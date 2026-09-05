@@ -56,12 +56,12 @@ Antes de confirmar la reserva, el sistema le muestra al Arrendatario una cotizac
 
 ### Edge Cases
 
-- ¿Qué pasa si la API de Módulo 1 no responde (timeout) al consultar disponibilidad/estado operativo? [NEEDS CLARIFICATION: ¿reintentar, fallar la reserva, o permitir reserva "provisional"?]
-- ¿Qué pasa si el Arrendatario abandona el flujo después de ver la cotización pero antes de confirmar? ¿Se guarda algún estado "borrador"?
-- ¿Puede un Arrendatario tener múltiples reservas activas simultáneas?
-- ¿Qué pasa si la confirmación de pago llega de Módulo 3 justo en el límite de los 15 minutos (race condition entre el TTL expirando y el pago confirmándose)? [NEEDS CLARIFICATION: ¿gana el pago si llega dentro de una tolerancia de gracia, o se rechaza estrictamente pasado el minuto 15?]
+- **Indisponibilidad o timeout de la API de Módulo 1**: Si la API de Módulo 1 no responde o devuelve error al consultar la información o el estado operativo de la embarcación, el sistema DEBE abortar el proceso de reserva de forma segura, sin crear reservas provisionales, e informar al Arrendatario sobre la indisponibilidad temporal del servicio. [NEEDS CLARIFICATION: SLA de respuesta esperado de Módulo 1]
+- **Abandono del flujo previo a la confirmación**: Si el Arrendatario consulta la cotización pero abandona el proceso antes de confirmar, el sistema NO DEBE persistir ninguna reserva ni aplicar retenciones temporales sobre el calendario; la embarcación permanece totalmente disponible para otros usuarios.
+- **Múltiples reservas activas por el mismo Arrendatario**: El sistema permite que un Arrendatario gestione varias reservas en curso de forma simultánea (para distintas fechas o embarcaciones); cada reserva opera con su propio ciclo de vida y temporizador TTL de 15 minutos de forma independiente.
+- **Concurrencia entre expiración del TTL y confirmación de pago (límite de los 15 minutos)**: Si la confirmación de pago de Módulo 3 llega cuando la reserva ya fue marcada como "Expirada" y liberada, el sistema DEBE rechazar el evento de pago y notificar a Módulo 3 para que tramite el reembolso correspondiente; si el pago se recibe antes de la ejecución de la expiración, prevalece la confirmación y la reserva transiciona a "Confirmada".
 
-> Los edge cases sobre traslape/condición de carrera entre reservas del mismo rango de tiempo se documentan en `spec-establecer-tiempo-reserva.md`.
+> Los edge cases sobre traslape y concurrencia de ventanas horarias se documentan en `spec-establecer-tiempo-reserva.md`.
 
 ---
 
