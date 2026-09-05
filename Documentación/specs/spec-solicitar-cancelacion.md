@@ -23,20 +23,10 @@ El Arrendatario solicita cancelar una reserva en estado cancelable. El sistema c
 
 **Acceptance Scenarios**:
 
-1. **Scenario**: Cancelación Flexible (anticipación mayor a 72 horas)
+1. **Scenario**: Cancelación clasificada y procesada
    - **Given** una reserva en estado cancelable con una hora pactada de inicio conocida
-   - **When** el Arrendatario solicita cancelarla con más de 72 horas de anticipación respecto a la hora pactada de inicio
-   - **Then** el sistema clasifica la cancelación como "Cancelación Flexible", notifica la clasificación a Módulo 3 para que aplique el reembolso del 100% (regla del proyecto; el cálculo y los montos los ejecuta Módulo 3), transiciona la reserva a "Cancelada por Arrendatario" y notifica a Módulo 1 la liberación de la embarcación
-
-2. **Scenario**: Cancelación Moderada (anticipación entre 24 y 72 horas)
-   - **Given** una reserva en estado cancelable con una hora pactada de inicio conocida
-   - **When** el Arrendatario solicita cancelarla con una anticipación de entre 24 y 72 horas respecto a la hora pactada de inicio (ambos límites incluidos en esta franja)
-   - **Then** el sistema clasifica la cancelación como "Cancelación Moderada", notifica la clasificación a Módulo 3 para que aplique la penalidad del 50% (regla del proyecto; cálculo en Módulo 3), transiciona la reserva a "Cancelada por Arrendatario" y notifica a Módulo 1 la liberación de la embarcación
-
-3. **Scenario**: Cancelación Tardía (anticipación menor a 24 horas)
-   - **Given** una reserva en estado cancelable con una hora pactada de inicio conocida
-   - **When** el Arrendatario solicita cancelarla con menos de 24 horas de anticipación respecto a la hora pactada de inicio
-   - **Then** el sistema clasifica la cancelación como "Cancelación Tardía", notifica la clasificación a Módulo 3 para que cobre el 100% como compensación al anfitrión (regla del proyecto, sin reembolso), transiciona la reserva a "Cancelada por Arrendatario" y notifica a Módulo 1 la liberación de la embarcación
+   - **When** el Arrendatario solicita cancelarla
+   - **Then** el sistema invoca "Calcular tipo de cancelación" para determinar la clasificación correspondiente, notifica esa clasificación a Módulo 3 para que aplique el reembolso o penalidad que corresponda, transiciona la reserva a "Cancelada por Arrendatario" y notifica a Módulo 1 la liberación de la embarcación
 
 ### User Story 2 - [El Propietario solicita cancelación de una reserva confirmada] (Priority: P1)
 
@@ -57,7 +47,6 @@ El Propietario solicita cancelar una reserva en estado cancelable (antes del che
 
 ### Edge Cases
 
-- **Límites temporales exactos (72 horas y 24 horas)**: si la anticipación es de exactamente 72 horas, se clasifica como **Moderada** (Flexible exige estrictamente más de 72 horas). Si la anticipación es de exactamente 24 horas, también es **Moderada** (el rango 24h-72h incluye ambos límites). Si la anticipación es menor a 24 horas, es **Tardía** de forma estricta.
 - **No-Show = Tardía**: la regla del proyecto agrupa "Tardía/No-Show <24h" con 0% de reembolso. En nuestro diagrama, el No-Show es un caso de uso distinto ("Marcar inasistencia"); aquí solo aplica la franja Tardía para cancelaciones voluntarias. La equivalencia de liquidación la resuelve Módulo 3.
 - **Cancelar una reserva que ya no es cancelable** (En Navegación, Completada, Expirada o ya Cancelada): el sistema DEBE rechazar la solicitud con el motivo correspondiente y NO notificar ni transicionar nada. [NEEDS CLARIFICATION: conjunto exacto de estados cancelables — ¿"Pendiente de Pago" (TTL activo) es cancelable? Propuesta: sí; cancela el flujo de pago, libera el activo y notifica a Módulo 3 para evitar el cobro]
 - **Doble cancelación simultánea**: dos actores intentan cancelar la misma reserva al mismo tiempo; el sistema DEBE garantizar que solo una transición de estado se aplique (la segunda recibe "reserva ya no está cancelable"), quedando la reserva con un único estado final de cancelación.
@@ -75,13 +64,11 @@ El Propietario solicita cancelar una reserva en estado cancelable (antes del che
 - **FR-002**: Si la reserva NO está en estado cancelable, el sistema DEBE rechazar la solicitud informando el motivo (p. ej. "el servicio ya está en curso", "la reserva ya fue cancelada o expirada") y NO DEBE notificar a Módulo 1 ni a Módulo 3.
 - **FR-003**: El sistema DEBE identificar y registrar quién inicia la cancelación (actor solicitante: Arrendatario o Propietario).
 - **FR-004**: El sistema DEBE invocar el caso de uso "Calcular tipo de cancelación" (delegación obligatoria, `<<include>>` según el diagrama; el detalle interno de su clasificación se especifica en su propio spec) pasándole como entrada explícita: identificador de la reserva, **actor solicitante (Arrendatario o Propietario)** y hora pactada de inicio. El tipo resultante depende de la anticipación Y de quién inicia la cancelación, no solo del tiempo restante.
-- **FR-005**: Cuando el actor solicitante es el **Arrendatario**, el sistema DEBE clasificar la cancelación de forma unívoca según las reglas del proyecto: **Flexible** si la anticipación es mayor a 72 horas; **Moderada** si la anticipación está entre 24 y 72 horas (ambos límites incluidos); **Tardía** si la anticipación es menor a 24 horas. Los montos (100% reembolso / 50% penalidad / 0% reembolso) los aplica y calcula Módulo 3.
-- **FR-006**: Cuando el actor solicitante es el **Propietario**, el sistema DEBE clasificar la notificación hacia Módulo 3 como "Cancelación por Anfitrión" y NO DEBE aplicar las franjas 72h/24h del Arrendatario. [NEEDS CLARIFICATION: política de reembolso al Arrendatario cuando cancela el Propietario — propuesta: 100% sin importar el tiempo restante]
-- **FR-007**: El sistema DEBE notificar a Módulo 3, para cada cancelación procesada, los datos necesarios para su liquidación (identificador de la reserva, marca temporal del evento, actor solicitante y clasificación/tipo de cancelación determinada). La matriz de liquidación (comisión, seguro, depósito, penalidades) pertenece a Módulo 3; Módulo 2 solo asegura el envío de estos datos. [NEEDS CLARIFICATION: formato/payload exacto del contrato de integración con Módulo 3 — se documentará en el contrato de integración aparte, no en este spec]
-- **FR-008**: Al procesar una cancelación, el sistema DEBE transicionar la reserva según el actor: "Cancelada por Arrendatario" o "Cancelada por Propietario". [NEEDS CLARIFICATION: nombres exactos y máquina de estados completa de una reserva]
-- **FR-009**: El sistema DEBE notificar a Módulo 1 la liberación de la embarcación tras la cancelación, con el estado operativo resultante [NEEDS CLARIFICATION: en cancelación por Arrendatario se libera a "Disponible"; en cancelación por Propietario, ¿"Disponible" o "En Mantenimiento/Limpieza"?].
-- **FR-010**: Consecuencias adicionales para el Propietario (reputación, restricción de publicación, retenciones) NO son responsabilidad de Módulo 2. Si existieran, se gestionan en otro módulo/contexto; Módulo 2 solo registra el evento.
-- **FR-011**: El sistema DEBE garantizar que Módulo 1 y Módulo 3 se enteren de cada cancelación procesada, de forma que ningún evento se pierda silenciosamente. [NEEDS CLARIFICATION: el mecanismo concreto para lograr esta garantía —reintentos, colas, confirmaciones— es una decisión de diseño técnico que se define en la fase de arquitectura, no en este spec]
+- **FR-005**: El sistema DEBE notificar a Módulo 3, para cada cancelación procesada, los datos necesarios para su liquidación (identificador de la reserva, marca temporal del evento, actor solicitante y clasificación/tipo de cancelación determinada). La matriz de liquidación (comisión, seguro, depósito, penalidades) pertenece a Módulo 3; Módulo 2 solo asegura el envío de estos datos. [NEEDS CLARIFICATION: formato/payload exacto del contrato de integración con Módulo 3 — se documentará en el contrato de integración aparte, no en este spec]
+- **FR-006**: Al procesar una cancelación, el sistema DEBE transicionar la reserva según el actor: "Cancelada por Arrendatario" o "Cancelada por Propietario". [NEEDS CLARIFICATION: nombres exactos y máquina de estados completa de una reserva]
+- **FR-007**: El sistema DEBE notificar a Módulo 1 la liberación de la embarcación tras la cancelación, con el estado operativo resultante [NEEDS CLARIFICATION: en cancelación por Arrendatario se libera a "Disponible"; en cancelación por Propietario, ¿"Disponible" o "En Mantenimiento/Limpieza"?].
+- **FR-008**: Consecuencias adicionales para el Propietario (reputación, restricción de publicación, retenciones) NO son responsabilidad de Módulo 2. Si existieran, se gestionan en otro módulo/contexto; Módulo 2 solo registra el evento.
+- **FR-009**: El sistema DEBE garantizar que Módulo 1 y Módulo 3 se enteren de cada cancelación procesada, de forma que ningún evento se pierda silenciosamente. [NEEDS CLARIFICATION: el mecanismo concreto para lograr esta garantía —reintentos, colas, confirmaciones— es una decisión de diseño técnico que se define en la fase de arquitectura, no en este spec]
 
 ### Key Entities
 
@@ -95,7 +82,7 @@ El Propietario solicita cancelar una reserva en estado cancelable (antes del che
 
 ### Measurable Outcomes
 
-- **SC-001**: El 100% de las cancelaciones solicitadas por el Arrendatario son clasificadas con precisión temporal (Flexible >72h, Moderada 24h-72h, Tardía <24h) y notificadas a Módulo 3 con el tipo correcto en menos de 2 segundos desde la confirmación de la solicitud.
+- **SC-001**: El 100% de las cancelaciones del Arrendatario son clasificadas correctamente (vía "Calcular tipo de cancelación") y notificadas a Módulo 3 en menos de 2 segundos desde la confirmación de la solicitud.
 - **SC-002**: Cero (0%) cancelaciones procesadas sobre reservas en un estado no cancelable.
 - **SC-003**: El 100% de las cancelaciones de Propietario se notifican a Módulo 3 como "Cancelación por Anfitrión", garantizando que el Arrendatario reciba su reembolso (el monto exacto depende de la política pendiente de clarificación).
 - **SC-004**: El 100% de las cancelaciones procesadas resultan en la liberación/actualización del estado operativo en Módulo 1 (sin embarcaciones que queden "Reservadas" tras una cancelación).
