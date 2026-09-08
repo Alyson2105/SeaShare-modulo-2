@@ -92,7 +92,7 @@ Como sistema, quiero detener la consulta si la API de Módulo 3 falla o no respo
 - **FR-002**: El sistema DEBE recibir estos datos de entrada: el identificador de la reserva, quién pide la cancelación (`Arrendatario` o `Propietario`) y las horas de anticipación calculadas respecto a la fecha y hora pactada de zarpe.
 - **FR-003**: El sistema DEBE llamar de forma síncrona a la API externa de Módulo 3, enviándole estos datos para que decida el tipo de cancelación.
 - **FR-004**: El sistema DEBE recibir la respuesta de Módulo 3 y verificar que corresponda a uno de estos valores del catálogo oficial:
-    - 🔶 [PENDIENTE DE CONFIRMAR — Sub-estados de Cancelación]: `Flexible`, `Moderado`, `Tardío`, `Por Anfitrión` [FIN PENDIENTE].
+ `Flexible`, `Moderado`, `Tardío`, `Por Anfitrión`.
 - **FR-005**: Si quien pide la cancelación es el `Arrendatario`, el sistema DEBE verificar que Módulo 3 aplique estas reglas de tiempo:
     - Tipo `Flexible`: para anticipaciones de más de 72 horas.
     - Tipo `Moderado`: para anticipaciones entre 72 y 24 horas.

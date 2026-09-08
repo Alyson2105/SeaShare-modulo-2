@@ -83,9 +83,6 @@ Si se intenta registrar el inicio de la navegación sobre una reserva que ya est
 - **Imposibilidad de marcar inasistencia una vez iniciado el viaje**:
     - Al confirmar la salida y pasar a "En Navegación", la opción de "Marcar inasistencia" queda inhabilitada de forma definitiva para esa reserva.
     - Si el Propietario ya había marcado inasistencia previamente (reserva en "Cancelado" por inasistencia), la solicitud de iniciar el viaje se rechaza de inmediato.
-- **Incompatibilidad con el estado operativo físico del barco en Módulo 1 (Barco en Mantenimiento o Limpieza)**:
-    - Puede presentarse la inconsistencia de que la reserva figure como `Confirmada` en Módulo 2, pero en Módulo 1 la embarcación haya sido marcada previamente en estado `En Mantenimiento/Limpieza` (debido a una avería sobrevenida en el motor, reparación urgente o daño reportado en un alquiler anterior).
-    - Dado que un vehículo náutico inhabilitado físicamente no puede hacerse a la mar de manera legal ni segura, el sistema DEBE consultar en tiempo real el estado operativo del activo a Módulo 1 antes de procesar el abordaje. Si Módulo 1 reporta que el barco está `En Mantenimiento/Limpieza`, Módulo 2 rechaza inmediatamente la acción de iniciar navegación, impide la activación del seguro en Módulo 3 e informa al Propietario que la embarcación se encuentra inhabilitada en la flota.
 - **Condición de carrera entre el Inicio de Navegación y el reporte de No-Show**:
     - Tras vencer los 30 minutos de tolerancia en el muelle, se habilita la opción de "Marcar inasistencia". Si en el mismo milisegundo el Propietario intenta marcar el inicio del viaje desde un dispositivo y simultáneamente se procesa un reporte de inasistencia, el control de concurrencia atómico de la base de datos asegura que solo una transacción consolide el estado final. Si el No-Show se procesa primero, la reserva pasa a `Cancelado` (Por Inasistencia) y el intento de iniciar navegación es rechazado de inmediato.
 - **Múltiples intentos por mala conexión en el muelle**:
@@ -105,7 +102,7 @@ Si se intenta registrar el inicio de la navegación sobre una reserva que ya est
 - **FR-002**: El sistema DEBE validar de forma estricta que el usuario que ejecuta la acción sea el Propietario registrado de la embarcación.
 - **FR-003**: El sistema DEBE validar que la solicitud se realice dentro de la ventana de tiempo autorizada para la salida (en la fecha programada o dentro del margen previo permitido).
 - **FR-004**: Si la reserva se encuentra en cualquier estado diferente a "Confirmada" (incluyendo `Pendiente de Pago`, `En Navegación`, `Completado`, `Expirado` o `Cancelado`), el sistema DEBE rechazar la solicitud e informar el motivo.
-- **FR-005**: Al validar la entrega del barco, el sistema DEBE invocar el caso de uso subordinado "Actualizar estado reserva" `(<<include>>)`, solicitando cambiar al estado principal 🔶 [PENDIENTE DE CONFIRMAR — Estados Principales de la Reserva] `En Navegación` [FIN PENDIENTE].
+- **FR-005**: Al validar la entrega del barco, el sistema DEBE invocar el caso de uso subordinado "Actualizar estado reserva" `(<<include>>)`, solicitando cambiar al estado principal `En Navegación`.
 - **FR-006**: El sistema DEBE guardar un registro del inicio del viaje, incluyendo: identificador de la reserva, identificador del propietario, hora real de entrega y notas opcionales.
 - **FR-007**: El sistema DEBE indicar a "Actualizar estado reserva" que llame a la API de Módulo 1 (`Asignar estado operativo`) para cambiar la embarcación al estado `En Navegación`.
 - **FR-008**: El sistema DEBE indicar a "Actualizar estado reserva" que llame a la API de Módulo 3 (`Recibir estado de reserva`) para notificar el cambio a `En Navegación` y activar el seguro náutico.

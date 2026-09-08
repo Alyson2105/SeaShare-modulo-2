@@ -94,17 +94,17 @@ Si alguien intenta registrar el fin de la navegación sobre una reserva que no e
 - **FR-001**: El sistema DEBE permitir registrar el fin de la navegación (entrega del barco) si y solo si la reserva existe y se encuentra en estado principal "En Navegación".
 - **FR-002**: El sistema DEBE validar de forma estricta que el usuario que realiza la solicitud sea el Propietario registrado de la embarcación.
 - **FR-003**: El sistema DEBE solicitar al Propietario la selección obligatoria de una de las dos opciones de sub-estado al momento de la entrega:
-    - 🔶 [PENDIENTE DE CONFIRMAR — Sub-estados de Finalización]: `Sin incidentes` (entrega normal de la embarcación sin ningún problema o daño).
-    - 🔶 [PENDIENTE DE CONFIRMAR — Sub-estados de Finalización]: `Con incidentes` (presencia de daños, fallas en la embarcación o faltantes de equipo). [FIN PENDIENTE]
+     `Sin incidentes` (entrega normal de la embarcación sin ningún problema o daño).
+    `Con incidentes` (presencia de daños, fallas en la embarcación o faltantes de equipo). 
 - **FR-004**: Si el Propietario selecciona el sub-estado `Con incidentes`, el sistema DEBE exigir y guardar una descripción textual con los detalles de las novedades o daños encontrados.
-- **FR-005**: Al confirmar la entrega, el sistema DEBE invocar el caso de uso subordinado "Actualizar estado reserva" (`<<include>>`), solicitando cambiar la reserva al estado principal 🔶 [PENDIENTE DE CONFIRMAR — Estados Principales de la Reserva] `Completado` [FIN PENDIENTE] junto con el sub-estado seleccionado (`Sin incidentes` o `Con incidentes`).
+- **FR-005**: Al confirmar la entrega, el sistema DEBE invocar el caso de uso subordinado "Actualizar estado reserva" (`<<include>>`), solicitando cambiar la reserva al estado principal  `Completado`  junto con el sub-estado seleccionado (`Sin incidentes` o `Con incidentes`).
 - **FR-006**: El sistema DEBE guardar un registro de la entrega, incluyendo: identificador de la reserva, identificador del propietario, fecha y hora real de entrega, sub-estado elegido y las observaciones de incidentes si aplican.
-- **FR-007**: 🔶 [PENDIENTE DE CONFIRMAR — Sincronización operativa con Módulo 1]: El sistema DEBE indicar a "Actualizar estado reserva" que llame a la API de Módulo 1 (`Asignar estado operativo`) para actualizar la embarcación:
+- **FR-007**:  El sistema DEBE indicar a "Actualizar estado reserva" que llame a la API de Módulo 1 (`Asignar estado operativo`) para actualizar la embarcación:
     - Si el sub-estado es `Sin incidentes`: cambiar el barco a estado `Disponible`.
-    - Si el sub-estado es `Con incidentes`: cambiar el barco a estado `En Mantenimiento/Limpieza` para inhabilitarlo temporalmente. [FIN PENDIENTE]
-- **FR-008**: 🔶 [PENDIENTE DE CONFIRMAR — Notificación de incidentes a Módulo 3]: El sistema DEBE indicar a "Actualizar estado reserva" que llame a la API de Módulo 3 (`Recibir estado de reserva`) para notificar el cierre del viaje:
+    - Si el sub-estado es `Con incidentes`: cambiar el barco a estado `En Mantenimiento/Limpieza` para inhabilitarlo temporalmente.
+- **FR-008**:  El sistema DEBE indicar a "Actualizar estado reserva" que llame a la API de Módulo 3 (`Recibir estado de reserva`) para notificar el cierre del viaje:
     - Si el sub-estado es `Sin incidentes`: comunicar la entrega exitosa para que Módulo 3 libere el pago al anfitrión y le devuelva la garantía al cliente.
-    - Si el sub-estado es `Con incidentes`: notificar el reporte de daños a Módulo 3 para que retenga la garantía e inicie el proceso de revisión. [FIN PENDIENTE]
+    - Si el sub-estado es `Con incidentes`: notificar el reporte de daños a Módulo 3 para que retenga la garantía e inicie el proceso de revisión.
 - **FR-009**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE calcular costos de reparación, cobros por demora ni realizar devoluciones o retenciones de dinero**. La evaluación financiera le corresponde exclusivamente al Módulo 3.
 - **FR-010**: Si la reserva se encuentra en cualquier estado diferente a "En Navegación", el sistema DEBE rechazar la solicitud e informar que el estado no es compatible.
 
