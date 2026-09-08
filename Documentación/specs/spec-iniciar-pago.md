@@ -1,85 +1,87 @@
 # Feature Specification: Iniciar Pago
 
 **Módulo**: Módulo 2 (Operación de Reservas, Tiempos y Cancelaciones)  
-**Created**: 2026-09-06  
+**Created**: 2026-09-06 (Actualizado: 2026-09-08)  
 **Primary Actor**: Arrendatario (Turista que reserva la embarcación)  
 **External Dependencies (APIs)**:
-- **Módulo 3 (Liquidación, Seguros y Dispersión de Fondos)**: Servicio financiero externo (consumido de manera indirecta a través del caso de uso subordinado `Recibir solicitud de pago`).
-- **Casos de uso internos de Módulo 2**: `Recibir solicitud de pago` (`<<include>>`).
+- **Módulo 3 (Liquidación, Seguros y Dispersión de Fondos)**: API externa de Módulo 3 (`Recibir solicitud de pago` / `Procesar cobro`). Módulo 2 le transfiere los datos identificadores de la reserva para que Módulo 3 tome el control del flujo financiero y procese el cobro. Módulo 2 nunca gestiona pasarelas, enlaces de pago, tarjetas ni cifras de dinero.
 
 ---
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - El Arrendatario confirma su intención de pagar dentro del tiempo límite (Priority: P1)
+### User Story 1 - Transferir la solicitud de pago a Módulo 3 dentro del tiempo límite (Priority: P1)
 
-Habiendo creado una reserva en estado 'Pendiente de Pago', el Arrendatario decide formalizar su contratación y presiona la opción para proceder al pago ('Iniciar pago'). En ese instante, el sistema verifica que los 15 minutos de tolerancia continúen vigentes, que el usuario autenticado en la sesión coincida exactamente con la persona (turista) que realizó la reserva y que la reserva no haya sido confirmada, expirada o cancelada previamente. Al confirmar que todo está en regla, el sistema le pasa la solicitud a 'Recibir solicitud de pago' para que envíe la orden al Módulo 3 y se procese el cobro, garantizando que el Módulo 2 no toque datos bancarios ni realice cálculos de dinero.
+Habiendo creado una reserva en estado "Pendiente de Pago", el Arrendatario titular decide formalizar su contratación y presiona la opción para proceder al pago ("Iniciar pago"). El sistema verifica que el temporizador de 15 minutos (TTL) continúe vigente, corrobora la titularidad del usuario y que la reserva esté en estado "Pendiente de Pago". Al validar que todo está en regla, el sistema recopila los identificadores de la reserva y transfiere la solicitud de pago a Módulo 3 (`Recibir solicitud de pago`) para que este módulo gestione el cobro correspondiente, manteniendo la reserva en estado "Pendiente de Pago".
 
-**Why this priority**: Es el paso clave que le permite al cliente pasar de una reserva temporal a la confirmación de su viaje. Sin esta acción, el proceso se detiene y la reserva termina cancelándose automáticamente.
+**Why this priority**: Es el paso que conecta la reserva temporal con el inicio del proceso de cobro en el sistema financiero. Sin esta acción, el proceso se detiene y la reserva expira automáticamente al agotarse el tiempo.
 
-**Independent Test**: Se puede probar simulando una reserva en estado "Pendiente de Pago" a la que aún le quede tiempo en el reloj de 15 minutos, emitiendo la solicitud de iniciar pago por parte del Arrendatario titular, y verificando que el sistema confirma que el tiempo no ha vencido y delega la solicitud hacia "Recibir solicitud de pago" sin realizar cálculos de dinero ni conectarse con pasarelas de pago.
-
-**Acceptance Scenarios**:
-
-1. **Scenario**: Inicio de pago válido con tiempo de tolerancia vigente
-    - **Given** una reserva en estado principal "Pendiente de Pago" con tiempo disponible en sus 15 minutos de tolerancia
-    - **When** el Arrendatario titular solicita iniciar el pago
-    - **Then** el sistema valida que el tiempo límite sigue activo, corrobora la titularidad de la reserva e invoca a "Recibir solicitud de pago" para transferir la intención de pago hacia Módulo 3
-
-2. **Scenario**: Reintento de pago tras intento no completado dentro del tiempo límite
-    - **Given** una reserva en estado "Pendiente de Pago" que aún dispone de 6 minutos en su reloj tras un intento previo no concretado
-    - **When** el Arrendatario solicita nuevamente iniciar el pago
-    - **Then** el sistema admite la solicitud por estar dentro del margen de 15 minutos e invoca a "Recibir solicitud de pago"
-
----
-
-### User Story 2 - Rechazar el inicio de pago si los 15 minutos de tolerancia han expirado (Priority: P1)
-
-Si el Arrendatario intenta iniciar el pago habiendo transcurrido más de 15 minutos desde la creación de la reserva (tiempo límite vencido), el sistema deniega la solicitud de forma inmediata, informando que el tiempo para efectuar el pago ha expirado y que la reserva ya no es válida.
-
-**Why this priority**: Evita que se cobren reservas cuyo barco ya fue liberado o se encuentra disponible nuevamente para otros usuarios, previniendo cobros erróneos y sobreventas.
-
-**Independent Test**: Se prueba ejecutando la acción de iniciar pago sobre una reserva cuyos 15 minutos de tolerancia han llegado a cero o que ya se encuentra en estado "Expirado", verificando que la acción se bloquea de inmediato, no se le pasa la solicitud a "Recibir solicitud de pago" y se muestra un mensaje explicativo al usuario.
+**Independent Test**: Se puede probar simulando una reserva en estado "Pendiente de Pago" con tiempo disponible en el temporizador de 15 minutos, solicitando el inicio de pago por el Arrendatario titular y verificando que el sistema valida la vigencia, transfiere con éxito la petición a Módulo 3 y mantiene la reserva en "Pendiente de Pago" a la espera de la confirmación financiera posterior.
 
 **Acceptance Scenarios**:
 
-1. **Scenario**: Intento de inicio de pago con tiempo límite expirado
-    - **Given** una reserva creada hace más de 15 minutos cuyo tiempo de tolerancia se encuentra vencido
+1. **Scenario**: Transferencia exitosa de la solicitud de pago a Módulo 3
+    - **Given** una reserva en estado "Pendiente de Pago" con tiempo disponible en sus 15 minutos de tolerancia y un Arrendatario titular autenticado
+    - **When** el Arrendatario solicita iniciar el pago
+    - **Then** el sistema valida la vigencia del tiempo, transfiere la solicitud de pago con los identificadores de la reserva a la API de Módulo 3 y mantiene la reserva en estado "Pendiente de Pago"
+
+2. **Scenario**: Bloqueo del inicio de pago por tiempo de tolerancia (TTL) expirado
+    - **Given** una reserva cuyo temporizador de 15 minutos ha llegado a cero o se encuentra en estado "Expirada"
     - **When** el Arrendatario intenta iniciar el pago
-    - **Then** el sistema rechaza la solicitud, informa que el tiempo de bloqueo temporal de 15 minutos ha expirado y no remite la petición a "Recibir solicitud de pago"
+    - **Then** el sistema rechaza la solicitud, informa que el tiempo límite para efectuar el pago ha vencido y NO transfiere ninguna petición a Módulo 3
+
+3. **Scenario**: Reintento de solicitud de pago dentro del tiempo límite
+    - **Given** una reserva en estado "Pendiente de Pago" a la que aún le restan minutos de tolerancia tras un intento previo no concretado
+    - **When** el Arrendatario solicita nuevamente iniciar el pago
+    - **Then** el sistema admite la solicitud por encontrarse dentro del margen de tiempo de los 15 minutos y transfiere nuevamente la solicitud a Módulo 3
 
 ---
 
-### User Story 3 - Rechazar inicio de pago sobre reservas no elegibles o por actores no autorizados (Priority: P2)
+### User Story 2 - Rechazar inicio de pago sobre reservas no elegibles o por actores no autorizados (Priority: P1)
 
-Si se intenta iniciar el pago de una reserva que ya se encuentra confirmada, cancelada o en navegación, o si la petición es enviada por un usuario diferente al Arrendatario que solicitó la reserva, el sistema rechaza la operación.
+Si se intenta iniciar el pago de una reserva que ya se encuentra confirmada, cancelada o en navegación, o si la petición es enviada por un usuario diferente al Arrendatario que solicitó la reserva, el sistema rechaza la operación inmediatamente sin comunicarse con Módulo 3.
 
-**Why this priority**: Asegura que no se procesen pagos duplicados para viajes ya confirmados y previene que personas ajenas intervengan en reservas de otros usuarios.
+**Why this priority**: Evita envíos duplicados sobre contratos ya pagados y protege la privacidad e integridad de las reservas frente a terceros no autorizados.
 
-**Independent Test**: Se prueba emitiendo la acción desde una cuenta de usuario que no sea la titular y sobre reservas en estados "Confirmada" y "Cancelado", comprobando que el sistema retorna una denegación formal sin enviar órdenes al Módulo 3.
+**Independent Test**: Se prueba emitiendo la acción de inicio de pago desde una cuenta no titular y sobre reservas en estados "Confirmada", "Cancelada" o "En Navegación", verificando que el sistema deniega formalmente la petición sin contactar a Módulo 3.
 
 **Acceptance Scenarios**:
 
-1. **Scenario**: Intento de pago sobre reserva ya confirmada
-    - **Given** una reserva en estado principal "Confirmada"
-    - **When** el Arrendatario intenta iniciar el pago nuevamente
-    - **Then** el sistema deniega la acción informando que la reserva ya se encuentra pagada y confirmada
+1. **Scenario**: Intento de pago sobre reserva ya confirmada o en estado incompatible
+    - **Given** una reserva en estado "Confirmada", "Cancelada" o "En Navegación"
+    - **When** el Arrendatario intenta iniciar el pago
+    - **Then** el sistema rechaza la solicitud informando que el estado actual de la reserva no admite pagos y no contacta a Módulo 3
 
 2. **Scenario**: Intento de pago por un usuario no titular
-    - **Given** una reserva en estado principal "Pendiente de Pago" con tiempo límite vigente
-    - **When** un usuario que no es el arrendatario registrado intenta iniciar el pago
-    - **Then** el sistema rechaza la solicitud por falta de autorización
+    - **Given** una reserva en estado "Pendiente de Pago" con tiempo vigente
+    - **When** un usuario que no es el Arrendatario registrado en la reserva intenta iniciar el pago
+    - **Then** el sistema deniega la solicitud por falta de autorización
+
+---
+
+### User Story 3 - Manejar fallas de conexión o indisponibilidad con la API de Módulo 3 (Priority: P2)
+
+Si al intentar transferir la solicitud de pago la API de Módulo 3 no responde o presenta una falla de comunicación, el sistema gestiona el error de forma segura sin cancelar ni expirar la reserva, manteniéndola en "Pendiente de Pago" para que el cliente pueda reintentar mientras continúe vigente su temporizador de 15 minutos.
+
+**Why this priority**: Asegura la resiliencia operativa evitando que un problema transitorio de comunicación aborte prematuramente una reserva que aún tiene tiempo de pago disponible.
+
+**Independent Test**: Se prueba simulando una falla de conexión al comunicarse con la API de Módulo 3 para una reserva válida con tiempo restante; se comprueba que el sistema registra el fallo, mantiene la reserva intacta en "Pendiente de Pago" y le muestra un mensaje claro al usuario indicando que puede volver a intentar.
+
+**Acceptance Scenarios**:
+
+1. **Scenario**: Falla temporal de conexión con Módulo 3
+    - **Given** una reserva en estado "Pendiente de Pago" a la que aún le resta tiempo en su temporizador de 15 minutos
+    - **When** el sistema intenta comunicarse con la API de Módulo 3 y la conexión falla o agota el tiempo de espera
+    - **Then** el sistema registra la incidencia, mantiene la reserva en estado "Pendiente de Pago" e informa al Arrendatario que el servicio está temporalmente indispuesto y puede reintentar
 
 ---
 
 ### Edge Cases
 
-- **Inicio de pago en los últimos segundos de tolerancia**:
-    - Si el Arrendatario presiona iniciar pago justo en el segundo final de los 15 minutos, el sistema evalúa la vigencia en el instante de recepción: si el tiempo aún es mayor a cero, admite la petición y la deriva inmediatamente a "Recibir solicitud de pago"; si expira en ese instante, prevalece la expiración de la reserva.
-- **Múltiples clics simultáneos (doble envío de intención de pago)**:
-    - Si el usuario presiona repetidamente el botón de pago por impaciencia, el sistema controla la concurrencia de la petición para canalizar una única solicitud activa hacia "Recibir solicitud de pago", evitando peticiones duplicadas.
-- **Prohibición absoluta de cálculo o procesamiento de dinero en Módulo 2**:
-    - En este caso de uso, el sistema **NO captura números de tarjeta, no interactúa con pasarelas de pago externas ni calcula montos, comisiones o recargos**. La pasarela, la captura de datos financieros y el cobro son responsabilidad exclusiva de Módulo 3.
+- **Inicio de pago en los últimos instantes del temporizador**: Si el Arrendatario solicita el pago justo en el límite de los 15 minutos, el sistema evalúa la vigencia en el instante exacto de la petición: si el tiempo restante es mayor a cero, admite la solicitud y transfiere la petición a Módulo 3; si la reserva ya fue transicionada a "Expirada", prevalece la expiración y se rechaza la solicitud.
+- **Múltiples solicitudes simultáneas (doble clic del usuario)**: Si el usuario presiona repetidamente el botón de pago, el sistema canaliza una única solicitud activa hacia Módulo 3 para evitar envíos duplicados.
+- **Mantenimiento estricto del estado de la reserva**: Este caso de uso **NO cambia la reserva a estado "Confirmada" ni a ningún otro estado**. La reserva permanece en "Pendiente de Pago"; la transición a "Confirmada" ocurrirá únicamente cuando Módulo 3 complete el cobro y llame al caso de uso "Confirmar pago".
+- **Separación total de responsabilidades financieras**: Módulo 2 **no procesa pasarelas, ni maneja enlaces de pago, datos de tarjetas de crédito o cálculo de montos/comisiones**. Módulo 2 únicamente valida la vigencia del tiempo y notifica la intención de pago a Módulo 3, quien asume por completo la interacción financiera.
 
 ---
 
@@ -87,22 +89,24 @@ Si se intenta iniciar el pago de una reserva que ya se encuentra confirmada, can
 
 ### Functional Requirements
 
-- **FR-001**: El sistema DEBE permitir al Arrendatario iniciar el proceso de pago de una reserva si y solo si la reserva existe y se encuentra en estado principal "Pendiente de Pago".
-- **FR-002**: El sistema DEBE verificar que los quince (15) minutos de tiempo de tolerancia asociados a la reserva se encuentren vigentes al momento de la solicitud (`tiempo_restante_ttl > 0`).
-- **FR-003**: Si el tiempo de 15 minutos ha expirado, el sistema DEBE rechazar el intento de pago, informar al Arrendatario que el tiempo límite de reserva expiró y NO DEBE transferir la solicitud al caso de uso subordinado ni a Módulo 3.
-- **FR-004**: El sistema DEBE validar que el usuario autenticado sea estrictamente el Arrendatario titular registrado en la reserva.
-- **FR-005**: Si la reserva se encuentra en cualquier estado distinto a "Pendiente de Pago" (incluyendo `Confirmada`, `Cancelado`, `Expirado`, `En Navegación` o `Completado`), el sistema DEBE denegar la solicitud informando el estado incompatible.
-- **FR-006**: Al validar satisfactoriamente la solicitud y la vigencia del tiempo, el sistema DEBE invocar de forma obligatoria el caso de uso subordinado "Recibir solicitud de pago" (`<<include>>`), transfiriendo el identificador de la reserva y la identificación del arrendatario para que este canalice la petición a Módulo 3.
-- **FR-007**: El sistema DEBE registrar un asiento auditable de la intención de pago, capturando: identificador de la reserva, identificador del arrendatario solicitante, tiempo remanente de tolerancia y marca temporal de la acción.
-- **FR-008**: **REGLA DE NEGOCIO ESTRICTA (Sin cálculo financiero):** El sistema **NO DEBE capturar credenciales bancarias, procesar pasarelas de cobro ni calcular montos monetarios, comisiones o recargos**. La función de Módulo 2 se limita a certificar la vigencia del tiempo de reserva y canalizar la intención de pago hacia la interfaz de integración con Módulo 3.
+- **FR-001**: El sistema DEBE permitir al Arrendatario solicitar el inicio de pago de una reserva si y solo si la reserva existe y se encuentra en estado "Pendiente de Pago".
+- **FR-002**: El sistema DEBE verificar que el usuario autenticado corresponda estrictamente al Arrendatario titular asociado a la reserva.
+- **FR-003**: El sistema DEBE verificar que el temporizador de quince (15) minutos (TTL) asociado a la reserva se encuentre vigente al momento de la solicitud (`tiempo_restante_ttl > 0`).
+- **FR-004**: Si el temporizador de 15 minutos ha expirado o la reserva no está en estado "Pendiente de Pago", el sistema DEBE denegar la solicitud de inmediato, informar el motivo al usuario y NO DEBE transferir información a Módulo 3.
+- **FR-005**: Al validar satisfactoriamente la reserva y la vigencia del tiempo, el sistema DEBE transferir la solicitud de pago con los identificadores correspondientes (identificador de la reserva, identificador del cliente, identificador de la embarcación y fechas reservadas) a la API de Módulo 3 (`Recibir solicitud de pago`).
+- **FR-006**: El sistema DEBE delegar la gestión del cobro en su totalidad a Módulo 3 tras la transferencia de la solicitud, sin intervenir en pasarelas bancarias, enlaces o transacciones financieras.
+- **FR-007**: El sistema DEBE mantener la reserva en estado "Pendiente de Pago" durante todo este flujo, sin realizar cambios de estado en este caso de uso.
+- **FR-008**: Si la API de Módulo 3 no responde o devuelve un error de comunicación, el sistema DEBE registrar el incidente técnico y mantener la reserva en estado "Pendiente de Pago" para permitir nuevos intentos mientras el temporizador siga vigente.
+- **FR-009**: **REGLA DE NEGOCIO ESTRICTA (Sin interacción financiera):** El sistema **NO DEBE capturar credenciales bancarias, procesar pasarelas de cobro, gestionar enlaces de pago ni calcular tarifas, comisiones o garantías**. La responsabilidad de Módulo 2 concluye al transferir válidamente la orden a Módulo 3.
+- **FR-010**: El sistema DEBE registrar un asiento auditable de cada solicitud de pago transferida a Módulo 3, capturando: identificador de la reserva, identificador del arrendatario, tiempo remanente de tolerancia, marca temporal y resultado de la comunicación con Módulo 3.
 
 ---
 
 ### Key Entities
 
-- **Reserva (`Reservation`)**: Entidad de Módulo 2 que debe encontrarse en estado "Pendiente de Pago" con temporizador de tolerancia activo.
-- **Intención de Pago (`PaymentIntent`)**: Registro de dominio en Módulo 2 que documenta la voluntad expresa del arrendatario de proceder al pago. Atributos: identificador de intención, identificador de la reserva, identificador del arrendatario, marca temporal de emisión, tiempo remanente de tolerancia.
-- **Arrendatario**: Usuario turista autenticado que posee la titularidad del alquiler temporal.
+- **Reserva**: Entidad de Módulo 2 que debe encontrarse en estado "Pendiente de Pago" con temporizador de tolerancia activo, cuyo estado permanece inalterado durante este caso de uso.
+- **Solicitud de Pago**: Registro de dominio en Módulo 2 que documenta la transferencia de la intención de pago hacia Módulo 3 (identificador de reserva, identificador de arrendatario, fecha/hora de transferencia y estado de entrega).
+- **Arrendatario**: Usuario turista autenticado titular de la reserva.
 
 ---
 
@@ -110,8 +114,9 @@ Si se intenta iniciar el pago de una reserva que ya se encuentra confirmada, can
 
 ### Measurable Outcomes
 
-- **SC-001**: Cero (0%) intentos de pago admitidos o derivados a Módulo 3 para reservas cuyos 15 minutos de tolerancia hayan expirado.
-- **SC-002**: Cero (0%) intentos de pago autorizados sobre reservas en estados no pendientes (`Confirmada`, `Cancelado`, `Expirado`, etc.).
-- **SC-003**: El 100% de las solicitudes válidas de inicio de pago son verificadas y derivadas al caso de uso "Recibir solicitud de pago" en menos de 300 milisegundos.
-- **SC-004**: Cero (0) operaciones financieras, cálculos de importes o procesamiento de tarjetas de crédito ejecutados dentro de Módulo 2.
-- **SC-005**: Cero (0%) solicitudes de pago admitidas a usuarios que no correspondan al arrendatario titular de la reserva.
+- **SC-001**: Cero (0%) solicitudes de pago admitidas o transferidas a Módulo 3 sobre reservas cuyos 15 minutos de tolerancia hayan expirado o que no se encuentren en estado "Pendiente de Pago".
+- **SC-002**: Cero (0%) solicitudes de pago autorizadas a usuarios que no correspondan al Arrendatario titular de la reserva.
+- **SC-003**: El cien por ciento (100%) de las solicitudes válidas son verificadas y transferidas a la API de Módulo 3 en menos de 500 milisegundos.
+- **SC-004**: Cero por ciento (0%) de cambios de estado en la reserva durante este caso de uso (la reserva conserva su estado "Pendiente de Pago").
+- **SC-005**: Cero (0) operaciones financieras, enlaces de pasarelas, captura de tarjetas o cálculos de montos ejecutados dentro de Módulo 2.
+- **SC-006**: El cien por ciento (100%) de las transferencias exitosas a Módulo 3 quedan registradas en auditoría con su respectiva marca temporal.
