@@ -35,10 +35,10 @@ Cada vez que una reserva cambia de estado dentro del Módulo 2 (`Pendiente de Pa
     - **When** el Propietario registra la entrega en Módulo 2
     - **Then** el sistema le notifica al Módulo 3 para que le entregue el dinero al anfitrión y le devuelva el depósito de garantía al cliente
 
-4. **Scenario**: Notificación de reserva Cancelada con su motivo exacto a Módulo 3
-    - **Given** una reserva que pasa a estado "Cancelado" con un sub-estado asignado (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión` o `Por Inasistencia`)
+4. **Scenario**: Notificación de reserva Cancelada con su clasificación y detalle temporal a Módulo 3
+    - **Given** una reserva que pasa a estado "Cancelado" con un sub-estado asignado (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión` o `Por Inasistencia`), las horas de anticipación calculadas y el actor solicitante
     - **When** se confirma la cancelación en Módulo 2
-    - **Then** el sistema le informa a Módulo 3 el estado y el sub-estado de cancelación para que este calcule los reembolsos o penalidades que apliquen
+    - **Then** el sistema le informa a Módulo 3 el estado "Cancelado", el sub-estado contractual, el actor que canceló, la anticipación temporal calculada y la justificación/avería (si aplica), para que Módulo 3 aplique directamente su matriz de liquidación, reembolsos o penalidades sin requerir una consulta síncrona previa de tipificación
 
 ---
 
@@ -99,7 +99,7 @@ Si al intentar enviar una notificación al Módulo 3 se pierde la conexión a in
 - **FR-004**: Cuando la reserva pase a estado `En Navegación`, el sistema DEBE notificar a Módulo 3 para confirmar el inicio del viaje y la cobertura del seguro en el agua.
 - **FR-005**: Cuando la reserva pase a estado `Completado` con sub-estado `Sin incidentes`, el sistema DEBE notificar a Módulo 3 para que entregue el pago al anfitrión y le devuelva la garantía al cliente.
 - **FR-006**: 🔶 [PENDIENTE DE CONFIRMAR — Notificación de incidentes a Módulo 3]: Cuando la reserva pase a estado `Completado` con sub-estado `Con incidentes`, el sistema DEBE notificar a Módulo 3 enviando los detalles y comentarios de las averías para que Módulo 3 retenga la garantía e inicie la revisión. [FIN PENDIENTE]
-- **FR-007**: Cuando la reserva pase a estado `Cancelado`, el sistema DEBE notificar a Módulo 3 el sub-estado de cancelación correspondiente (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión` o `Por Inasistencia`) para que Módulo 3 aplique las reglas de devolución y penalidades.
+- **FR-007**: Cuando la reserva pase a estado `Cancelado`, el sistema DEBE notificar a Módulo 3 el sub-estado de cancelación clasificado (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión` o `Por Inasistencia`), el actor que canceló, la anticipación temporal calculada (en horas y minutos) y la justificación/avería (si aplica), para que Módulo 3 aplique directamente su matriz de liquidación, reembolsos y penalidades sin requerir una API previa de consulta de tipos de cancelación.
 - **FR-008**: Cuando la reserva pase a estado `Expirado`, el sistema DEBE notificar a Módulo 3 para el cierre del intento de reserva y la liberación de cobros si existieron intentos en proceso.
 - **FR-009**: El sistema DEBE contar con un mecanismo de envío garantizado que reintente entregar los avisos pendientes si ocurre una falla temporal de conexión con Módulo 3.
 - **FR-010**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE calcular devoluciones, penalidades en dinero, costos de seguros ni realizar transferencias**. Toda la lógica de cobros y cuentas es responsabilidad exclusiva del Módulo 3.
@@ -109,7 +109,7 @@ Si al intentar enviar una notificación al Módulo 3 se pierde la conexión a in
 
 ### Key Entities
 
-- **Evento de Estado (`ReservationStatusEvent`)**: Datos del mensaje enviado a Módulo 3. Incluye: código del evento, código de la reserva, código del cliente, código del barco, estado principal, sub-estado, fecha/hora del evento, aviso de incidentes y comentarios explicativos.
+- **Evento de Estado (`ReservationStatusEvent`)**: Datos del mensaje enviado a Módulo 3. Incluye: código del evento, código de la reserva, código del cliente, código del barco, estado principal, sub-estado, fecha/hora del evento, datos de cancelación (actor solicitante, anticipación en horas/minutos, justificación si aplica), aviso de incidentes y comentarios explicativos.
 - **Reserva (`Reservation`)**: Entidad del Módulo 2 cuyos cambios de estado se notifican a Módulo 3.
 - **Acuse de Recibo (`Module3Acknowledgment`)**: Respuesta enviada por Módulo 3 confirmando que recibió la notificación correctamente.
 
