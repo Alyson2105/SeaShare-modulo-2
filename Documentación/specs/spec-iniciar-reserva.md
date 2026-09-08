@@ -1,144 +1,91 @@
 # Feature Specification: Iniciar Reserva
 
-**Módulo**: Módulo 2 – Gestión de Reserva  
-**Creado**: 2026-09-03 (Actualizado: 2026-09-08)  
-**Actor primario**: Arrendatario  
-**Dependencias externas (APIs)**:
-
-- Módulo 1 – Gestión de Embarcación (`Proveer información de embarcación`, `Brindar información estado operativo`): consulta de existencia, datos del activo (incluyendo sus horas fijas de check-in y check-out) y verificación de disponibilidad operativa.
-- Módulo 3 – Gestión de Liquidación (`Proveer información cotización de reserva` [consumo], `Confirmar pago` [recepción]): cálculo de la cotización estimada y recepción de la confirmación de pago.
-
----
-
-## User Scenarios & Testing *(mandatory)*
-
-### User Story 1 - [Crear reserva con periodo válido y sin traslapes] (Priority: P1)
-
-El Arrendatario selecciona una embarcación disponible e ingresa el rango de fechas (días de inicio y fin) que desea reservarla. El sistema consulta a Módulo 1 para validar la existencia y estado operativo de la embarcación, obtiene sus horas fijas de check-in y check-out, valida que el periodo en días sea coherente y dentro de los límites permitidos, y verifica que ninguno de los días solicitados esté ya ocupado por otra reserva de la misma embarcación. Si todo es correcto, registra la reserva con su rango horario exacto y estado inicial "Pendiente de Pago", iniciando el temporizador de bloqueo temporal (TTL).
-
-**Why this priority**: Es el flujo central de contratación de la plataforma. Garantiza la integridad básica del negocio al impedir reservas sobre embarcaciones no operativas, fechas incoherentes o días ya reservados (sobreventa).
-
-**Independent Test**: Se puede probar simulando una embarcación disponible con horarios de check-in (ej. 09:00) y check-out (ej. 17:00) conocidos en Módulo 1, enviando solicitudes con diferentes rangos de fechas (válidas, no operativas, duración inválida, y días con traslape previo), verificando que el sistema solo persiste la reserva y asigna el rango horario exacto cuando todas las validaciones son superadas.
-
-**Acceptance Scenarios**:
-
-1. **Scenario**: Reserva exitosa con rango de días disponible y horas fijas de la embarcación
-   - **Given** el Arrendatario está autenticado, la embarcación seleccionada tiene estado operativo "Disponible" en Módulo 1 con hora de check-in (09:00) y check-out (17:00), y no existen reservas previas en los días solicitados
-   - **When** el Arrendatario solicita reservar del día 10 al día 12 de un mes determinado
-   - **Then** el sistema crea la reserva en estado "Pendiente de Pago" con inicio el día 10 a las 09:00 y fin el día 12 a las 17:00, e inicia el temporizador de 15 minutos (TTL)
-
-2. **Scenario**: Intento de reserva con embarcación no operativa en Módulo 1
-   - **Given** Módulo 1 informa que la embarcación seleccionada está en estado "En Mantenimiento", "Reservado" o "En Navegación"
-   - **When** el Arrendatario intenta iniciar la reserva
-   - **Then** el sistema rechaza la solicitud informando que la embarcación no se encuentra disponible operativamente para reserva
-
-3. **Scenario**: Solicitud con duración fuera de los límites permitidos
-   - **Given** una duración de reserva solicitada (en días) menor a la mínima o mayor a la máxima establecida [NEEDS CLARIFICATION: duración mínima y máxima en días]
-   - **When** el Arrendatario intenta iniciar la reserva
-   - **Then** el sistema rechaza la solicitud indicando que la cantidad de días solicitada está fuera del rango permitido
-
-4. **Scenario**: Intento de reserva con traslape en uno o más días con reserva existente
-   - **Given** la misma embarcación ya cuenta con una reserva activa (confirmada o pendiente de pago) que ocupa uno o más días del rango solicitado
-   - **When** el Arrendatario intenta solicitar ese rango de fechas
-   - **Then** el sistema rechaza la solicitud informando que la embarcación ya está ocupada en los días seleccionados y no crea la reserva
+**Módulo**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
+**Fecha de Creación**: 2026-09-08 (Actualizado para arquitectura de estado Borrador)  
+**Actores Primarios**: Arrendatario (Turista / Cliente)  
+**Dependencias Externas (APIs)**:
+- **Módulo 1 (Gestión de Flota y Activos P2P)**: API externa `Consultar información de embarcación` para validar la existencia del activo, su puerto GPS y su zona horaria antes de permitir la reserva. (Nota: En este paso NO se llama a `Asignar estado operativo`, la embarcación no se bloquea).
+- **Casos de uso internos de Módulo 2**:
+    - `Proveer cotización de reserva` `(<<include>>)`: Para obtener la estimación del costo basada en las fechas seleccionadas.
+    - `Actualizar estado reserva` `(<<include>>)`: Para registrar el nacimiento de la reserva en estado `Borrador`.
 
 ---
 
-### User Story 2 - [Resolver solicitudes simultáneas sobre el mismo rango de días] (Priority: P1 / P2 - PENDIENTE DE CONFIRMACIÓN)
+## User Scenarios & Testing
 
-Dos o más Arrendatarios intentan reservar la misma embarcación en el mismo rango de días casi al mismo tiempo. El sistema resuelve la contienda de manera exclusiva, otorgando el bloqueo a una sola solicitud y rechazando las demás por no disponibilidad, garantizando que nunca se generen reservas duplicadas para la misma embarcación y fechas.
+### User Story 1 - Configurar y registrar la intención de reserva en estado Borrador (Priority: P1)
 
-**Why this priority**: En un marketplace con alta demanda, la concurrencia simultánea sobre la misma embarcación puede provocar dobles reservas si no se gestiona de forma atómica.
+Como Arrendatario, quiero seleccionar una embarcación, ingresar las fechas de mi viaje y la cantidad de pasajeros para crear una reserva preliminar y ver el costo estimado antes de decidir si procedo a pagar.
 
-**Independent Test**: Se puede probar enviando dos o más solicitudes de reserva concurrentes sobre la misma embarcación y el mismo rango de días, verificando que exactamente una solicitud crea la reserva en estado "Pendiente de Pago" y las demás son rechazadas informando que los días ya no están disponibles.
+***Why this priority***: Es el punto de entrada principal al embudo de conversión del marketplace. Sin este paso, el cliente no puede formalizar su intención de viaje ni conocer el presupuesto estimado aplicable a sus fechas.
 
-**Acceptance Scenarios**:
+***Independent Test***: Se prueba seleccionando una embarcación válida en Módulo 1, ingresando fechas futuras y una cantidad de pasajeros válida. Se verifica que el sistema consulte la cotización estimada a Módulo 3 (a través de `Proveer cotización de reserva`), muestre la advertencia obligatoria, y guarde la reserva en estado `Borrador` sin bloquear la disponibilidad del barco en Módulo 1.
 
-1. **Scenario**: Dos solicitudes simultáneas sobre los mismos días, un único ganador
-   - **Given** dos Arrendatarios envían al mismo tiempo una solicitud de reserva para la misma embarcación y el mismo rango de días disponibles
-   - **When** el sistema procesa ambas solicitudes concurrentemente
-   - **Then** el sistema acepta únicamente una de las solicitudes (creando su reserva en estado "Pendiente de Pago") y rechaza la otra indicando que la embarcación ya no está disponible en esas fechas
+***Acceptance Scenarios***:
 
----
+1. **Scenario**: Creación exitosa de la reserva preliminar
+    - **Given** un Arrendatario autenticado y una embarcación validada en Módulo 1
+    - **When** el usuario selecciona las fechas, horas y pasajeros, y presiona "Reservar"
+    - **Then** el sistema invoca `(<<include>>)` a "Proveer cotización de reserva" obteniendo el valor estimado, muestra la advertencia obligatoria ("Valor estimado..."), e invoca `(<<include>>)` a "Actualizar estado reserva" para crear la reserva en estado `Borrador` sin bloquear el activo físico
 
-### User Story 3 - [Ver cotización antes de confirmar] (Priority: P2)
-
-Antes de confirmar definitivamente la creación de la reserva, el sistema presenta al Arrendatario una cotización estimada con el desglose del costo del alquiler por los días seleccionados, calculada a partir de los datos tarifarios de Módulo 3.
-
-**Why this priority**: Otorga transparencia de precios al usuario antes de asumir el compromiso de pago, pero no bloquea la lógica transaccional básica de validación de disponibilidad del MVP.
-
-**Independent Test**: Se puede probar solicitando la cotización para un rango de días determinado en una embarcación con tarifas configuradas en Módulo 3, verificando que el monto presentado coincide con la tarifa por día multiplicada por la duración.
-
-**Acceptance Scenarios**:
-
-1. **Scenario**: Presentación de cotización estimada
-   - **Given** el Arrendatario seleccionó una embarcación y un rango de días válidos
-   - **When** el sistema calcula los costos consultando la tarifa en Módulo 3 (vía "Proveer información cotización de reserva")
-   - **Then** se presenta al Arrendatario la cotización total estimada antes de la confirmación final de la reserva
+2. **Scenario**: Fechas pasadas o inválidas rechazadas por el motor de cotización
+    - **Given** un Arrendatario configurando una reserva
+    - **When** ingresa fechas en el pasado o una fecha de fin anterior a la de inicio
+    - **Then** la validación delegada en la cotización falla, el sistema rechaza la operación informando el error y la reserva no se crea en la base de datos
 
 ---
 
-### User Story 4 - [Expiración automática por vencimiento del TTL sin pago] (Priority: P1)
+### User Story 2 - Mostrar la cotización estimada con la advertencia obligatoria de Finanzas (Priority: P1)
 
-Una vez creada la reserva en estado "Pendiente de Pago", el sistema mantiene bloqueados los días seleccionados durante una ventana de tolerancia de 15 minutos (TTL). Si no se recibe confirmación de pago por parte de Módulo 3 al vencer dicho tiempo, el sistema expira la reserva automáticamente y libera los días y la embarcación en Módulo 1.
+Como sistema, quiero asegurar que el Arrendatario reciba la cotización estimada exacta devuelta por el caso de uso subordinado, acompañada siempre del texto de advertencia obligatorio dictado por Módulo 3, para gestionar correctamente sus expectativas financieras antes del cobro final.
 
-**Why this priority**: Evita bloqueos indefinidos de inventario provocados por usuarios que inician el proceso pero no completan el pago, protegiendo los ingresos del Propietario.
+***Why this priority***: Módulo 2 no calcula dinero ni asume cargos ocultos. Al estar en la etapa de `Borrador`, el total devuelto es solo un estimado. Omitir la advertencia generaría problemas legales y reclamos cuando en el paso de pago se sumen el seguro y la garantía.
 
-**Independent Test**: Se puede probar creando una reserva en estado "Pendiente de Pago", dejando transcurrir el lapso de 15 minutos sin emitir pago desde Módulo 3, y verificando que la reserva transiciona a "Expirada" y que los días vuelven a estar disponibles para nuevas consultas.
+***Independent Test***: Se simula la creación de la reserva y se intercepta la interfaz gráfica para comprobar que el texto "Valor estimado. No incluye cargos adicionales ni depósito de seguridad" se renderiza exactamente como fue entregado por la integración, sin alteraciones.
 
-**Acceptance Scenarios**:
+***Acceptance Scenarios***:
 
-1. **Scenario**: Expiración automática tras 15 minutos sin pago
-   - **Given** una reserva creada en estado "Pendiente de Pago" con un temporizador de 15 minutos activo
-   - **When** transcurren los 15 minutos sin que Módulo 3 confirme el pago
-   - **Then** el sistema invoca "Actualizar estado reserva" para transicionarla a "Expirada" y libera la disponibilidad de la embarcación en Módulo 1
+1. **Scenario**: Visualización de la cotización estimada
+    - **Given** un Arrendatario que acaba de configurar sus fechas y pasajeros
+    - **When** el sistema recibe la respuesta de `(<<include>>)` "Proveer cotización de reserva"
+    - **Then** el sistema presenta el monto en pantalla junto con la advertencia obligatoria íntegra, sin sumar ni calcular ningún valor adicional por su cuenta
 
 ---
 
 ### Edge Cases
 
-- **Indisponibilidad o timeout de la API de Módulo 1**: Si la API de Módulo 1 no responde o devuelve error al consultar la información, horarios o estado operativo de la embarcación, el sistema DEBE abortar el proceso de reserva de forma segura, sin crear reservas provisionales, e informar al Arrendatario sobre la indisponibilidad temporal del servicio. [NEEDS CLARIFICATION: SLA de respuesta esperado de Módulo 1]
-- **Ausencia de horarios de check-in / check-out en Módulo 1**: Si la embarcación registrada en Módulo 1 no tiene definidos sus horarios fijos de check-in y check-out, el sistema DEBE rechazar la creación de la reserva e informar el error de configuración del activo. [NEEDS CLARIFICATION: ¿existen horarios por defecto a nivel de plataforma o es obligatorio que el Propietario los configure?]
-- **Abandono del flujo previo a la confirmación**: Si el Arrendatario consulta la cotización pero abandona el proceso antes de confirmar la solicitud, el sistema NO DEBE persistir ninguna reserva ni aplicar retenciones sobre los días del calendario; la embarcación permanece totalmente disponible para otros usuarios.
-- **Múltiples reservas activas por el mismo Arrendatario**: El sistema permite que un Arrendatario gestione varias reservas en curso simultáneamente (para distintas fechas o embarcaciones); cada reserva opera con su propio ciclo de vida y temporizador TTL de 15 minutos de forma independiente.
-- **Concurrencia entre expiración del TTL y confirmación de pago (límite del minuto 15)**: Si la confirmación de pago de Módulo 3 llega cuando la reserva ya fue marcada como "Expirada" y liberada, el sistema DEBE rechazar el evento de pago y notificar a Módulo 3 para que tramite el reembolso correspondiente; si el pago se recibe antes de la ejecución de la expiración, prevalece la confirmación y la reserva transiciona a "Confirmada".
-- **Zona horaria de la embarcación**: La validación de fechas y el cálculo de inicio y fin de la reserva se realizan en la zona horaria del puerto de atraque de la embarcación, garantizando que las horas de check-in y check-out correspondan a la hora local del activo.
+- **Condición de No-Bloqueo**: A diferencia de versiones anteriores, crear una reserva en este caso de uso **no aparta la embarcación**. Múltiples usuarios pueden crear reservas en estado `Borrador` para el mismo barco y las mismas fechas al mismo tiempo. El primero que decida avanzar al caso de uso `Iniciar pago` será quien se quede con el bloqueo del inventario.
+- **Abandono de la Reserva en Borrador**: Si el Arrendatario crea la reserva (estado `Borrador`) pero nunca avanza a pagar, el registro quedará inactivo. Como no tiene temporizador TTL ni bloquea inventario, el sistema puede limpiar estos registros pasivamente mediante rutinas de mantenimiento sin afectar la operación.
+- **Indisponibilidad de la cotización**: Si `Proveer cotización de reserva` retorna un error porque Módulo 3 está caído o el barco no tiene tarifas configuradas, el sistema DEBE detener la creación de la reserva y mostrar un error controlado, prohibiendo la creación de un `Borrador` sin precio de referencia.
 
 ---
 
-## Requirements *(mandatory)*
+## Requirements
 
 ### Functional Requirements
 
-- **FR-001**: El sistema DEBE permitir al Arrendatario seleccionar una embarcación y especificar un rango de fechas de reserva (día de inicio y día de fin).
-- **FR-002**: El sistema DEBE consumir la API de Módulo 1 (`Proveer información de embarcación`) para verificar la existencia de la embarcación y obtener sus datos de configuración, incluyendo obligatoriamente sus horas fijas de check-in y check-out. [NEEDS CLARIFICATION: valores por defecto si no vienen configuradas].
-- **FR-003**: El sistema DEBE consumir la API de Módulo 1 (`Brindar información estado operativo`) para verificar que la embarcación se encuentra en estado "Disponible" antes de proceder con la reserva.
-- **FR-004**: El sistema DEBE validar que la fecha de inicio sea igual o anterior a la fecha de fin, que el inicio no se encuentre en el pasado [NEEDS CLARIFICATION: política para reservas inmediatas / mismo día], y que la duración total en días esté dentro de los límites permitidos [NEEDS CLARIFICATION: duración mínima y máxima en días].
-- **FR-005**: El sistema DEBE construir el rango temporal exacto de la reserva asignando la hora fija de check-in de la embarcación al día de inicio, y la hora fija de check-out de la embarcación al día de fin.
-- **FR-006**: El sistema DEBE verificar que ningún día comprendido en el rango solicitado esté ocupado por otra reserva activa (en estado "Confirmada" o "Pendiente de Pago" con TTL vigente) para la misma embarcación en Módulo 2.
-- **FR-007**: Si la validación de fechas o disponibilidad de días resulta rechazada, el sistema NO DEBE crear la reserva y DEBE informar al Arrendatario el motivo específico del rechazo (embarcación no operativa, duración fuera de límites o fechas ya ocupadas).
-- **FR-008**: El sistema DEBE resolver las solicitudes concurrentes sobre los mismos días de forma atómica y exclusiva, garantizando que solo una solicitud resulte admitida y las demás sean rechazadas por no disponibilidad. [NEEDS CLARIFICATION: el mecanismo técnico de concurrencia (bloqueo optimista vs. pesimista) es una decisión de diseño de arquitectura].
-- **FR-009**: El sistema DEBE presentar al Arrendatario la cotización estimada antes de la confirmación final. Dicha cotización se calcula consumiendo la tarifa correspondiente desde Módulo 3 (`Proveer información cotización de reserva`); este caso de uso solo la presenta sin recalcular montos por su cuenta.
-- **FR-010**: Al confirmar una solicitud con días válidos y disponibles, el sistema DEBE persistir la reserva en estado "Pendiente de Pago" e iniciar inmediatamente un temporizador (TTL) de 15 minutos.
-- **FR-011**: Si el sistema recibe la confirmación de pago desde Módulo 3 (`Confirmar pago`) antes del vencimiento del TTL, la reserva DEBE transicionar a estado "Confirmada" y el temporizador DEBE cancelarse (transición ejecutada por "Actualizar estado reserva").
-- **FR-012**: Si el temporizador de 15 minutos expira sin confirmación de pago, el sistema DEBE invocar "Actualizar estado reserva" para marcar la reserva como "Expirada" y notificar a Módulo 1 la liberación de la embarcación.
-- **FR-013**: El sistema DEBE registrar el identificador del Arrendatario asociado a cada reserva creada.
-
-### Key Entities
-
-- **Reserva**: Entidad central del módulo. Atributos de dominio clave: identificador único, identificador del arrendatario, identificador de la embarcación (referencia a Módulo 1), fecha/hora de inicio (día inicial + hora check-in), fecha/hora de fin (día final + hora check-out), días reservados, estado de la reserva (ej. "Pendiente de Pago", "Confirmada", "Expirada"), cotización estimada y marca temporal de expiración del TTL (15 minutos).
-- **Embarcación** *(entidad externa, propiedad de Módulo 1)*: Representa el activo náutico. Módulo 2 consulta y referencia sus atributos: identificador, estado operativo (Disponible, Reservado, En Navegación, En Mantenimiento), hora fija de check-in, hora fija de check-out y puerto/ubicación para determinar zona horaria.
-- **Arrendatario**: Usuario cliente que solicita la reserva. Se asume gestionado por un servicio de autenticación/identidad externo. [NEEDS CLARIFICATION: ¿Módulo 2 gestiona usuarios o consume un servicio de identidad?].
+- **FR-001**: El sistema DEBE permitir al Arrendatario ingresar el identificador de la embarcación, fechas/horas pactadas de inicio y fin, y la cantidad de pasajeros.
+- **FR-002**: El sistema DEBE consultar a la API externa de Módulo 1 (`Consultar información de embarcación`) para validar que el identificador existe y obtener el puerto de atraque y su zona horaria oficial.
+- **FR-003**: El sistema DEBE invocar obligatoriamente al caso de uso subordinado `Proveer cotización de reserva` `(<<include>>)` en su modo individual, transmitiéndole las fechas y la embarcación.
+- **FR-004**: El sistema DEBE capturar el precio estimado devuelto y exhibir obligatoriamente en la interfaz de usuario el siguiente texto inmutable asociado a la cotización: *"Valor estimado. No incluye cargos adicionales ni depósito de seguridad"*.
+- **FR-005**: Si la solicitud de reserva es válida y se obtuvo la cotización, el sistema DEBE invocar al caso de uso orquestador `Actualizar estado reserva` `(<<include>>)` solicitando la creación de la reserva en el estado principal `Borrador`.
+- **FR-006**: El sistema **NO DEBE** invocar llamadas de bloqueo hacia Módulo 1 en esta etapa. El estado `Borrador` no debe alterar la disponibilidad operativa de la embarcación física.
+- **FR-007**: El sistema **NO DEBE** iniciar el temporizador TTL de 15 minutos en este caso de uso. El control de tiempo límite se delega estrictamente al caso de uso posterior (`Iniciar pago`).
+- **FR-008**: **REGLA DE NEGOCIO ESTRICTA (Sin cálculo financiero):** El sistema **NO DEBE** manipular el valor devuelto por la cotización, no debe intentar sumar seguros, comisiones ni depósitos por su cuenta, ni realizar validaciones de reglas tarifarias. Toda la matemática y validación de fechas a nivel de costo pertenece a Módulo 3.
 
 ---
 
-## Success Criteria *(mandatory)*
+### Key Entities
+
+- **Reserva (`Reservation`)**: Entidad de Módulo 2 que se crea y persiste por primera vez en estado `Borrador` tras este flujo, conteniendo los parámetros operativos (fechas, barco, pasajeros) y la cotización estimada de referencia.
+
+---
+
+## Success Criteria
 
 ### Measurable Outcomes
 
-- **SC-001**: El Arrendatario puede completar el flujo de selección de fechas, consulta de cotización y solicitud de reserva en menos de 2 minutos.
-- **SC-002**: El sistema valida la disponibilidad operativa y consulta de horarios en Módulo 1 en menos de [NEEDS CLARIFICATION: tiempo objetivo, p. ej. 2 segundos].
-- **SC-003**: Cero por ciento (0%) de reservas creadas sobre días con traslape o fechas incoherentes en la misma embarcación.
-- **SC-004**: El cien por ciento (100%) de las reservas creadas registran su inicio y fin vinculados a los horarios exactos de check-in y check-out configurados para la embarcación.
-- **SC-005**: Bajo concurrencia simultánea sobre el mismo rango de días, exactamente una (1) solicitud es procesada exitosamente y el 100% de las demás son rechazadas limpiamente sin generar sobreventas ni inconsistencias de inventario.
-- **SC-006**: El cien por ciento (100%) de las reservas en estado "Pendiente de Pago" sin confirmación de pago tras 15 minutos son marcadas como "Expirada" y la embarcación es liberada en Módulo 1 en menos de 5 segundos tras vencer el temporizador.
+- **SC-001**: El 100% de las reservas recién creadas nacen exclusivamente en estado `Borrador`.
+- **SC-002**: Cero (0%) bloqueos operativos enviados a Módulo 1 derivados de la ejecución de este caso de uso.
+- **SC-003**: El 100% de las cotizaciones mostradas en este paso despliegan la advertencia textual requerida por Módulo 3.
+- **SC-004**: Cero (0) operaciones aritméticas, redondeos o cálculos de tarifas ejecutados internamente por el código de Módulo 2.

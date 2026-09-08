@@ -1,126 +1,92 @@
-# Feature Specification: Recibir Estado de Reserva
+# Feature Specification: Recibir Estado de Reserva (Notificación a Módulo 3)
 
-**Módulo**: Módulo 2 (Operación de Reservas, Tiempos y Cancelaciones)  
-**Created**: 2026-09-06  
-**Primary Actor / Disparador**: Invocación interna desde el caso de uso `Actualizar estado reserva` (al confirmarse cualquier cambio de estado en la reserva) / Módulo 3 (Gestión Liquidación) como consumidor externo  
-**External Dependencies (APIs)**:
-- **Módulo 3 (Liquidación, Seguros y Dispersión de Fondos)**: API externa de tesorería y liquidación (`Recibir estado de reserva` que atiende los avisos de cambio de estado para activar seguros, guardar o devolver el depósito de garantía, y entregar los pagos o reembolsos).
-
----
-
-## User Scenarios & Testing *(mandatory)*
-
-### User Story 1 - Avisar en tiempo real al Módulo 3 sobre los cambios de estado del viaje (Priority: P1)
-
-Cada vez que una reserva cambia de estado dentro del Módulo 2 (`Pendiente de Pago`, `Confirmada`, `En Navegación`, `Completado`, `Cancelado` o `Expirado`), este proceso envía una notificación inmediata al Módulo 3. Con esta información, el Módulo 3 maneja los cobros y seguros: activa el seguro del barco, guarda o devuelve la garantía y le entrega el dinero al anfitrión o al cliente según corresponda.
-
-**Why this priority**: Es la comunicación indispensable entre la operación del viaje y el área de cobros. Sin estos avisos, el Módulo 3 no sabría cuándo activar los seguros ni cuándo entregar o devolver el dinero guardado.
-
-**Independent Test**: Se prueba realizando cambios de estado en el Módulo 2 conectándolo a un simulador de Módulo 3. Se comprueba que Módulo 3 recibe la información exacta (código de reserva, estado principal, sub-estado y fecha/hora), verificando que Módulo 2 no envía ni calcula montos de dinero.
-
-**Acceptance Scenarios**:
-
-1. **Scenario**: Notificación de reserva Confirmada a Módulo 3
-    - **Given** una reserva que pasa al estado "Confirmada"
-    - **When** se guarda el cambio en Módulo 2
-    - **Then** el sistema le avisa al Módulo 3 que la reserva está "Confirmada" para que guarde los fondos y active la póliza de seguro
-
-2. **Scenario**: Notificación de inicio de viaje (En Navegación) a Módulo 3
-    - **Given** una reserva que pasa al estado "En Navegación"
-    - **When** se confirma la salida del barco en Módulo 2
-    - **Then** el sistema le avisa al Módulo 3 que el barco está "En Navegación" para ratificar que el seguro está activo en el agua
-
-3. **Scenario**: Notificación de viaje Completado sin problemas a Módulo 3
-    - **Given** una reserva que termina en estado "Completado" con el sub-estado "Sin incidentes"
-    - **When** el Propietario registra la entrega en Módulo 2
-    - **Then** el sistema le notifica al Módulo 3 para que le entregue el dinero al anfitrión y le devuelva el depósito de garantía al cliente
-
-4. **Scenario**: Notificación de reserva Cancelada con su clasificación y detalle temporal a Módulo 3
-    - **Given** una reserva que pasa a estado "Cancelado" con un sub-estado asignado (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión` o `Por Inasistencia`), las horas de anticipación calculadas y el actor solicitante
-    - **When** se confirma la cancelación en Módulo 2
-    - **Then** el sistema le informa a Módulo 3 el estado "Cancelado", el sub-estado contractual, el actor que canceló, la anticipación temporal calculada y la justificación/avería (si aplica), para que Módulo 3 aplique directamente su matriz de liquidación, reembolsos o penalidades sin requerir una consulta síncrona previa de tipificación
+**Módulo**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
+**Fecha de Creación**: 2026-09-08 (Actualizado para excluir notificaciones del estado Borrador)  
+**Actores Primarios / Disparador**: Sistema / Invocado internamente por el caso de uso `Actualizar estado reserva`.  
+**Dependencias Externas (APIs)**:
+- **Módulo 3 – Liquidación, Seguros y Dispersión de Fondos**: API externa receptora (`Recibir estado de reserva`), encargada de procesar las transiciones operativas para detonar la lógica financiera (activación de seguros, retenciones, cobros, dispersiones y reembolsos).
 
 ---
 
-### User Story 2 - Notificar de inmediato los reportes de daños para congelar la garantía (Priority: P1)
+## User Scenarios & Testing
 
-Si al recibir el barco el Propietario reporta daños o averías y la reserva finaliza en estado 'Completado' con el sub-estado 'Con incidentes', este proceso le envía un aviso prioritario al Módulo 3. Esta notificación le indica al Módulo 3 que debe retener de forma preventiva el depósito de garantía del cliente e iniciar la revisión del reclamo, sin que Módulo 2 evalúe el costo de los daños.
+### User Story 1 - Notificar el inicio del ciclo de pago y posteriores transiciones (Priority: P1)
 
-**Why this priority**: Evita que el Módulo 3 le devuelva el dinero de la garantía al cliente cuando el barco sufrió daños o pérdidas durante el viaje.
+Como sistema (Módulo 2), quiero notificar a Módulo 3 cada vez que una reserva entra a la fase de pago (`Pendiente de Pago`) y en cada transición de estado posterior, para que Finanzas tenga visibilidad en tiempo real del ciclo de vida del alquiler y pueda ejecutar sus procesos de recaudo y cobertura.
 
-**Independent Test**: Se prueba simulando la entrega de un barco con la opción "Con incidentes" y comentarios de los daños. Se verifica que el mensaje enviado a Módulo 3 incluye el aviso de retención de garantía y los comentarios, asegurando que Módulo 2 no calcula valores a cobrar.
+***Why this priority***: Módulo 3 es ciego a la operación si Módulo 2 no le avisa. Esta notificación es el gatillo que permite a Módulo 3 saber cuándo debe esperar un pago, cuándo activar un seguro o cuándo devolver dinero.
 
-**Acceptance Scenarios**:
+***Independent Test***: Se prueba interceptando la salida HTTP desde `Actualizar estado reserva` hacia un *mock* de la API de Módulo 3. Se provoca el cambio de una reserva de `Borrador` a `Pendiente de Pago` (vía `Iniciar pago`) y se verifica que Módulo 2 emita un *payload* con el ID de la reserva, el nuevo estado y la marca de tiempo, sin enviar montos calculados. Se verifica también que NO se envíe nada al crear el `Borrador`.
 
-1. **Scenario**: Notificación de entrega con reporte de daños a Módulo 3
-    - **Given** una reserva que pasa a "Completado" con sub-estado "Con incidentes" y la descripción de los problemas encontrados
-    - **When** se registra la entrega en Módulo 2
-    - **Then** el sistema le notifica al Módulo 3 el estado "Completado", el sub-estado "Con incidentes" y los comentarios para que retenga el depósito de garantía y gestione el reclamo
+***Acceptance Scenarios***:
+
+1. **Scenario**: Notificación inicial al arrancar el proceso de pago
+    - **Given** una reserva que acaba de pasar de `Borrador` a `Pendiente de Pago` debido a que el Arrendatario ejecutó `Iniciar pago`
+    - **When** se consolida el nuevo estado en la base de datos
+    - **Then** el sistema emite una notificación síncrona a Módulo 3 informando que la reserva identificada entró a `Pendiente de Pago`, activando el interés financiero sobre el contrato
+
+2. **Scenario**: Omisión intencional de notificación para el estado Borrador
+    - **Given** un Arrendatario que acaba de crear una reserva preliminar mediante `Iniciar reserva`
+    - **When** la reserva se guarda internamente en estado `Borrador`
+    - **Then** el sistema NO notifica a Módulo 3, manteniendo el registro como un borrador interno exclusivo de Módulo 2
+
+3. **Scenario**: Notificaciones de ciclo de vida activo
+    - **Given** una reserva que transiciona a `Confirmada`, `En Navegación`, o cualquier estado terminal (`Completado`, `Cancelado`, `Expirado`)
+    - **When** se asienta el cambio en la máquina de estados
+    - **Then** el sistema notifica el evento exacto a Módulo 3, incluyendo sub-estados si aplican (ej. `Cancelado` con sub-estado `Moderado`)
 
 ---
 
-### User Story 3 - Reintentar el envío de mensajes si falla la conexión con Módulo 3 (Priority: P2)
+### User Story 2 - Asegurar la entrega de notificaciones ante caídas de red (Priority: P1)
 
-Si al intentar enviar una notificación al Módulo 3 se pierde la conexión a internet, la respuesta tarda demasiado o el servidor falla, el sistema guarda la notificación en una lista de pendientes y la reintenta enviar automáticamente hasta que Módulo 3 la reciba con éxito.
+Como sistema, quiero encolar y reintentar las notificaciones dirigidas a Módulo 3 si este no responde, para garantizar que ningún evento operativo (como un check-in o una cancelación) se pierda silenciosamente, manteniendo la consistencia eventual entre la operación y las finanzas.
 
-**Why this priority**: Asegura que ningún aviso de cambio de estado se pierda por una falla temporal de red, evitando que los pagos o devoluciones de dinero queden trabados.
+***Why this priority***: Una notificación perdida significa que un seguro no se activó o que un anfitrión nunca recibió su dinero. La entrega garantizada (Event Delivery Guarantee) es innegociable en arquitecturas desacopladas.
 
-**Independent Test**: Se prueba simulando un corte de red cuando se intenta enviar un aviso a Módulo 3. Se comprueba que el sistema guarda el mensaje pendiente, lo reintenta cuando regresa la conexión y lo marca como entregado al recibir la confirmación de Módulo 3.
+***Independent Test***: Se simula una caída (HTTP 503 o timeout) en la API de Módulo 3. Se dispara un cambio de estado en Módulo 2. Se verifica que Módulo 2 guarde la transición exitosamente y encole el mensaje de notificación, reintentándolo periódicamente hasta recibir un HTTP 200 OK.
 
-**Acceptance Scenarios**:
+***Acceptance Scenarios***:
 
-1. **Scenario**: Reintento exitoso tras una falla temporal de red
-    - **Given** un cambio de estado confirmado en Módulo 2
-    - **When** el primer intento de envío a Módulo 3 falla por desconexión
-    - **Then** el sistema guarda el mensaje en pendientes, reintenta el envío y confirma la entrega una vez restablecida la conexión con Módulo 3
+1. **Scenario**: Reintento automático por indisponibilidad de Módulo 3
+    - **Given** una reserva que cambia a `En Navegación` pero la API de Módulo 3 está caída
+    - **When** el sistema intenta enviar la notificación y recibe un error de conexión
+    - **Then** el sistema marca el evento como "Pendiente de envío" y lo reintenta con una estrategia de respaldo progresivo (backoff) hasta que Módulo 3 confirme la recepción
 
 ---
 
 ### Edge Cases
 
-- **Evitar notificaciones duplicadas**:
-    - Cada mensaje enviado a Módulo 3 lleva un código único y la hora exacta del evento, permitiendo que Módulo 3 identifique y descarte avisos repetidos en caso de reintentos por falla de red.
-- **Respeto estricto del orden de los eventos**:
-    - El sistema garantiza que las notificaciones de una misma reserva se entreguen a Módulo 3 en el orden exacto en que ocurrieron (por ejemplo, primero `Confirmada`, luego `En Navegación` y finalmente `Completado`), evitando errores en los cobros.
-- **Prohibición de calcular o mover dinero en Módulo 2**:
-    - Este caso de uso solo envía avisos sobre lo que sucede en el viaje; **NO calcula comisiones, penalidades, costos de seguro ni montos de devolución**. Módulo 2 informa QUÉ pasó y CUÁNDO pasó; Módulo 3 decide CUÁNTO dinero se entrega.
-- **Falla prolongada en la conexión con Módulo 3**:
-    - Si el Módulo 3 permanece caído tras varios reintentos, la notificación se queda guardada en estado "Pendiente de Entrega" y se genera una alerta para su revisión, garantizando que no se pierda ningún evento.
+- **Idempotencia en la Recepción**: Si Módulo 2 envía dos veces la misma notificación por un falso timeout de red, Módulo 3 debe ser capaz de procesarla de forma idempotente. Módulo 2 envía identificadores únicos por cada transición para facilitar esto.
+- **Reporte de Incidentes**: Si la notificación es de un estado `Completado` con sub-estado `Con incidentes`, el *payload* debe incluir obligatoriamente el texto descriptivo de las averías para que Módulo 3 sustente la retención del depósito de garantía.
+- **Prohibición de Cálculo Monetario**: Las notificaciones de estado son puramente operativas. **Módulo 2 JAMÁS incluye en el *payload* cálculos de penalidades, montos de reembolso o valoraciones de daños**[cite: 2]. Solo notifica el estado (ej. `Cancelado`), el sub-estado (ej. `Tardío`) y el actor responsable.
 
 ---
 
-## Requirements *(mandatory)*
+## Requirements
 
 ### Functional Requirements
 
-- **FR-001**: El sistema DEBE ofrecer un mecanismo interno para recibir y enviar los avisos de cambio de estado generados desde el caso de uso `Actualizar estado reserva`.
-- **FR-002**: El sistema DEBE construir la notificación para Módulo 3 incluyendo los siguientes datos: código de la reserva, código del cliente, código del barco, estado principal alcanzado (`Pendiente de Pago`, `Confirmada`, `En Navegación`, `Completado`, `Cancelado`, `Expirado`), sub-estado (si aplica), fecha/hora del evento y el proceso que lo causó.
-- **FR-003**: Cuando la reserva pase a estado `Confirmada`, el sistema DEBE notificar a Módulo 3 para habilitar la activación de la póliza de seguro y la custodia del dinero.
-- **FR-004**: Cuando la reserva pase a estado `En Navegación`, el sistema DEBE notificar a Módulo 3 para confirmar el inicio del viaje y la cobertura del seguro en el agua.
-- **FR-005**: Cuando la reserva pase a estado `Completado` con sub-estado `Sin incidentes`, el sistema DEBE notificar a Módulo 3 para que entregue el pago al anfitrión y le devuelva la garantía al cliente.
-- **FR-006**: 🔶 [PENDIENTE DE CONFIRMAR — Notificación de incidentes a Módulo 3]: Cuando la reserva pase a estado `Completado` con sub-estado `Con incidentes`, el sistema DEBE notificar a Módulo 3 enviando los detalles y comentarios de las averías para que Módulo 3 retenga la garantía e inicie la revisión. [FIN PENDIENTE]
-- **FR-007**: Cuando la reserva pase a estado `Cancelado`, el sistema DEBE notificar a Módulo 3 el sub-estado de cancelación clasificado (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión` o `Por Inasistencia`), el actor que canceló, la anticipación temporal calculada (en horas y minutos) y la justificación/avería (si aplica), para que Módulo 3 aplique directamente su matriz de liquidación, reembolsos y penalidades sin requerir una API previa de consulta de tipos de cancelación.
-- **FR-008**: Cuando la reserva pase a estado `Expirado`, el sistema DEBE notificar a Módulo 3 para el cierre del intento de reserva y la liberación de cobros si existieron intentos en proceso.
-- **FR-009**: El sistema DEBE contar con un mecanismo de envío garantizado que reintente entregar los avisos pendientes si ocurre una falla temporal de conexión con Módulo 3.
-- **FR-010**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE calcular devoluciones, penalidades en dinero, costos de seguros ni realizar transferencias**. Toda la lógica de cobros y cuentas es responsabilidad exclusiva del Módulo 3.
-- **FR-011**: El sistema DEBE guardar un registro de cada notificación enviada a Módulo 3, guardando: código del evento, código de la reserva, estado/sub-estado notificado, fecha/hora de envío y la confirmación de recepción entregada por Módulo 3.
+- **FR-001**: El sistema DEBE enviar una petición a la API externa `Recibir estado de reserva` de Módulo 3 cada vez que el caso de uso `Actualizar estado reserva` consolide una transición de estado válida.
+- **FR-002**: El sistema **NO DEBE** emitir ninguna notificación a Módulo 3 cuando una reserva sea creada o modificada en estado `Borrador`. La integración con Módulo 3 inicia estrictamente a partir del estado `Pendiente de Pago`.
+- **FR-003**: El *payload* de la notificación DEBE contener obligatoriamente: identificador de la reserva, nuevo estado principal, sub-estado (si aplica), marca temporal exacta del evento (en formato ISO 8601) y actor que disparó el evento.
+- **FR-004**: Si el estado es `Cancelado`, la notificación DEBE incluir el sub-estado (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión`, `Por Inasistencia`) y la anticipación temporal cronológica.
+- **FR-005**: Si el estado es `Completado` con sub-estado `Con incidentes`, la notificación DEBE incluir el reporte textual de novedades ingresado por el Propietario.
+- **FR-006**: El sistema DEBE implementar un mecanismo de entrega garantizada (cola de reintentos) para asegurar que las notificaciones alcancen Módulo 3 ante fallos temporales de red o timeouts.
+- **FR-007**: **REGLA ESTRICTA**: El sistema **NO DEBE** calcular ni incluir datos financieros procesados en la notificación[cite: 2]. Finanzas es responsable de interpretar el estado operativo y traducir ese evento a dinero.
 
 ---
 
 ### Key Entities
 
-- **Evento de Estado (`ReservationStatusEvent`)**: Datos del mensaje enviado a Módulo 3. Incluye: código del evento, código de la reserva, código del cliente, código del barco, estado principal, sub-estado, fecha/hora del evento, datos de cancelación (actor solicitante, anticipación en horas/minutos, justificación si aplica), aviso de incidentes y comentarios explicativos.
-- **Reserva (`Reservation`)**: Entidad del Módulo 2 cuyos cambios de estado se notifican a Módulo 3.
-- **Acuse de Recibo (`Module3Acknowledgment`)**: Respuesta enviada por Módulo 3 confirmando que recibió la notificación correctamente.
+- **Notificación de Transición (`StateTransitionEvent`)**: DTO (Data Transfer Object) de integración saliente que empaqueta los detalles del cambio de estado operativo para consumo de Módulo 3.
 
 ---
 
-## Success Criteria *(mandatory)*
+## Success Criteria
 
 ### Measurable Outcomes
 
-- **SC-001**: El 100% de los cambios de estado confirmados en `Actualizar estado reserva` envían la notificación al Módulo 3 en menos de 500 milisegundos.
-- **SC-002**: Cero (0%) avisos de cambio de estado perdidos (el 100% de los eventos se reintentan hasta recibir confirmación de Módulo 3).
-- **SC-003**: El 100% de los cierres de viaje con sub-estado `Con incidentes` envían el aviso de retención de garantía y los comentarios al Módulo 3.
-- **SC-004**: Cero (0) cálculos de dinero, tarifas, comisiones o pagos realizados dentro de Módulo 2.
-- **SC-005**: El 100% de las notificaciones enviadas incluyen un código único para evitar que Módulo 3 procese mensajes duplicados.
+- **SC-001**: Cero (0%) notificaciones enviadas a Módulo 3 relacionadas con el estado interno `Borrador`.
+- **SC-002**: El 100% de los cambios desde `Pendiente de Pago` en adelante son notificados a Módulo 3 (0% de eventos perdidos gracias a la cola de reintentos).
+- **SC-003**: El tiempo de emisión del primer intento de notificación no supera los 500 milisegundos tras la consolidación del estado en la base de datos local.
+- **SC-004**: Cero (0) valores financieros o monetarios calculados incluidos en el cuerpo del mensaje enviado a Módulo 3[cite: 2].
