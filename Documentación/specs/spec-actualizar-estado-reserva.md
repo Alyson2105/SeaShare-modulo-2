@@ -1,128 +1,162 @@
 # Feature Specification: Actualizar Estado de Reserva
 
-**Módulo**: Módulo 2 – Gestión de Reserva  
-**Creado**: 2026-09-05  
-**Actor primario / Disparador**: Invocación interna desde casos de uso de Módulo 2 (`Solicitar cancelación`, `Confirmar pago`, `Marcar inasistencia`, `Marcar inicio de la navegación`, `Marcar fin de navegacion`, temporizador de expiración TTL)  
-**Dependencias externas (APIs)**:
-
-- Módulo 1 – Gestión de Embarcación (`Asignar estado operativo`: API externa de escritura para sincronizar el estado físico/operativo de la embarcación en el inventario náutico).
-- Módulo 3 – Liquidación, Seguros y Dispersión de Fondos (`Recibir el estado de la reserva`: API externa hacia la cual Módulo 2 empuja el estado actualizado de la reserva en cada transición para gobernar la custodia de fondos, seguros y dispersión).
+**Módulo**: Módulo 2 (Operación de Reservas, Tiempos y Cancelaciones)  
+**Created**: 2026-09-06  
+**Primary Actor**: Sistema / Invocación interna (Orquestador de casos de uso de Módulo 2: `Iniciar reserva`, `Confirmar pago`, `Marcar inicio de la navegación`, `Marcar fin de navegacion`, `Solicitar cancelación`, `Marcar inasistencia`, y el temporizador de expiración TTL de 15 minutos)  
+**External Dependencies (APIs)**:
+- **Módulo 1 (Gestión de Flota y Activos P2P)**: API externa (`Asignar estado operativo`) para la sincronización del estado operativo de la embarcación (`Disponible`, `Reservado`, `En Navegación`, `En Mantenimiento/Limpieza`).
+- **Módulo 3 (Liquidación, Seguros y Dispersión de Fondos)**: API externa (`Recibir estado de reserva`) hacia la cual Módulo 2 notifica las transiciones de estado y los sub-estados operativos (incluyendo el reporte de incidentes para gestión del depósito de garantía y liquidación).
 
 ---
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - [Ejecutar transiciones válidas en el ciclo de vida de la reserva] (Priority: P1)
+### User Story 1 - Centralizar y ejecutar transiciones válidas en la máquina de estados de la reserva (Priority: P1)
 
-Cualquier caso de uso del ciclo de vida de Módulo 2 que requiera cambiar el estado de una reserva invoca a "Actualizar estado reserva". El sistema valida que la transición solicitada cumpla con la máquina de estados formal, actualiza el estado en persistencia, registra la marca de tiempo del cambio y el origen de la transición, y asegura la integridad del registro.
+Cualquier caso de uso del ciclo de vida de Módulo 2 que requiera registrar el nacimiento o modificar el estado de una reserva invoca de forma obligatoria a "Actualizar estado reserva" (`<<include>>`: `Iniciar reserva`, `Confirmar pago`, `Marcar inicio de la navegación`, `Marcar fin de navegacion`, `Solicitar cancelación`, `Marcar inasistencia`, o el temporizador TTL de 15 minutos). El sistema valida que la transición solicitada cumpla con la máquina de estados formal, asigna el estado principal y el sub-estado correspondiente, persiste el cambio de manera atómica, registra la marca de tiempo exacta y preserva la trazabilidad histórica de la reserva.
 
-**Why this priority**: Es el núcleo central de consistencia del dominio de reservas. Centralizar las transiciones en un único caso de uso previene inconsistencias de estado, carreras concurrentes y estados corruptos en la plataforma.
+**Why this priority**: Es el núcleo central de consistencia del dominio de reservas. Centralizar las transiciones en un motor único previene estados inconsistentes, condiciones de carrera concurrentes y corrupciones en el ciclo de vida del alquiler.
 
-**Independent Test**: Se puede probar preparando reservas en cada uno de los estados posibles y solicitando transiciones válidas (p. ej. de "Pendiente de Pago" a "Confirmada", de "Confirmada" a "En Navegación", de "En Navegación" a "Finalizada"), verificando que el nuevo estado se persiste de forma atómica junto con su marca temporal.
+**Independent Test**: Se puede probar aislando el motor de transiciones, preparando reservas en cada estado principal admisible y solicitando transiciones legales (p. ej. `Creación` → `Pendiente de Pago`, `Pendiente de Pago` → `Confirmada`, `Confirmada` → `En Navegación`, `En Navegación` → `Completado` con sub-estados, `Confirmada` → `Cancelado` con sub-estados, `Pendiente de Pago` → `Expirado`), verificando que el nuevo estado y sub-estado quedan persistidos atómicamente con fecha y causa.
 
 **Acceptance Scenarios**:
 
-1. **Scenario**: Transición estándar de reserva pendiente a confirmada
-   - **Given** una reserva en estado "Pendiente de Pago"
-   - **When** "Confirmar pago" invoca la actualización a estado "Confirmada"
-   - **Then** el sistema valida que la transición es admisible, actualiza el estado de la reserva a "Confirmada", almacena la marca temporal y dispara las sincronizaciones con Módulo 1 y Módulo 3
+1. **Scenario**: Creación y registro inicial de reserva en Pendiente de Pago
+    - **Given** una embarcación disponible según Módulo 1 y una solicitud de reserva válida
+    - **When** el caso de uso "Iniciar reserva" invoca la transición inicial
+    - **Then** el sistema crea la reserva con estado principal "Pendiente de Pago" e invoca a Módulo 1 (`Asignar estado operativo`) para fijar la embarcación en "Reservado"
 
-2. **Scenario**: Transición por expiración automática de TTL
-   - **Given** una reserva en estado "Pendiente de Pago" cuyo temporizador de 15 minutos ha vencido sin pago confirmado
-   - **When** el temporizador interno dispara la actualización de estado
-   - **Then** el sistema valida y actualiza el estado de la reserva a "Expirada" y dispara la liberación del activo en Módulo 1
+2. **Scenario**: Confirmación de reserva tras aprobación de pago
+    - **Given** una reserva en estado principal "Pendiente de Pago"
+    - **When** el caso de uso "Confirmar pago" invoca la actualización a estado "Confirmada"
+    - **Then** el sistema valida que la transición es legal, actualiza el estado principal a "Confirmada", almacena la marca temporal del cambio e inicia la notificación hacia los módulos externos
 
-3. **Scenario**: Transición a estados terminales por cancelación o inasistencia
-   - **Given** una reserva en estado "Confirmada"
-   - **When** se solicita transición a "Cancelada por Arrendatario", "Cancelada por Propietario" o "No-Show"
-   - **Then** el sistema actualiza el estado de la reserva al estado terminal solicitado y registra el actor y motivo causante
+3. **Scenario**: Inicio del servicio de navegación (Check-in)
+    - **Given** una reserva en estado principal "Confirmada"
+    - **When** el caso de uso "Marcar inicio de la navegación" solicita la transición de estado
+    - **Then** el sistema valida la transición y actualiza el estado principal de la reserva a "En Navegación"
+
+4. **Scenario**: Cierre exitoso del servicio sin novedades (Check-out)
+    - **Given** una reserva en estado principal "En Navegación"
+    - **When** el caso de uso "Marcar fin de navegacion" reporta el cierre del servicio indicando ausencia de novedades
+    - **Then** el sistema actualiza el estado principal a "Completado" con el sub-estado "Sin incidentes"
+
+5. **Scenario**: Cierre del servicio con novedades o averías
+    - **Given** una reserva en estado principal "En Navegación"
+    - **When** el caso de uso "Marcar fin de navegacion" reporta el cierre del servicio notificando daños o incidencias
+    - **Then** el sistema actualiza el estado principal a "Completado" con el sub-estado "Con incidentes"
+
+6. **Scenario**: Cancelación voluntaria de reserva confirmada o por inasistencia
+    - **Given** una reserva en estado principal "Confirmada"
+    - **When** "Solicitar cancelación" o "Marcar inasistencia" invocan la actualización aportando la tipificación externa o causal correspondiente
+    - **Then** el sistema actualiza el estado principal a "Cancelado" y asigna el sub-estado correspondiente ("Flexible", "Moderado", "Tardío", "Por Anfitrión" o "Por Inasistencia")
+
+7. **Scenario**: Expiración automática por vencimiento del temporizador de 15 minutos
+    - **Given** una reserva en estado principal "Pendiente de Pago" cuyo temporizador TTL de 15 minutos ha vencido sin confirmación de pago
+    - **When** el temporizador interno del sistema dispara la actualización
+    - **Then** el sistema actualiza el estado principal a "Expirado" de forma atómica
 
 ---
 
-### User Story 2 - [Sincronizar el estado operativo de la embarcación en Módulo 1] (Priority: P1)
+### User Story 2 - Sincronizar el estado operativo de la embarcación en Módulo 1 (Priority: P1)
 
-Cada vez que una reserva cambia de estado, el sistema debe mapear y actualizar inmediatamente el estado operativo de la embarcación física en Módulo 1 mediante la API `Asignar estado operativo`, garantizando que la disponibilidad real del inventario se refleje en toda la plataforma.
+En los hitos determinantes del ciclo de vida de la reserva, el sistema debe notificar de manera síncrona a la API externa `Asignar estado operativo` de Módulo 1 para actualizar el estado operativo de la embarcación (`Disponible`, `Reservado`, `En Navegación`, `En Mantenimiento/Limpieza`), asegurando que el inventario físico en muelle coincida exactamente con la disponibilidad del marketplace.
 
-**Why this priority**: Si el estado operativo de la embarcación no se actualiza en Módulo 1, el activo podría figurar como "Disponible" mientras está en navegación o quedar bloqueado como "Reservado" tras una cancelación o expiración, provocando sobreventas o pérdida de ingresos comerciales.
+**Why this priority**: Si el estado de la embarcación no se actualiza en Módulo 1, el activo podría figurar disponible estando en altamar o reservado temporalmente, o quedar bloqueado tras cancelaciones y expiraciones, generando sobreventas o pérdidas operativas.
 
-**Independent Test**: Se puede probar mockeando la API `Asignar estado operativo` de Módulo 1 y ejecutando transiciones de reserva hacia "Confirmada", "En Navegación", "Cancelada" y "Finalizada", validando que Módulo 1 recibe la llamada con los estados "Reservado", "En Navegación", "Disponible" y "Disponible", respectivamente.
+**Independent Test**: Se puede probar mediante un mock de la API `Asignar estado operativo` de Módulo 1, disparando transiciones de reserva y verificando que Módulo 1 recibe los llamados con el identificador del activo y el nuevo estado operativo exacto.
 
 **Acceptance Scenarios**:
 
-1. **Scenario**: Confirmación de reserva bloquea embarcación como "Reservado"
-   - **Given** una embarcación en estado operativo "Disponible" en Módulo 1
-   - **When** la reserva asociada transiciona exitosamente a "Confirmada"
-   - **Then** el sistema invoca la API `Asignar estado operativo` de Módulo 1 enviando el estado "Reservado" para esa embarcación
+1. **Scenario**: Nacimiento de la reserva bloquea la embarcación como "Reservado"
+    - **Given** una embarcación en estado operativo "Disponible" en Módulo 1
+    - **When** la reserva se crea exitosamente pasando al estado inicial "Pendiente de Pago"
+    - **Then** el sistema invoca la API externa `Asignar estado operativo` de Módulo 1 enviando el estado "Reservado" para esa embarcación
 
-2. **Scenario**: Inicio de navegación actualiza embarcación a "En Navegación"
-   - **Given** una reserva en estado "Confirmada" cuya embarcación está "Reservado" en Módulo 1
-   - **When** la reserva transiciona a estado "En Navegación"
-   - **Then** el sistema invoca la API `Asignar estado operativo` de Módulo 1 enviando el estado "En Navegación"
+2. **Scenario**: Navegación iniciada actualiza la embarcación a "En Navegación"
+    - **Given** una reserva que transiciona al estado principal "En Navegación"
+    - **When** se completa la persistencia del estado en Módulo 2
+    - **Then** el sistema invoca la API externa `Asignar estado operativo` de Módulo 1 enviando el estado operativo "En Navegación" para la embarcación asociada
 
-3. **Scenario**: Cancelación, expiración, No-Show o fin de navegación libera embarcación a "Disponible"
-   - **Given** una reserva que transiciona a "Expirada", "Cancelada por Arrendatario", "No-Show" o "Finalizada"
-   - **When** se ejecuta la actualización del estado de la reserva
-   - **Then** el sistema invoca la API `Asignar estado operativo` de Módulo 1 asignando el estado "Disponible" (salvo indicación explícita de paso a mantenimiento)
+3. **Scenario**: Culminación regular, cancelación o expiración libera la embarcación a "Disponible"
+    - **Given** una reserva que transiciona a "Completado" con sub-estado "Sin incidentes", a "Cancelado" o a "Expirado"
+    - **When** se procesa la actualización de estado
+    - **Then** el sistema invoca la API externa `Asignar estado operativo` de Módulo 1 enviando el estado operativo "Disponible" para reintegrar la embarcación al inventario activo
+
+4. **Scenario**: Culminación con reporte de avería o mantenimiento solicitado
+    - **Given** una reserva que transiciona a "Completado" con sub-estado "Con incidentes" (o cancelación por anfitrión que reporta inhabilitación)
+    - **When** se asienta la actualización de estado
+    - **Then** el sistema invoca la API externa `Asignar estado operativo` de Módulo 1 enviando el estado operativo "En Mantenimiento/Limpieza" para bloquear temporalmente el activo hasta su inspección
 
 ---
 
-### User Story 3 - [Notificar y empujar el nuevo estado de reserva a Módulo 3] (Priority: P1)
+### User Story 3 - Notificar transiciones y reporte de incidentes a Módulo 3 para liquidación y garantías (Priority: P1)
 
-Cada cambio de estado en una reserva debe ser notificado de manera activa a la API externa de Módulo 3 (`Recibir el estado de la reserva`) para que el sistema financiero y de liquidación ajuste las garantías, active seguros, libere depósitos o procese las liquidaciones y dispersiones de fondos correspondientes.
+Cada cambio de estado y sub-estado en una reserva debe ser empujado a la API externa de Módulo 3 (`Recibir estado de reserva`). Esto permite que el motor financiero gobierne oportunamente la activación de seguros náuticos, el inicio de la dispersión de fondos al anfitrión, la retención preventiva o liberación de depósitos de garantía y el procesamiento de reembolsos, cumpliendo con la regla estricta de que Módulo 2 jamás calcula ni transfiere dinero.
 
-**Why this priority**: Módulo 3 depende en tiempo real de los hitos operativos de la reserva para controlar la retención y dispersión de fondos. Sin esta notificación, el dinero quedaría retenido o dispersado fuera de tiempo.
+**Why this priority**: Módulo 3 depende en tiempo real de los eventos operativos de Módulo 2 para ejecutar los movimientos financieros. Sin esta comunicación, las liquidaciones y garantías quedarían retenidas indefinidamente o liberadas erróneamente.
 
-**Independent Test**: Se puede probar mediante un mock de la API `Recibir el estado de la reserva` de Módulo 3, comprobando que cada transición de estado en Módulo 2 envía una carga útil que contiene el identificador de la reserva, el nuevo estado, la marca temporal del cambio y el contexto del evento.
+**Independent Test**: Se puede probar utilizando un mock de la API `Recibir estado de reserva` de Módulo 3, validando que ante cada transición en Módulo 2 se envíe un mensaje que incluya el identificador de reserva, estado principal, sub-estado y marca de tiempo, sin contener ningún atributo de cálculo monetario.
 
 **Acceptance Scenarios**:
 
-1. **Scenario**: Notificación de reserva confirmada a Módulo 3
-   - **Given** una reserva que pasa a estado "Confirmada"
-   - **When** se completa la persistencia del estado en Módulo 2
-   - **Then** el sistema invoca la API `Recibir el estado de la reserva` de Módulo 3 comunicando el estado "Confirmada" para activar la custodia de fondos y seguro náutico
+1. **Scenario**: Notificación de reserva confirmada para cobertura y custodia
+    - **Given** una reserva que transiciona a estado principal "Confirmada"
+    - **When** se asienta la transición en Módulo 2
+    - **Then** el sistema invoca la API `Recibir estado de reserva` de Módulo 3 con el estado "Confirmada" para activar la póliza de seguro y la retención de garantía
 
-2. **Scenario**: Notificación de fin de servicio náutico a Módulo 3
-   - **Given** una reserva que transiciona a "Finalizada"
-   - **When** se asienta la finalización en Módulo 2
-   - **Then** el sistema notifica a Módulo 3 el estado "Finalizada" para que Módulo 3 inicie la matriz de liquidación, pago al anfitrión y liberación del depósito de garantía
+2. **Scenario**: Notificación de servicio completado sin incidentes para dispersión y devolución de garantía
+    - **Given** una reserva que transiciona a "Completado" con sub-estado "Sin incidentes"
+    - **When** se procesa la actualización de estado
+    - **Then** el sistema notifica a Módulo 3 para que inicie la dispersión de fondos al anfitrión y la liberación del depósito de garantía al arrendatario
+
+3. **Scenario**: Notificación de servicio completado con incidentes para retención de garantía
+    - **Given** una reserva que transiciona a "Completado" con sub-estado "Con incidentes"
+    - **When** se procesa la actualización de estado
+    - **Then** el sistema notifica a Módulo 3 la existencia de incidentes para que Módulo 3 retenga el depósito de garantía y gestione el reclamo financiero de forma autónoma
+
+4. **Scenario**: Notificación de cancelación o inasistencia para ejecución de penalidades y reembolsos
+    - **Given** una reserva que transiciona a "Cancelado" con un sub-estado específico ("Flexible", "Moderado", "Tardío", "Por Anfitrión", "Por Inasistencia")
+    - **When** se registra la cancelación
+    - **Then** el sistema notifica a Módulo 3 el estado "Cancelado" junto con su sub-estado (el de `Por Inasistencia` fue asignado directamente por Módulo 2; los otros cuatro fueron recibidos previamente desde Módulo 3 a través de "Solicitar tipo de cancelación") para que Módulo 3 aplique su matriz de liquidación y reembolsos
 
 ---
 
-### User Story 4 - [Rechazar transiciones de estado inválidas o extemporáneas] (Priority: P2)
+### User Story 4 - Rechazar estrictamente transiciones ilegales y preservar la inmutabilidad de estados terminales (Priority: P2)
 
-Si un caso de uso o evento externo solicita una transición no permitida por la máquina de estados (por ejemplo, intentar pasar una reserva "Expirada" a "Confirmada", o una reserva "Finalizada" a "Cancelada"), el sistema rechaza la solicitud de manera estricta, protegiendo la inmutabilidad de los estados terminales.
+Si se recibe una petición de cambio de estado incompatible con la máquina de estados formal, si se intenta cancelar una reserva que aún está en `Pendiente de Pago`, o si se intenta alterar una reserva que ya alcanzó un estado terminal (`Completado`, `Cancelado` o `Expirado`), el sistema debe denegar de forma estricta la solicitud, impidiendo modificaciones inconsistentes en persistencia y llamadas colaterales a sistemas externos.
 
-**Why this priority**: Evita inconsistencias de datos y ataques lógicos o condiciones de carrera que puedan reactivar reservas finalizadas o cancelar servicios que ya concluyeron.
+**Why this priority**: Previene la corrupción de datos ante reintentos desfasados de red, eventos concurrentes desordenados o solicitudes maliciosas que pretendan alterar contratos ya concluidos o interrumpir flujos de pago protegidos por TTL.
 
-**Independent Test**: Se puede probar enviando solicitudes de transición ilegales (p. ej. Expirada → Confirmada, Finalizada → Cancelada, No-Show → En Navegación) y verificando que el sistema retorna un error de transición inválida y no modifica la base de datos ni invoca APIs externas.
+**Independent Test**: Se prueba enviando intencionalmente transiciones ilegales (p. ej. `Pendiente de Pago` → `Cancelado`, `Expirado` → `Confirmada`, `Completado` → `Cancelado`, `En Navegación` → `Pendiente de Pago`) y comprobando que el sistema retorna una denegación formal, no altera el registro de la reserva y no genera tráfico hacia Módulo 1 ni Módulo 3.
 
 **Acceptance Scenarios**:
 
-1. **Scenario**: Intento de confirmación sobre reserva ya expirada
-   - **Given** una reserva en estado "Expirada"
-   - **When** se solicita la transición a estado "Confirmada"
-   - **Then** el sistema rechaza la transición indicando que el estado actual "Expirada" es terminal y no admite confirmación
+1. **Scenario**: Intento de cancelación directa sobre reserva en Pendiente de Pago
+    - **Given** una reserva en estado principal "Pendiente de Pago"
+    - **When** se recibe una solicitud de cancelación voluntaria
+    - **Then** el sistema rechaza la solicitud indicando que las reservas pendientes de pago no admiten cancelación directa y deben esperar la expiración natural del TTL de 15 minutos si se desiste de pagar
 
-2. **Scenario**: Intento de cancelación sobre reserva ya finalizada
-   - **Given** una reserva en estado "Finalizada"
-   - **When** se solicita transición a estado "Cancelada"
-   - **Then** el sistema rechaza la solicitud indicando que un servicio finalizado no es cancelable
+2. **Scenario**: Intento de confirmación extemporánea sobre reserva expirada
+    - **Given** una reserva en estado principal "Expirado"
+    - **When** se recibe una solicitud de confirmación de pago
+    - **Then** el sistema rechaza la solicitud indicando estado terminal irreversible y no altera la reserva
+
+3. **Scenario**: Intento de cancelación sobre servicio completado o en navegación
+    - **Given** una reserva en estado principal "Completado" o "En Navegación"
+    - **When** se solicita su cancelación
+    - **Then** el sistema rechaza la operación indicando que el estado actual no admite cancelación
 
 ---
 
 ### Edge Cases
 
-- **Máquina de Estados Formal de la Reserva**:
-  - Estados posibles: `Pendiente de Pago`, `Confirmada`, `En Navegación`, `Finalizada`, `Cancelada por Arrendatario`, `Cancelada por Propietario`, `No-Show`, `Expirada`, `Pago Fallido`.
-  - Estados terminales (no admiten ninguna transición posterior): `Finalizada`, `Cancelada por Arrendatario`, `Cancelada por Propietario`, `No-Show`, `Expirada`, `Pago Fallido`.
-- **Falla de comunicación con Módulo 1 (`Asignar estado operativo`)**:
-  - Si el estado de la reserva se actualiza en Módulo 2 pero Módulo 1 no responde a la actualización del activo, ¿cómo se garantiza la sincronización?
-  - *Regla*: el sistema DEBE garantizar consistencia eventual mediante reintentos automáticos con registro de eventos pendientes, evitando que la falla externa aborte la consistencia interna de la reserva [NEEDS CLARIFICATION: política de reintentos y alertas ante desincronización persistente con Módulo 1].
-- **Falla de comunicación con Módulo 3 (`Recibir el estado de la reserva`)**:
-  - Si la llamada a Módulo 3 falla durante una transición crítica (p. ej. "Finalizada" o "Cancelada"), el sistema DEBE encolar el evento y reintentar su entrega para asegurar que Módulo 3 reciba la señal de liquidación (0% eventos perdidos silenciosamente, ver SC-005 de `spec-solicitar-cancelacion.md`).
-- **Condición de carrera entre dos transiciones casi simultáneas**:
-  - Por ejemplo, cancelación por el Arrendatario y reporte de No-Show por el Propietario en el mismo segundo.
-  - El sistema DEBE aplicar control de concurrencia optimista (versionado de la entidad Reserva) para asegurar que solo una transición gane y la siguiente sea evaluada contra el estado recién asentado.
+- **"Pendiente de Pago" no es cancelable voluntariamente**: Si el Arrendatario desiste de contratar una reserva que está en `Pendiente de Pago`, no existe endpoint ni acción de cancelación anticipada. La reserva se libera de forma pasiva y garantizada únicamente cuando expira el temporizador TTL de 15 minutos, pasando a `Expirado` y liberando la embarcación en Módulo 1.
+- **Condición de carrera entre expiración del TTL de 15 minutos y confirmación de pago**: Si el evento de confirmación de pago de Módulo 3 coincide con el vencimiento del temporizador de 15 minutos, el sistema debe resolver la concurrencia de forma atómica: si la expiración se consolida primero, la reserva pasa a `Expirado`, se libera la embarcación y se rechaza la confirmación instruyendo a Módulo 3 el reembolso; si la confirmación entra antes de la persistencia de la expiración, la reserva transiciona a `Confirmada` y el temporizador se desactiva.
+- **Concurrencia entre cancelación de reserva confirmada e inasistencia**: Si coinciden temporalmente una solicitud de cancelación voluntaria y un reporte de No-Show, el control de concurrencia optimista asegura que la primera transacción aceptada defina el estado final; la segunda es denegada por encontrarse la reserva en estado terminal.
+- **Falla transitoria de conectividad con Módulo 1 o Módulo 3**: Si la persistencia del estado en Módulo 2 es exitosa pero la llamada a la API externa `Asignar estado operativo` de Módulo 1 o `Recibir estado de reserva` de Módulo 3 falla por timeout o error de red, el sistema DEBE encolar el evento pendiente de entrega y activar un mecanismo de reintentos automáticos garantizados para asegurar consistencia eventual (0% eventos perdidos).
+- **Notificaciones duplicadas e idempotencia**: Si se solicita una transición hacia un estado y sub-estado en el que la reserva ya se encuentra actualmente (p. ej. reintento de webhook de pago ya aprobado), el sistema responde con confirmación exitosa de forma idempotente sin disparar dobles llamadas externas ni duplicar registros de auditoría.
+- **Inmutabilidad absoluta de estados terminales**: Los estados `Completado`, `Cancelado` y `Expirado` (con cualquiera de sus sub-estados) son definitivos; ninguna entidad, actor ni evento puede modificar su estado una vez asentado.
 
 ---
 
@@ -130,29 +164,39 @@ Si un caso de uso o evento externo solicita una transición no permitida por la 
 
 ### Functional Requirements
 
-- **FR-001**: El sistema DEBE proveer un mecanismo centralizado para actualizar el estado de una reserva, invocado obligatoriamente por cualquier caso de uso que modifique el ciclo de vida de la reserva (`<<include>>`).
-- **FR-002**: El sistema DEBE validar de forma estricta que la transición solicitada sea legal de acuerdo con la máquina de estados formal:
-  - De `Pendiente de Pago` solo se puede transicionar a: `Confirmada`, `Expirada`, `Pago Fallido`, `Cancelada por Arrendatario`.
-  - De `Confirmada` solo se puede transicionar a: `En Navegación`, `Cancelada por Arrendatario`, `Cancelada por Propietario`, `No-Show`.
-  - De `En Navegación` solo se puede transicionar a: `Finalizada`.
-  - Los estados `Finalizada`, `Cancelada por Arrendatario`, `Cancelada por Propietario`, `No-Show`, `Expirada` y `Pago Fallido` son terminales y NO DEBEN permitir transiciones ulteriores.
-- **FR-003**: Si la transición solicitada no es legal, el sistema DEBE rechazar la actualización, generar un error descriptivo y abstenerse de alterar la reserva o invocar sistemas externos.
-- **FR-004**: Al admitir una transición válida, el sistema DEBE persistir de forma atómica el nuevo estado en la entidad Reserva, registrando el timestamp exacto del cambio y el origen/motivo de la actualización.
-- **FR-005**: El sistema DEBE invocar la API externa de Módulo 1 (`Asignar estado operativo`) con el identificador de la embarcación y el estado operativo correspondiente:
-  - Para transición a `Confirmada`: asignar estado `Reservado`.
-  - Para transición a `En Navegación`: asignar estado `En Navegación`.
-  - Para transiciones a `Expirada`, `Cancelada por Arrendatario`, `No-Show` o `Finalizada`: asignar estado `Disponible` [NEEDS CLARIFICATION: si tras cancelación por propietario o avería reportada al fin de navegación se asigna `En Mantenimiento/Limpieza`].
-- **FR-006**: El sistema DEBE invocar la API externa de Módulo 3 (`Recibir el estado de la reserva`) enviando el identificador de la reserva, el nuevo estado alcanzado, la fecha/hora de transición y el tipo o metadata del evento si aplica.
-- **FR-007**: El sistema DEBE aplicar control de concurrencia atómico para garantizar que, ante múltiples solicitudes simultáneas de actualización sobre la misma reserva, solo una transición prevalezca y la otra sea rechazada o reevaluada.
-- **FR-008**: Si la notificación a Módulo 1 o a Módulo 3 experimenta una falla transitoria de conectividad, el sistema DEBE registrar el evento para reintento garantizado, impidiendo que el evento de cambio de estado se pierda silenciosamente.
-- **FR-009**: El sistema DEBE mantener un registro de auditoría con el histórico cronológico de todos los cambios de estado experimentados por cada reserva durante su ciclo de vida.
-- **FR-010**: El sistema **NO DEBE en ningún momento calcular reembolsos, dispersiones, comisiones ni valores monetarios**; su responsabilidad se restringe al gobierno del estado y a la comunicación de los cambios a Módulo 1 y Módulo 3.
+- **FR-001**: El sistema DEBE actuar como el motor central y exclusivo para actualizar el estado y sub-estado de cualquier reserva en Módulo 2, siendo invocado obligatoriamente por los casos de uso operativos mediante relaciones `<<include>>`.
+- **FR-002**: El sistema DEBE gobernar la máquina de estados de la reserva bajo el siguiente catálogo formal:
+    - 🔶 [PENDIENTE DE CONFIRMAR — Estados Principales de la Reserva]: `Pendiente de Pago`, `Confirmada`, `En Navegación`, `Completado`, `Cancelado`, `Expirado`. El estado inicial de toda reserva al crearse es obligatoriamente `Pendiente de Pago` (transición desde el estado inexistente hacia `Pendiente de Pago`, disparada exclusivamente por "Iniciar reserva"). `Pendiente de Pago`, `En Navegación` y `Expirado` no tienen sub-estados. [FIN PENDIENTE]
+    - 🔶 [PENDIENTE DE CONFIRMAR — Sub-estados de Cancelación]: Aplican exclusivamente cuando el estado principal es `Cancelado`. Los valores admitidos son: `Flexible`, `Moderado`, `Tardío`, `Por Anfitrión`, `Por Inasistencia`. Los primeros cuatro (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión`) son **calculados por Módulo 3**: dentro de "Solicitar cancelación", Módulo 2 le envía a Módulo 3 (mediante "Solicitar tipo de cancelación") el tiempo de anticipación y el actor solicitante, y Módulo 3 aplica sus reglas de negocio y devuelve la clasificación — Módulo 2 no calcula esta categoría, solo la recibe y la persiste como sub-estado. El quinto valor (`Por Inasistencia`) es la única excepción: lo asigna **directamente Módulo 2** dentro de "Marcar inasistencia", sin consultar a Módulo 3, porque no depende de una ventana de tiempo variable sino de la regla fija de 30 minutos de tolerancia. [FIN PENDIENTE]
+    - 🔶 [PENDIENTE DE CONFIRMAR — Sub-estados de Finalización]: Aplican exclusivamente cuando el estado principal es `Completado`. Los valores admitidos son: `Sin incidentes`, `Con incidentes`. [FIN PENDIENTE]
+    - 🔶 [PENDIENTE DE CONFIRMAR — Estados terminales]: `Completado`, `Cancelado` y `Expirado` (con cualquiera de sus sub-estados). Ninguno de estos estados admite transiciones posteriores bajo ninguna circunstancia. [FIN PENDIENTE]
+- **FR-003**: El sistema DEBE validar de forma estricta que la transición solicitada cumpla con las rutas legales permitidas:
+    - `Creación → Pendiente de Pago`: Única vía de entrada a la máquina de estados, disparada exclusivamente por el caso de uso "Iniciar reserva".
+    - Desde `Pendiente de Pago` solo se permite transicionar a: `Confirmada`, `Expirado`. (Las reservas en `Pendiente de Pago` NO admiten cancelación directa a través de "Solicitar cancelación"; si no se completa el pago, la reserva concluye únicamente por expiración pasiva del temporizador TTL).
+    - Desde `Confirmada` solo se permite transicionar a: `En Navegación`, `Cancelado`.
+    - Desde `En Navegación` solo se permite transicionar a: `Completado`.
+    - Ninguna transición está permitida desde los estados terminales `Completado`, `Cancelado` o `Expirado`.
+- **FR-004**: Si la transición solicitada es legal, el sistema DEBE actualizar y persistir de forma atómica en el registro de la Reserva su estado principal y, cuando aplique, su sub-estado correspondiente.
+- **FR-005**: Si la transición solicitada es ilegal o viola las reglas de la máquina de estados, el sistema DEBE rechazar la solicitud, abstenerse de modificar el registro de la reserva y NO emitir notificaciones a sistemas externos.
+- **FR-006**: El sistema DEBE aplicar control de concurrencia atómico para garantizar que, ante solicitudes simultáneas de actualización sobre la misma reserva, solo una transición gane y las subsecuentes se evalúen contra el estado actualizado.
+- **FR-007**: 🔶 [PENDIENTE DE CONFIRMAR — Sincronización operativa con Módulo 1]: El sistema DEBE invocar la API externa `Asignar estado operativo` de Módulo 1 para actualizar el estado operativo de la embarcación según las siguientes reglas:
+    - Cuando la reserva se crea (transición inicial a `Pendiente de Pago`): invocar `Asignar estado operativo` en Módulo 1 para actualizar la embarcación a `Reservado`.
+    - Cuando la reserva pasa a `En Navegación`: actualizar la embarcación a `En Navegación`.
+    - Cuando la reserva pasa a `Completado` (con sub-estado `Sin incidentes`), `Cancelado` o `Expirado`: actualizar la embarcación a `Disponible`.
+    - Cuando la reserva pasa a `Completado` con sub-estado `Con incidentes` o se reporte inhabilitación física: actualizar la embarcación a `En Mantenimiento/Limpieza`. [FIN PENDIENTE]
+- **FR-008**: El sistema DEBE invocar la API externa de Módulo 3 (`Recibir estado de reserva`) ante cada cambio de estado, transmitiendo el identificador de la reserva, el nuevo estado principal, el sub-estado (si aplica), la fecha/hora exacta de la transición y la causa o evento disparador.
+- **FR-009**: 🔶 [PENDIENTE DE CONFIRMAR — Notificación de incidentes a Módulo 3]: Si el estado resultante es `Completado` con sub-estado `Con incidentes`, el sistema DEBE reportar explícitamente la condición de novedad a Módulo 3 para que dicho módulo gestione la retención preventiva del depósito de garantía y la tramitación del reclamo financiero. [FIN PENDIENTE]
+- **FR-010**: **REGLA DE NEGOCIO ESTRICTA (Sin cálculo financiero):** El sistema **NO DEBE calcular montos de reembolso, porcentajes de penalidad, comisiones de plataforma, costos de seguros ni efectuar transferencias monetarias**. La responsabilidad de Módulo 2 se restringe a evaluar el tiempo, gobernar la máquina de estados y transmitir/recibir clasificaciones de cancelación hacia y desde Módulo 3 (excepto `Por Inasistencia`, que Módulo 2 asigna directamente); todo cálculo monetario, y la clasificación por tiempo de las cancelaciones voluntarias, es competencia exclusiva de Módulo 3.
+- **FR-011**: El sistema DEBE registrar un asiento de auditoría cronológico por cada transición de estado exitosa, documentando: identificador de la reserva, estado principal anterior, sub-estado anterior, nuevo estado principal, nuevo sub-estado, caso de uso solicitante, actor o sistema causante y marca temporal exacta.
+- **FR-012**: El sistema DEBE garantizar la entrega eventual y la no pérdida de notificaciones hacia Módulo 1 y Módulo 3 ante fallos transitorios de red mediante registro de eventos pendientes y reintentos.
+
+---
 
 ### Key Entities
 
-- **Reserva (`Reservation`)**: Entidad que almacena el estado actual (`estado`), identificador único, versión de concurrencia y relaciones con Arrendatario y Embarcación.
-- **Registro Histórico de Transición de Estado (`ReservationStatusAudit`)**: Registro de auditoría. Atributos: id_auditoría, reserva_id, estado_anterior, estado_nuevo, disparador/caso_de_uso_origen, actor_responsable, timestamp_transicion, motivo.
-- **Embarcación**: Activo náutico gobernado físicamente por Módulo 1.
+- **Reserva (`Reservation`)**: Entidad central de Módulo 2. Atributos funcionales clave: identificador único, identificador del arrendatario, identificador de la embarcación (referencia a Módulo 1), estado principal actual, sub-estado actual, fecha/hora pactada de inicio, fecha/hora pactada de fin, versión de concurrencia.
+- **Historial de Transiciones de Estado (`ReservationStatusAudit`)**: Registro de auditoría del ciclo de vida. Atributos: identificador del evento de auditoría, identificador de la reserva, estado principal previo, sub-estado previo, nuevo estado principal, nuevo sub-estado, caso de uso origen, actor o disparador, marca temporal del cambio, observaciones/metadata contextual.
+- **Embarcación**: Activo náutico cuya existencia física y estado operativo (`Disponible`, `Reservado`, `En Navegación`, `En Mantenimiento/Limpieza`) son gobernados en Módulo 1 y referenciados externamente en Módulo 2.
 
 ---
 
@@ -160,8 +204,9 @@ Si un caso de uso o evento externo solicita una transición no permitida por la 
 
 ### Measurable Outcomes
 
-- **SC-001**: Cero (0%) transiciones de estado ilegales o no contempladas en la máquina de estados formal admitidas en la base de datos de Módulo 2.
-- **SC-002**: El 100% de las transiciones de estado exitosas disparan la invocación hacia la API `Asignar estado operativo` de Módulo 1 y la API `Recibir el estado de la reserva` de Módulo 3 en menos de 500 milisegundos desde la persistencia de la reserva.
-- **SC-003**: Cero (0%) discrepancias operativas donde una reserva esté confirmada o en navegación y la embarcación figure en un estado incompatible en Módulo 1.
-- **SC-004**: El 100% de los eventos de cambio de estado son entregados y confirmados ante Módulo 3 (0% de eventos de estado perdidos).
-- **SC-005**: El 100% de las transiciones de estado quedan documentadas en el registro de auditoría con fecha, hora, estado anterior, estado nuevo y caso de uso causante.
+- **SC-001**: Cero (0%) transiciones de estado ilegales o no contempladas en la máquina de estados admitidas en la base de datos de Módulo 2.
+- **SC-002**: El 100% de las transiciones de estado confirmadas disparan las notificaciones hacia la API `Asignar estado operativo` de Módulo 1 y la API `Recibir estado de reserva` de Módulo 3 en menos de 500 milisegundos desde la persistencia interna.
+- **SC-003**: Cero (0%) discrepancias donde una reserva figure en creación/pendiente, en navegación o completada y el activo físico en Módulo 1 muestre un estado operativo contradictorio.
+- **SC-004**: El 100% de los cambios de estado y sub-estado son notificados y confirmados por Módulo 3 (0% de eventos de sincronización financiera perdidos silenciosamente).
+- **SC-005**: Cero (0) operaciones de cálculo monetario, cobro, reembolso o retención de dinero ejecutadas dentro de Módulo 2.
+- **SC-006**: El 100% de las transiciones de estado quedan registradas de manera inmutable en el historial de auditoría con su estampa de tiempo y causante.

@@ -1,97 +1,93 @@
 # Feature Specification: Marcar Inasistencia
 
-**Módulo**: Módulo 2 – Gestión de Reserva  
-**Creado**: 2026-09-05  
-**Actor primario**: Propietario (Anfitrión de la embarcación)  
-**Dependencias externas (APIs)**:
-
-- Módulo 1 – Gestión de Embarcación (liberación del activo a estado "Disponible", gestionada a través de "Actualizar estado reserva").
-- Módulo 3 – Liquidación, Seguros y Dispersión de Fondos (comunicación de la clasificación "No-Show" para que Módulo 3 ejecute la liquidación de la compensación del 100% al anfitrión según las reglas financieras del proyecto).
+**Módulo**: Módulo 2 (Operación de Reservas, Tiempos y Cancelaciones)  
+**Created**: 2026-09-06  
+**Primary Actor**: Propietario (Anfitrión de la embarcación)  
+**External Dependencies (APIs)**:
+- **Módulo 1 (Gestión de Flota y Activos P2P)**: API externa `Consultar información embarcación` (para obtener el puerto de atraque de la embarcación y determinar la zona horaria oficial aplicable al cálculo de los 30 minutos de espera); y API externa `Asignar estado operativo` (liberación del barco a estado `Disponible`, orquestada indirectamente a través del caso de uso `Actualizar estado reserva`).
+- **Módulo 3 (Liquidación, Seguros y Dispersión de Fondos)**: API externa `Recibir estado de reserva` (comunicación del nuevo estado principal `Cancelado` y sub-estado `Por Inasistencia`, orquestada indirectamente a través de `Actualizar estado reserva`, para que Módulo 3 entregue el pago de compensación al anfitrión).
+- **Casos de uso internos de Módulo 2**: `Actualizar estado reserva` (`<<include>>`).
 
 ---
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - [El Propietario reporta inasistencia del Arrendatario tras la ventana de tolerancia] (Priority: P1)
+### User Story 1 - El Propietario reporta inasistencia del cliente tras esperar los 30 minutos de cortesía (Priority: P1)
 
-Habiendo transcurrido los 30 minutos de tolerancia posteriores a la hora pactada de inicio del servicio sin que el Arrendatario se haya presentado en el muelle de embarque, el Propietario registra la inasistencia (No-Show). El sistema valida el cumplimiento estricto del tiempo, transiciona la reserva al estado terminal "No-Show", libera la embarcación en Módulo 1 para que vuelva a estar disponible y notifica la clasificación a Módulo 3 para que aplique la compensación correspondiente al anfitrión.
+Si pasan los 30 minutos de cortesia establecidos después de la hora acordada para la salida y el cliente no llega al muelle, el Propietario reporta que el cliente no se presentó (No-Show). En ese instante, el sistema verifica que ya pasaron los 30 minutos obligatorios, cambia la reserva al estado 'Cancelado' con el sub-estado 'Por Inasistencia' mediante la invocación a 'Actualizar estado reserva' (`<<include>>`), avisa al Módulo 1 para que el barco vuelva a quedar 'Disponible' y le notifica al Módulo 3 para que le entregue la compensación económica al Propietario según las políticas de la plataforma.
 
-**Why this priority**: Protege el tiempo y la operación comercial del Propietario, permitiéndole liberar legal y operativamente su embarcación en el puerto y asegurar su derecho a la compensación estipulada en las políticas del marketplace.
+**Why this priority**: Protege el tiempo y la disponibilidad del anfitrión, permitiéndole liberar su barco para otros posibles alquileres y asegurando que reciba el pago por el tiempo de espera y la reserva perdida.
 
-**Independent Test**: Se puede probar preparando una reserva en estado "Confirmada" con fecha/hora de inicio ya superada por al menos 30 minutos, ejecutando la solicitud de marcar inasistencia por parte del Propietario autenticado, y verificando que el sistema actualiza el estado a "No-Show" mediante "Actualizar estado reserva", libera el activo en Módulo 1 y notifica el evento a Módulo 3 sin calcular valores monetarios.
+**Independent Test**: Se prueba con una reserva en estado "Confirmada" cuya hora de salida fue hace más de 30 minutos. El Propietario envía el reporte de inasistencia; se verifica que el sistema comprueba la hora, invoca a "Actualizar estado reserva" pasando el estado a "Cancelado" (sub-estado "Por Inasistencia"), guarda el registro y envía las notificaciones externas sin realizar cálculos de dinero.
 
 **Acceptance Scenarios**:
 
-1. **Scenario**: Inasistencia registrada válidamente cumplidos los 30 minutos de tolerancia
-   - **Given** una reserva en estado "Confirmada" cuya fecha/hora pactada de zarpe fue hace 31 minutos o más
-   - **When** el Propietario de la embarcación solicita marcar inasistencia
-   - **Then** el sistema valida que transcurrió la ventana de tolerancia de 30 minutos, invoca "Actualizar estado reserva" para fijar el estado en "No-Show", registra el evento de inasistencia, notifica a Módulo 3 la clasificación "No-Show" para la compensación del 100% y notifica a Módulo 1 la liberación de la embarcación a estado "Disponible"
+1. **Scenario**: Inasistencia reportada correctamente tras pasar los 30 minutos de espera
+    - **Given** una reserva en estado principal "Confirmada" cuya hora pactada de salida pasó hace 35 minutos
+    - **When** el Propietario registrado del barco reporta la inasistencia del cliente
+    - **Then** el sistema confirma que transcurrieron los 30 minutos de tolerancia, invoca "Actualizar estado reserva" para cambiar el estado a "Cancelado" con el sub-estado "Por Inasistencia", guarda el registro y coordina la liberación del barco en Módulo 1 y el aviso de pago a Módulo 3
 
-2. **Scenario**: Inasistencia registrada en el límite exacto de la tolerancia
-   - **Given** una reserva en estado "Confirmada" cuya fecha/hora de zarpe fue hace exactamente 30 minutos y 0 segundos
-   - **When** el Propietario solicita marcar inasistencia
-   - **Then** el sistema admite la solicitud por haberse alcanzado el umbral reglamentario de tolerancia y procesa el No-Show
+2. **Scenario**: Inasistencia reportada justo al cumplirse los 30 minutos
+    - **Given** una reserva en estado principal "Confirmada" cuya hora pactada de salida pasó hace exactamente 30 minutos
+    - **When** el Propietario solicita marcar la inasistencia
+    - **Then** el sistema acepta el reporte por haber alcanzado el tiempo mínimo de espera y procesa el cambio de estado de la reserva
 
 ---
 
-### User Story 2 - [Rechazar reporte de inasistencia anticipado dentro de la ventana de tolerancia] (Priority: P2)
+### User Story 2 - Rechazar el reporte de inasistencia antes de cumplir los 30 minutos de espera (Priority: P1)
 
-Si el Propietario intenta reportar inasistencia antes de que transcurran los 30 minutos de cortesía desde la hora pactada de inicio, el sistema rechaza la solicitud de manera inmediata, informando el tiempo restante que debe esperar para garantizar el derecho de presentación del Arrendatario.
+Si el Propietario intenta reportar la inasistencia del cliente antes de que pasen los 30 minutos de cortesía desde la hora de salida acordada, el sistema rechaza la solicitud de inmediato y le muestra cuántos minutos faltan para poder habilitar esa opción, protegiendo el derecho del cliente a llegar dentro del tiempo de tolerancia.
 
-**Why this priority**: Garantiza la equidad contractual protegiendo al Arrendatario de cancelaciones arbitrarias durante el periodo de tolerancia oficial establecido por la plataforma.
+**Why this priority**: Garantiza un trato justo con el turista y evita que la reserva se cancele antes de tiempo durante el periodo oficial de espera.
 
-**Independent Test**: Se puede probar intentando marcar inasistencia sobre una reserva confirmada a los 10 o 25 minutos posteriores a la hora pactada de inicio, verificando que el sistema rechaza la operación, no cambia el estado y muestra al usuario los minutos restantes para habilitar la opción.
+**Independent Test**: Se prueba intentando reportar la inasistencia a los 10 o 20 minutos de la hora de salida de una reserva confirmada. Se verifica que el sistema rechaza la acción, mantiene la reserva como "Confirmada" y le indica al Propietario el tiempo exacto que le falta por esperar.
 
 **Acceptance Scenarios**:
 
-1. **Scenario**: Intento de marcar inasistencia antes de los 30 minutos
-   - **Given** una reserva en estado "Confirmada" cuya hora pactada de inicio transcurrió hace solo 15 minutos
-   - **When** el Propietario intenta marcar inasistencia
-   - **Then** el sistema rechaza la solicitud, informa que la ventana de tolerancia de 30 minutos sigue activa e indica que restan 15 minutos para poder reportar el No-Show, sin modificar el estado de la reserva ni notificar a Módulo 3
+1. **Scenario**: Intento de reporte dentro del tiempo de espera de 30 minutos
+    - **Given** una reserva en estado principal "Confirmada" cuya hora de salida acordada fue hace 18 minutos
+    - **When** el Propietario intenta marcar inasistencia
+    - **Then** el sistema rechaza la solicitud, informa que el tiempo de espera sigue activo indicando que faltan 12 minutos para habilitar el reporte, y NO cambia el estado de la reserva ni le notifica a otros módulos
 
-2. **Scenario**: Intento de marcar inasistencia previo a la hora de inicio de la reserva
-   - **Given** una reserva en estado "Confirmada" cuya hora de inicio pactada aún no ha llegado (está en el futuro)
-   - **When** el Propietario intenta marcar inasistencia
-   - **Then** el sistema bloquea y rechaza la acción indicando que el servicio aún no ha comenzado
+2. **Scenario**: Intento de reporte antes de la hora de salida del viaje
+    - **Given** una reserva en estado principal "Confirmada" cuya hora de salida es en el futuro
+    - **When** el Propietario intenta marcar inasistencia
+    - **Then** el sistema bloquea la acción informando que el viaje aún no ha comenzado
 
 ---
 
-### User Story 3 - [Rechazar reporte de inasistencia sobre reservas en estados incompatibles] (Priority: P2)
+### User Story 3 - Rechazar el reporte de inasistencia en reservas no válidas o por usuarios no autorizados (Priority: P2)
 
-Si el Propietario intenta marcar inasistencia sobre una reserva que ya inició navegación, fue cancelada previamente o ya culminó, el sistema debe denegar la operación sin alterar el registro.
+Si se intenta marcar la inasistencia en una reserva que ya inició el viaje, que está pendiente de pago, cancelada, completada o vencida, o si la solicitud la realiza una persona diferente al Propietario del barco, el sistema rechaza la acción de inmediato.
 
-**Why this priority**: Evita inconsistencias de dominio y fraudes operativos, asegurando que un servicio en curso o cancelado no pueda ser alterado retroactivamente como No-Show.
+**Why this priority**: Evita errores en el sistema, confusiones en viajes que ya salieron y que personas no autorizadas cancelen reservas ajenas.
 
-**Independent Test**: Se puede probar ejecutando la acción sobre reservas en estados "En Navegación", "Cancelada por Arrendatario", "Finalizada" y "Expirada", comprobando que en el 100% de los casos la acción es rechazada.
+**Independent Test**: Se prueba enviando solicitudes de inasistencia desde cuentas no autorizadas o sobre reservas que estén en estados como "En Navegación", "Completado" o "Pendiente de Pago", comprobando que el sistema rechaza el intento sin modificar los datos de la reserva.
 
 **Acceptance Scenarios**:
 
-1. **Scenario**: Intento de marcar inasistencia cuando el servicio ya inició navegación
-   - **Given** una reserva en estado "En Navegación" (el check-in ya fue efectuado)
-   - **When** el Propietario intenta marcar inasistencia
-   - **Then** el sistema rechaza la operación informando que el servicio ya fue iniciado
+1. **Scenario**: Intento de marcar inasistencia cuando el viaje ya inició
+    - **Given** una reserva que ya cambió al estado "En Navegación" (el cliente ya abordó)
+    - **When** el Propietario intenta marcar inasistencia
+    - **Then** el sistema rechaza la solicitud e informa que el viaje ya comenzó y no se puede reportar una inasistencia
 
-2. **Scenario**: Intento de marcar inasistencia en reserva ya cancelada
-   - **Given** una reserva que fue previamente transicionada a "Cancelada por Arrendatario"
-   - **When** el Propietario intenta marcar inasistencia
-   - **Then** el sistema rechaza la solicitud informando que la reserva ya fue cancelada con anterioridad
+2. **Scenario**: Intento de marcar inasistencia por un usuario no autorizado
+    - **Given** una reserva en estado principal "Confirmada" que cumple el tiempo de espera
+    - **When** un usuario que no es el propietario registrado del barco intenta marcar la inasistencia
+    - **Then** el sistema rechaza la solicitud por falta de permisos
 
 ---
 
 ### Edge Cases
 
-- **Exclusión mutua entre "Marcar inasistencia" y "Marcar inicio de la navegación"**:
-  - Ambas acciones compiten una vez transcurridos los 30 minutos (el cliente puede llegar al minuto 35 y el anfitrión optar por iniciar el viaje en lugar de penalizarlo).
-  - Si el Propietario pulsa "Marcar inicio de la navegación", la reserva pasa a "En Navegación" y la opción de "Marcar inasistencia" queda inhabilitada de forma irreversible.
-  - Si el Propietario pulsa "Marcar inasistencia", la reserva pasa a "No-Show" y queda inhabilitada de forma irreversible para iniciar navegación.
-- **Validación del huso horario del puerto**:
-  - La fecha/hora actual del sistema debe cotejarse contra la zona horaria oficial del puerto de atraque de la embarcación (GPS provisto por Módulo 1), evitando desfasajes si el Propietario o los servidores operan en husos horarios diferentes.
-- **Acción manual vs. automatización de No-Show**:
-  - En el diagrama de casos de uso, "Marcar inasistencia" está vinculado al actor humano `Propietario`. ¿Debe existir un proceso automático de fondo que declare No-Show si transcurre un plazo excesivo (p. ej. 3 horas) sin reporte del Propietario ni inicio de navegación? [NEEDS CLARIFICATION: ¿el No-Show es estrictamente manual a criterio del Propietario o existe un cierre automático por inactividad prolongada?]
-- **Evidencia o justificación de inasistencia**:
-  - ¿Debe el Propietario registrar notas obligatorias, fotografías del muelle o confirmación bajo declaración jurada al marcar inasistencia? [NEEDS CLARIFICATION: ¿se exigen campos de justificación o basta con la confirmación de la acción en la interfaz?]
-- **Autorización de actor**:
-  - Únicamente el Propietario legítimo de la embarcación asociada a la reserva tiene autorización para ejecutar esta acción; cualquier intento de otro usuario debe ser rechazado como no autorizado.
+- **Elección entre iniciar viaje con retraso o marcar inasistencia**: Pasados los 30 minutos de cortesía, si el cliente llega tarde (por ejemplo, al minuto 35), el Propietario decide si le permite abordar e iniciar el viaje o si marca la inasistencia:
+    - Si el Propietario presiona "Marcar inicio de la navegación", la reserva pasa a "En Navegación" y ya no se podrá marcar inasistencia.
+    - Si el Propietario presiona "Marcar inasistencia", la reserva pasa a "Cancelado" (sub-estado "Por Inasistencia") y el viaje queda cancelado de forma definitiva.
+- **Zona horaria del puerto donde está el barco**: Los 30 minutos de espera se calculan según la hora real del puerto donde se encuentra el barco (obtenida mediante `Consultar información embarcación` en Módulo 1), evitando problemas si el teléfono del Propietario tiene una hora distinta.
+- **Coincidencia entre cancelación del cliente y reporte de inasistencia**: Si el cliente cancela desde su aplicación al mismo tiempo que el Propietario reporta la inasistencia, el sistema procesa la primera solicitud que reciba y rechaza la segunda por encontrarse en un estado ya cerrado.
+- **Reservas que no han sido pagadas**: Una reserva que está en "Pendiente de Pago" no aplica para reporte de inasistencia. Si el cliente no paga a tiempo, la reserva se cancela por tiempo límite agotado (TTL), no por inasistencia.
+- **Prohibición de calcular dinero en Módulo 2**: El Módulo 2 **NO calcula pagos, compensaciones ni penalidades en dinero**. Su función termina al verificar el tiempo transcurrido, cambiar el estado e informar al Módulo 3 el sub-estado "Por Inasistencia" para que el Módulo 3 realice la entrega del dinero.
+- **Falla al consultar la información del barco**: Si no se puede consultar el puerto y la zona horaria del barco en Módulo 1 al momento de verificar la hora, el sistema NO debe asumir una zona horaria por defecto. [NEEDS CLARIFICATION: ¿se reintenta la consulta, o se rechaza temporalmente la solicitud de inasistencia hasta poder resolver la zona horaria?]
 
 ---
 
@@ -99,23 +95,26 @@ Si el Propietario intenta marcar inasistencia sobre una reserva que ya inició n
 
 ### Functional Requirements
 
-- **FR-001**: El sistema DEBE permitir al Propietario marcar la inasistencia (No-Show) de una reserva si y solo si la reserva existe y se encuentra en estado "Confirmada".
-- **FR-002**: El sistema DEBE validar que el usuario que ejecuta la acción sea el Propietario registrado de la embarcación asociada a la reserva.
-- **FR-003**: El sistema DEBE validar que hayan transcurrido al menos treinta (30) minutos continuos desde la fecha y hora pactada de inicio de la reserva (`timestamp_actual >= fecha_hora_inicio + 30 minutos`).
-- **FR-004**: La validación temporal de la ventana de tolerancia DEBE calcularse tomando como referencia el huso horario oficial del puerto de atraque de la embarcación.
-- **FR-005**: Si no han transcurrido los 30 minutos de tolerancia, el sistema DEBE rechazar la solicitud, indicando el tiempo remanente antes de poder marcar la inasistencia, y NO DEBE realizar ninguna transición ni notificación externa.
-- **FR-006**: Si la reserva se encuentra en cualquier estado distinto a "Confirmada" (p. ej. "En Navegación", "Cancelada por Arrendatario", "Finalizada", "Expirada"), el sistema DEBE denegar la solicitud informando el estado incompatible.
-- **FR-007**: Al validar satisfactoriamente el reporte de inasistencia, el sistema DEBE invocar el caso de uso "Actualizar estado reserva" (vía `<<include>>`) para transicionar el estado de la reserva a "No-Show".
-- **FR-008**: El sistema DEBE registrar un registro auditable del evento de inasistencia, capturando el identificador de la reserva, el identificador del Propietario, la marca temporal exacta del reporte, los minutos de tolerancia transcurridos y notas explicativas si aplican [NEEDS CLARIFICATION].
-- **FR-009**: El sistema DEBE notificar a Módulo 3 la clasificación del evento como "No-Show" para que Módulo 3 gestione la liquidación de la compensación del 100% al anfitrión estipulada en la política del proyecto.
-- **FR-010**: El sistema **NO DEBE calcular penalidades, comisiones, reembolsos ni ejecutar transferencias o dispersiones de dinero**; su alcance se limita a validar la regla temporal de tolerancia, registrar el estado y reportar la clasificación "No-Show" a Módulo 3.
-- **FR-011**: Al completarse la transición a "No-Show", el sistema DEBE garantizar que la embarcación quede liberada a estado operativo "Disponible" en Módulo 1 (a través de los efectos colaterales de "Actualizar estado reserva").
+- **FR-001**: El sistema DEBE permitir registrar la inasistencia (No-Show) de una reserva si y solo si la reserva existe y se encuentra en estado principal "Confirmada".
+- **FR-002**: El sistema DEBE verificar y garantizar que el usuario que solicita marcar la inasistencia sea estrictamente el Propietario registrado de la embarcación.
+- **FR-003**: El sistema DEBE validar que hayan transcurrido al menos treinta (30) minutos continuos desde la fecha y hora pactada de inicio de la reserva (`tiempo_actual >= fecha_hora_inicio + 30 minutos`).
+- **FR-004**: La validación de la ventana de tolerancia de 30 minutos DEBE calcularse tomando como referencia la zona horaria del puerto donde opera la embarcación, obtenida mediante la API `Consultar información embarcación` de Módulo 1.
+- **FR-005**: Si no han transcurrido los 30 minutos de tolerancia, el sistema DEBE rechazar la solicitud, calcular y mostrar al Propietario los minutos y segundos exactos que faltan de espera, y NO DEBE realizar cambios de estado ni enviar notificaciones.
+- **FR-006**: Si la reserva se encuentra en cualquier estado diferente a "Confirmada" (incluyendo Pendiente de Pago, En Navegación, Completado, Expirado o Cancelado), el sistema DEBE rechazar la solicitud e informar la incompatibilidad del estado.
+- **FR-007**: Al confirmar el reporte de inasistencia, el sistema DEBE invocar el caso de uso subordinado "Actualizar estado reserva" (`<<include>>`), solicitando cambiar el estado a `Cancelado` con el sub-estado de cancelación `Por Inasistencia` .
+- **FR-008**: El sistema DEBE guardar un registro del evento de inasistencia, incluyendo: identificador de la reserva, identificador del propietario, fecha y hora del reporte, minutos de espera transcurridos y observaciones opcionales del anfitrión.
+- **FR-009**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE calcular montos de compensación, devoluciones, comisiones ni realizar pagos bancarios**. El Módulo 2 solo verifica el tiempo y actualiza el estado; la entrega de dinero al anfitrión la realiza el Módulo 3 al recibir el aviso del sub-estado "Por Inasistencia".
+- **FR-010**: El sistema DEBE indicar a "Actualizar estado reserva" que llame a la API de Módulo 1 (`Asignar estado operativo`) para liberar la embarcación al estado `Disponible`.
+- **FR-011**: El sistema DEBE indicar a "Actualizar estado reserva" que llame a la API de Módulo 3 (`Recibir estado de reserva`) para comunicar el estado `Cancelado` y el sub-estado `Por Inasistencia`.
+- **FR-012**: Si la API `Consultar información embarcación` de Módulo 1 no responde o no entrega la zona horaria, el sistema NO DEBE calcular la tolerancia con una zona horaria asumida por defecto. [NEEDS CLARIFICATION: política de reintento o rechazo temporal ante esta falla — ver Edge Cases].
+
+---
 
 ### Key Entities
 
-- **Reserva (`Reservation`)**: Entidad de Módulo 2 que transiciona a estado "No-Show".
-- **Registro de Inasistencia (`NoShowEvent`)**: Registro de auditoría del dominio. Atributos clave: id_evento, reserva_id, propietario_id, timestamp_reporte, fecha_hora_pactada_inicio, minutos_tolerancia_observados, comentarios_anfitrión.
-- **Embarcación**: Activo náutico cuya propiedad y estado operativo son administrados en Módulo 1.
+- **Reserva (`Reservation`)**: Entidad de dominio en Módulo 2. Atributos evaluados: identificador, identificador del propietario, identificador de la embarcación, fecha/hora de inicio, estado principal ("Confirmada" → "Cancelado"), sub-estado ("Por Inasistencia").
+- **Registro de Inasistencia (`NoShowEvent`)**: Registro del evento para auditoría. Atributos: identificador del evento, identificador de la reserva, identificador del anfitrión, fecha/hora del reporte, minutos de espera observados y comentarios del anfitrión.
+- **Embarcación**: Activo registrado en el Módulo 1 cuya zona horaria se consulta mediante `Consultar información embarcación`.
 
 ---
 
@@ -123,8 +122,9 @@ Si el Propietario intenta marcar inasistencia sobre una reserva que ya inició n
 
 ### Measurable Outcomes
 
-- **SC-001**: Cero (0%) reportes de inasistencia procesados antes de cumplirse los 30 minutos reglamentarios de tolerancia posteriores a la hora pactada de inicio.
-- **SC-002**: Cero (0%) reportes de inasistencia admitidos sobre reservas que ya hayan iniciado navegación ("En Navegación") o que estén canceladas o finalizadas.
-- **SC-003**: El 100% de los reportes válidos de inasistencia transicionan la reserva a "No-Show" y notifican a Módulo 1 y Módulo 3 en menos de 2 segundos.
-- **SC-004**: Cero (0%) operaciones de cálculo de dinero, montos de penalidad o transferencias financieras generadas dentro del flujo de Módulo 2.
-- **SC-005**: El 100% de los intentos prematuros de reporte presentan un mensaje claro que informa con exactitud cuántos minutos restan para que expire la ventana de tolerancia.
+- **SC-001**: Cero (0%) reportes de inasistencia aceptados antes de cumplirse exactamente los 30 minutos de espera posteriores a la hora acordada de salida.
+- **SC-002**: Cero (0%) reportes de inasistencia aceptados en reservas que estén en estado "En Navegación", "Completado", "Cancelado", "Expirado" o "Pendiente de Pago".
+- **SC-003**: El 100% de los intentos realizados antes de tiempo muestran un mensaje con el tiempo exacto que resta para cumplir los 30 minutos de espera.
+- **SC-004**: El 100% de los reportes válidos cambian la reserva a Cancelado (sub-estado Por Inasistencia) y notifican a Módulo 1 y Módulo 3 en menos de 1 segundo.
+- **SC-005**: Cero (0) cálculos de dinero, penalidades o pagos realizados dentro del Módulo 2.
+- **SC-006**: Cero (0%) solicitudes de inasistencia autorizadas a personas diferentes al propietario del barco.

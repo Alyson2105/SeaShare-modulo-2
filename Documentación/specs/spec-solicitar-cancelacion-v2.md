@@ -4,9 +4,7 @@
 **Fecha de Creación**: 2026-09-06  
 **Actores Primarios**: Arrendatario y Propietario (ambos interactúan directamente con este caso de uso en la plataforma)  
 **Dependencias Externas (APIs)**:
-- **Módulo 1 – Gestión de Flota y Activos P2P**:
-    - API externa `Consultar información embarcación` (para obtener el puerto de atraque de la embarcación y determinar la zona horaria oficial aplicable al cálculo de la anticipación temporal — ver FR-004).
-    - API externa `Asignar estado operativo` (notificación para liberar la embarcación a estado `Disponible` o su pase a `En Mantenimiento/Limpieza` si se reporta avería, orquestada de forma indirecta a través del caso de uso `Actualizar estado reserva`).
+- **Módulo 1 – Gestión de Flota y Activos P2P**: API externa `Asignar estado operativo` (notificación para liberar la embarcación a estado `Disponible` o su pase a `En Mantenimiento/Limpieza` si se reporta avería, orquestada de forma indirecta a través del caso de uso `Actualizar estado reserva`).
 - **Módulo 3 – Liquidación, Seguros y Dispersión de Fondos**:
     - Consumo indirecto a través del caso de uso subordinado `Solicitar tipo de cancelación` para consultar a Módulo 3 la clasificación contractual de la cancelación (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión`).
     - API externa `Recibir estado de reserva` (notificación del estado `Cancelado` junto con su sub-estado para que Módulo 3 ejecute la liquidación de reembolsos y penalidades, orquestada vía `Actualizar estado reserva`).
@@ -101,8 +99,6 @@ Como sistema, quiero denegar las solicitudes de cancelación sobre reservas en e
 - **Condición de carrera entre Arrendatario y Propietario (Doble cancelación simultánea)**: Si ambos actores envían la cancelación de la misma reserva exactamente en el mismo instante, el control de concurrencia de `Actualizar estado reserva` asegura que la primera solicitud procesada guarde el sub-estado. La segunda solicitud es rechazada al encontrar la reserva en estado terminal `Cancelado`.
 - **Cancelación concurrente con el inicio de navegación**: Si el Arrendatario solicita cancelar mientras el Propietario registra el inicio de la navegación en el muelle, prevalece la primera transacción confirmada. Si se registra primero el inicio de navegación, la cancelación es rechazada indicando que el viaje ya comenzó.
 - **Falla o interrupción en la API de Módulo 3 durante "Solicitar tipo de cancelación"**: Si Módulo 3 no responde a la solicitud de tipificación, el sistema no asienta la cancelación de forma incompleta; detiene el flujo, mantiene la reserva en estado "Confirmada" y notifica al usuario el inconveniente temporal para su reintento.
-- **Huso horario del puerto de atraque**: La anticipación temporal que este caso de uso calcula y le envía a "Solicitar tipo de cancelación" DEBE computarse usando la zona horaria del puerto donde está atracada la embarcación, obtenida mediante `Consultar información embarcación` (Módulo 1) — no la hora del dispositivo del usuario ni la del servidor.
-- **Indisponibilidad o timeout de `Consultar información embarcación`**: Si el sistema no puede obtener el puerto de atraque (y su zona horaria) al momento de calcular la anticipación, el sistema NO DEBE asumir una zona horaria por defecto. [NEEDS CLARIFICATION: misma decisión pendiente que en `spec-marcar-inasistencia.md` y `spec-marcar-inicio-navegacion.md` — ¿reintentar la consulta, o rechazar temporalmente la solicitud de cancelación?]
 - **Prohibición absoluta de cálculo financiero en Módulo 2**: Módulo 2 **no calcula importes a devolver, comisiones de retención ni montos de penalidad monetaria**. Módulo 2 solo registra la anticipación temporal, consulta la categoría a Módulo 3, asienta el nuevo estado y delega en Módulo 3 toda la dispersión financiera de fondos.
 
 ---
@@ -114,7 +110,7 @@ Como sistema, quiero denegar las solicitudes de cancelación sobre reservas en e
 - **FR-001**: El sistema DEBE permitir solicitar la cancelación de una reserva si y solo si la reserva existe y se encuentra en estado principal "Confirmada" (previo al check-in o inicio de la navegación).
 - **FR-002**: El sistema DEBE verificar y validar que el usuario solicitante sea unívocamente el Arrendatario titular o el Propietario registrado de la embarcación asociada a la reserva.
 - **FR-003**: El sistema DEBE excluir explícitamente de la opción de cancelación a las reservas que se encuentren en estado `Pendiente de Pago`, `En Navegación`, `Completado`, `Expirado` o previamente `Cancelado`.
-- **FR-004**: El sistema DEBE calcular las horas y minutos exactos de anticipación entre la fecha/hora de la solicitud de cancelación y la fecha/hora pactada de inicio de la reserva, tomando como base la zona horaria oficial del puerto de atraque de la embarcación, obtenida mediante la API `Consultar información embarcación` de Módulo 1.
+- **FR-004**: El sistema DEBE calcular las horas y minutos exactos de anticipación entre la fecha/hora de la solicitud de cancelación y la fecha/hora pactada de inicio de la reserva, tomando como base la zona horaria oficial del puerto de atraque de la embarcación.
 - **FR-005**: El sistema DEBE invocar obligatoriamente el caso de uso subordinado `Solicitar tipo de cancelación` mediante una relación `(<<include>>)`, enviando el identificador de la reserva, el actor solicitante (Arrendatario o Propietario) y la anticipación calculada.
 - **FR-006**: El sistema DEBE registrar la clasificación contractual de la cancelación retornada por Módulo 3 a través de `Solicitar tipo de cancelación`:
     - 🔶 [PENDIENTE DE CONFIRMAR — Sub-estados de Cancelación]: `Flexible`, `Moderado`, `Tardío` o `Por Anfitrión` [FIN PENDIENTE].
@@ -126,7 +122,6 @@ Como sistema, quiero denegar las solicitudes de cancelación sobre reservas en e
 - **FR-010**: El sistema DEBE delegar en `Actualizar estado reserva` la notificación hacia la API externa `Recibir estado de reserva` de Módulo 3 enviando el estado `Cancelado`, el sub-estado correspondiente y la marca de tiempo para que Módulo 3 gestione la liquidación y compensación de fondos.
 - **FR-011**: **REGLA DE NEGOCIO ESTRICTA (Sin cálculo financiero):** El sistema **NO DEBE en ningún caso calcular montos de devolución, deducciones de comisiones, penalidades monetarias ni ejecutar transferencias de dinero**. Módulo 2 actúa como orquestador de tiempos y estados; la valoración económica y dispersión de dinero pertenece exclusivamente a Módulo 3.
 - **FR-012**: El sistema DEBE guardar un registro claro y auditable de la cancelación, capturando: identificador de la reserva, actor solicitante, fecha y hora de la solicitud, anticipación temporal calculada, sub-estado contractual resultante y la justificación si aplica.
-- **FR-013**: Si la API `Consultar información embarcación` de Módulo 1 no responde o no devuelve el dato de puerto/zona horaria, el sistema NO DEBE calcular la anticipación con una zona horaria asumida por defecto. [NEEDS CLARIFICATION: política de reintento o rechazo temporal ante esta falla]
 
 ---
 
@@ -134,7 +129,7 @@ Como sistema, quiero denegar las solicitudes de cancelación sobre reservas en e
 
 - **Reserva (`Reservation`)**: Entidad de Módulo 2 que cambia de estado principal de "Confirmada" a "Cancelado", adoptando el sub-estado asignado por Módulo 3.
 - **Evento de Cancelación (`CancellationEvent`)**: Registro auditable de dominio. Atributos clave: identificador del evento, identificador de la reserva, actor solicitante (Arrendatario / Propietario), marca de tiempo de la solicitud, horas de anticipación respecto al zarpe, clasificación contractual devuelta por Módulo 3 y motivo/justificación del anfitrión.
-- **Embarcación** *(entidad externa, propiedad de Módulo 1)*: se referencia por id; su puerto de atraque (y la zona horaria que de él se deriva) se consulta vía `Consultar información embarcación`. Su estado operativo se actualiza a `Disponible` o `En Mantenimiento/Limpieza` tras la cancelación.
+- **Embarcación**: Activo náutico administrado por Módulo 1, cuyo estado operativo se actualiza a `Disponible` o `En Mantenimiento/Limpieza` tras la cancelación.
 
 ---
 
