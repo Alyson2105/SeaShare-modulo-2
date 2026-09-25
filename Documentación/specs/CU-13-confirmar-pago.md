@@ -6,7 +6,7 @@
 **Dependencias externas (APIs)**:
 
 - Módulo 3 – Liquidación, Seguros y Dispersión de Fondos (`Confirmar pago`: punto de entrada consumido por Módulo 3 para reportar el resultado de la transacción).
-- Módulo 1 – Gestión de Embarcación (afectación indirecta a través de la invocación a "Actualizar estado reserva").
+- Módulo 1 – Gestión de Embarcación (afectación indirecta a través de la invocación a "CU-08 Actualizar estado reserva").
 
 ---
 
@@ -14,18 +14,18 @@
 
 ### User Story 1 - [Confirmar reserva tras aprobación exitosa del pago dentro del TTL] (Priority: P1)
 
-Módulo 3 notifica a Módulo 2 que la transacción de pago para una reserva pendiente ha sido aprobada exitosamente dentro de los 15 minutos de Time-To-Live (TTL). El sistema cancela el temporizador de expiración, registra la constancia de pago e invoca "Actualizar estado reserva" para formalizar la reserva en estado "Confirmada", asegurando que el activo quede debidamente bloqueado.
+Módulo 3 notifica a Módulo 2 que la transacción de pago para una reserva pendiente ha sido aprobada exitosamente dentro de los 15 minutos de Time-To-Live (TTL). El sistema cancela el temporizador de expiración, registra la constancia de pago e invoca "CU-08 Actualizar estado reserva" para formalizar la reserva en estado "Reservada", asegurando que el activo quede debidamente bloqueado.
 
 **Why this priority**: Es la transición crítica que convierte una solicitud temporal de reserva en un contrato formal y confirmado. Sin la confirmación de pago, ninguna reserva puede consolidarse en la plataforma.
 
-**Independent Test**: Se puede probar aislando el endpoint/servicio de entrada con una reserva en estado "Pendiente de Pago" cuyo temporizador TTL esté activo, enviando un payload de confirmación de pago exitoso desde Módulo 3, y verificando que el TTL se desactiva, la reserva pasa a "Confirmada" a través de "Actualizar estado reserva" y la referencia de pago queda registrada.
+**Independent Test**: Se puede probar aislando el endpoint/servicio de entrada con una reserva en estado "Pendiente de Pago" cuyo temporizador TTL esté activo, enviando un payload de confirmación de pago exitoso desde Módulo 3, y verificando que el TTL se desactiva, la reserva pasa a "Reservada" a través de "CU-08 Actualizar estado reserva" y la referencia de pago queda registrada.
 
 **Acceptance Scenarios**:
 
 1. **Scenario**: Aprobación de pago dentro de la ventana de 15 minutos
    - **Given** una reserva existente en estado "Pendiente de Pago" con un temporizador TTL de 15 minutos activo (tiempo restante > 0)
-   - **When** Módulo 3 invoca "Confirmar pago" indicando resultado "Aprobado" y un identificador de transacción válido
-   - **Then** el sistema cancela inmediatamente el temporizador TTL de 15 minutos, invoca "Actualizar estado reserva" para transicionar la reserva a "Confirmada" y almacena el identificador de transacción y fecha de confirmación
+   - **When** Módulo 3 invoca "CU-13 Confirmar pago" indicando resultado "Aprobado" y un identificador de transacción válido
+   - **Then** el sistema cancela inmediatamente el temporizador TTL de 15 minutos, invoca "CU-08 Actualizar estado reserva" para transicionar la reserva a "Reservada" y almacena el identificador de transacción y fecha de confirmación
 
 2. **Scenario**: Persistencia de trazabilidad de la transacción
    - **Given** una confirmación de pago exitosa recibida desde Módulo 3
@@ -40,7 +40,7 @@ Módulo 3 notifica que la transacción de pago fue rechazada por la pasarela (fo
 
 **Why this priority**: Garantiza que los intentos de pago fallidos sean manejados de manera controlada, evitando que una reserva quede congelada en limbo y permitiendo al Arrendatario conocer el estado de su intento o liberar el inventario.
 
-**Independent Test**: Se puede probar enviando una notificación de pago con resultado "Rechazado" para una reserva en estado "Pendiente de Pago" y verificando que el sistema actualiza el registro con el motivo devuelto por Módulo 3 sin marcar la reserva como confirmada.
+**Independent Test**: Se puede probar enviando una notificación de pago con resultado "Rechazado" para una reserva en estado "Pendiente de Pago" y verificando que el sistema actualiza el registro con el motivo devuelto por Módulo 3 sin llevar la reserva al estado Reservado.
 
 **Acceptance Scenarios**:
 
@@ -52,7 +52,7 @@ Módulo 3 notifica que la transacción de pago fue rechazada por la pasarela (fo
 2. **Scenario**: Rechazo definitivo que culmina la reserva
    - **Given** una reserva cuyo intento de pago fue rechazado y no admite más reintentos (o agotó su TTL)
    - **When** se procesa el cierre del intento de pago
-   - **Then** el sistema invoca "Actualizar estado reserva" para transicionar la reserva a "Pago Fallido" o "Expirada" y liberar la embarcación en Módulo 1
+   - **Then** el sistema invoca "CU-08 Actualizar estado reserva" para transicionar la reserva a "Pago Fallido" o "Expirada" y liberar la embarcación en Módulo 1
 
 ---
 
@@ -62,12 +62,12 @@ Si Módulo 3 reintenta la entrega del mensaje de confirmación de pago (por rein
 
 **Why this priority**: En sistemas distribuidos con pasarelas de pago, los webhooks y llamadas de confirmación suelen entregarse bajo semántica *at-least-once*; la falta de idempotencia podría causar bloqueos o transiciones contradictorias.
 
-**Independent Test**: Se puede probar enviando dos veces consecutivas la misma notificación de confirmación de pago con el mismo identificador de transacción y reserva, validando que la primera solicitud transiciona la reserva a "Confirmada" y la segunda responde con éxito sin reejecutar transiciones ni corromper estados.
+**Independent Test**: Se puede probar enviando dos veces consecutivas la misma notificación de confirmación de pago con el mismo identificador de transacción y reserva, validando que la primera solicitud transiciona la reserva a "Reservada" y la segunda responde con éxito sin reejecutar transiciones ni corromper estados.
 
 **Acceptance Scenarios**:
 
-1. **Scenario**: Recepción de confirmación duplicada para reserva ya confirmada
-   - **Given** una reserva que ya se encuentra en estado "Confirmada" con una referencia de transacción T_123
+1. **Scenario**: Recepción de confirmación duplicada para reserva ya en estado Reservado
+   - **Given** una reserva que ya se encuentra en estado "Reservada" con una referencia de transacción T_123
    - **When** Módulo 3 reenvía la confirmación de pago con la misma referencia T_123
    - **Then** el sistema responde con confirmación exitosa a Módulo 3, no dispara nuevas transiciones de estado ni invoca nuevamente a Módulo 1
 
@@ -75,12 +75,12 @@ Si Módulo 3 reintenta la entrega del mensaje de confirmación de pago (por rein
 
 ### Edge Cases
 
-- **Confirmación de pago recibida tras la expiración del TTL (Race Condition)**: el temporizador de 15 minutos expira y "Actualizar estado reserva" marca la reserva como "Expirada" liberando la embarcación. Milisegundos o segundos después, llega la confirmación de pago de Módulo 3 reportando "Aprobado". ¿Cómo procede el sistema?
+- **Confirmación de pago recibida tras la expiración del TTL (Race Condition)**: el temporizador de 15 minutos expira y "CU-08 Actualizar estado reserva" marca la reserva como "Expirada" liberando la embarcación. Milisegundos o segundos después, llega la confirmación de pago de Módulo 3 reportando "Aprobado". ¿Cómo procede el sistema?
   - *Regla*: Módulo 2 NO PUEDE confirmar una reserva expirada cuyo inventario pudo haber sido tomado por otro usuario. El sistema DEBE rechazar la confirmación indicando "Reserva expirada por TTL" y notificar inmediatamente a Módulo 3 para que proceda con la reversión/reembolso automático del cobro en la pasarela de pagos.
   - [NEEDS CLARIFICATION: ¿existe una ventana de gracia técnica (p. ej. 30 segundos) posterior al minuto 15 para admitir pagos en tránsito, o el corte es estrictamente al segundo 900?]
 - **Confirmación de pago sobre reserva cancelada**: el Arrendatario solicita cancelar la reserva mientras el pago estaba en proceso. Si llega la confirmación de pago posterior a la cancelación, el sistema debe rechazar la confirmación y requerir a Módulo 3 la reversión del importe.
 - **Payload con datos incompletos o reserva inexistente**: si Módulo 3 envía una confirmación con un identificador de reserva que no existe en Módulo 2 o sin estado de transacción, el sistema DEBE responder con error de validación (400/Unprocessable Entity) sin alterar ningún registro.
-- **Falla en el caso de uso subordinado "Actualizar estado reserva"**: si al invocar "Actualizar estado reserva" ocurre una falla de persistencia, la confirmación de pago NO debe considerarse completada y el sistema debe devolver un error transitorio a Módulo 3 para habilitar su reintento según el protocolo de integración.
+- **Falla en el caso de uso subordinado "CU-08 Actualizar estado reserva"**: si al invocar "CU-08 Actualizar estado reserva" ocurre una falla de persistencia, la confirmación de pago NO debe considerarse completada y el sistema debe devolver un error transitorio a Módulo 3 para habilitar su reintento según el protocolo de integración.
 
 ---
 
@@ -94,12 +94,12 @@ Si Módulo 3 reintenta la entrega del mensaje de confirmación de pago (por rein
 - **FR-004**: Si el resultado de la transacción es **Aprobado** y la reserva está dentro de su ventana de TTL de 15 minutos:
   - El sistema DEBE cancelar inmediatamente el temporizador de expiración TTL de 15 minutos asociado a la reserva.
   - El sistema DEBE registrar en la reserva el identificador de la transacción externa provisto por Módulo 3 y la marca temporal de la confirmación.
-  - El sistema DEBE invocar el caso de uso "Actualizar estado reserva" (vía `<<include>>`) para transicionar el estado de la reserva a "Confirmada".
+  - El sistema DEBE invocar el caso de uso "CU-08 Actualizar estado reserva" (vía `<<include>>`) para transicionar el estado de la reserva a "Reservada".
 - **FR-005**: Si el resultado de la transacción es **Rechazado** o **Fallido**:
   - El sistema DEBE registrar el resultado fallido y el motivo en el historial de la reserva.
-  - [NEEDS CLARIFICATION: definir si el sistema invoca inmediatamente "Actualizar estado reserva" para marcar "Pago Fallido/Cancelada" y liberar la embarcación en Módulo 1, o si se mantiene "Pendiente de Pago" hasta el agotamiento del TTL para permitir reintento de pago].
+  - [NEEDS CLARIFICATION: definir si el sistema invoca inmediatamente "CU-08 Actualizar estado reserva" para marcar "Pago Fallido/Cancelada" y liberar la embarcación en Módulo 1, o si se mantiene "Pendiente de Pago" hasta el agotamiento del TTL para permitir reintento de pago].
 - **FR-006**: Si el sistema recibe una notificación de pago **Aprobado** cuando el temporizador TTL ya expiró y la reserva se encuentra en estado "Expirada":
-  - El sistema NO DEBE transicionar la reserva a "Confirmada".
+  - El sistema NO DEBE transicionar la reserva a "Reservada".
   - El sistema DEBE responder a Módulo 3 con un código/mensaje de rechazo indicando que la reserva expiró por tiempo límite.
   - El sistema DEBE solicitar/instruir a Módulo 3 la reversión automática de los fondos cobrados al Arrendatario en la pasarela.
 - **FR-007**: El sistema DEBE ser estrictamente idempotente: si recibe una notificación con un identificador de transacción y estado idénticos a una confirmación previamente procesada para la misma reserva, DEBE responder afirmativamente sin repetir transiciones de estado ni generar nuevas llamadas colaterales.
@@ -116,8 +116,8 @@ Si Módulo 3 reintenta la entrega del mensaje de confirmación de pago (por rein
 
 ### Measurable Outcomes
 
-- **SC-001**: El 100% de las notificaciones de pago aprobado recibidas dentro del TTL transicionan la reserva a "Confirmada" y cancelan el temporizador en menos de 1 segundo tras la recepción del evento.
-- **SC-002**: Cero (0%) reservas confirmadas de forma extemporánea cuando el TTL de 15 minutos ya ha expirado y el activo ha sido liberado.
+- **SC-001**: El 100% de las notificaciones de pago aprobado recibidas dentro del TTL transicionan la reserva a "Reservada" y cancelan el temporizador en menos de 1 segundo tras la recepción del evento.
+- **SC-002**: Cero (0%) reservas llevadas a estado Reservado de forma extemporánea cuando el TTL de 15 minutos ya ha expirado y el activo ha sido liberado.
 - **SC-003**: Cero (0%) discrepancias de cobro huérfano sin notificación de reversión enviada a Módulo 3 ante condiciones de carrera en el límite del TTL.
 - **SC-004**: El 100% de las confirmaciones repetidas o duplicadas por reintentos de red son respondidas de forma idempotente sin corromper el estado de la reserva ni generar dobles bloqueos en Módulo 1.
 - **SC-005**: Cero (0%) operaciones de liquidación, cálculo monetario o llamadas directas a pasarelas de pago originadas en Módulo 2.

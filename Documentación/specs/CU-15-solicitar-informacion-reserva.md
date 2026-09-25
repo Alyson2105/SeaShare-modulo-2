@@ -5,7 +5,7 @@
 **Actores Primarios / Disparador**: Módulo 3 (Consumidor del API)  
 **Dependencias Externas (APIs)**:
 - **Módulo 3 – Liquidación, Seguros y Dispersión de Fondos**: Actúa como el sistema cliente que consume este *endpoint* de lectura para obtener los datos operativos de la reserva.
-- **Casos de uso internos de Módulo 2**: Ninguno. Este caso de uso es una consulta de dominio de solo lectura. **NO invoca a "Actualizar estado reserva"**, no utiliza relaciones `(<<include>>)` ni `(<<extend>>)` y no muta la máquina de estados.
+- **Casos de uso internos de Módulo 2**: Ninguno. Este caso de uso es una consulta de dominio de solo lectura. **NO invoca a "CU-08 Actualizar estado reserva"**, no utiliza relaciones `(<<include>>)` ni `(<<extend>>)` y no muta la máquina de estados.
 
 ---
 
@@ -17,12 +17,12 @@ Como motor financiero (Módulo 3), necesito consultar los datos operativos actua
 
 ***Why this priority***: Es el puente de lectura fundamental entre la operación y las finanzas. Sin este canal, Módulo 3 operaría a ciegas y no podría respaldar transacciones, activaciones de pólizas ni dispersiones.
 
-***Independent Test***: Se prueba ejecutando consultas `GET` hacia Módulo 2 enviando identificadores válidos de reservas en estados activos (`Pendiente de Pago`, `Confirmada`, `En Navegación`). Se verifica que la respuesta estregue el *payload* completo en menos de 200 ms sin alterar el estado de la base de datos ni gatillar eventos secundarios.
+***Independent Test***: Se prueba ejecutando consultas `GET` hacia Módulo 2 enviando identificadores válidos de reservas en estados activos (`Pendiente de Pago`, `Reservada`, `En Navegación`). Se verifica que la respuesta estregue el *payload* completo en menos de 200 ms sin alterar el estado de la base de datos ni gatillar eventos secundarios.
 
 ***Acceptance Scenarios***:
 
 1. **Scenario**: Consulta exitosa de una reserva activa
-    - **Given** una reserva existente en estado `Confirmada` o `En Navegación`
+    - **Given** una reserva existente en estado `Reservada` o `En Navegación`
     - **When** Módulo 3 solicita la información mediante su identificador
     - **Then** el sistema responde con el código 200 OK y entrega los datos operativos completos (fechas, pasajeros, embarcación, estado actual y marcas temporales) sin realizar cálculos financieros
 
@@ -35,16 +35,16 @@ Como motor financiero (Módulo 3), necesito consultar los datos operativos actua
 
 ### User Story 2 - Proveer datos de cierre e incidentes para liquidación final (Priority: P1)
 
-Como motor financiero (Módulo 3), necesito obtener los detalles de cierre de una reserva (sub-estados de incidentes, justificaciones o anticipación de cancelación) para aplicar de manera autónoma mi matriz de liquidación, reembolsos y ejecución de garantías[cite: 2].
+Como motor financiero (Módulo 3), necesito obtener los detalles de cierre de una reserva (texto de novedades si existe, justificaciones o anticipación de cancelación) para aplicar de manera autónoma mi matriz de liquidación, reembolsos y ejecución de garantías[cite: 2].
 
 ***Why this priority***: Permite a Módulo 3 saber matemáticamente cuánto dinero liberar, retener o penalizar al finalizar un contrato, basándose estrictamente en los hechos operativos reportados en muelle.
 
-***Independent Test***: Se prueba consultando reservas en estados terminales (`Completado` y `Cancelado` con sus respectivos sub-estados). Se valida que Módulo 2 exponga el texto íntegro de los incidentes y las horas exactas de anticipación, sin deducir montos de dinero.
+***Independent Test***: Se prueba consultando reservas en estados terminales (`Completado` y `Cancelado`). Se valida que Módulo 2 exponga el texto íntegro de las novedades (si existen) y las horas exactas de anticipación, sin deducir montos de dinero.
 
 ***Acceptance Scenarios***:
 
 1. **Scenario**: Consulta de reserva completada para evaluar garantía
-    - **Given** una reserva en estado `Completado` (ya sea `Sin incidentes` o `Con incidentes`)
+    - **Given** una reserva en estado `Completado`
     - **When** Módulo 3 solicita la información
     - **Then** el sistema devuelve los datos del check-out, incluyendo el texto descriptivo de novedades (si las hay), permitiendo a Módulo 3 decidir sobre el depósito de garantía
 
@@ -70,7 +70,7 @@ Como motor financiero (Módulo 3), necesito obtener los detalles de cierre de un
 
 - **FR-001**: El sistema DEBE exponer un *endpoint* de lectura síncrona dedicado a proveer información de la reserva a Módulo 3.
 - **FR-002**: Si la reserva existe, el sistema DEBE retornar un payload estructurado que incluya obligatoriamente: identificador de la reserva, identificadores de arrendatario y embarcación, fechas/horas pactadas de zarpe y desembarque, cantidad de pasajeros, estado principal actual y referencia de la cotización original.
-- **FR-003**: Si el estado es `Completado`, el sistema DEBE incluir el sub-estado (`Sin incidentes` / `Con incidentes`), la fecha/hora real de check-out y el texto literal de las novedades u observaciones registradas por el Propietario.
+- **FR-003**: Si el estado es `Completado`, el sistema DEBE incluir la fecha/hora real de check-out y, si existe, el texto literal de las novedades u observaciones registradas por el Propietario.
 - **FR-004**: Si el estado es `Cancelado`, el sistema DEBE incluir el sub-estado correspondiente (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión`, `Por Inasistencia`), el actor que disparó la cancelación y las horas exactas de anticipación calculadas.
 - **FR-005**: Si el estado es `Pendiente de Pago`, el sistema DEBE incluir la marca de tiempo exacta en la que expirará el temporizador TTL de 15 minutos.
 - **FR-006**: **REGLA DE NEGOCIO ESTRICTA**: El sistema **NO DEBE** calcular ni incluir en la respuesta ningún valor monetario derivado de penalidades, reembolsos o tasación de daños. Toda valoración económica pertenece a Módulo 3.

@@ -23,7 +23,7 @@ Al comenzar el proceso de reserva, el caso de uso 'Iniciar reserva' (`<<include>
 1. **Scenario**: Obtención de datos exitosa con un número de pasajeros permitido
     - **Given** un barco registrado en Módulo 1 con capacidad máxima para 8 personas
     - **When** el cliente solicita la reserva para 6 personas
-    - **Then** el sistema confirma que no se supera el límite y le entrega al proceso "Iniciar reserva" los datos del barco (nombre, matrícula, tipo, puerto GPS, servicios y dueño)
+    - **Then** el sistema confirma que no se supera el límite y le entrega al proceso "CU-02 Iniciar reserva" los datos del barco (nombre, matrícula, tipo, puerto GPS, servicios y dueño)
 
 2. **Scenario**: Rechazo por intentar viajar con más personas de las permitidas
     - **Given** un barco registrado en Módulo 1 con capacidad máxima para 5 personas
