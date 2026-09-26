@@ -40,7 +40,7 @@ Módulo 3 notifica que la transacción de pago fue rechazada por la pasarela (fo
 
 **Why this priority**: Garantiza que los intentos de pago fallidos sean manejados de manera controlada, evitando que una reserva quede congelada en limbo y permitiendo al Arrendatario conocer el estado de su intento o liberar el inventario.
 
-**Independent Test**: Se puede probar enviando una notificación de pago con resultado "Rechazado" para una reserva en estado "Pendiente de Pago" y verificando que el sistema actualiza el registro con el motivo devuelto por Módulo 3 sin llevar la reserva al estado Reservado.
+**Independent Test**: Se puede probar enviando una notificación de pago con resultado "Rechazado" para una reserva en estado "Pendiente de Pago" y verificando que el sistema actualiza el registro con el motivo devuelto por Módulo 3 sin llevar la reserva al estado Reservada.
 
 **Acceptance Scenarios**:
 
@@ -66,7 +66,7 @@ Si Módulo 3 reintenta la entrega del mensaje de confirmación de pago (por rein
 
 **Acceptance Scenarios**:
 
-1. **Scenario**: Recepción de confirmación duplicada para reserva ya en estado Reservado
+1. **Scenario**: Recepción de confirmación duplicada para reserva ya en estado Reservada
    - **Given** una reserva que ya se encuentra en estado "Reservada" con una referencia de transacción T_123
    - **When** Módulo 3 reenvía la confirmación de pago con la misma referencia T_123
    - **Then** el sistema responde con confirmación exitosa a Módulo 3, no dispara nuevas transiciones de estado ni invoca nuevamente a Módulo 1
@@ -117,7 +117,7 @@ Si Módulo 3 reintenta la entrega del mensaje de confirmación de pago (por rein
 ### Measurable Outcomes
 
 - **SC-001**: El 100% de las notificaciones de pago aprobado recibidas dentro del TTL transicionan la reserva a "Reservada" y cancelan el temporizador en menos de 1 segundo tras la recepción del evento.
-- **SC-002**: Cero (0%) reservas llevadas a estado Reservado de forma extemporánea cuando el TTL de 15 minutos ya ha expirado y el activo ha sido liberado.
+- **SC-002**: Cero (0%) reservas llevadas a estado Reservada de forma extemporánea cuando el TTL de 15 minutos ya ha expirado y el activo ha sido liberado.
 - **SC-003**: Cero (0%) discrepancias de cobro huérfano sin notificación de reversión enviada a Módulo 3 ante condiciones de carrera en el límite del TTL.
 - **SC-004**: El 100% de las confirmaciones repetidas o duplicadas por reintentos de red son respondidas de forma idempotente sin corromper el estado de la reserva ni generar dobles bloqueos en Módulo 1.
 - **SC-005**: Cero (0%) operaciones de liquidación, cálculo monetario o llamadas directas a pasarelas de pago originadas en Módulo 2.

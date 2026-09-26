@@ -39,17 +39,17 @@ Como motor financiero (Módulo 3), necesito obtener los detalles de cierre de un
 
 ***Why this priority***: Permite a Módulo 3 saber matemáticamente cuánto dinero liberar, retener o penalizar al finalizar un contrato, basándose estrictamente en los hechos operativos reportados en muelle.
 
-***Independent Test***: Se prueba consultando reservas en estados terminales (`Completado` y `Cancelado`). Se valida que Módulo 2 exponga el texto íntegro de las novedades (si existen) y las horas exactas de anticipación, sin deducir montos de dinero.
+***Independent Test***: Se prueba consultando reservas en estados terminales (`Completada` y `Cancelada`). Se valida que Módulo 2 exponga el texto íntegro de las novedades (si existen) y las horas exactas de anticipación, sin deducir montos de dinero.
 
 ***Acceptance Scenarios***:
 
 1. **Scenario**: Consulta de reserva completada para evaluar garantía
-    - **Given** una reserva en estado `Completado`
+    - **Given** una reserva en estado `Completada`
     - **When** Módulo 3 solicita la información
     - **Then** el sistema devuelve los datos del check-out, incluyendo el texto descriptivo de novedades (si las hay), permitiendo a Módulo 3 decidir sobre el depósito de garantía
 
 2. **Scenario**: Consulta de reserva cancelada para aplicar penalidades
-    - **Given** una reserva en estado `Cancelado`
+    - **Given** una reserva en estado `Cancelada`
     - **When** Módulo 3 solicita la información
     - **Then** el sistema responde con el sub-estado (ej. `Moderado`), el actor responsable y las horas de anticipación, delegando el cálculo del reembolso a Módulo 3
 
@@ -60,7 +60,7 @@ Como motor financiero (Módulo 3), necesito obtener los detalles de cierre de un
 - **Naturaleza Estrictamente Idempotente (Solo Lectura)**: Esta interfaz no produce efectos secundarios. No avanza el estado, no interfiere con el TTL, no llama a Módulo 1 ni dispara webhooks. Módulo 3 puede consultarla 1,000 veces seguidas obteniendo exactamente el mismo resultado sin corromper el sistema.
 - **Sin Política de Reintentos Internos**: Dado que Módulo 2 actúa como servidor pasivo en este caso de uso, si hay un timeout de red, Módulo 2 simplemente cierra el hilo. La responsabilidad de reintentar la llamada recae 100% en el cliente (Módulo 3).
 - **Prohibición de Cálculos Financieros**: Módulo 2 **NO** tasa económicamente los daños, no estima penalidades y no deduce comisiones[cite: 2]. Solo entrega hechos (horas, textos, estados).
-- **Inmutabilidad en Estados Terminales**: Las consultas sobre reservas en estado `Completado`, `Cancelado` o `Expirado` siempre devolverán la misma fotografía histórica del cierre.
+- **Inmutabilidad en Estados Terminales**: Las consultas sobre reservas en estado `Completada`, `Cancelada` o `Expirada` siempre devolverán la misma fotografía histórica del cierre.
 
 ---
 
@@ -70,8 +70,8 @@ Como motor financiero (Módulo 3), necesito obtener los detalles de cierre de un
 
 - **FR-001**: El sistema DEBE exponer un *endpoint* de lectura síncrona dedicado a proveer información de la reserva a Módulo 3.
 - **FR-002**: Si la reserva existe, el sistema DEBE retornar un payload estructurado que incluya obligatoriamente: identificador de la reserva, identificadores de arrendatario y embarcación, fechas/horas pactadas de zarpe y desembarque, cantidad de pasajeros, estado principal actual y referencia de la cotización original.
-- **FR-003**: Si el estado es `Completado`, el sistema DEBE incluir la fecha/hora real de check-out y, si existe, el texto literal de las novedades u observaciones registradas por el Propietario.
-- **FR-004**: Si el estado es `Cancelado`, el sistema DEBE incluir el sub-estado correspondiente (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión`, `Por Inasistencia`), el actor que disparó la cancelación y las horas exactas de anticipación calculadas.
+- **FR-003**: Si el estado es `Completada`, el sistema DEBE incluir la fecha/hora real de check-out y, si existe, el texto literal de las novedades u observaciones registradas por el Propietario.
+- **FR-004**: Si el estado es `Cancelada`, el sistema DEBE incluir el sub-estado correspondiente (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión`, `Por Inasistencia`), el actor que disparó la cancelación y las horas exactas de anticipación calculadas.
 - **FR-005**: Si el estado es `Pendiente de Pago`, el sistema DEBE incluir la marca de tiempo exacta en la que expirará el temporizador TTL de 15 minutos.
 - **FR-006**: **REGLA DE NEGOCIO ESTRICTA**: El sistema **NO DEBE** calcular ni incluir en la respuesta ningún valor monetario derivado de penalidades, reembolsos o tasación de daños. Toda valoración económica pertenece a Módulo 3.
 - **FR-007**: El sistema DEBE garantizar que la ejecución de este caso de uso no genere escrituras en la base de datos ni notificaciones hacia componentes de Módulo 1.
