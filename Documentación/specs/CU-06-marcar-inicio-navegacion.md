@@ -40,7 +40,7 @@ Si el Propietario intenta marcar el inicio de la navegación mucho antes de la f
 
 ***Why this priority***: Evita que un anfitrión bloquee el barco en el sistema días antes del viaje real o active coberturas de seguro a destiempo.
 
-***Independent Test***: Se prueba intentando registrar el inicio de viaje en una reserva en estado Reservado cuya fecha es lejana (por ejemplo, dentro de 2 días), comprobando que el sistema rechaza la solicitud e indica cuándo se habilitará la opción.
+***Independent Test***: Se prueba intentando registrar el inicio de viaje en una reserva en estado Reservada cuya fecha es lejana (por ejemplo, dentro de 2 días), comprobando que el sistema rechaza la solicitud e indica cuándo se habilitará la opción.
 
 ***Acceptance Scenarios***:
 
@@ -61,8 +61,8 @@ Si se intenta registrar el inicio de la navegación sobre una reserva que ya est
 
 ***Acceptance Scenarios***:
 
-1. **Scenario**: Intento de inicio en una reserva que no está en estado Reservado o cancelada
-    - **Given** una reserva en estado "Cancelado", "Pendiente de Pago" o "Expirado"
+1. **Scenario**: Intento de inicio en una reserva que no está en estado Reservada o cancelada
+    - **Given** una reserva en estado "Cancelada", "Pendiente de Pago" o "Expirada"
     - **When** el Propietario intenta marcar el inicio de la navegación
     - **Then** el sistema rechaza la acción e informa que el estado actual no permite iniciar el servicio
 
@@ -82,9 +82,9 @@ Si se intenta registrar el inicio de la navegación sobre una reserva que ya est
 
 - **Imposibilidad de marcar inasistencia una vez iniciado el viaje**:
     - Al confirmar la salida y pasar a "En Navegación", la opción de "CU-05 Marcar inasistencia" queda inhabilitada de forma definitiva para esa reserva.
-    - Si el Propietario ya había marcado inasistencia previamente (reserva en "Cancelado" por inasistencia), la solicitud de iniciar el viaje se rechaza de inmediato.
+    - Si el Propietario ya había marcado inasistencia previamente (reserva en "Cancelada" por inasistencia), la solicitud de iniciar el viaje se rechaza de inmediato.
 - **Condición de carrera entre el Inicio de Navegación y el reporte de No-Show**:
-    - Tras vencer los 30 minutos de tolerancia en el muelle, se habilita la opción de "CU-05 Marcar inasistencia". Si en el mismo milisegundo el Propietario intenta marcar el inicio del viaje desde un dispositivo y simultáneamente se procesa un reporte de inasistencia, el control de concurrencia atómico de la base de datos asegura que solo una transacción consolide el estado final. Si el No-Show se procesa primero, la reserva pasa a `Cancelado` (Por Inasistencia) y el intento de iniciar navegación es rechazado de inmediato.
+    - Tras vencer los 30 minutos de tolerancia en el muelle, se habilita la opción de "CU-05 Marcar inasistencia". Si en el mismo milisegundo el Propietario intenta marcar el inicio del viaje desde un dispositivo y simultáneamente se procesa un reporte de inasistencia, el control de concurrencia atómico de la base de datos asegura que solo una transacción consolide el estado final. Si el No-Show se procesa primero, la reserva pasa a `Cancelada` (Por Inasistencia) y el intento de iniciar navegación es rechazado de inmediato.
 - **Múltiples intentos por mala conexión en el muelle**:
     - Si por fallas de señal en el puerto el Propietario presiona varias veces el botón de inicio, el sistema procesa una sola solicitud y responde correctamente a los reintentos sin duplicar notificaciones a Módulo 1 y Módulo 3.
 - **Salida ligeramente antes o después de la hora exacta**:
@@ -101,7 +101,7 @@ Si se intenta registrar el inicio de la navegación sobre una reserva que ya est
 - **FR-001**: El sistema DEBE permitir registrar el inicio de la navegación (check-in de salida) de una reserva si y solo si la reserva existe y se encuentra en estado principal "Reservada".
 - **FR-002**: El sistema DEBE validar de forma estricta que el usuario que ejecuta la acción sea el Propietario registrado de la embarcación.
 - **FR-003**: El sistema DEBE validar que la solicitud se realice dentro de la ventana de tiempo autorizada para la salida (en la fecha programada o dentro del margen previo permitido).
-- **FR-004**: Si la reserva se encuentra en cualquier estado diferente a "Reservada" (incluyendo `Pendiente de Pago`, `En Navegación`, `Completado`, `Expirado` o `Cancelado`), el sistema DEBE rechazar la solicitud e informar el motivo.
+- **FR-004**: Si la reserva se encuentra en cualquier estado diferente a "Reservada" (incluyendo `Pendiente de Pago`, `En Navegación`, `Completada`, `Expirada` o `Cancelada`), el sistema DEBE rechazar la solicitud e informar el motivo.
 - **FR-005**: Al validar la entrega del barco, el sistema DEBE invocar el caso de uso subordinado "CU-08 Actualizar estado reserva" `(<<include>>)`, solicitando cambiar al estado principal `En Navegación`.
 - **FR-006**: El sistema DEBE guardar un registro del inicio del viaje, incluyendo: identificador de la reserva, identificador del propietario, hora real de entrega y notas opcionales.
 - **FR-007**: El sistema DEBE indicar a "CU-08 Actualizar estado reserva" que llame a la API de Módulo 1 (`Asignar estado operativo`) para cambiar la embarcación al estado `En Navegación`.

@@ -26,9 +26,9 @@ Como sistema (Módulo 2), quiero notificar a Módulo 3 cada vez que una reserva 
     - **Then** el sistema emite una notificación síncrona a Módulo 3 informando que la reserva identificada entró a `Pendiente de Pago`, activando el interés financiero sobre el contrato
 
 2. **Scenario**: Notificaciones de ciclo de vida activo
-    - **Given** una reserva que transiciona a `Reservada`, `En Navegación`, o cualquier estado terminal (`Completado`, `Cancelado`, `Expirado`)
+    - **Given** una reserva que transiciona a `Reservada`, `En Navegación`, o cualquier estado terminal (`Completada`, `Cancelada`, `Expirada`)
     - **When** se asienta el cambio en la máquina de estados
-    - **Then** el sistema notifica el evento exacto a Módulo 3, incluyendo sub-estados si aplican (ej. `Cancelado` con sub-estado `Moderado`)
+    - **Then** el sistema notifica el evento exacto a Módulo 3, incluyendo sub-estados si aplican (ej. `Cancelada` con sub-estado `Moderado`)
 
 ---
 
@@ -52,8 +52,8 @@ Como sistema, quiero encolar y reintentar las notificaciones dirigidas a Módulo
 ### Edge Cases
 
 - **Idempotencia en la Recepción**: Si Módulo 2 envía dos veces la misma notificación por un falso timeout de red, Módulo 3 debe ser capaz de procesarla de forma idempotente. Módulo 2 envía identificadores únicos por cada transición para facilitar esto.
-- **Texto de novedades en el cierre**: Si el cierre incluye texto opcional de novedades, el *payload* de `Completado` lo lleva como campo informativo. Dicho texto no modifica el tratamiento del cierre (liberación del pago y devolución de la garantía).
-- **Prohibición de Cálculo Monetario**: Las notificaciones de estado son puramente operativas. **Módulo 2 JAMÁS incluye en el *payload* cálculos de penalidades, montos de reembolso o valoraciones de daños**[cite: 2]. Solo notifica el estado (ej. `Cancelado`), el sub-estado (ej. `Tardío`) y el actor responsable.
+- **Texto de novedades en el cierre**: Si el cierre incluye texto opcional de novedades, el *payload* de `Completada` lo lleva como campo informativo. Dicho texto no modifica el tratamiento del cierre (liberación del pago y devolución de la garantía).
+- **Prohibición de Cálculo Monetario**: Las notificaciones de estado son puramente operativas. **Módulo 2 JAMÁS incluye en el *payload* cálculos de penalidades, montos de reembolso o valoraciones de daños**[cite: 2]. Solo notifica el estado (ej. `Cancelada`), el sub-estado (ej. `Tardío`) y el actor responsable.
 
 ---
 
@@ -63,8 +63,8 @@ Como sistema, quiero encolar y reintentar las notificaciones dirigidas a Módulo
 
 - **FR-001**: El sistema DEBE enviar una petición a la API externa `Recibir estado de reserva` de Módulo 3 cada vez que el caso de uso `Actualizar estado reserva` consolide una creación o transición de estado válida. La integración con Módulo 3 inicia estrictamente a partir del estado `Pendiente de Pago` (estado inicial de toda reserva).
 - **FR-002**: El *payload* de la notificación DEBE contener obligatoriamente: identificador de la reserva, nuevo estado principal, sub-estado (si aplica), marca temporal exacta del evento (en formato ISO 8601) y actor que disparó el evento.
-- **FR-003**: Si el estado es `Cancelado`, la notificación DEBE incluir el sub-estado (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión`, `Por Inasistencia`) y la anticipación temporal cronológica.
-- **FR-004**: Si el cierre de la navegación incluye texto opcional de novedades provisto por el Propietario, la notificación de `Completado` DEBE incluirlo como campo informativo, sin que ello modifique el tratamiento del cierre.
+- **FR-003**: Si el estado es `Cancelada`, la notificación DEBE incluir el sub-estado (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión`, `Por Inasistencia`) y la anticipación temporal cronológica.
+- **FR-004**: Si el cierre de la navegación incluye texto opcional de novedades provisto por el Propietario, la notificación de `Completada` DEBE incluirlo como campo informativo, sin que ello modifique el tratamiento del cierre.
 - **FR-005**: El sistema DEBE implementar un mecanismo de entrega garantizada (cola de reintentos) para asegurar que las notificaciones alcancen Módulo 3 ante fallos temporales de red o timeouts.
 - **FR-006**: **REGLA ESTRICTA**: El sistema **NO DEBE** calcular ni incluir datos financieros procesados en la notificación[cite: 2]. Finanzas es responsable de interpretar el estado operativo y traducir ese evento a dinero.
 
