@@ -14,17 +14,17 @@
 
 ### User Story 1 - Configurar y validar la intención de reserva sin persistirla (Priority: P1)
 
-Como Arrendatario, quiero seleccionar una embarcación, ingresar las fechas de mi viaje y la cantidad de pasajeros para validar mi intención de viaje y ver el costo estimado antes de decidir si procedo a pagar.
+Como Arrendatario, quiero seleccionar una embarcación, ingresar las fechas de mi viaje y ver el costo estimado antes de decidir si procedo a pagar.
 
 ***Why this priority***: Es el punto de entrada principal al embudo de conversión del marketplace. Sin este paso, el cliente no puede formalizar su intención de viaje ni conocer el presupuesto estimado aplicable a sus fechas.
 
-***Independent Test***: Se prueba seleccionando una embarcación válida en Módulo 1, ingresando fechas futuras y una cantidad de pasajeros válida. Se verifica que el sistema consulte la cotización estimada a Módulo 3 (a través de `Proveer cotización de reserva`), muestre la advertencia obligatoria, sin persistir ninguna reserva y sin bloquear la disponibilidad del barco en Módulo 1.
+***Independent Test***: Se prueba seleccionando una embarcación válida en Módulo 1, ingresando fechas futuras. Se verifica que el sistema consulte la cotización estimada a Módulo 3 (a través de `Proveer cotización de reserva`), muestre la advertencia obligatoria, sin persistir ninguna reserva y sin bloquear la disponibilidad del barco en Módulo 1.
 
 ***Acceptance Scenarios***:
 
 1. **Scenario**: Creación exitosa de la reserva preliminar
     - **Given** un Arrendatario autenticado y una embarcación validada en Módulo 1
-    - **When** el usuario selecciona las fechas, horas y pasajeros, y presiona "Reservar"
+    - **When** el usuario selecciona las fechas y presiona "Reservar"
     - **Then** el sistema valida los parámetros, presenta la cotización estimada y deja los datos listos para el flujo de `Iniciar pago`, sin crear ni persistir ninguna reserva y sin bloquear el activo físico
 
 2. **Scenario**: Fechas pasadas o inválidas rechazadas por el motor de cotización
@@ -47,9 +47,9 @@ Como Arrendatario, quiero seleccionar una embarcación, ingresar las fechas de m
 
 ### Functional Requirements
 
-- **FR-001**: El sistema DEBE permitir al Arrendatario ingresar el identificador de la embarcación, fechas/horas pactadas de inicio y fin, y la cantidad de pasajeros.
+- **FR-001**: El sistema DEBE permitir al Arrendatario ingresar el identificador de la embarcación y las fechas pactadas de inicio y fin.
 - **FR-002**: El sistema DEBE consultar a la API externa de Módulo 1 (`Consultar información de embarcación`) para validar que el identificador existe y obtener el puerto de atraque y su zona horaria oficial.
-- **FR-005**: Si la solicitud de reserva es válida, el sistema DEBE entregar los parámetros consolidados y validados (embarcación, fechas/horas, pasajeros y cotización) al flujo de `Iniciar pago`, sin persistir ninguna reserva en este caso de uso.
+- **FR-005**: Si la solicitud de reserva es válida, el sistema DEBE entregar los parámetros consolidados y validados (embarcación, fechas y cotización) al flujo de `Iniciar pago`, sin persistir ninguna reserva en este caso de uso.
 - **FR-006**: El sistema **NO DEBE** invocar llamadas de bloqueo hacia Módulo 1 en esta etapa. Como no se persiste ninguna reserva, nada de lo actuado aquí debe alterar la disponibilidad operativa de la embarcación física.
 - **FR-007**: El sistema **NO DEBE** iniciar el temporizador TTL de 15 minutos en este caso de uso. El control de tiempo límite se delega estrictamente al caso de uso posterior (`Iniciar pago`).
 
@@ -57,7 +57,7 @@ Como Arrendatario, quiero seleccionar una embarcación, ingresar las fechas de m
 
 ### Key Entities
 
-- **Reserva (`Reservation`)**: Entidad de Módulo 2 que **NO** se crea ni persiste en este flujo. Los parámetros operativos validados (fechas, barco, pasajeros) se entregan de forma transitoria al flujo de `Iniciar pago`.
+- **Reserva (`Reservation`)**: Entidad de Módulo 2 que **NO** se crea ni persiste en este flujo. Los parámetros operativos validados (fechas, barco) se entregan de forma transitoria al flujo de `Iniciar pago`.
 
 ---
 

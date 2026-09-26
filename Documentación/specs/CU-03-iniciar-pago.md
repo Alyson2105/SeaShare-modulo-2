@@ -34,6 +34,11 @@ Como Arrendatario, quiero proceder al pago de mi intención de reserva (parámet
     - **When** el sistema invoca "Brindar cálculo total de la reserva" pero Módulo 3 está indisponible o arroja error
     - **Then** el sistema aborta la operación sin crear ninguna reserva, NO bloquea el inventario y muestra un mensaje de error al usuario
 
+3. **Scenario**: Intento de pago sin aceptar la política de cancelación
+    - **Given** un Arrendatario en la pantalla de pago con un temporizador activo
+    - **When** el usuario intenta accionar el botón "Confirmar y Pagar" sin haber seleccionado el checkbox obligatorio "Acepto la Política de Cancelación"
+    - **Then** el sistema bloquea el avance hacia la pasarela de Módulo 3, mantiene al usuario en la vista actual y resalta una advertencia indicando la obligación de aceptar las políticas de cancelación
+
 ---
 
 ### User Story 2 - Resolución de colisiones por concurrencia en la intención de pago (Priority: P1)
@@ -57,14 +62,14 @@ Como sistema, quiero evitar que dos usuarios bloqueen la misma embarcación para
 
 - **Inicio de pago sin disponibilidad**: Si al validar de forma atómica las fechas ya se encuentran bloqueadas por otra reserva (en `Pendiente de Pago` o `Reservada`), el sistema DEBE denegar inmediatamente el inicio del flujo sin crear ninguna reserva.
 - **Temporizador TTL de 15 minutos en curso**: Una vez que se entra a `Pendiente de Pago`, el usuario tiene un Time-To-Live estricto de 15 minutos[cite: 2]. Si el usuario abandona la pasarela y vuelve a entrar, el temporizador NO se reinicia; sigue consumiéndose desde el primer inicio de pago.
-
+- **Expiración del temporizador TTL en pantalla (00:00)**: Si el contador en cuenta regresiva llega a cero mientras el usuario permanece en la pantalla de pago, el sistema DEBE inhabilitar la acción de "Confirmar y Pagar", notificar la expiración del tiempo de reserva y redirigir al usuario o liberar el inventario bloqueado.
 ---
 
 ## Requirements
 
 ### Functional Requirements
 
-- **FR-001**: El sistema DEBE permitir iniciar el proceso de pago a partir de parámetros de viaje validados (embarcación, fechas/horas y pasajeros), sin exigir una reserva preexistente.
+- **FR-001**: El sistema DEBE permitir iniciar el proceso de pago a partir de parámetros de viaje validados (embarcación, fechas y pasajeros), sin exigir una reserva preexistente.
 - **FR-002**: El sistema DEBE invocar obligatoriamente al caso de uso subordinado `Brindar cálculo total de la reserva` `(<<include>>)` para solicitar a Módulo 3 el monto final vinculante, incluyendo el desglose de tarifa base, seguro náutico y depósito de garantía.
 - **FR-003**: **REGLA DE NEGOCIO ESTRICTA**: El sistema **NO DEBE** manipular, sumar ni recalcular el valor devuelto por el cálculo total[cite: 2]. Debe utilizar la estructura financiera entregada por Módulo 3 de manera intacta.
 - **FR-004**: Si el cálculo total es devuelto con éxito, el sistema DEBE validar de forma atómica que las fechas de la reserva sigan disponibles (que no hayan sido bloqueadas por otra reserva que haya entrado a `Pendiente de Pago` o `Reservada` instantes antes).
@@ -72,7 +77,11 @@ Como sistema, quiero evitar que dos usuarios bloqueen la misma embarcación para
 - **FR-006**: Al confirmarse la transición a `Pendiente de Pago`, el sistema DEBE iniciar un temporizador de expiración (TTL) estricto de 15 minutos asociado a la reserva[cite: 2].
 - **FR-007**: Si el proceso de validación concurrente falla (las fechas acaban de ser ocupadas), el sistema DEBE rechazar el inicio del pago sin crear ninguna reserva y notificar al usuario.
 - **FR-008**: El sistema DEBE transferir el identificador de la reserva, el monto total devuelto por el cálculo y los datos del usuario hacia la interfaz o API de cobro de Módulo 3 para que el usuario efectúe la transacción.
-
+- **FR-009**: El sistema DEBE desplegar visualmente en la pantalla la información resumida de la reserva: imagen de portada, nombre de la embarcación, rango de fechas, número total de noches, cantidad de pasajeros y ubicación/marina.
+- **FR-010**: El sistema DEBE renderizar en la interfaz un temporizador dinámico visible en cuenta regresiva basado en el TTL de 15 minutos (ej. "Reserva expira en: 14:52").
+- **FR-011**: El sistema DEBE mostrar el desglose financiero detallado proveniente de `Brindar cálculo total de la reserva`, incluyendo la fórmula explicativa de la tarifa base (días × tarifa diaria), comisión de la plataforma, seguro náutico, depósito de garantía reembolsable y el mensaje aclaratorio sobre las condiciones del reembolso ("El depósito se reembolsa completo si el barco se devuelve sin daños").
+- **FR-012**: El sistema DEBE incluir un componente de confirmación interactivo "Acepto la Política de Cancelación" junto con la condición explícita (ej. "Cancelación gratis hasta 72h antes del inicio del viaje").
+- **FR-013**: El sistema DEBE exigir la selección obligatoria del checkbox "Acepto la Política de Cancelación" como condición requerida antes de permitir la ejecución o habilitación del botón primario "Confirmar y Pagar".
 ---
 
 ### Key Entities
@@ -88,3 +97,4 @@ Como sistema, quiero evitar que dos usuarios bloqueen la misma embarcación para
 - **SC-001**: El 100% de los intentos de inicio de pago exitosos crean la reserva en `Pendiente de Pago` y arrancan correctamente el temporizador de 15 minutos.
 - **SC-002**: Cero (0%) sobreventas ante intentos de pago concurrentes sobre la misma embarcación en el mismo rango de fechas.
 - **SC-003**: Cero (0) valores financieros calculados dentro del alcance de Módulo 2; el 100% de los cobros utilizan el dato provisto por `Brindar cálculo total de la reserva`.
+- **SC-004**: El 100% de las transacciones redirigidas hacia Módulo 3 cuentan con la confirmación previa y explícita de la política de cancelación por parte del usuario.
