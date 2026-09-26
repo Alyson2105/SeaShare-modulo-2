@@ -7,8 +7,6 @@
 - **Módulo 3 – Gestión Liquidación**: sistema cliente que consume los mensajes de la cola para decidir internamente el destino del depósito. No participa en la creación ni en la actualización del estado de la disputa.
 - **Casos de uso internos de Módulo 2**: invocado tras cada transición a estado final (RECHAZADA o ACEPTADA) gestionada por `Generar disputa de garantía` (`CU-16`, cierre automático) y `Actualizar estado de disputa de garantía` (`CU-17`, resolución del Admin).
 
-> **Nota de alcance**: este caso de uso reemplaza lo que originalmente se planteó como "Solicitar información de disputa de garantía". No es un caso adicional: es el mismo caso renombrado y con la dirección de la relación invertida — en vez de que Módulo 3 consulte activamente, es Módulo 2 quien publica o envía la información y Módulo 3 la recibe.
->
 > **Nota de dominio**: los estados **PENDIENTE**, **RECHAZADA** y **ACEPTADA** (en mayúscula) pertenecen al objeto **Disputa de garantía**, que es distinto al estado de la reserva (`Completada`, `Reservada`, `Pendiente de Pago`, etc.).
 
 ---
