@@ -53,7 +53,7 @@ Como sistema, quiero encolar y reintentar las notificaciones dirigidas a Módulo
 
 - **Idempotencia en la Recepción**: Si Módulo 2 envía dos veces la misma notificación por un falso timeout de red, Módulo 3 debe ser capaz de procesarla de forma idempotente. Módulo 2 envía identificadores únicos por cada transición para facilitar esto.
 - **Texto de novedades en el cierre**: Si el cierre incluye texto opcional de novedades, el *payload* de `Completada` lo lleva como campo informativo. Dicho texto no modifica el tratamiento del cierre (liberación del pago y devolución de la garantía).
-- **Prohibición de Cálculo Monetario**: Las notificaciones de estado son puramente operativas. **Módulo 2 JAMÁS incluye en el *payload* cálculos de penalidades, montos de reembolso o valoraciones de daños**[cite: 2]. Solo notifica el estado (ej. `Cancelada`), el sub-estado (ej. `Tardío`) y el actor responsable.
+- **Prohibición de Cálculo Monetario**: Las notificaciones de estado son puramente operativas. **Módulo 2 JAMÁS incluye en el *payload* cálculos de penalidades, montos de reembolso o valoraciones de daños**. Solo notifica el estado (ej. `Cancelada`), el sub-estado (ej. `Tardío`) y el actor responsable.
 
 ---
 
@@ -66,7 +66,7 @@ Como sistema, quiero encolar y reintentar las notificaciones dirigidas a Módulo
 - **FR-003**: Si el estado es `Cancelada`, la notificación DEBE incluir el sub-estado (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión`, `Por Inasistencia`) y la anticipación temporal cronológica.
 - **FR-004**: Si el cierre de la navegación incluye texto opcional de novedades provisto por el Propietario, la notificación de `Completada` DEBE incluirlo como campo informativo, sin que ello modifique el tratamiento del cierre.
 - **FR-005**: El sistema DEBE implementar un mecanismo de entrega garantizada (cola de reintentos) para asegurar que las notificaciones alcancen Módulo 3 ante fallos temporales de red o timeouts.
-- **FR-006**: **REGLA ESTRICTA**: El sistema **NO DEBE** calcular ni incluir datos financieros procesados en la notificación[cite: 2]. Finanzas es responsable de interpretar el estado operativo y traducir ese evento a dinero.
+- **FR-006**: **REGLA ESTRICTA**: El sistema **NO DEBE** calcular ni incluir datos financieros procesados en la notificación. Finanzas es responsable de interpretar el estado operativo y traducir ese evento a dinero.
 
 ---
 
@@ -82,4 +82,4 @@ Como sistema, quiero encolar y reintentar las notificaciones dirigidas a Módulo
 
 - **SC-001**: El 100% de los cambios de estado (a partir de la creación en `Pendiente de Pago`) son notificados a Módulo 3 (0% de eventos perdidos gracias a la cola de reintentos).
 - **SC-002**: El tiempo de emisión del primer intento de notificación no supera los 500 milisegundos tras la consolidación del estado en la base de datos local.
-- **SC-003**: Cero (0) valores financieros o monetarios calculados incluidos en el cuerpo del mensaje enviado a Módulo 3[cite: 2].
+- **SC-003**: Cero (0) valores financieros o monetarios calculados incluidos en el cuerpo del mensaje enviado a Módulo 3.

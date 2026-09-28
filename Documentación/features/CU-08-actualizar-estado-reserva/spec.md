@@ -29,7 +29,7 @@ Cualquier caso de uso de Módulo 2 que necesite crear una reserva en su estado i
 2. **Scenario**: Transición a Pendiente de Pago e inicio del bloqueo operativo
     - **Given** una reserva en estado "Iniciada" con su TTL en curso
     - **When** el caso de uso "CU-03 Iniciar pago" pide la transición porque el usuario decidió proceder al cobro
-    - **Then** el sistema registra la reserva en estado "Pendiente de Pago" (el TTL sigue corriendo desde `Iniciada`, no se reinicia) y le avisa a Módulo 1 (`Asignar estado operativo`) para poner la embarcación en "Reservado"[cite: 2]
+    - **Then** el sistema registra la reserva en estado "Pendiente de Pago" (el TTL sigue corriendo desde `Iniciada`, no se reinicia) y le avisa a Módulo 1 (`Asignar estado operativo`) para poner la embarcación en "Reservado"
 
 3. **Scenario**: Confirmación de la reserva tras aprobarse el pago
     - **Given** una reserva en estado principal "Pendiente de Pago"
@@ -113,7 +113,7 @@ Si llega un pedido de cambio de estado que no está permitido, el sistema tiene 
 ### Edge Cases
 
 - **Sin bloqueo antes del pago (Condición de carrera pre-pago)**: Dado que en estado `Iniciada` no hay retención de la embarcación, es posible que dos Arrendatarios distintos tengan reservas en `Iniciada` para el mismo barco y las mismas fechas simultáneamente. El primer usuario que complete `Iniciar pago` transicionará su reserva a `Pendiente de Pago` y ganará el bloqueo en Módulo 1 (`Reservado`). Si el segundo usuario intenta `Iniciar pago` después, Módulo 2 validará la disponibilidad en Módulo 1, descubrirá que ya está reservado por el primero y rechazará la transición a `Pendiente de Pago`.
-- **"Pendiente de Pago" no se puede cancelar por voluntad propia**: La reserva se libera solo de forma pasiva cuando vence el temporizador TTL de 15 minutos[cite: 2].
+- **"Pendiente de Pago" no se puede cancelar por voluntad propia**: La reserva se libera solo de forma pasiva cuando vence el temporizador TTL de 15 minutos.
 - **Falla pasajera de conexión con Módulo 1 o 3**: Mecanismo de cola y reintentos (0% de eventos perdidos).
 - **Los estados finales no se pueden tocar nunca más**: `Completada`, `Cancelada` y `Expirada` son definitivos.
 

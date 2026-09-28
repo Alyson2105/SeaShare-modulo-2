@@ -347,17 +347,16 @@ Esta sección **no resuelve** las inconsistencias: las señala para que se cierr
 17. **Volumen y capacidad nunca definidos**: número de usuarios, número de reservas y volumen de reservas concurrentes.
 18. **Divisa**: CU-11 y CU-12 transportan `currency` (COP, USD) y prohíben la conversión local, pero ninguna spec fija en qué moneda se almacena la reserva ni cómo se reconcilian cotizaciones en monedas distintas.
 19. CU-05: dos `[NEEDS CLARIFICATION]` sobre la política ante fallo de Módulo 1 al resolver la zona horaria (¿reintentar o rechazar temporalmente la inasistencia?).
-20. CU-13: tres `[NEEDS CLARIFICATION]` — política ante pago rechazado (¿cancelar o permitir reintento dentro del TTL?), ventana de gracia tras el segundo 900 y duplicación de la misma pregunta en FR-005.
+20. CU-13: dos `[NEEDS CLARIFICATION]` — política ante pago rechazado (¿cancelar o permitir reintento dentro del TTL?) y duplicación de la misma pregunta en FR-005.
 21. CU-11: cuatro `[NEEDS CLARIFICATION]` — límite de lote (50 o 100) y los dos SLAs. CU-12: tres — nombre formal del endpoint (hay dos candidatos) y su SLA.
 22. CU-16, CU-17 y CU-18: seis dudas abiertas entre las tres specs — reclamo múltiple o editable dentro de la ventana, si la ventana de 24 h es configurable, política de reintento del job diferido, si el Admin puede resolver una disputa `PENDIENTE` sin reclamo registrado, longitud máxima del motivo, y garantías de orden y estrategia de versionado de `eventId`.
 
 ### C. Higiene documental (no bloquea, conviene corregir en los planes por CU)
 
-23. Marcadores `[cite: 2]` sin resolver en CU-03, CU-08, CU-14 y CU-15.
-24. CU-13 usa `[NEEDS CLARIFICATION]` como enunciado de requisito: FR-005 es íntegramente una pregunta, no un requisito.
-25. Inconsistencia de nomenclatura entre specs: "Módulo 2 – Gestión de Reserva" (CU-13) frente a "Operación de Reservas, Tiempos y Cancelaciones"; y las variantes de nombre de Módulo 1 ("Gestión de Flota y Activos P2P", "Gestión de Embarcación", "Gestión de Flota"). Se adopta la nomenclatura canónica de `consistencia-m2-m3.md` §1.
-26. CU-08 US3 y US4 declaran sus escenarios de aceptación "intactos" o "idénticos" sin listarlos. CU-01 referencia una sección de dudas que no existe. CU-11 invoca un "Contrato UC01 de Módulo 3" que nunca se cita ni se adjunta.
-27. **No pude revisar el diagrama**: `diagrams/Sea-Share module-Modulo 2.drawio.png` es una imagen y este modelo no admite entrada visual. Conviene contrastar este plan contra el diagrama, en particular el agrupamiento de casos de uso y las relaciones `<<include>>` y `<<extend>>`.
+23. CU-13 usa `[NEEDS CLARIFICATION]` como enunciado de requisito: FR-005 es íntegramente una pregunta, no un requisito.
+24. Inconsistencia de nomenclatura entre specs: "Módulo 2 – Gestión de Reserva" (CU-13) frente a "Operación de Reservas, Tiempos y Cancelaciones"; y las variantes de nombre de Módulo 1 ("Gestión de Flota y Activos P2P", "Gestión de Embarcación", "Gestión de Flota"). Se adopta la nomenclatura canónica de `consistencia-m2-m3.md` §1.
+25. CU-08 US3 y US4 declaran sus escenarios de aceptación "intactos" o "idénticos" sin listarlos. CU-01 referencia una sección de dudas que no existe. CU-11 invoca un "Contrato UC01 de Módulo 3" que nunca se cita ni se adjunta.
+26. **No pude revisar el diagrama**: `diagrams/Sea-Share module-Modulo 2.drawio.png` es una imagen y este modelo no admite entrada visual. Conviene contrastar este plan contra el diagrama, en particular el agrupamiento de casos de uso y las relaciones `<<include>>` y `<<extend>>`.
 
 ---
 
