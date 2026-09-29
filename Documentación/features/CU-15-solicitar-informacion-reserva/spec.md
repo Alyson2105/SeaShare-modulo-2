@@ -13,7 +13,7 @@
 
 ### User Story 1 - Suministrar información operativa en tiempo real a Módulo 3 (Priority: P1)
 
-Como motor financiero (Módulo 3), necesito consultar los datos operativos actualizados de una reserva específica (estado, fechas, pasajeros y barco) para poder vincular mis operaciones de cobro, activación de seguros y custodia de fondos con la realidad operativa del alquiler[cite: 2].
+Como motor financiero (Módulo 3), necesito consultar los datos operativos actualizados de una reserva específica (estado, fechas, pasajeros y barco) para poder vincular mis operaciones de cobro, activación de seguros y custodia de fondos con la realidad operativa del alquiler.
 
 ***Why this priority***: Es el puente de lectura fundamental entre la operación y las finanzas. Sin este canal, Módulo 3 operaría a ciegas y no podría respaldar transacciones, activaciones de pólizas ni dispersiones.
 
@@ -35,7 +35,7 @@ Como motor financiero (Módulo 3), necesito consultar los datos operativos actua
 
 ### User Story 2 - Proveer datos de cierre e incidentes para liquidación final (Priority: P1)
 
-Como motor financiero (Módulo 3), necesito obtener los detalles de cierre de una reserva (texto de novedades si existe, justificaciones o anticipación de cancelación) para aplicar de manera autónoma mi matriz de liquidación, reembolsos y ejecución de garantías[cite: 2].
+Como motor financiero (Módulo 3), necesito obtener los detalles de cierre de una reserva (texto de novedades si existe, justificaciones o anticipación de cancelación) para aplicar de manera autónoma mi matriz de liquidación, reembolsos y ejecución de garantías.
 
 ***Why this priority***: Permite a Módulo 3 saber matemáticamente cuánto dinero liberar, retener o penalizar al finalizar un contrato, basándose estrictamente en los hechos operativos reportados en muelle.
 
@@ -59,7 +59,7 @@ Como motor financiero (Módulo 3), necesito obtener los detalles de cierre de un
 
 - **Naturaleza Estrictamente Idempotente (Solo Lectura)**: Esta interfaz no produce efectos secundarios. No avanza el estado, no interfiere con el TTL, no llama a Módulo 1 ni dispara webhooks. Módulo 3 puede consultarla 1,000 veces seguidas obteniendo exactamente el mismo resultado sin corromper el sistema.
 - **Sin Política de Reintentos Internos**: Dado que Módulo 2 actúa como servidor pasivo en este caso de uso, si hay un timeout de red, Módulo 2 simplemente cierra el hilo. La responsabilidad de reintentar la llamada recae 100% en el cliente (Módulo 3).
-- **Prohibición de Cálculos Financieros**: Módulo 2 **NO** tasa económicamente los daños, no estima penalidades y no deduce comisiones[cite: 2]. Solo entrega hechos (horas, textos, estados).
+- **Prohibición de Cálculos Financieros**: Módulo 2 **NO** tasa económicamente los daños, no estima penalidades y no deduce comisiones. Solo entrega hechos (horas, textos, estados).
 - **Inmutabilidad en Estados Terminales**: Las consultas sobre reservas en estado `Completada`, `Cancelada` o `Expirada` siempre devolverán la misma fotografía histórica del cierre.
 
 ---
