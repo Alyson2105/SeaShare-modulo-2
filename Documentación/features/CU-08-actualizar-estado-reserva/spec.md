@@ -1,7 +1,7 @@
 # Feature Specification: Actualizar Estado de Reserva
 
 **Módulo**: Módulo 2 (Operación de Reservas, Tiempos y Cancelaciones)  
-**Created**: 2026-09-08 (Actualizado: el ciclo inicia en Iniciada; el TTL arranca ahí)  
+**Created**: 2026-09-08 (Actualizado: integración del ciclo de pago e inicio en 'Iniciada')  
 **Primary Actor**: Sistema / Se llama internamente (Es el motor que usan los demás casos de uso de Módulo 2: `Iniciar reserva`, `Iniciar pago`, `Confirmar pago`, `Marcar inicio de la navegación`, `Marcar fin de navegacion`, `Solicitar cancelación`, `Marcar inasistencia`, y el temporizador de expiración TTL de 15 minutos)  
 **External Dependencies (APIs)**:
 - **Módulo 1 (Gestión de Flota y Activos P2P)**: API externa (`Asignar estado operativo`) para mantener sincronizado el estado operativo de la embarcación (`Disponible`, `Reservado`, `En Navegación`, `En Mantenimiento/Limpieza`).
@@ -9,50 +9,50 @@
 
 ---
 
-## User Scenarios & Testing
+## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Ser el único lugar donde se aplican los cambios de estado válidos de la reserva (Priority: P1)
 
 Cualquier caso de uso de Módulo 2 que necesite crear una reserva en su estado inicial (`Iniciada`) o cambiar su estado tiene que pasar obligatoriamente por "CU-08 Actualizar estado reserva" (`<<include>>`). El sistema verifica que el cambio pedido cumpla con las reglas de estados, asigna el estado principal y el sub-estado que corresponda, guarda el cambio de forma segura, registra la hora exacta y deja guardado el historial completo de la reserva.
 
-***Why this priority***: Es la pieza central que mantiene todo consistente en el mundo de las reservas. Tener un único motor de cambios evita estados inconsistentes, problemas cuando dos cosas pasan al mismo tiempo, y datos dañados en el ciclo de vida del alquiler.
+**Why this priority**: Es la pieza central que mantiene todo consistente en el mundo de las reservas. Tener un único motor de cambios evita estados inconsistentes, problemas cuando dos cosas pasan al mismo tiempo, y datos dañados en el ciclo de vida del alquiler.
 
-***Independent Test***: Se puede probar aislando el motor de cambios de estado, preparando reservas en cada estado posible y pidiendo cambios permitidos (por ejemplo, `Creación` → `Iniciada`, `Iniciada` → `Pendiente de Pago`, `Pendiente de Pago` → `Reservada`, `Reservada` → `En Navegación`, `En Navegación` → `Completada`, `Reservada` → `Cancelada`), y verificando que el nuevo estado y sub-estado quedan guardados correctamente con fecha y motivo.
+**Independent Test**: Se puede probar aislando el motor de cambios de estado, preparando reservas en cada estado posible y pidiendo cambios permitidos (por ejemplo, `Creación` → `Iniciada`, `Iniciada` → `Pendiente de Pago`, `Pendiente de Pago` → `Reservada`, `Reservada` → `En Navegación`, `En Navegación` → `Completada`, `Reservada` → `Cancelada`), y verificando que el nuevo estado y sub-estado quedan guardados correctamente con fecha y motivo.
 
-***Acceptance Scenarios***:
+**Acceptance Scenarios**:
 
 1. **Scenario**: Creación y primer registro de la reserva en estado Iniciada
     - **Given** un Arrendatario que presiona "Reservar" y comienza a llenar los datos del viaje (embarcación, fechas)
-    - **When** el caso de uso "CU-02 Iniciar reserva" pide la creación inicial
+    - **When** el caso de uso `Iniciar reserva` pide la creación inicial
     - **Then** el sistema crea la reserva con estado principal "Iniciada" como único punto de entrada a la máquina de estados, enciende el temporizador TTL de 15 minutos y no notifica bloqueo a Módulo 1
 
-2. **Scenario**: Transición a Pendiente de Pago e inicio del bloqueo operativo
+2. **Scenario**: Transición a Pendiente de Pago e inicio del bloqueo operativo vía Iniciar Pago
     - **Given** una reserva en estado "Iniciada" con su TTL en curso
-    - **When** el caso de uso "CU-03 Iniciar pago" pide la transición porque el usuario decidió proceder al cobro
+    - **When** el caso de uso orquestador `Iniciar pago` invoca este motor para proceder al cobro
     - **Then** el sistema registra la reserva en estado "Pendiente de Pago" (el TTL sigue corriendo desde `Iniciada`, no se reinicia) y le avisa a Módulo 1 (`Asignar estado operativo`) para poner la embarcación en "Reservado"
 
 3. **Scenario**: Confirmación de la reserva tras aprobarse el pago
     - **Given** una reserva en estado principal "Pendiente de Pago"
-    - **When** el caso de uso "CU-13 Confirmar pago" pide actualizar a estado "Reservada"
-    - **Then** el sistema verifica que el cambio es válido, actualiza el estado principal a "Reservada", guarda la hora del cambio y empieza a avisarle a los módulos externos
+    - **When** el caso de uso `Confirmar pago` pide actualizar a estado "Reservada"
+    - **Then** el sistema verifica que el cambio es válido, actualiza el estado principal a "Reservada", guarda la hora del cambio y avisa a los módulos externos
 
 4. **Scenario**: Inicio del servicio de navegación (Check-in)
     - **Given** una reserva en estado principal "Reservada"
-    - **When** el caso de uso "Marcar inicio de la navegación" pide el cambio de estado
+    - **When** el caso de uso `Marcar inicio de la navegación` pide el cambio de estado
     - **Then** el sistema verifica el cambio y actualiza el estado principal de la reserva a "En Navegación"
 
 5. **Scenario**: Cierre del servicio (Check-out)
     - **Given** una reserva en estado principal "En Navegación"
-    - **When** el caso de uso "Marcar fin de navegacion" avisa que el servicio terminó
-    - **Then** el sistema actualiza el estado principal a "Completada" y guarda el texto de novedades si el Propietario lo proveyó (campo opcional que no altera el cierre)
+    - **When** el caso de uso `Marcar fin de navegacion` avisa que el servicio terminó
+    - **Then** el sistema actualiza el estado principal a "Completada" y guarda el texto de novedades si el Propietario lo proveyó
 
-7. **Scenario**: Cancelación voluntaria de una reserva en estado Reservada, o por inasistencia
+6. **Scenario**: Cancelación voluntaria de una reserva en estado Reservada, o por inasistencia
     - **Given** una reserva en estado principal "Reservada"
-    - **When** "Solicitar cancelación" o "CU-05 Marcar inasistencia" piden el cambio, aportando el tipo o motivo correspondiente
-    - **Then** el sistema actualiza el estado principal a "Cancelada" y asigna el sub-estado que corresponda ("Flexible", "Moderado", "Tardío", "Por Anfitrión" o "Por Inasistencia")
+    - **When** `Solicitar cancelación` o `Marcar inasistencia` piden el cambio, aportando el tipo o motivo correspondiente
+    - **Then** el sistema actualiza el estado principal a "Cancelada" y asigna el sub-estado que corresponda (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión` o `Por Inasistencia`)
 
-8. **Scenario**: Expiración automática al cumplirse los 15 minutos
-    - **Given** una reserva en estado principal "Pendiente de Pago" cuyo temporizador TTL de 15 minutos ya venció sin que se confirmara el pago
+7. **Scenario**: Expiración automática al cumplirse los 15 minutos
+    - **Given** una reserva en estado principal "Pendiente de Pago" cuyo temporizador TTL de 15 minutos ya venció sin confirmación de pago
     - **When** el temporizador interno del sistema dispara el cambio
     - **Then** el sistema actualiza el estado principal a "Expirada" de forma segura y completa
 
@@ -62,20 +62,20 @@ Cualquier caso de uso de Módulo 2 que necesite crear una reserva en su estado i
 
 En los momentos clave del ciclo de vida de la reserva (a partir de que hay intención real de pago), el sistema le avisa de inmediato a la API `Asignar estado operativo` de Módulo 1 para actualizar el estado operativo de la embarcación (`Disponible`, `Reservado`, `En Navegación`, `En Mantenimiento/Limpieza`).
 
-***Why this priority***: Asegura que el inventario físico en el muelle coincida exactamente con los compromisos de pago y navegación en la plataforma.
+**Why this priority**: Asegura que el inventario físico en el muelle coincida exactamente con los compromisos de pago y navegación en la plataforma.
 
-***Independent Test***: Se puede probar simulando la API `Asignar estado operativo` de Módulo 1, provocando cambios de estado de reserva y verificando que Módulo 1 recibe el aviso correcto en los estados pertinentes: ningún aviso al nacer en `Iniciada`, y aviso de bloqueo al entrar a `Pendiente de Pago`.
+**Independent Test**: Se puede probar simulando la API `Asignar estado operativo` de Módulo 1, provocando cambios de estado de reserva y verificando que Módulo 1 recibe el aviso correcto en los estados pertinentes: ningún aviso al nacer en `Iniciada`, y aviso de bloqueo al entrar a `Pendiente de Pago`.
 
-***Acceptance Scenarios***:
+**Acceptance Scenarios**:
 
 1. **Scenario**: Al iniciar el pago, la embarcación queda bloqueada como "Reservado"
-    - **Given** una reserva que pasa de "Iniciada" a "Pendiente de Pago" (al dispararse "CU-03 Iniciar pago")
-    - **When** se procesa la actualización de estado
+    - **Given** una reserva que pasa de "Iniciada" a "Pendiente de Pago" (al dispararse `Iniciar pago`)
+    - **When** se procesa la actualización de estado en este motor
     - **Then** el sistema llama a la API `Asignar estado operativo` de Módulo 1 enviando el estado "Reservado" para esa embarcación
 
 2. **Scenario**: Al iniciar la navegación, la embarcación pasa a "En Navegación"
     - **Given** una reserva que pasa al estado principal "En Navegación"
-    - **When** se guarda ese cambio en Módulo 2
+    - **When** se guarda ese cambio
     - **Then** el sistema llama a la API `Asignar estado operativo` de Módulo 1 enviando el estado operativo "En Navegación"
 
 3. **Scenario**: Un cierre normal, cancelación o expiración liberan la embarcación a "Disponible"
@@ -89,24 +89,33 @@ En los momentos clave del ciclo de vida de la reserva (a partir de que hay inten
 
 Cada vez que cambia el estado o sub-estado de una reserva a partir de su consolidación, el sistema DEBE avisarle a la API externa de Módulo 3 (`Recibir estado de reserva`).
 
-***Why this priority***: Módulo 3 necesita enterarse en tiempo real de lo que pasa para activar seguros, retener o devolver depósitos de garantía, y procesar reembolsos.
+**Why this priority**: Módulo 3 necesita enterarse en tiempo real de lo que pasa para activar seguros, retener o devolver depósitos de garantía, y procesar reembolsos.
 
-*(Los Acceptance Scenarios de esta US se mantienen intactos respecto a los avisos de Confirmación, Cierre, Cancelación y Penalidades).*
+**Independent Test**: Se prueba simulando eventos de transición y validando que las peticiones salientes hacia Módulo 3 incluyan los datos correctos del estado y sub-estado.
+
+**Acceptance Scenarios**:
+
+1. **Scenario**: Aviso exitoso de transición a Módulo 3
+    - **Given** una reserva que experimenta un cambio de estado válido gestionado por este motor
+    - **When** el cambio se consolida en base de datos
+    - **Then** el sistema emite una notificación hacia la API externa `Recibir estado de reserva` de Módulo 3
 
 ---
 
 ### User Story 4 - Rechazar por completo los cambios no permitidos y mantener intactos los estados finales (Priority: P2)
 
-Si llega un pedido de cambio de estado que no está permitido, el sistema tiene que rechazar la solicitud sin excepciones.
+Si llega un pedido de cambio de estado que no está permitido por la máquina de estados, el sistema tiene que rechazar la solicitud sin excepciones.
 
-***Acceptance Scenarios***:
+**Why this priority**: Protege la integridad transaccional de la plataforma.
+
+**Independent Test**: Se prueba enviando comandos de transición prohibidos (ej. cancelar una reserva en `Pendiente de Pago`) y verificando que el motor los rechaza.
+
+**Acceptance Scenarios**:
 
 1. **Scenario**: Intento de cancelar una reserva en Pendiente de Pago
     - **Given** una reserva en estado principal "Pendiente de Pago"
     - **When** llega una solicitud de cancelación voluntaria
-    - **Then** el sistema rechaza la solicitud explicando que solo las reservas en estado Reservada admiten cancelación; la reserva en Pendiente de Pago debe expirar pasivamente.
-
-*(Los demás Acceptance Scenarios sobre estados finales y completados se mantienen idénticos).*
+    - **Then** el sistema rechaza la solicitud explicando que solo las reservas en estado `Reservada` admiten cancelación activa; la reserva en Pendiente de Pago debe expirar pasivamente por TTL.
 
 ---
 
@@ -119,18 +128,18 @@ Si llega un pedido de cambio de estado que no está permitido, el sistema tiene 
 
 ---
 
-## Requirements
+## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: El sistema DEBE ser el único lugar donde se actualiza el estado y sub-estado de cualquier reserva en Módulo 2, invocado obligatoriamente mediante relaciones `<<include>>`.
+- **FR-001**: El sistema DEBE ser el único lugar donde se actualiza el estado y sub-estado de cualquier reserva en Módulo 2, invocado obligatoriamente mediante relaciones `<<include>>` por los casos de uso transaccionales (incluyendo `Iniciar pago`).
 - **FR-002**: El sistema DEBE seguir esta lista oficial de estados de la reserva:
-    - **Estados Principales de la Reserva**: `Iniciada`, `Pendiente de Pago`, `Reservada`, `En Navegación`, `Completada`, `Cancelada`, `Expirada`. El estado inicial de toda reserva al crearse es siempre `Iniciada` (disparado únicamente por "CU-02 Iniciar reserva" al presionar "Reservar"). `Iniciada`, `Pendiente de Pago`, `En Navegación` y `Expirada` no tienen sub-estados.
+    - **Estados Principales de la Reserva**: `Iniciada`, `Pendiente de Pago`, `Reservada`, `En Navegación`, `Completada`, `Cancelada`, `Expirada`. El estado inicial de toda reserva al crearse es siempre `Iniciada` (disparado únicamente por `Iniciar reserva` al presionar "Reservar"). `Iniciada`, `Pendiente de Pago`, `En Navegación` y `Expirada` no tienen sub-estados.
     - **Sub-estados de Cancelación**: `Flexible`, `Moderado`, `Tardío`, `Por Anfitrión`, `Por Inasistencia`.
     - **Estados terminales**: `Completada`, `Cancelada` y `Expirada`.
 - **FR-003**: El sistema DEBE verificar de forma estricta que el cambio de estado pedido sea uno de los permitidos:
-    - `Creación → Iniciada`: única forma de entrar a la máquina de estados, disparada por "CU-02 Iniciar reserva" al presionar "Reservar".
-    - `Iniciada → Pendiente de Pago`: disparada por "CU-03 Iniciar pago".
+    - `Creación → Iniciada`: única forma de entrar a la máquina de estados, disparada por `Iniciar reserva` al presionar "Reservar".
+    - `Iniciada → Pendiente de Pago`: disparada por `Iniciar pago`.
     - `Pendiente de Pago → Reservada` o `Expirada`.
     - `Reservada → En Navegación` o `Cancelada`.
     - `En Navegación → Completada`.
@@ -143,7 +152,7 @@ Si llega un pedido de cambio de estado que no está permitido, el sistema tiene 
     - Pasa a `En Navegación`: actualizar a `En Navegación`.
     - Pasa a `Completada`, `Cancelada` o `Expirada`: actualizar a `Disponible`.
 - **FR-008**: El sistema DEBE llamar a la API externa de Módulo 3 (`Recibir estado de reserva`) ante cada cambio de estado a partir de `Pendiente de Pago` (inclusive).
-- **FR-009**: **Texto de novedades en el cierre**: Si el cierre de la navegación incluye el texto opcional de novedades provisto por el Propietario, el sistema DEBE adjuntarlo como campo informativo en la notificación de `Completada` a Módulo 3, sin que ello modifique el tratamiento del cierre (liberación del pago y devolución de la garantía).
+- **FR-009**: **Texto de novedades en el cierre**: Si el cierre de la navegación incluye el texto opcional de novedades provisto por el Propietario, el sistema DEBE adjuntarlo como campo informativo en la notificación de `Completada` a Módulo 3, sin que ello modifique el tratamiento del cierre.
 - **FR-010**: **REGLA DE NEGOCIO ESTRICTA (Sin cálculo financiero):** Módulo 2 **NO DEBE** calcular montos ni hacer transferencias de dinero. Toda valoración económica es de Módulo 3.
 
 ---
@@ -156,7 +165,7 @@ Si llega un pedido de cambio de estado que no está permitido, el sistema tiene 
 
 ---
 
-## Success Criteria
+## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 

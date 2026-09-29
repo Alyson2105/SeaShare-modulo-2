@@ -108,6 +108,18 @@ Si se intenta registrar el inicio de la navegación sobre una reserva que ya est
 - **FR-008**: El sistema DEBE indicar a "CU-08 Actualizar estado reserva" que llame a la API de Módulo 3 (`Recibir estado de reserva`) para notificar el cambio a `En Navegación` y activar el seguro náutico.
 - **FR-009**: Al cambiar el estado a "En Navegación", el sistema DEBE desactivar de forma permanente la opción de ejecutar "CU-05 Marcar inasistencia" o "Solicitar cancelación" para esa reserva.
 - **FR-010**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE realizar cobros de garantías, retenciones de dinero, cálculos de tarifas ni pagos**. El Módulo 2 solo maneja los estados y tiempos del viaje; la gestión monetaria es responsabilidad del Módulo 3.
+- **FR-011**: El sistema DEBE mostrar en la pantalla del Propietario un banner informativo previo al inicio que indique el tiempo restante (ej. "Faltan 45 minutos para la hora de salida") y la hora exacta a la que se habilitará el registro de embarque.
+- **FR-012**: El sistema DEBE agrupar las opciones de embarque dentro de un panel lateral titulado "Acciones de embarque", manteniendo el botón "Marcar inicio de la navegación" inhabilitado hasta alcanzar la fecha/hora pactada de salida del puerto.
+- **FR-013**: Al hacer clic en "Marcar inicio de la navegación", el sistema DEBE desplegar una ventana emergente de confirmación de entrega que incluya:
+    - Campo con la "Hora real de salida".
+    - Campo de texto libre "Notas de la entrega (opcional)".
+    - Mensaje de advertencia sobre la inhabilitación permanente del reporte de inasistencia tras la confirmación.
+    - Botón primario "Confirmar salida" y botón de retorno "Volver".
+- **FR-014**: Tras la confirmación exitosa, el sistema DEBE desplegar una ventana emergente de respuesta que informe:
+    - Estado "Viaje iniciado" con badge de "En Navegación".
+    - Hora real registrada y actor que realizó la confirmación.
+    - Confirmación de activación de seguro en Módulo 3 y botón "Volver al panel de embarque".
+- **FR-015**: Al transicionar a "En Navegación", el sistema DEBE actualizar la pantalla principal del Propietario desplegando un banner destacado en verde con la información del viaje en curso, removiendo el panel lateral de "Acciones de embarque" y activando el botón "Marcar fin de la navegación" dentro del banner.
 
 ---
 

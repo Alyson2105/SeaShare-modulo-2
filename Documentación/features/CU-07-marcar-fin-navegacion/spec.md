@@ -89,6 +89,14 @@ Si alguien intenta registrar el fin de la navegación sobre una reserva que no e
 - **FR-008**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE calcular costos de reparación, cobros por demora ni realizar devoluciones o retenciones de dinero**. La evaluación financiera le corresponde exclusivamente al Módulo 3.
 - **FR-009**: Si la reserva se encuentra en cualquier estado diferente a "En Navegación", el sistema DEBE rechazar la solicitud e informar que el estado no es compatible.
 - **FR-010**: Al confirmar el cierre (reserva a `Completada`), el sistema DEBE invocar `Generar disputa de garantía` (`CU-16`, `<<include>>`) para crear la disputa asociada en estado PENDIENTE y abrir la ventana de 24 horas para el reclamo del Propietario.
+- **FR-011**: El sistema DEBE permitir disparar el proceso de finalización del viaje directamente desde el botón "Marcar fin de la navegación" ubicado en el banner verde de viaje en curso dentro de la pantalla de detalles de la reserva del Propietario.
+- **FR-012**: Al hacer clic en "Marcar fin de la navegación", el sistema DEBE desplegar una ventana emergente de confirmación que incluya:
+    - El identificador de la reserva y nombre del Arrendatario.
+    - La visualización de la "Hora real de desembarque".
+    - Un campo de texto libre "Novedades de la entrega (opcional)" para registrar posibles daños, faltantes o incumplimientos.
+    - Un mensaje informativo indicando que, al confirmar, la reserva pasará a estado Completada y se notificará al sistema de pagos.
+    - Botón primario "Confirmar fin de viaje" y botón secundario "Volver".
+- **FR-013**: Tras la confirmación exitosa, el sistema DEBE desplegar una ventana emergente de respuesta informando que el estado es "Viaje completado", confirmando la notificación a Módulo 3 para la liberación de fondos y proporcionando un botón para retornar al panel principal.
 
 ---
 
