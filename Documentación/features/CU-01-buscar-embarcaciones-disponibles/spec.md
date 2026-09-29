@@ -49,9 +49,10 @@ Como Arrendatario, quiero buscar embarcaciones disponibles utilizando fechas, ca
 - **FR-001**: El sistema DEBE permitir al Arrendatario ingresar criterios de búsqueda como fechas, horas y cantidad de pasajeros.
 - **FR-002**: El sistema DEBE recuperar la lista de embarcaciones que coincidan con los criterios de búsqueda (a través del catálogo/Módulo 1 de manera implícita u otra fuente de verdad de listados).
 - **FR-003**: El sistema DEBE invocar obligatoriamente al caso de uso subordinado `CU-11 Proveer información cotización de reserva` `(<<include>>)` en su modo lote, transmitiendo los identificadores de las embarcaciones recuperadas.
-- **FR-004**: El sistema DEBE mostrar los resultados al Arrendatario incluyendo la información básica de la embarcación y la tarifa estimada devuelta.
-- **FR-005**: El sistema DEBE proveer un punto de extensión hacia `Ver detalle de embarcación` para cada resultado mostrado en el catálogo, permitiendo al usuario avanzar a la validación de capacidad.
-
+- **FR-004**: El sistema DEBE mostrar los resultados al Arrendatario incluyendo la información básica de la embarcación —tales como nombre comercial, fotografía del activo, ubicación o puerto base, capacidad máxima de pasajeros y condiciones de navegación— junto con la tarifa estimada devuelta.
+- **FR-005**: El sistema DEBE proveer un punto de extensión hacia `Ver detalle de embarcación` para cada resultado mostrado en el catálogo, interactuando mediante un botón de acción principal (`Reservar` o selección de tarjeta) que permita al usuario avanzar a la validación de capacidad.
+- **FR-006**: El sistema DEBE proveer elementos de navegación superior y filtrado rápido en la interfaz, incluyendo una barra de búsqueda global por texto (*"Buscar barcos - marina, isla..."*), enlaces de acceso rápido (`Reservas`, `Favoritos`, `Bandeja de entrada`, `Perfil`) y filtros rápidos por categoría (*Velero*, *Yate*, *Catamarán*, `+ Filtros`).
+- **FR-007**: El sistema DEBE mostrar de forma dinámica el contexto de los resultados en la interfaz, incluyendo una etiqueta descriptiva (ej. *"Populares esta semana"*) y un contador numérico total de elementos encontrados (ej. *24 resultados*).
 ---
 
 ### Key Entities

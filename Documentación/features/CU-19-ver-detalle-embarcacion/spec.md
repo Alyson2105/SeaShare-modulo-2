@@ -70,13 +70,26 @@ Como Arrendatario, quiero ver el precio total exacto de mi viaje para el rango d
 
 ### Functional Requirements
 
+## Edge Cases
+
+- **Expiración del Temporizador**: Si el temporizador regresivo de la cotización expira (ej. llega a 00:00), el sistema debe invalidar la cotización actual, bloquear la transición hacia el pago o reserva y requerir una re-cotización a Módulo 3.
+
+## Requirements *(mandatory)*
+
+### Functional Requirements
+
 - **FR-001**: El sistema DEBE recibir el identificador de la embarcación seleccionada desde `Buscar embarcaciones disponibles` (`<<extend>>`).
 - **FR-002**: El sistema DEBE invocar obligatoriamente a `Proveer información embarcación` (`<<include>>`) para obtener los datos técnicos oficiales (capacidad máxima, puerto, servicios) sin persistirlos localmente.
-- **FR-003**: El sistema DEBE proveer selectores para que el Arrendatario ingrese la cantidad de pasajeros y el rango de fechas deseado.
+- **FR-003**: El sistema DEBE proveer selectores y un calendario interactivo con campos visuales independientes para que el Arrendatario ingrese la cantidad de pasajeros y el rango de fechas (fecha de inicio y fecha de fin) deseado.
 - **FR-004**: El sistema DEBE validar de forma estricta que la cantidad de pasajeros ingresada sea menor o igual a la capacidad máxima técnica de la embarcación.
 - **FR-005**: Al definir fechas y pasajeros válidos, el sistema DEBE invocar a `Proveer información cotización de reserva` (`<<include>>`) en modo individual para obtener el total del viaje.
 - **FR-006**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero)**: El sistema **NO DEBE** calcular divisiones, tarifas por noche, ni manipular el total entregado por Módulo 3. DEBE exponer visualmente el total íntegro junto con la cantidad de días del rango seleccionado.
 - **FR-007**: El sistema DEBE habilitar la transición hacia `Iniciar reserva` (`<<extend>>`) única y exclusivamente si la capacidad es válida y se ha obtenido una cotización exitosa de Módulo 3.
+- **FR-008**: El sistema DEBE proveer un enlace de navegación de retorno (ej. *"‹ Volver a resultados"*) que permita al Arrendatario regresar al catálogo de búsqueda sin perder los filtros previos.
+- **FR-009**: El sistema DEBE renderizar la ficha técnica de la embarcación desglosando los atributos oficiales de Módulo 1 en componentes visuales estructurados: capacidad máxima, tipo de navegación/capitán, eslora en pies y número de camarotes.
+- **FR-010**: El sistema DEBE mostrar una sección informativa con las amenidades y comodidades disponibles de la embarcación (ej. equipo de esnórquel, Wi-Fi, nevera, tablas de paddle, etc.) y los datos de validación del anfitrión (superanfitrión e identidad verificada).
+
+
 
 ### Key Entities
 

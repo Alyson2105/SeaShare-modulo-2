@@ -119,10 +119,17 @@ Como Propietario de la embarcación, quiero cancelar una reserva en estado Reser
 - **FR-012**: El sistema DEBE delegar en `Actualizar estado reserva` la notificación hacia la API externa `Recibir estado de reserva` de Módulo 3 enviando el estado principal `Cancelada`, el sub-estado contractual determinado (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión` o `Por Inasistencia`), el actor solicitante y la marca de tiempo, para que Módulo 3 gestione la liquidación y dispersión financiera de fondos.
 - **FR-013**: **REGLA DE NEGOCIO ESTRICTA (Sin cálculo financiero):** El sistema **NO DEBE en ningún caso calcular montos de devolución, deducciones de comisiones, penalidades monetarias ni ejecutar transferencias de dinero**. Módulo 2 actúa como orquestador de tiempos, reglas de anticipación y estados; la valoración económica y dispersión de dinero pertenece exclusivamente a Módulo 3.
 - **FR-014**: El sistema DEBE guardar un registro claro y auditable de la cancelación (`CancellationEvent`), capturando: identificador del evento, identificador de la reserva, actor solicitante, fecha y hora de la solicitud, anticipación temporal calculada, sub-estado contractual resultante y la justificación/motivo si aplica.
-- **FR-015**: El sistema DEBE desplegar una ventana emergente de confirmación al Arrendatario que muestre de forma transparente los datos del zarpe, la anticipación calculada y la descripción de la clasificación.
-- **FR-016**: El sistema DEBE desplegar una ventana emergente de cancelación al Propietario que requiera la selección obligatoria de la causa ("Fuerza mayor logística" o "Avería o desperfecto mecánico") y el campo de justificación.
-- **FR-017**: El sistema DEBE incluir en las ventanas emergentes de cancelación la opción explícita "MANTENER RESERVA", la cual cierra la ventana sin alterar el estado de la reserva ni registrar eventos.
-
+- **FR-015**: El sistema DEBE desplegar una ventana emergente de confirmación para el Arrendatario que incluya los siguientes componentes visuales:
+    - Título "Cancelar Reserva" seguido del identificador (ej. "#RS-4492") y un subtítulo de contexto con el nombre del barco, fechas y nombre del anfitrión.
+    - Un bloque de desglose temporal que muestre explícitamente el "Zarpe pactado", la "Solicitud de cancelación" (ambos con fecha, hora y zona horaria del puerto) y el resultado de la "Anticipación calculada" en horas.
+    - Un bloque titulado "ESTADO DE LA POLÍTICA" que exhiba la clasificación asignada (ej. "MODERADA") mediante una etiqueta destacada y un texto confirmatorio.
+    - Un texto aclaratorio inferior indicando: "El monto de retención lo calcula el sistema de pagos.".
+    - Dos botones de acción en la parte inferior: "MANTENER RESERVA" (secundario)  la cual cierra la ventana sin alterar el estado de la reserva ni registrar eventos y "CONFIRMAR CANCELACIÓN" (primario).
+- **FR-016**: El sistema DEBE desplegar una ventana emergente de cancelación para el Propietario que estructure la captura del motivo de la siguiente manera:
+    - Título "Cancelar Reserva" seguido del identificador y una etiqueta roja destacada con el texto "CANCELACIÓN POR ANFITRIÓN".
+    - Una sección obligatoria "Motivo de la cancelación" compuesta por dos tarjetas de selección excluyentes: "Fuerza mayor logística" (incluyendo la etiqueta verde indicadora "La embarcación quedará Disponible") y "Averia o desperfecto mecanico" (incluyendo la etiqueta roja indicadora "La embarcación pasará a En mantenimiento/ Limpieza").
+    - Un área de texto libre titulada "Justificación" con el placeholder "Describa brevemente lo ocurrido (quedará registrado en el evento cancelación)".
+    - Dos botones de acción en la base: "MANTENER RESERVA"  la cual cierra la ventana sin alterar el estado de la reserva ni registrar eventos y "CONFIRMAR CANCELACIÓN".
 ---
 
 ## Key Entities

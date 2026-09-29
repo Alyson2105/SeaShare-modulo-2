@@ -45,6 +45,7 @@ Como Arrendatario, una vez validados los detalles de mi viaje, quiero **llenar m
 
 - **Bloqueo Temporal Garantizado**: Durante los 15 minutos del TTL, la embarcación está fuera del mercado para las fechas seleccionadas. Si el usuario abandona el flujo y el TTL vence, el sistema (vía motor de estados) expira pasivamente la reserva y notifica a Módulo 1 que vuelva a liberar la embarcación.
 - **Desacople de validaciones iniciales**: Al ser una extensión, asume que la embarcación seleccionada proviene de un flujo válido previo (desde la vista de detalle ).
+- **Cancelación mediante Modal**: Si el usuario presiona el botón de cerrar ("X") en la esquina superior derecha del modal de confirmación, el sistema debe abortar el proceso de inicio de reserva, limpiar el formulario y devolver al usuario a la pantalla anterior sin aplicar ningún bloqueo en Módulo 1.
 
 ---
 
@@ -53,12 +54,18 @@ Como Arrendatario, una vez validados los detalles de mi viaje, quiero **llenar m
 ### Functional Requirements
 
 - **FR-001**: El sistema DEBE recibir los parámetros de la embarcación, fechas, pasajeros y montos provenientes de los casos base a los que extiende (`Buscar embarcaciones disponibles` o `Ver detalle de embarcación`).
-- **FR-002**: El sistema DEBE proveer la interfaz para capturar obligatoriamente el nombre completo del titular de la reserva y un número de celular de contacto válido.
-- **FR-003**: El sistema DEBE validar de forma atómica que las fechas sigan disponibles en Módulo 1 antes de proceder con la creación.
-- **FR-004**: Si los datos son válidos y hay disponibilidad, el sistema DEBE invocar a `Actualizar estado reserva` (`<<include>>`) para persistir la reserva en estado `Iniciada`.
-- **FR-005**: Al asentar la reserva en `Iniciada`, el sistema DEBE iniciar el temporizador TTL de 15 minutos asociado a esa transacción.
-- **FR-006**: Como efecto directo de pasar a `Iniciada`, el sistema DEBE asegurar (a través de `Actualizar estado reserva`) que se invoque a Módulo 1 para asignar el estado operativo de bloqueo temporal (`Reservado`) a la embarcación física.
-
+- **FR-002**: El sistema DEBE presentar la interfaz de captura de datos mediante una ventana modal superpuesta con el título "CONFIRMA LOS DATOS DE TU RESERVA".
+- **FR-003**: El sistema DEBE mostrar en la parte superior del modal una tarjeta de resumen que incluya la fotografía, nombre y ubicación de la embarcación, junto con las fechas, número de noches y cantidad de pasajeros seleccionados.
+- **FR-004**: El sistema DEBE presentar la información financiera mostrando únicamente la "Tarifa base" y el subtotal de las noches seleccionadas (ej. "$250 × 2 noches" resultando en "$500"), acompañada directamente debajo por la nota aclaratoria: "Monto previo. El valor final y vinculante se confirma en el paso de pago."
+- **FR-005**: El sistema DEBE mostrar un banner informativo (color amarillo) que advierta al usuario sobre el efecto de su acción: "Al continuar, tu reserva queda Iniciada y arranca tu ventana de 15 minutos."
+- **FR-006**: El sistema DEBE proveer un formulario ("Datos de contacto del titular") para capturar obligatoriamente el "Nombre completo del titular" y el "Celular de contacto".
+- **FR-007**: El sistema DEBE proveer en el mismo formulario un campo de texto opcional para capturar el "Correo electrónico" del titular.
+- **FR-008**: El sistema DEBE validar visualmente el formulario en caso de datos faltantes o incorrectos, mostrando un banner de error general (ej. "Completa el nombre del titular y el celular de contacto para continuar."), marcando los bordes de los campos afectados en rojo y desplegando mensajes de ayuda específicos debajo de cada input (ej. "Ingresa el nombre del titular de la reserva.").
+- **FR-009**: El sistema DEBE incluir un botón de acción principal en la parte inferior del modal con el texto "Continuar a pagar", el cual debe estar deshabilitado visualmente si existen errores de validación en el formulario.
+- **FR-010**: El sistema DEBE validar de forma atómica que las fechas sigan disponibles en Módulo 1 antes de proceder con la creación al presionar el botón de continuar.
+- **FR-011**: Si los datos son válidos y hay disponibilidad, el sistema DEBE invocar a `Actualizar estado reserva` (`<<include>>`) para persistir la reserva en estado `Iniciada`.
+- **FR-012**: Al asentar la reserva en `Iniciada`, el sistema DEBE iniciar el temporizador TTL de 15 minutos asociado a esa transacción.
+- **FR-013**: Como efecto directo de pasar a `Iniciada`, el sistema DEBE asegurar (a través de `Actualizar estado reserva`) que se invoque a Módulo 1 para asignar el estado operativo de bloqueo temporal (`Reservado`) a la embarcación física.
 ---
 
 ### Key Entities

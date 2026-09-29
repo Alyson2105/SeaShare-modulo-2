@@ -68,6 +68,12 @@ Como Propietario, quiero consultar el listado de las reservas asociadas exclusiv
 - **FR-004**: **REGLA DE NEGOCIO ESTRICTA**: El precio total expuesto DEBE ser el monto original congelado durante la creación de la reserva. El sistema NO DEBE calcular deducciones, aplicar reembolsos ni restar porcentajes en las reservas `Canceladas`.
 - **FR-005**: El sistema DEBE mostrar claramente los sub-estados en las reservas canceladas (ej. `Cancelada - Por Anfitrión`, `Cancelada - Por Inasistencia`) para dar contexto al usuario sin comprometer lógica financiera.
 - **FR-006**: El sistema DEBE permitir seleccionar una reserva específica del listado para invocar la vista profunda (extensión hacia `Ver detalle de reserva`).
+- **FR-007**: El sistema DEBE mostrar encabezados diferenciados según el rol del usuario en sesión: "Mis reservas" para el Arrendatario y "Reservas recibidas" para el Propietario, acompañados en ambos casos de un contador total de elementos (ej. "12 en total") y controles de navegación por pestañas para filtrar entre "Historial" y "Canceladas".
+- **FR-008**: El sistema DEBE renderizar el estado vigente de cada reserva mediante etiquetas visuales (badges) con colores semánticos que faciliten su identificación rápida (ej. "Confirmada" en verde, "En navegación" en amarillo, "Pendiente de pago" en gris, "Cancelada" en rojo).
+- **FR-009**: El sistema DEBE incluir en la tarjeta de resumen para el **Propietario** el nombre del Arrendatario que realizó la reserva (ej. "Laura Gomez") y la cantidad de pasajeros, junto a los datos básicos de la embarcación (imagen, nombre, rango de fechas y noches).
+- **FR-010**: El sistema DEBE incluir en la tarjeta de resumen para el **Arrendatario** líneas de detalle contextual debajo de las fechas cuando aplique a los estados finales, tales como confirmaciones de devolución (ej. "+ $200.00 depósito reembolsado") o razones/efectos de cancelación (ej. "Cancelada - ventana 72h+", "Reembolso emitido - Sin cargo - cancelación gratuita").
+- **FR-011**: El sistema DEBE proveer un enlace de acción textual explícito en cada fila o tarjeta (ej. "Ver detalles >") ubicado junto al monto total, para invocar la vista profunda (extensión hacia `Ver detalle de reserva`).
+
 
 ### Key Entities
 

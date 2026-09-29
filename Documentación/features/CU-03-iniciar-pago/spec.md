@@ -80,11 +80,12 @@ Como sistema, quiero evitar que dos usuarios bloqueen la misma embarcación para
 - **FR-007**: Al confirmarse la transición a `Pendiente de Pago`, el sistema NO DEBE reiniciar el temporizador TTL: el temporizador iniciado en `Iniciada` sigue corriendo y conserva su vencimiento original.
 - **FR-008**: Si el proceso de validación concurrente falla (las fechas acaban de ser ocupadas), el sistema DEBE rechazar el inicio del pago sin transicionar la reserva (permanece en `Iniciada`) y notificar al usuario.
 - **FR-009**: El sistema DEBE transferir el identificador de la reserva, el monto total devuelto por el cálculo y los datos del usuario hacia la interfaz o API de cobro de Módulo 3 para que el usuario efectúe la transacción.
-- **FR-010**: El sistema DEBE desplegar visualmente en la pantalla la información resumida de la reserva: imagen de portada, nombre de la embarcación, rango de fechas, número total de noches, cantidad de pasajeros y ubicación/marina.
-- **FR-011**: El sistema DEBE renderizar en la interfaz un temporizador dinámico visible en cuenta regresiva basado en el TTL de 15 minutos (ej. "Reserva expira en: 14:52").
+- **FR-010**: El sistema DEBE desplegar visualmente en la pantalla la información resumida de la reserva: imagen de portada, nombre de la embarcación, rango de fechas, número total de noches, cantidad de pasajeros, modalidad de viaje (ej. "Viaje con capitán") y ubicación/marina.
+- **FR-011**: El sistema DEBE renderizar en la interfaz un temporizador dinámico visible en cuenta regresiva basado en el TTL de 15 minutos (ej. "Reserva expira en: 14:52") acompañado en la parte inferior por el texto confirmatorio "Precio y disponibilidad bloqueados"
 - **FR-012**: El sistema DEBE mostrar el desglose financiero detallado proveniente de `Brindar cálculo total de la reserva`, incluyendo la fórmula explicativa de la tarifa base (días × tarifa diaria), comisión de la plataforma, seguro náutico, depósito de garantía reembolsable y el mensaje aclaratorio sobre las condiciones del reembolso ("El depósito se reembolsa completo si el barco se devuelve sin daños").
 - **FR-013**: El sistema DEBE incluir un componente de confirmación interactivo "Acepto la Política de Cancelación" junto con la condición explícita (ej. "Cancelación gratis hasta 72h antes del inicio del viaje").
 - **FR-014**: El sistema DEBE exigir la selección obligatoria del checkbox "Acepto la Política de Cancelación" como condición requerida antes de permitir la ejecución o habilitación del botón primario "Confirmar y Pagar".
+- - **FR-015**: El sistema DEBE presentar un panel lateral de resumen que destaque el "Total a pagar" general en mayor tamaño, un sub-desglose de los rubros, el botón de acción principal y un texto de retroalimentación dinámico indicando "Se requiere tu consentimiento para completar el pago." cuando las políticas aún no hayan sido aceptadas.
 
 ---
 

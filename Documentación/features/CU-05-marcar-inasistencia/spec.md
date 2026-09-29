@@ -119,6 +119,7 @@ Si se intenta marcar la inasistencia en una reserva que ya inició el viaje, que
 - **FR-016**: Al confirmarse la inasistencia, el sistema DEBE actualizar la pantalla "Detalles reserva" del Propietario desplegando un banner superior de estado terminal de color rojo que indique "Reserva cancelada por inasistencia", especificando el nombre del propietario solicitante y los minutos de espera registrados.
 - **FR-017**: En el estado "Cancelada por Inasistencia", el sistema DEBE remover el panel "Acciones de embarque", reemplazar la tarjeta de pago por el bloque "Compensación" (manteniendo el total original con la aclaración de que el sistema de pagos gestionará los fondos) y desplegar el badge dinámico "Cancelado por inasistencia".
 - **FR-018**: El sistema DEBE actualizar la sección "Itinerario" en la interfaz del Propietario registrando de forma visible la fecha y hora exacta en que se realizó el registro de "Inasistencia reportada".
+- **FR-019**: En caso de que la reserva pase a "Cancelada por inasistencia", el resumen de pago para el Propietario DEBE cambiar su título a "Compensación", mostrando el "Total original" con el mensaje aclaratorio inferior: "El sistema de pagos gestionará la compensación al anfitrión.".
 
 ---
 

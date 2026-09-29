@@ -110,7 +110,7 @@ Si se intenta registrar el inicio de la navegación sobre una reserva que ya est
 - **FR-010**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE realizar cobros de garantías, retenciones de dinero, cálculos de tarifas ni pagos**. El Módulo 2 solo maneja los estados y tiempos del viaje; la gestión monetaria es responsabilidad del Módulo 3.
 - **FR-011**: El sistema DEBE mostrar en la pantalla del Propietario un banner informativo previo al inicio que indique el tiempo restante (ej. "Faltan 45 minutos para la hora de salida") y la hora exacta a la que se habilitará el registro de embarque.
 - **FR-012**: El sistema DEBE agrupar las opciones de embarque dentro de un panel lateral titulado "Acciones de embarque", manteniendo el botón "Marcar inicio de la navegación" inhabilitado hasta alcanzar la fecha/hora pactada de salida del puerto.
-- **FR-013**: Al hacer clic en "Marcar inicio de la navegación", el sistema DEBE desplegar una ventana emergente de confirmación de entrega que incluya:
+- **FR-013**: Al hacer clic en "Marcar inicio de la navegación", para el propieatario el sistema DEBE desplegar una ventana emergente de confirmación de entrega que incluya:
     - Campo con la "Hora real de salida".
     - Campo de texto libre "Notas de la entrega (opcional)".
     - Mensaje de advertencia sobre la inhabilitación permanente del reporte de inasistencia tras la confirmación.

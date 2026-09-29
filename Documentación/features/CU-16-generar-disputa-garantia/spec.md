@@ -92,6 +92,16 @@ Si el Propietario no reporta nada dentro de las 24 horas, el propio caso de uso 
 - **FR-009**: Un intento de reclamo fuera de la ventana (disputa ya en RECHAZADA por vencimiento) DEBE rechazarse sin modificar el estado de la disputa.
 - **FR-010**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE manipular el depósito en garantía, ni ejecutar pagos, reembolsos, liquidaciones ni ninguna operación financiera**. Toda decisión monetaria pertenece exclusivamente a Módulo 3 a partir del estado final de la disputa.
 - **FR-011**: Solo el cierre automático en RECHAZADA DEBE publicarse a Módulo 3 a través de `Recibir información de disputa de garantía` (`CU-18`). La creación en PENDIENTE es interna de Módulo 2 y NO se publica.
+- **FR-012**: Mientras la ventana de 24 horas esté en curso (disputa en PENDIENTE), el sistema DEBE renderizar un banner destacado (color amarillo/crema) con el título "Ventana para reportar disputa de garantía abierta", un texto con la cuenta regresiva exacta y el botón de acción principal negro "Reportar problema".
+- **FR-013**: Si el estado final de la disputa es favorable al anfitrión, el sistema DEBE mostrar un banner verde con el título "Tu reclamo fue aceptado" y el texto explicativo indicando que el sistema de pagos gestionará la liquidación del depósito.
+- **FR-014**: Si la disputa transiciona a RECHAZADA por vencimiento de la ventana, el sistema DEBE mostrar un banner rojo con el título "Disputa cerrada automáticamente" y exponer explícitamente el motivo del sistema: "Sin reclamo en ventana. La ventana de 24h venció sin que reportaras ningún problema".
+- **FR-015**: Si el Propietario registró un reporte exitosamente, el sistema DEBE renderizar permanentemente una tarjeta inferior titulada "Tu reclamo", mostrando textualmente la descripción enviada y la fecha/hora exacta del registro para fines de auditoría.
+- **FR-016**: El sistema DEBE desplegar una ventana emergente titulada "Reportar problema con la garantía" al hacer clic en el botón "Reportar problema", la cual incluya:
+    - Un subtítulo de referencia con el identificador de la reserva y la vigencia (ej. "Reserva RSV-2026-08341 · Ventana de 24 h vigente").
+    - Una sección titulada "Descripción del daño o problema" que contenga un área de texto con un placeholder explicativo (ej. "Ej: El timón llegó dañado y hubo 3 horas de retraso en la entrega del barco").
+    - Un bloque informativo secundario con un mensaje de advertencia sobre el estado y la revisión administrativa (ej. "Tu reclamo quedará registrado y en revisión por un administrador. La disputa seguirá en PENDIENTE hasta que se resuelva: no se realizará ningún cobro ni cálculo aquí.").
+    - Dos botones de acción en la parte inferior: "Cancelar" (secundario) y "Enviar reclamo" (primario, con fondo oscuro).
+
 
 ### Key Entities
 
