@@ -1,17 +1,12 @@
 # Feature Specification: Solicitar Cancelación
 
 **Módulo**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
-**Fecha de Creación**: 2026-09-06 (Actualizado: 2026-09-28 por refactor de arquitectura)  
+**Fecha de Creación**: 2026-09-06 (Actualizado: 2026-09-28 por sincronización de arquitectura, relaciones UML y limpieza de User Stories)  
 **Actores Primarios**: Arrendatario y Propietario (ambos interactúan directamente con este caso de uso en la plataforma)  
 **Dependencias Externas (APIs)**:
-- **Módulo 1 – Gestión de Flota y Activos P2P**:
-    - API externa `Consultar información embarcación` (para obtener el puerto de atraque de la embarcación y determinar la zona horaria oficial aplicable al cálculo exacto de la anticipación temporal).
-    - API externa `Asignar estado operativo` (notificación para liberar la embarcación a estado `Disponible` o su pase a `En Mantenimiento/Limpieza` si se reporta avería, orquestada de forma indirecta a través del caso de uso `Actualizar estado reserva`).
-- **Módulo 3 – Liquidación, Seguros y Dispersión de Fondos**:
-    - API externa `Recibir estado de reserva` (notificación del estado principal `Cancelada` junto con el sub-estado contractual determinado para que Módulo 3 ejecute la liquidación de reembolsos y penalidades, orquestada vía `Actualizar estado reserva`).
 - **Casos de uso internos de Módulo 2**:
-    - `Ver detalle de reserva` (`<<extend>>`): Este caso de uso extiende a la vista de detalles. Se habilita cuando el usuario, revisando su reserva confirmada en la vista profunda, decide ejercer la cancelación.
-    - `Actualizar estado reserva` (`<<include>>`): Para ejecutar la transición formal al estado principal terminal `Cancelada` con el sub-estado clasificado (`Flexible`, `Moderado`, `Tardío` o `Por Anfitrión`).
+    - `Ver detalle de reserva` (`<<extend>>`): Este caso de uso (`Solicitar cancelación`) **es la extensión** que se ancla a `Ver detalle de reserva` (la flecha del diagrama apunta al caso base). Se activa cuando el usuario, revisando su reserva confirmada en la vista profunda, decide ejercer la cancelación.
+    - `Actualizar estado reserva` (`<<include>>`): Para ejecutar la transición formal al estado principal terminal `Cancelada` con el sub-estado clasificado (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión` o `Por Inasistencia`).
 
 ---
 
@@ -23,13 +18,13 @@ Como Arrendatario, quiero solicitar la cancelación voluntaria de mi reserva en 
 
 **Why this priority**: Constituye el mecanismo contractual de salida unilateral para el cliente, activando de forma controlada la política de cancelaciones de la plataforma, clasificando la penalidad/reembolso según los tiempos pactados y devolviendo la disponibilidad del activo al inventario náutico.
 
-**Independent Test**: Se prueba accediendo a una reserva en estado "Reservada" desde `Ver detalle de reserva`, solicitando la cancelación en los tres umbrales temporales del proyecto (>72h, entre 72h y 24h, y <24h antes del zarpe, evaluados en la zona horaria del puerto de atraque). Se verifica el cálculo algorítmico interno de anticipación, la asignación directa del sub-estado correspondiente, la invocación a `(<<include>>)` "CU-08 Actualizar estado reserva", la liberación del activo en Módulo 1 y la notificación a Módulo 3 sin que Módulo 2 realice cálculos monetarios.
+**Independent Test**: Se prueba accediendo a una reserva en estado "Reservada" desde `Ver detalle de reserva`, solicitando la cancelación en los tres umbrales temporales del proyecto (>72h, entre 72h y 24h, y <24h antes del zarpe, evaluados en la zona horaria del puerto de atraque). Se verifica el cálculo algorítmico interno de anticipación, la asignación directa del sub-estado correspondiente, la invocación a `(<<include>>)` a `Actualizar estado reserva`, la liberación del activo en Módulo 1 y la notificación a Módulo 3 sin que Módulo 2 realice cálculos monetarios.
 
 **Acceptance Scenarios**:
 
 1. **Scenario**: Cancelación voluntaria con más de 72 horas de anticipación (Flexible) detonada desde el detalle
     - **Given** un Arrendatario titular visualizando el detalle de una reserva en estado "Reservada" cuya hora pactada de inicio es en más de 72 horas en la zona horaria del puerto
-    - **When** el usuario ejecuta la acción de cancelar (disparando el `<<extend>>`)
+    - **When** el usuario ejecuta la acción de cancelar (disparando el `<<extend>>` hacia `Ver detalle de reserva`)
     - **Then** el sistema calcula la anticipación temporal (>72h), determina internamente la clasificación "Flexible", invoca la relación `(<<include>>)` con `Actualizar estado reserva` fijando el estado "Cancelada" con el sub-estado "Flexible", notifica a Módulo 1 para liberar la embarcación a estado "Disponible" y notifica a Módulo 3 para tramitar el reembolso total al cliente.
 
 2. **Scenario**: Cancelación voluntaria entre 72 y 24 horas de anticipación (Moderado)
@@ -45,7 +40,7 @@ Como Arrendatario, quiero solicitar la cancelación voluntaria de mi reserva en 
 4. **Scenario**: Desestimación de la cancelación desde la ventana emergente
     - **Given** un Arrendatario en la ventana emergente de cancelación viendo la clasificación calculada
     - **When** el usuario hace clic en el botón "MANTENER RESERVA"
-    - **Then** el sistema cierra la ventana emergente, no ejecuta ninguna transición de estado y conserva la reserva en estado "Reservada"
+    - **Then** el sistema cierra la ventana emergente, no ejecuta ninguna transición de estado y conserva la reserva en estado "Reservada".
 
 ---
 
@@ -55,7 +50,7 @@ Como Propietario de la embarcación, quiero cancelar una reserva en estado Reser
 
 **Why this priority**: Es la contraparte de protección al consumidor que garantiza que, ante incumplimiento o indisponibilidad del anfitrión, la reserva quede formalmente cerrada con clasificación directa "Por Anfitrión" (sin aplicar franjas horarias de anticipación), el activo náutico se actualice adecuadamente y el Arrendatario reciba la devolución íntegra de su dinero gestionada por Módulo 3.
 
-**Independent Test**: Se prueba ejecutando la cancelación por parte del Propietario sobre una reserva en estado Reservada antes del check-in, independientemente del tiempo restante para el zarpe. Se valida que el sistema asigne directamente el sub-estado "Por Anfitrión" sin evaluar umbrales horarios, registre el motivo, invoque a `Actualizar estado reserva`, actualice el activo náutico en Módulo 1 de acuerdo a la causa e instruya la liquidación a Módulo 3.
+**Independent Test**: Se prueba ejecutando la cancelación por parte del Propietario sobre una reserva en estado Reservada antes del check-in, independientemente del tiempo restante para el zarpe. Se valida que el sistema asigne directamente el sub-estado "Por Anfitrión" ohne evaluar umbrales horarios, registre el motivo, invoque a `Actualizar estado reserva`, actualice el activo náutico en Módulo 1 de acuerdo a la causa e instruya la liquidación a Módulo 3.
 
 **Acceptance Scenarios**:
 
@@ -76,33 +71,6 @@ Como Propietario de la embarcación, quiero cancelar una reserva en estado Reser
 
 ---
 
-### User Story 3 - Rechazar cancelaciones sobre reservas no cancelables o por actores no legitimados (Priority: P1)
-
-Como sistema, quiero denegar las solicitudes de cancelación sobre reservas en estados no permitidos o iniciadas por terceros no autorizados, para mantener la integridad de las reservas y evitar cancelaciones indebidas.
-
-**Why this priority**: Preserva la consistencia de la máquina de estados, evita cancelaciones arbitrarias durante la navegación y ratifica que las reservas pendientes de pago no se cancelan activamente sino por expiración pasiva de su temporizador TTL.
-
-**Independent Test**: Se prueba emitiendo solicitudes de cancelación sobre reservas en estados "Pendiente de Pago", "En Navegación", "Completada" y "Expirada", así como desde cuentas de terceros no vinculadas a la reserva, verificando el rechazo estricto en el 100% de los intentos sin emitir clasificaciones ni alterar estados.
-
-**Acceptance Scenarios**:
-
-1. **Scenario**: Intento de cancelación sobre reserva en Pendiente de Pago
-    - **Given** una reserva en estado principal "Pendiente de Pago" dentro de su temporizador TTL de 15 minutos
-    - **When** el usuario intenta acceder a la cancelación desde la interfaz
-    - **Then** el sistema deshabilita u oculta el punto de extensión, y si es invocado directamente, rechaza la solicitud informando que las reservas en pendiente de pago no admiten cancelación activa y deben esperar la expiración natural del TTL.
-
-2. **Scenario**: Intento de cancelación sobre servicio ya en navegación o completado
-    - **Given** una reserva en estado "En Navegación" o "Completada"
-    - **When** el Arrendatario o el Propietario intentan solicitar la cancelación
-    - **Then** el sistema deniega la acción informando que el servicio ya fue iniciado o finalizado.
-
-3. **Scenario**: Intento de cancelación por un tercero no autorizado
-    - **Given** una reserva en estado "Reservada"
-    - **When** un usuario que no es ni el Arrendatario titular ni el Propietario registrado solicita la cancelación
-    - **Then** el sistema deniega la operación por falta de autorización.
-
----
-
 ## Edge Cases
 
 - **Resolución de límites exactos de anticipación (72h o 24h en punto)**:
@@ -116,7 +84,7 @@ Como sistema, quiero denegar las solicitudes de cancelación sobre reservas en e
 - **Indisponibilidad o timeout de `Consultar información embarcación`**:
     - Si el sistema no puede obtener el puerto de atraque y su zona horaria al momento de procesar la cancelación, el sistema NO DEBE calcular la anticipación con una zona horaria asumida por defecto. DEBE detener temporalmente la solicitud y retornar un error de servicio no disponible para reintento.
 - **Inadmisibilidad en reservas "Pendiente de Pago"**:
-    - El estado "Pendiente de Pago" no es cancelable voluntariamente por ningún actor. La salida pasiva consiste en no realizar el pago y permitir que el temporizador TTL de 15 minutos expire automáticamente la reserva y libere el activo en Módulo 1.
+    - El estado "Pendiente de Pago" no es cancelable voluntariamente por ningún actor. La salida pasiva consiste en no realizar el pago y permitir que el temporizador TTL expire automáticamente la reserva y libere el activo en Módulo 1.
 - **Diferenciación estricta entre Cancelación Tardía (<24h) y No-Show**:
     - Ambas figuras conllevan una anticipación inferior a 24 horas respecto al zarpe, pero el "No-Show" es un caso de uso independiente (`Marcar inasistencia`) administrado exclusivamente por el Propietario tras cumplirse la ventana de tolerancia de 30 minutos en el muelle. Este caso de uso solo gestiona cancelaciones voluntarias explícitas previas al zarpe.
 - **Condición de carrera entre Arrendatario y Propietario (Doble cancelación simultánea)**:
@@ -124,7 +92,7 @@ Como sistema, quiero denegar las solicitudes de cancelación sobre reservas en e
 - **Cancelación concurrente con el inicio de navegación**:
     - Si el Arrendatario solicita cancelar mientras el Propietario registra el inicio de la navegación en el muelle, prevalece la primera transacción confirmada. Si se confirma primero el inicio de navegación, la cancelación es rechazada indicando que el viaje ya comenzó.
 - **Prohibición absoluta de cálculo financiero en Módulo 2**:
-    - Módulo 2 **no calcula importes a devolver, comisiones de retención ni montos de penalidad monetaria**. Módulo 2 calcula la anticipación temporal, asigna el sub-estado (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión`), asienta la transición de estado y delega en Módulo 3 toda la dispersión financiera de fondos.
+    - Módulo 2 **no calcula importes a devolver, comisiones de retención ni montos de penalidad monetaria**. Módulo 2 calcula la anticipación temporal, asigna el sub-estado (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión` o `Por Inasistencia`), asienta la transición de estado y delega en Módulo 3 toda la dispersión financiera de fondos.
 
 ---
 
@@ -132,10 +100,10 @@ Como sistema, quiero denegar las solicitudes de cancelación sobre reservas en e
 
 ### Functional Requirements
 
-- **FR-001**: El sistema DEBE activarse como una extensión (`<<extend>>`) desde el caso de uso `Ver detalle de reserva` cuando el usuario desea ejercer una cancelación.
+- **FR-001**: El sistema DEBE activarse como una extensión (`<<extend>>`) desde el caso base `Ver detalle de reserva` cuando el usuario desea ejercer una cancelación.
 - **FR-002**: El sistema DEBE permitir solicitar la cancelación de una reserva si y solo si la reserva existe y se encuentra en estado principal `Reservada` (previo al check-in o inicio formal de la navegación).
-- **FR-003**: El sistema DEBE verificar y validar que el usuario solicitante sea unívocamente el Arrendatario titular o el Propietario registrado de la embarcación asociada a la reserva. Si el usuario no está legitimado, DEBE rechazar la solicitud con error de autorización.
-- **FR-004**: El sistema DEBE excluir explícitamente de la opción de cancelación activa a las reservas que se encuentren en estado `Pendiente de Pago`, `En Navegación`, `Completada`, `Expirada` o previamente `Cancelada`.
+- **FR-003**: El sistema DEBE verificar y validar que el usuario solicitante sea unívocamente el Arrendatario titular o el Propietario registrado de la embarcación asociada a la reserva. Si el usuario no está legitimado o es un tercero no autorizado, el sistema DEBE rechazar la operación de manera estricta.
+- **FR-004**: El sistema DEBE excluir explícitamente y denegar por completo las solicitudes de cancelación activa sobre reservas que se encuentren en estado `Pendiente de Pago`, `En Navegación`, `Completada`, `Expirada` o previamente `Cancelada`. En el caso particular de `Pendiente de Pago`, el sistema debe rechazar la cancelación indicando que no admite cancelación activa y debe esperarse la expiración natural del TTL.
 - **FR-005**: El sistema DEBE consultar a la API externa `Consultar información embarcación` de Módulo 1 para obtener el puerto de atraque de la embarcación y determinar la zona horaria oficial del activo. Si la API de Módulo 1 no responde o falla, el sistema NO DEBE asumir una zona horaria por defecto y DEBE detener el flujo con error descriptivo.
 - **FR-006**: Si el solicitante es el Arrendatario, el sistema DEBE calcular el tiempo de anticipación exacto (en horas y minutos) como la diferencia entre la fecha/hora de la solicitud de cancelación y la fecha/hora pactada de inicio de la reserva, bajo la zona horaria oficial del puerto de atraque.
 - **FR-007**: Si el solicitante es el Arrendatario, el sistema DEBE clasificar automáticamente la cancelación aplicando las siguientes reglas de negocio temporales:
@@ -144,38 +112,23 @@ Como sistema, quiero denegar las solicitudes de cancelación sobre reservas en e
     - **Tardío**: Cuando la anticipación es estrictamente menor a 24 horas (`anticipacion < 24 horas`).
 - **FR-008**: Si el solicitante es el Propietario, el sistema DEBE asignar directamente la clasificación **Por Anfitrión**, sin evaluar el tiempo de anticipación ni aplicar franjas horarias.
 - **FR-009**: Si la cancelación es solicitada por el Propietario, el sistema DEBE permitir registrar el motivo o justificación de la cancelación, identificando si la causa se debe a fuerza mayor logística o a una avería/desperfecto mecánico que requiera inhabilitar la embarcación.
-- **FR-010**: Una vez determinada la clasificación contractual (`Flexible`, `Moderado`, `Tardío` o `Por Anfitrión`), el sistema DEBE invocar obligatoriamente el caso de uso interno subordinado `Actualizar estado reserva` mediante una relación `(<<include>>)`, solicitando la transición al estado principal terminal `Cancelada` asociando el sub-estado clasificado.
+- **FR-010**: Una vez determinada la clasificación contractual (`Flexible`, `Moderado`, `Tardío` o `Por Anfitrión`), el sistema DEBE invocar obligatoriamente el caso de uso interno subordinado `Actualizar estado reserva` mediante una relación `(<<include>>)`.
 - **FR-011**: El sistema DEBE delegar en `Actualizar estado reserva` la notificación hacia la API externa `Asignar estado operativo` de Módulo 1 para actualizar el activo náutico:
     - Asignar `Disponible` si la cancelación fue realizada por el Arrendatario o por el Propietario sin reporte de avería (fuerza mayor logística).
     - Asignar `En Mantenimiento/Limpieza` si el Propietario canceló reportando daño mecánico o necesidad de reparación.
-- **FR-012**: El sistema DEBE delegar en `Actualizar estado reserva` la notificación hacia la API externa `Recibir estado de reserva` de Módulo 3 enviando el estado principal `Cancelada`, el sub-estado contractual determinado (`Flexible`, `Moderado`, `Tardío` o `Por Anfitrión`), el actor solicitante y la marca de tiempo, para que Módulo 3 gestione la liquidación y dispersión financiera de fondos.
+- **FR-012**: El sistema DEBE delegar en `Actualizar estado reserva` la notificación hacia la API externa `Recibir estado de reserva` de Módulo 3 enviando el estado principal `Cancelada`, el sub-estado contractual determinado (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión` o `Por Inasistencia`), el actor solicitante y la marca de tiempo, para que Módulo 3 gestione la liquidación y dispersión financiera de fondos.
 - **FR-013**: **REGLA DE NEGOCIO ESTRICTA (Sin cálculo financiero):** El sistema **NO DEBE en ningún caso calcular montos de devolución, deducciones de comisiones, penalidades monetarias ni ejecutar transferencias de dinero**. Módulo 2 actúa como orquestador de tiempos, reglas de anticipación y estados; la valoración económica y dispersión de dinero pertenece exclusivamente a Módulo 3.
 - **FR-014**: El sistema DEBE guardar un registro claro y auditable de la cancelación (`CancellationEvent`), capturando: identificador del evento, identificador de la reserva, actor solicitante, fecha y hora de la solicitud, anticipación temporal calculada, sub-estado contractual resultante y la justificación/motivo si aplica.
-- **FR-015**: El sistema DEBE desplegar una ventana emergente de confirmación al Arrendatario que muestre de forma transparente:
-    - El ID de la reserva, nombre de la embarcación, rango de fechas y nombre del Arrendatario titular (ej. "Laura Gomez").
-    - La fecha/hora del "Zarpe pactado" y la fecha/hora actual de "Solicitud de cancelación", indicando la zona horaria del puerto.
-    - La "Anticipación calculada" en horas exactas.
-    - El badge y descripción de la clasificación ("FLEXIBLE", "MODERADO" o "TARDÍO").
-    - La leyenda aclaratoria "El monto de retención lo calcula el sistema de pagos".
-- **FR-016**: El sistema DEBE desplegar una ventana emergente de cancelación al Propietario que presente el identificador de la reserva, la etiqueta/badge explícita "CANCELACIÓN POR ANFITRIÓN", el nombre del Arrendatario ("Arrendatario: [Nombre]"), y requiera la selección obligatoria de la causa mostrando:
-    - Opción 1: "Fuerza mayor logística", con el indicador explícito "La embarcación quedará Disponible".
-    - Opción 2: "Avería o desperfecto mecánico", con el indicador explícito "La embarcación pasará a En mantenimiento/Limpieza".
-    - Un campo de texto libre ("Justificación") con el placeholder "Describa brevemente lo ocurrido (quedará registrado en el evento cancelación)".
-- **FR-017**: El sistema DEBE incluir en las ventanas emergentes de cancelación la opción explícita "MANTENER RESERVA", la cual cierra la ventana emergente sin alterar el estado de la reserva ni registrar eventos de cancelación.
+- **FR-015**: El sistema DEBE desplegar una ventana emergente de confirmación al Arrendatario que muestre de forma transparente los datos del zarpe, la anticipación calculada y la descripción de la clasificación.
+- **FR-016**: El sistema DEBE desplegar una ventana emergente de cancelación al Propietario que requiera la selección obligatoria de la causa ("Fuerza mayor logística" o "Avería o desperfecto mecánico") y el campo de justificación.
+- **FR-017**: El sistema DEBE incluir en las ventanas emergentes de cancelación la opción explícita "MANTENER RESERVA", la cual cierra la ventana sin alterar el estado de la reserva ni registrar eventos.
 
 ---
 
 ## Key Entities
 
-- **Reserva (`Reservation`)**: Entidad principal de Módulo 2 que cambia de estado de `Reservada` a `Cancelada`, adoptando el sub-estado clasificado (`Flexible`, `Moderado`, `Tardío` o `Por Anfitrión`).
-- **Evento de Cancelación (`CancellationEvent`)**: Registro auditable de dominio en Módulo 2. Atributos clave:
-    - `id_evento`: Identificador único de auditoría.
-    - `id_reserva`: Referencia a la reserva afectada.
-    - `actor_solicitante`: `Arrendatario` o `Propietario`.
-    - `fecha_hora_solicitud`: Timestamp oficial en la zona horaria del puerto.
-    - `anticipacion_calculada`: Diferencia en horas y minutos respecto al zarpe.
-    - `sub_estado_clasificado`: `Flexible`, `Moderado`, `Tardío` o `Por Anfitrión`.
-    - `justificacion`: Motivo reportado por el Propietario (si aplica).
+- **Reserva (`Reservation`)**: Entidad principal de Módulo 2 que cambia de estado de `Reservada` a `Cancelada`, adoptando el sub-estado clasificado (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión` o `Por Inasistencia`).
+- **Evento de Cancelación (`CancellationEvent`)**: Registro auditable de dominio en Módulo 2. Atributos clave: identificador, referencia a reserva, actor solicitante, timestamp oficial, anticipación calculada, sub-estado contractual resultante y justificación.
 - **Clasificación de Cancelación**: Categoría de dominio resultante del cálculo de anticipación o rol del actor, persistida como sub-estado de la reserva y comunicada a Módulo 3.
 - **Embarcación** *(entidad externa, propiedad de Módulo 1)*: Referenciada por identificador; su puerto de atraque (y zona horaria) se consulta vía `Consultar información embarcación` y su estado operativo se actualiza a `Disponible` o `En Mantenimiento/Limpieza` vía `Asignar estado operativo`.
 
