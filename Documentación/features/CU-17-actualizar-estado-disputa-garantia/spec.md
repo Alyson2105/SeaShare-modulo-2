@@ -71,6 +71,13 @@ Si la revisión todavía no terminó, el Admin puede dejar constancia de que la 
 - **FR-005**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El Admin y el sistema **NO DEBEN introducir montos, ni ejecutar operaciones de pasarela ni de pago** en este caso de uso. La decisión es únicamente administrativa y operativa; el destino del dinero lo resuelve Módulo 3 a partir del estado final.
 - **FR-006**: El cierre automático por vencimiento del Caso de uso 1 (`Generar disputa de garantía`) DEBE ejecutarse a través de esta misma operación de cambio de estado (PENDIENTE → RECHAZADA, actor Sistema, motivo de sistema), para mantener una sola fuente de verdad sobre las transiciones.
 - **FR-007**: Cada cambio de estado a RECHAZADA o ACEPTADA DEBE publicarse a Módulo 3 a través de `Recibir información de disputa de garantía` (`CU-18`). El registro inicial en PENDIENTE es interno y NO se publica.
+- **FR-008**: El sistema DEBE proveer una vista de administración titulada "Resolución de disputas", que incluya un menú de navegación lateral izquierdo con la opción activa "Resolución de disputas" y el botón inferior "Cerrar sesión", además de un contador resumen superior de la bandeja (ej. "Bandeja: 2 abiertas · 1 en revisión · 9 resueltas").
+- **FR-009**: El sistema DEBE mostrar un bloque superior con el identificador de la disputa (ej. "Disputa D-2014"), el nombre de la embarcación, la referencia de la reserva, los nombres del Arrendatario y del Propietario, acompañado a la derecha por una etiqueta de estado (ej. "PENDIENTE · 14h restantes").
+- **FR-010**: El sistema DEBE presentar un panel central dividido en dos columnas: la tarjeta izquierda "Reclamo del Propietario" (con el nombre del anfitrión y la descripción textual del daño reportado) y la tarjeta derecha "Novedades registradas al cierre" (con un texto informativo aclarando que el check-out de CU-07 no constituye un reclamo formal).
+- **FR-011**: El sistema DEBE proveer un campo de texto libre titulado "Motivo de la resolución (opcional, solo informativo)" con un placeholder descriptivo (ej. "Ej: El desgaste reportado es normal por uso, no corresponde a un daño"), permitiendo al administrador registrar observaciones de trazabilidad que no afectan ni condicionan las operaciones financieras de los fondos.
+- **FR-012**: El sistema DEBE mostrar en la esquina inferior derecha dos botones de acción principal para que el administrador resuelva el caso: "Rechazar reclamo" (secundario con borde rojo, asociado a la transición hacia RECHAZADA) y "Aceptar reclamo" (primario con fondo verde, asociado a la transición hacia ACEPTADA).
+- 
+
 
 ### Key Entities
 
