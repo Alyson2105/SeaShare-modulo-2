@@ -1,46 +1,49 @@
 # Feature Specification: Iniciar Reserva
 
 **Módulo**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
-**Fecha de Creación**: 2026-09-08 (Actualizado: al presionar Reservar crea la reserva en Iniciada e inicia el TTL)  
+**Fecha de Creación**: 2026-09-08 (Actualizado: 2026-09-28 por corrección de regla de bloqueo)  
 **Actores Primarios**: Arrendatario (Turista / Cliente)  
 **Dependencias Externas (APIs)**:
-- **Módulo 1 (Gestión de Flota y Activos P2P)**: API externa `Consultar información de embarcación` para validar la existencia del activo, su puerto GPS y su zona horaria antes de permitir la reserva. (Nota: En este paso NO se llama a `Asignar estado operativo`, la embarcación no se bloquea).
+- **Módulo 1 (Gestión de Flota)**: API externa `Consultar información de embarcación` para validación, y de forma indirecta (vía Actualizar estado reserva), la API `Asignar estado operativo` para aplicar el bloqueo físico de la embarcación durante los 15 minutos del TTL.
 - **Casos de uso internos de Módulo 2**:
-    - `CU-01 Buscar embarcaciones disponibles` `(<<extend>>)`: Caso de uso opcional que amplía este flujo si el usuario necesita buscar una embarcación antes de iniciar la reserva. La condición de extensión es que el Arrendatario inicie el flujo sin un identificador de embarcación preseleccionado.
-    - `Actualizar estado reserva` `(<<include>>)`: Para crear la reserva en estado `Iniciada` e iniciar el TTL de 15 minutos al presionar "Reservar".
+    - `Ver detalle de embarcación` `(<<extend>>)`: Caso de uso que amplía este flujo. Se activa cuando el Arrendatario decide continuar para ingresar sus datos personales.
+    - `Actualizar estado reserva` `(<<include>>)`: Para crear la reserva formalmente en estado `Iniciada`, encender el TTL de 15 minutos y notificar el bloqueo a Módulo 1.
 
 ---
 
 ## User Scenarios & Testing
 
-### User Story 1 - Crear la reserva en estado Iniciada al presionar Reservar (Priority: P1)
+### User Story 1 - Completar datos, crear la reserva en estado Iniciada y apartar la embarcación (Priority: P1)
 
-Como Arrendatario, quiero presionar "Reservar" y comenzar a llenar los datos de mi viaje (embarcación, fechas) para que la reserva quede registrada en estado `Iniciada`, iniciando su ventana de 15 minutos, y ver el costo estimado antes de decidir si procedo a pagar.
+Como Arrendatario, una vez validados los detalles de mi viaje, quiero **llenar mis datos personales obligatorios (nombre completo del titular y celular)** para que la reserva quede registrada en estado `Iniciada`, encendiendo su ventana de 15 minutos y apartando temporalmente la embarcación para que nadie más la pueda tomar mientras yo decido si procedo a pagar.
 
-***Why this priority***: Es el punto de entrada principal al embudo de conversión del marketplace. Sin este paso, el cliente no puede formalizar su intención de viaje ni conocer el presupuesto estimado aplicable a sus fechas.
+***Why this priority***: Es el punto de entrada principal a la persistencia del marketplace y el mecanismo ("carrito de compras") que protege la disponibilidad del inventario para el usuario mientras completa su transacción.
 
-***Independent Test***: Se prueba seleccionando una embarcación válida en Módulo 1, ingresando fechas futuras. Se verifica que el sistema consulte la cotización estimada a Módulo 3 (a través de `Proveer cotización de reserva`), muestre la advertencia obligatoria, creando la reserva en estado `Iniciada` con su TTL en curso y sin bloquear la disponibilidad del barco en Módulo 1.
+***Independent Test***: Se prueba accediendo desde el detalle de una embarcación válida. Se ingresan los datos y se verifica que el sistema llame a `Actualizar estado reserva`, creando la reserva en estado `Iniciada`, iniciando el TTL y validando que Módulo 1 bloquee el activo.
 
 ***Acceptance Scenarios***:
 
-1. **Scenario**: Creación exitosa de la reserva preliminar
-    - **Given** un Arrendatario autenticado y una embarcación validada en Módulo 1
-    - **When** el usuario selecciona las fechas y presiona "Reservar"
-    - **Then** el sistema crea la reserva en estado `Iniciada` a través de `Actualizar estado reserva` (`<<include>>`), enciende el TTL de 15 minutos, presenta la cotización estimada y deja los datos listos para el flujo de `Iniciar pago`, sin bloquear el activo físico
+1. **Scenario**: Creación exitosa de la reserva preliminar y bloqueo de inventario
+    - **Given** un Arrendatario que proviene de `Ver detalle de embarcación` y completó sus datos obligatorios (nombre completo y celular)
+    - **When** acciona la intención de reservar
+    - **Then** el sistema persiste la reserva asociándola a ese nombre y contacto, invoca a `Actualizar estado reserva` (`<<include>>`) fijando el estado en `Iniciada`, enciende el TTL de 15 minutos, **bloquea la disponibilidad de la embarcación en Módulo 1**, y deja los datos listos para el pago.
 
-2. **Scenario**: Fechas pasadas o inválidas rechazadas por el motor de cotización
-    - **Given** un Arrendatario configurando una reserva
-    - **When** ingresa fechas en el pasado o una fecha de fin anterior a la de inicio
-    - **Then** la validación falla, el sistema rechaza la operación informando el error y la reserva no se crea en la base de datos
+2. **Scenario**: Colisión por concurrencia al intentar apartar el barco (Control de sobreventa)
+    - **Given** dos Arrendatarios intentando crear una reserva para el mismo barco y las mismas fechas al mismo tiempo
+    - **When** ambos envían sus datos simultáneamente
+    - **Then** el sistema aplica control de concurrencia atómico, permite que solo la primera transacción entre a `Iniciada` (ganando el bloqueo de 15 minutos) y rechaza la segunda informando que las fechas ya no están disponibles.
+
+3. **Scenario**: Abandono de la intención de reserva por falta de datos
+    - **Given** un Arrendatario configurando su reserva
+    - **When** intenta avanzar sin ingresar su nombre completo o sin proveer un número de celular válido
+    - **Then** la validación falla, el sistema rechaza la operación informando el error, la reserva no se crea y el barco NO se bloquea.
 
 ---
 
-
 ### Edge Cases
 
-- **Condición de No-Bloqueo**: Este caso de uso **no aparta la embarcación**. Múltiples usuarios pueden tener reservas en estado `Iniciada` para el mismo barco y las mismas fechas al mismo tiempo, sin bloqueo. El primero que complete el caso de uso `Iniciar pago` (transición a `Pendiente de Pago`) será quien se quede con el bloqueo del inventario.
-- **Abandono del formulario antes del pago**: Si el Arrendatario abandona el llenado de datos antes de llegar al pago, la reserva permanece en estado `Iniciada` con su TTL en curso. Qué ocurre al vencer el TTL en este estado no está definido en ningún spec [ver Duda D-01 en la lista de dudas al final de esta tarea].
-- **Búsqueda previa opcional**: El flujo puede ser extendido por `CU-01 Buscar embarcaciones disponibles` si el usuario no tiene un identificador de embarcación preseleccionado. La condición es que el Arrendatario desee explorar opciones antes de reservar.
+- **Bloqueo Temporal Garantizado**: Durante los 15 minutos del TTL, la embarcación está fuera del mercado para las fechas seleccionadas. Si el usuario abandona el flujo y el TTL vence, el sistema (vía motor de estados) expira pasivamente la reserva y notifica a Módulo 1 que vuelva a liberar la embarcación.
+- **Desacople de consultas técnicas**: A diferencia de arquitecturas previas, este caso de uso asume que la capacidad máxima y las fechas ya fueron validadas en el punto de extensión de `Ver detalle de embarcación`.
 
 ---
 
@@ -48,17 +51,18 @@ Como Arrendatario, quiero presionar "Reservar" y comenzar a llenar los datos de 
 
 ### Functional Requirements
 
-- **FR-001**: El sistema DEBE permitir al Arrendatario ingresar el identificador de la embarcación y las fechas pactadas de inicio y fin.
-- **FR-002**: El sistema DEBE consultar a la API externa de Módulo 1 (`Consultar información de embarcación`) para validar que el identificador existe y obtener el puerto de atraque y su zona horaria oficial.
-- **FR-005**: Si la solicitud de reserva es válida, el sistema DEBE invocar a `Actualizar estado reserva` (`<<include>>`) para crear la reserva en estado `Iniciada` e iniciar el TTL de 15 minutos, y entregar los parámetros consolidados y validados (embarcación, fechas y cotización) al flujo de `Iniciar pago`.
-- **FR-006**: El sistema **NO DEBE** invocar llamadas de bloqueo hacia Módulo 1 en esta etapa. Como no se persiste ninguna reserva, nada de lo actuado aquí debe alterar la disponibilidad operativa de la embarcación física.
-- **FR-007**: Al presionar "Reservar" y comenzar el llenado de datos, el sistema DEBE iniciar el temporizador TTL de 15 minutos asociado a la reserva recién creada en estado `Iniciada`.
+- **FR-001**: El sistema DEBE recibir los parámetros validados de la embarcación, fechas, pasajeros y monto cotizado provenientes de la extensión `Ver detalle de embarcación`.
+- **FR-002**: El sistema DEBE proveer la interfaz para capturar obligatoriamente el nombre completo del titular de la reserva y un número de celular de contacto válido.
+- **FR-003**: El sistema DEBE validar de forma atómica que las fechas sigan disponibles en Módulo 1 antes de proceder con la creación.
+- **FR-004**: Si los datos son válidos y hay disponibilidad, el sistema DEBE invocar a `Actualizar estado reserva` (`<<include>>`) para persistir la reserva en estado `Iniciada`.
+- **FR-005**: Al asentar la reserva en `Iniciada`, el sistema DEBE iniciar el temporizador TTL de 15 minutos asociado a esa transacción.
+- **FR-006**: Como efecto directo de pasar a `Iniciada`, el sistema DEBE asegurar (a través de `Actualizar estado reserva`) que se invoque a Módulo 1 para asignar el estado operativo de bloqueo temporal (`Reservado`) a la embarcación física.
 
 ---
 
 ### Key Entities
 
-- **Reserva (`Reservation`)**: Entidad de Módulo 2 que se crea y persiste por primera vez en estado `Iniciada` en este flujo (con su TTL en curso). Sus parámetros alimentan el flujo de `Iniciar pago`. La embarcación no se bloquea en esta etapa.
+- **Reserva (`Reservation`)**: Entidad de Módulo 2 que se crea y persiste por primera vez en estado `Iniciada`, vinculada al nombre y celular capturados. Su creación detona el temporizador TTL y el bloqueo físico en Módulo 1, garantizando la exclusividad del inventario de cara al flujo de pago.
 
 ---
 
@@ -66,6 +70,6 @@ Como Arrendatario, quiero presionar "Reservar" y comenzar a llenar los datos de 
 
 ### Measurable Outcomes
 
-- **SC-001**: El 100% de las acciones "Reservar" válidas crean la reserva en estado `Iniciada` con su TTL de 15 minutos en curso.
-- **SC-002**: Cero (0%) bloqueos operativos enviados a Módulo 1 derivados de la ejecución de este caso de uso.
-- **SC-004**: Cero (0) operaciones aritméticas, redondeos o cálculos de tarifas ejecutados internamente por el código de Módulo 2.
+- **SC-001**: El 100% de las acciones de registro válidas crean la reserva en estado `Iniciada`, arrancan el TTL y bloquean la embarcación en Módulo 1.
+- **SC-002**: Cero (0%) sobreventas cuando dos usuarios intentan iniciar una reserva sobre el mismo inventario en el mismo instante.
+- **SC-003**: Cero (0) operaciones aritméticas o cálculos de tarifas ejecutados internamente por este caso de uso.

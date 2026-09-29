@@ -1,13 +1,13 @@
 # Feature Specification: Buscar embarcaciones disponibles
 
 **Módulo**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
-**Fecha de Creación**: 2026-09-24  
+**Fecha de Creación**: 2026-09-24 (Actualizado: 2026-09-28 por cambios de arquitectura)  
 **Actores Primarios**: Arrendatario (Turista / Cliente)  
-**Dependencias Externas (APIs)**: 
-**Modulo 1** :API Externa `Consultar información de embarcación` para poder mostrar todo el catálogo de embarcaciones disponibles, su puerto GPS y su zona horario antes de permitir realizar la reserva.
-**Módulo 3** API Externa `Proveer información cotización de reserva` `(<<include>>)`: Para obtener la estimación del costo en lote y presentarla en los resultados de búsqueda.
+**Dependencias Externas (APIs)**:
+- **Módulo 1**: API Externa `Consultar información de embarcación` para poder mostrar todo el catálogo de embarcaciones disponibles, su puerto GPS y su zona horaria antes de permitir realizar la reserva.
+- **Módulo 3**: API Externa `Proveer información cotización de reserva` `(<<include>>)` para obtener la estimación del costo en lote y presentarla en los resultados de búsqueda.
 - **Casos de uso internos de Módulo 2**:
-    - `CU-02 Iniciar reserva`: Este caso de uso extiende `(<<extend>>)` a Iniciar reserva. La condición de extensión se cumple si el usuario desea buscar y seleccionar una embarcación antes de formalizar la intención de reserva.
+    - `Ver detalle de embarcación` (`<<extend>>`): Este caso de uso es extendido por la vista de detalle. La condición de extensión se cumple si el usuario desea seleccionar un activo específico del catálogo para ver su ficha técnica completa.
 
 ---
 
@@ -38,7 +38,7 @@ Como Arrendatario, quiero buscar embarcaciones disponibles utilizando fechas, ca
 ### Edge Cases
 
 - **Ausencia de Cotización Temporal**: Si Módulo 3 no puede proveer cotizaciones en lote debido a una caída del servicio, el sistema mostrará las embarcaciones disponibles pero indicará que el precio estimado no está disponible en este momento.
-- **Punto de Extensión Hacia Iniciar Reserva**: Este caso de uso es opcionalmente invocado si el Arrendatario entra al proceso de `CU-02 Iniciar reserva` sin haber preseleccionado una embarcación.
+- **Punto de Extensión Hacia Detalle**: Este caso de uso es el punto de partida que permite extender hacia `Ver detalle de embarcación` una vez que el usuario hace clic en una tarjeta del catálogo para avanzar en el embudo.
 
 ---
 
@@ -50,6 +50,7 @@ Como Arrendatario, quiero buscar embarcaciones disponibles utilizando fechas, ca
 - **FR-002**: El sistema DEBE recuperar la lista de embarcaciones que coincidan con los criterios de búsqueda (a través del catálogo/Módulo 1 de manera implícita u otra fuente de verdad de listados).
 - **FR-003**: El sistema DEBE invocar obligatoriamente al caso de uso subordinado `CU-11 Proveer información cotización de reserva` `(<<include>>)` en su modo lote, transmitiendo los identificadores de las embarcaciones recuperadas.
 - **FR-004**: El sistema DEBE mostrar los resultados al Arrendatario incluyendo la información básica de la embarcación y la tarifa estimada devuelta.
+- **FR-005**: El sistema DEBE proveer un punto de extensión hacia `Ver detalle de embarcación` para cada resultado mostrado en el catálogo, permitiendo al usuario avanzar a la validación de capacidad.
 
 ---
 

@@ -107,6 +107,18 @@ Si se intenta marcar la inasistencia en una reserva que ya inició el viaje, que
 - **FR-010**: El sistema DEBE indicar a "CU-08 Actualizar estado reserva" que llame a la API de Módulo 1 (`Asignar estado operativo`) para liberar la embarcación al estado `Disponible`.
 - **FR-011**: El sistema DEBE indicar a "CU-08 Actualizar estado reserva" que llame a la API de Módulo 3 (`Recibir estado de reserva`) para comunicar el estado `Cancelada` y el sub-estado `Por Inasistencia`.
 - **FR-012**: Si la API `Consultar información embarcación` de Módulo 1 no responde o no entrega la zona horaria, el sistema NO DEBE calcular la tolerancia con una zona horaria asumida por defecto. [NEEDS CLARIFICATION: política de reintento o rechazo temporal ante esta falla — ver Edge Cases].
+- **FR-013**: El sistema DEBE mostrar en la pantalla de la reserva del Propietario un banner informativo que indique el estado del tiempo de cortesía:
+    - Estado en curso (0 a 30 min): Muestra un contador regresivo con los minutos y segundos faltantes para habilitar el reporte.
+    - Estado cumplido (>30 min): Muestra los minutos transcurridos desde la hora pactada e indica que el Propietario puede decidir entre iniciar el viaje o marcar inasistencia.
+- **FR-014**: El sistema DEBE mantener inhabilitado el botón "Marcar inasistencia" dentro del panel lateral "Acciones de embarque" durante los 30 minutos de tolerancia iniciales y habilitarlo (en color rojo) únicamente al cumplirse dicho tiempo.
+- **FR-015**: Al presionar "Marcar inasistencia", el sistema DEBE desplegar una ventana emergente de confirmación que presente:
+    - Título con ID de la reserva y nombre del Arrendatario.
+    - Banner de advertencia explícito: "Esta acción es irreversible. La reserva pasará a Cancelada por Inasistencia. El barco quedará Disponible y la compensación al anfitrión será gestionada por el sistema de pagos".
+    - Campo de texto libre opcional "Comentario (opcional)".
+    - Botón primario "Confirmar inasistencia" y botón secundario "Volver".
+- **FR-016**: Al confirmarse la inasistencia, el sistema DEBE actualizar la pantalla "Detalles reserva" del Propietario desplegando un banner superior de estado terminal de color rojo que indique "Reserva cancelada por inasistencia", especificando el nombre del propietario solicitante y los minutos de espera registrados.
+- **FR-017**: En el estado "Cancelada por Inasistencia", el sistema DEBE remover el panel "Acciones de embarque", reemplazar la tarjeta de pago por el bloque "Compensación" (manteniendo el total original con la aclaración de que el sistema de pagos gestionará los fondos) y desplegar el badge dinámico "Cancelado por inasistencia".
+- **FR-018**: El sistema DEBE actualizar la sección "Itinerario" en la interfaz del Propietario registrando de forma visible la fecha y hora exacta en que se realizó el registro de "Inasistencia reportada".
 
 ---
 
