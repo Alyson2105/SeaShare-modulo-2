@@ -2,7 +2,7 @@
 
 **Módulo**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
 **Fecha de Creación**: 2026-09-06  
-**Actores Primarios**: Propietario (Anfitrión de la embarcación)  
+**Actores Primarios**: Propietario (dueño de la embarcación)  
 **Dependencias Externas (APIs)**:
 - **Módulo 1 – Gestión de Flota y Activos P2P**: API externa `Asignar estado operativo` (cambio del estado del barco a `En Navegación`, orquestado indirectamente a través del caso de uso subordinado `Actualizar estado reserva`).
 - **Módulo 3 – Liquidación, Seguros y Dispersión de Fondos**: API externa `Recibir estado de reserva` (notificación de inicio del viaje para la activación formal de la póliza de seguro y control de fondos, orquestada indirectamente a través de `Actualizar estado reserva`).
@@ -38,7 +38,7 @@ En el muelle de salida, una vez revisado el estado del barco, el equipo de segur
 
 Si el Propietario intenta marcar el inicio de la navegación mucho antes de la fecha y hora acordadas (por ejemplo, días u horas antes de la reserva), el sistema rechaza la solicitud e informa que el registro solo se habilita cerca de la fecha y hora programadas para el viaje.
 
-***Why this priority***: Evita que un anfitrión bloquee el barco en el sistema días antes del viaje real o active coberturas de seguro a destiempo.
+***Why this priority***: Evita que un propietario bloquee el barco en el sistema días antes del viaje real o active coberturas de seguro a destiempo.
 
 ***Independent Test***: Se prueba intentando registrar el inicio de viaje en una reserva en estado Reservada cuya fecha es lejana (por ejemplo, dentro de 2 días), comprobando que el sistema rechaza la solicitud e indica cuándo se habilitará la opción.
 
@@ -100,7 +100,7 @@ Si se intenta registrar el inicio de la navegación sobre una reserva que ya est
 
 - **FR-001**: El sistema DEBE permitir registrar el inicio de la navegación (check-in de salida) de una reserva si y solo si la reserva existe y se encuentra en estado principal "Reservada".
 - **FR-002**: El sistema DEBE validar de forma estricta que el usuario que ejecuta la acción sea el Propietario registrado de la embarcación.
-- **FR-003**: El sistema DEBE validar que la solicitud se realice dentro de la ventana de tiempo autorizada para la salida (en la fecha programada o dentro del margen previo permitido).
+- **FR-003**: El sistema DEBE validar que la solicitud de inicio de navegación se realice a partir de la hora exacta de zarpe pactada (sin antelación). La ventana de habilitación del registro inicia en la fecha y hora exacta de salida de la reserva. [NEED CLARIFICATION: Definir límite de minutos posteriores al zarpe permitidos]
 - **FR-004**: Si la reserva se encuentra en cualquier estado diferente a "Reservada" (incluyendo `Pendiente de Pago`, `En Navegación`, `Completada`, `Expirada` o `Cancelada`), el sistema DEBE rechazar la solicitud e informar el motivo.
 - **FR-005**: Al validar la entrega del barco, el sistema DEBE invocar el caso de uso subordinado "CU-08 Actualizar estado reserva" `(<<include>>)`, solicitando cambiar al estado principal `En Navegación`.
 - **FR-006**: El sistema DEBE guardar un registro del inicio del viaje, incluyendo: identificador de la reserva, identificador del propietario, hora real de entrega y notas opcionales.
@@ -110,7 +110,7 @@ Si se intenta registrar el inicio de la navegación sobre una reserva que ya est
 - **FR-010**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE realizar cobros de garantías, retenciones de dinero, cálculos de tarifas ni pagos**. El Módulo 2 solo maneja los estados y tiempos del viaje; la gestión monetaria es responsabilidad del Módulo 3.
 - **FR-011**: El sistema DEBE mostrar en la pantalla del Propietario un banner informativo previo al inicio que indique el tiempo restante (ej. "Faltan 45 minutos para la hora de salida") y la hora exacta a la que se habilitará el registro de embarque.
 - **FR-012**: El sistema DEBE agrupar las opciones de embarque dentro de un panel lateral titulado "Acciones de embarque", manteniendo el botón "Marcar inicio de la navegación" inhabilitado hasta alcanzar la fecha/hora pactada de salida del puerto.
-- **FR-013**: Al hacer clic en "Marcar inicio de la navegación", para el propieatario el sistema DEBE desplegar una ventana emergente de confirmación de entrega que incluya:
+- **FR-013**: Al hacer clic en "Marcar inicio de la navegación", para el Propietario el sistema DEBE desplegar una ventana emergente de confirmación de entrega que incluya:
     - Campo con la "Hora real de salida".
     - Campo de texto libre "Notas de la entrega (opcional)".
     - Mensaje de advertencia sobre la inhabilitación permanente del reporte de inasistencia tras la confirmación.

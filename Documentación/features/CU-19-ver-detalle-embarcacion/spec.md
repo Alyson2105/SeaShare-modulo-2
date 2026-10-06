@@ -63,16 +63,9 @@ Como Arrendatario, quiero ver el precio total exacto de mi viaje para el rango d
 - **Prohibición de cálculos aritméticos (Tarifa por noche)**: Módulo 2 no debe dividir el total provisto por Módulo 3 entre la cantidad de días para inventar un "precio por noche". Solo expone el total oficial y los días involucrados.
 - **Cambio dinámico de parámetros**: Si el usuario altera las fechas o los pasajeros en la vista de detalle, el sistema debe re-evaluar la capacidad máxima e invocar nuevamente la cotización para actualizar el total en pantalla.
 - **Inconsistencia de datos desde Módulo 1**: Si al invocar `Proveer información embarcación` el activo no existe o retorna datos corruptos (ej. capacidad máxima = 0), el sistema debe mostrar un error de "Embarcación no disponible" y abortar la visualización del detalle.
+- **Expiración del Temporizador**: Si el temporizador regresivo de la cotización expira (ej. llega a 00:00), el sistema debe invalidar la cotización actual, bloquear la transición hacia el pago o reserva y requerir una re-cotización a Módulo 3.
 
 ---
-
-## Requirements *(mandatory)*
-
-### Functional Requirements
-
-## Edge Cases
-
-- **Expiración del Temporizador**: Si el temporizador regresivo de la cotización expira (ej. llega a 00:00), el sistema debe invalidar la cotización actual, bloquear la transición hacia el pago o reserva y requerir una re-cotización a Módulo 3.
 
 ## Requirements *(mandatory)*
 
@@ -87,7 +80,7 @@ Como Arrendatario, quiero ver el precio total exacto de mi viaje para el rango d
 - **FR-007**: El sistema DEBE habilitar la transición hacia `Iniciar reserva` (`<<extend>>`) única y exclusivamente si la capacidad es válida y se ha obtenido una cotización exitosa de Módulo 3.
 - **FR-008**: El sistema DEBE proveer un enlace de navegación de retorno (ej. *"‹ Volver a resultados"*) que permita al Arrendatario regresar al catálogo de búsqueda sin perder los filtros previos.
 - **FR-009**: El sistema DEBE renderizar la ficha técnica de la embarcación desglosando los atributos oficiales de Módulo 1 en componentes visuales estructurados: capacidad máxima, tipo de navegación/capitán, eslora en pies y número de camarotes.
-- **FR-010**: El sistema DEBE mostrar una sección informativa con las amenidades y comodidades disponibles de la embarcación (ej. equipo de esnórquel, Wi-Fi, nevera, tablas de paddle, etc.) y los datos de validación del anfitrión (superanfitrión e identidad verificada).
+- **FR-010**: El sistema DEBE mostrar una sección informativa con las amenidades y comodidades disponibles de la embarcación (ej. equipo de esnórquel, Wi-Fi, nevera, tablas de paddle, etc.) y los datos de validación del propietario.
 
 
 

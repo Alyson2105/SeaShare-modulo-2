@@ -1,12 +1,12 @@
 # Feature Specification: Confirmar Pago
 
-**Módulo**: Módulo 2 – Gestión de Reserva  
+**Módulo**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
 **Creado**: 2026-09-05  
 **Actor primario / Disparador**: Módulo 3 – Liquidación, Seguros y Dispersión de Fondos (sistema externo que invoca este punto de entrada tras procesar el cobro contra la pasarela de pagos)  
 **Dependencias externas (APIs)**:
 
 - Módulo 3 – Liquidación, Seguros y Dispersión de Fondos (`Confirmar pago`: punto de entrada consumido por Módulo 3 para reportar el resultado de la transacción).
-- Módulo 1 – Gestión de Embarcación (afectación indirecta a través de la invocación a "CU-08 Actualizar estado reserva").
+- Módulo 1 – Gestión de Flota y Activos P2P (afectación indirecta a través de la invocación a "CU-08 Actualizar estado reserva").
 
 ---
 
@@ -97,12 +97,12 @@ Si Módulo 3 reintenta la entrega del mensaje de confirmación de pago (por rein
   - El sistema DEBE invocar el caso de uso "CU-08 Actualizar estado reserva" (vía `<<include>>`) para transicionar el estado de la reserva a "Reservada".
 - **FR-005**: Si el resultado de la transacción es **Rechazado** o **Fallido**:
   - El sistema DEBE registrar el resultado fallido y el motivo en el historial de la reserva.
-  - [NEEDS CLARIFICATION: definir si el sistema invoca inmediatamente "CU-08 Actualizar estado reserva" para marcar "Pago Fallido/Cancelada" y liberar la embarcación en Módulo 1, o si se mantiene "Pendiente de Pago" hasta el agotamiento del TTL para permitir reintento de pago].
+  - El sistema DEBE actualizar el estado de la reserva invocando a "CU-08 Actualizar estado reserva" para transicionar a `Pago Fallido` y liberar la embarcación en Módulo 1 ante rechazo definitivo, o mantener la reserva en `Pendiente de Pago` mientras reste tiempo en el TTL para admitir un reintento del cobro [NEEDS CLARIFICATION: confirmación de la política operativa sobre reintento de pago dentro del TTL remanente versus cancelación/fallo inmediato].
 - **FR-006**: Si el sistema recibe una notificación de pago **Aprobado** cuando el temporizador TTL ya expiró y la reserva se encuentra en estado "Expirada":
   - El sistema NO DEBE transicionar la reserva a "Reservada".
   - El sistema DEBE responder a Módulo 3 con un código/mensaje de rechazo indicando que la reserva expiró por tiempo límite.
   - El sistema DEBE solicitar/instruir a Módulo 3 la reversión automática de los fondos cobrados al Arrendatario en la pasarela.
-- **FR-007**: El sistema DEBE ser estrictamente idempotente: si recibe una notificación con un identificador de transacción y estado idénticos a una confirmación previamente procesada para la misma reserva, DEBE responder afirmativamente sin repetir transiciones de estado ni generar nuevas llamadas colaterales.
+- **FR-007**: El sistema DEBE ser estrictamente idempotente: si recibe una notificación con un identificador de transacción y estado idénticos a una confirmación previamente procesada para la misma reserva, DEBE responder afirmativamente sin repetir transiciones de estado ni generar nuevas llamadas colaterales. [PENDIENTE DE DEFINICIÓN: Estrategia de idempotencia de pago en la validación del webhook]
 - **FR-008**: El sistema **NO DEBE realizar cálculos de montos, cobros directos, retenciones de depósitos de garantía ni comunicarse directamente con pasarelas de pago**; toda esa operación es de exclusiva competencia de Módulo 3.
 
 ### Key Entities

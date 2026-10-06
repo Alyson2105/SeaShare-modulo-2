@@ -2,9 +2,9 @@
 
 **Módulo**: Módulo 2 (Operación de Reservas, Tiempos y Cancelaciones)  
 **Fecha de Creación**: 2026-09-26  
-**Actores Primarios**: Módulo 3 (Gestión Liquidación), como receptor de la información publicada por Módulo 2.  
+**Actores Primarios**: Módulo 3 (Liquidación, Seguros y Dispersión de Fondos), como receptor de la información publicada por Módulo 2.  
 **Dependencias Externas (APIs)**:
-- **Módulo 3 – Gestión Liquidación**: sistema cliente que consume los mensajes de la cola para decidir internamente el destino del depósito. No participa en la creación ni en la actualización del estado de la disputa.
+- **Módulo 3 – Liquidación, Seguros y Dispersión de Fondos**: sistema cliente que consume los mensajes de la cola para decidir internamente el destino del depósito. No participa en la creación ni en la actualización del estado de la disputa.
 - **Casos de uso internos de Módulo 2**: invocado tras cada transición a estado final (RECHAZADA o ACEPTADA) gestionada por `Generar disputa de garantía` (`CU-16`, cierre automático) y `Actualizar estado de disputa de garantía` (`CU-17`, resolución del Admin).
 
 > **Nota de dominio**: los estados **PENDIENTE**, **RECHAZADA** y **ACEPTADA** (en mayúscula) pertenecen al objeto **Disputa de garantía**, que es distinto al estado de la reserva (`Completada`, `Reservada`, `Pendiente de Pago`, etc.).
@@ -74,6 +74,7 @@ El envío se realiza por cola de mensajes (Módulo 2 publica, Módulo 3 consume)
 - **FR-004**: Cada mensaje DEBE incluir un identificador único de evento (identificador de disputa + estado + eventId o número de versión incremental), de forma que Módulo 3 pueda descartar duplicados o reenvíos sin reconsultar el estado completo.
 - **FR-005**: Si la publicación en el broker falla, el sistema DEBE reintentarla hasta confirmarla, sin perder el evento.
 - **FR-006**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** Módulo 2 **NO DEBE calcular, sugerir ni incluir** en el mensaje ningún valor monetario ni instrucción financiera. El destino del depósito lo decide Módulo 3 internamente a partir del estado recibido.
+- **FR-007**: El **SLA límite de respuesta a disputas de garantía** (publicación del estado final a Módulo 3) está fijado en **24 horas**.
 
 ### Key Entities
 

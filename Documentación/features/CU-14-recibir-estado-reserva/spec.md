@@ -36,7 +36,7 @@ Como sistema (Módulo 2), quiero notificar a Módulo 3 cada vez que una reserva 
 
 Como sistema, quiero encolar y reintentar las notificaciones dirigidas a Módulo 3 si este no responde, para garantizar que ningún evento operativo (como un check-in o una cancelación) se pierda silenciosamente, manteniendo la consistencia eventual entre la operación y las finanzas.
 
-***Why this priority***: Una notificación perdida significa que un seguro no se activó o que un anfitrión nunca recibió su dinero. La entrega garantizada (Event Delivery Guarantee) es innegociable en arquitecturas desacopladas.
+***Why this priority***: Una notificación perdida significa que un seguro no se activó o que un propietario nunca recibió su dinero. La entrega garantizada (Event Delivery Guarantee) es innegociable en arquitecturas desacopladas.
 
 ***Independent Test***: Se simula una caída (HTTP 503 o timeout) en la API de Módulo 3. Se dispara un cambio de estado en Módulo 2. Se verifica que Módulo 2 guarde la transición exitosamente y encole el mensaje de notificación, reintentándolo periódicamente hasta recibir un HTTP 200 OK.
 
@@ -63,7 +63,7 @@ Como sistema, quiero encolar y reintentar las notificaciones dirigidas a Módulo
 
 - **FR-001**: El sistema DEBE enviar una petición a la API externa `Recibir estado de reserva` de Módulo 3 cada vez que el caso de uso `Actualizar estado reserva` consolide una creación o transición de estado válida. La integración con Módulo 3 inicia estrictamente a partir del estado `Pendiente de Pago` (estado inicial de toda reserva).
 - **FR-002**: El *payload* de la notificación DEBE contener obligatoriamente: identificador de la reserva, nuevo estado principal, sub-estado (si aplica), marca temporal exacta del evento (en formato ISO 8601) y actor que disparó el evento.
-- **FR-003**: Si el estado es `Cancelada`, la notificación DEBE incluir el sub-estado (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión`, `Por Inasistencia`) y la anticipación temporal cronológica.
+- **FR-003**: Si el estado es `Cancelada`, la notificación DEBE incluir el sub-estado (`Flexible`, `Moderado`, `Tardío`, `Por Propietario`, `Por Inasistencia`) y la anticipación temporal cronológica.
 - **FR-004**: Si el cierre de la navegación incluye texto opcional de novedades provisto por el Propietario, la notificación de `Completada` DEBE incluirlo como campo informativo, sin que ello modifique el tratamiento del cierre.
 - **FR-005**: El sistema DEBE implementar un mecanismo de entrega garantizada (cola de reintentos) para asegurar que las notificaciones alcancen Módulo 3 ante fallos temporales de red o timeouts.
 - **FR-006**: **REGLA ESTRICTA**: El sistema **NO DEBE** calcular ni incluir datos financieros procesados en la notificación. Finanzas es responsable de interpretar el estado operativo y traducir ese evento a dinero.

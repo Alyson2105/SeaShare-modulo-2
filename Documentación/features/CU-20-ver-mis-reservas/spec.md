@@ -27,7 +27,7 @@ Como Arrendatario, quiero ver un listado de todas mis reservas (pasadas, vigente
     - **Then** el sistema presenta el listado ordenado cronológicamente, mostrando para cada una: nombre de la embarcación, rango de fechas, estado actual y el monto total guardado al momento de su creación.
 
 2. **Scenario**: Visualización de reservas canceladas con su total original congelado
-    - **Given** una reserva en estado `Cancelada` (con sub-estado `Por Anfitrión` o `Por Inasistencia`)
+    - **Given** una reserva en estado `Cancelada` (con sub-estado `Por Propietario` o `Por Inasistencia`)
     - **When** el Arrendatario visualiza esa fila en su listado
     - **Then** el sistema presenta el estado "Cancelada" y expone únicamente el total original que fue congelado al crear la reserva, sin mostrar cálculos, deducciones ni devoluciones, delegando esa liquidación a Módulo 3.
 
@@ -66,13 +66,14 @@ Como Propietario, quiero consultar el listado de las reservas asociadas exclusiv
 - **FR-002**: El sistema DEBE filtrar los registros en la base de datos para devolver únicamente las reservas donde el usuario en sesión coincida con el `arrendatario_id` o el `propietario_id`.
 - **FR-003**: El sistema DEBE presentar para cada reserva en el listado: Identificador/Nombre de la embarcación, rango de fechas del viaje, estado principal vigente y precio total.
 - **FR-004**: **REGLA DE NEGOCIO ESTRICTA**: El precio total expuesto DEBE ser el monto original congelado durante la creación de la reserva. El sistema NO DEBE calcular deducciones, aplicar reembolsos ni restar porcentajes en las reservas `Canceladas`.
-- **FR-005**: El sistema DEBE mostrar claramente los sub-estados en las reservas canceladas (ej. `Cancelada - Por Anfitrión`, `Cancelada - Por Inasistencia`) para dar contexto al usuario sin comprometer lógica financiera.
+- **FR-005**: El sistema DEBE mostrar claramente los sub-estados en las reservas canceladas (ej. `Cancelada - Por Propietario`, `Cancelada - Por Inasistencia`) para dar contexto al usuario sin comprometer lógica financiera.
 - **FR-006**: El sistema DEBE permitir seleccionar una reserva específica del listado para invocar la vista profunda (extensión hacia `Ver detalle de reserva`).
 - **FR-007**: El sistema DEBE mostrar encabezados diferenciados según el rol del usuario en sesión: "Mis reservas" para el Arrendatario y "Reservas recibidas" para el Propietario, acompañados en ambos casos de un contador total de elementos (ej. "12 en total") y controles de navegación por pestañas para filtrar entre "Historial" y "Canceladas".
 - **FR-008**: El sistema DEBE renderizar el estado vigente de cada reserva mediante etiquetas visuales (badges) con colores semánticos que faciliten su identificación rápida (ej. "Confirmada" en verde, "En navegación" en amarillo, "Pendiente de pago" en gris, "Cancelada" en rojo).
 - **FR-009**: El sistema DEBE incluir en la tarjeta de resumen para el **Propietario** el nombre del Arrendatario que realizó la reserva (ej. "Laura Gomez") y la cantidad de pasajeros, junto a los datos básicos de la embarcación (imagen, nombre, rango de fechas y noches).
-- **FR-010**: El sistema DEBE incluir en la tarjeta de resumen para el **Arrendatario** líneas de detalle contextual debajo de las fechas cuando aplique a los estados finales, tales como confirmaciones de devolución (ej. "+ $200.00 depósito reembolsado") o razones/efectos de cancelación (ej. "Cancelada - ventana 72h+", "Reembolso emitido - Sin cargo - cancelación gratuita").
+- **FR-010**: El sistema DEBE incluir en la tarjeta de resumen para el **Arrendatario** insignias o etiquetas contextuales de estado cualitativo debajo de las fechas cuando aplique a los estados finales, tales como confirmaciones operativas de garantía (ej. "Depósito sin disputa / Reembolso gestionado por Módulo 3") o sub-estados de cancelación (ej. "Cancelada - Ventana Flexible", "Cancelada - Por Propietario"). En ningún caso el sistema mostrará montos numéricos de reembolso ni monedas extranjeras en esta vista.
 - **FR-011**: El sistema DEBE proveer un enlace de acción textual explícito en cada fila o tarjeta (ej. "Ver detalles >") ubicado junto al monto total, para invocar la vista profunda (extensión hacia `Ver detalle de reserva`).
+- **FR-012**: El sistema DEBE implementar paginación de resultados fijando un límite de 10 reservas por página, ordenadas descendentemente por fecha de creación (`created_at DESC`), proveyendo controles de navegación entre páginas.
 
 
 ### Key Entities

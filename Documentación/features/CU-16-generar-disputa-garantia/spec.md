@@ -85,15 +85,15 @@ Si el Propietario no reporta nada dentro de las 24 horas, el propio caso de uso 
 - **FR-002**: Los flujos de cierre que terminan en estado `Cancelada` NO DEBEN generar disputa de garantía.
 - **FR-003**: El actor creador de la disputa es el Sistema (creación automática). El Propietario NO genera disputas.
 - **FR-004**: La creación DEBE registrar la disputa en estado PENDIENTE ejecutando la operación de `Actualizar estado de disputa de garantía` (`CU-17`, `<<include>>`).
-- **FR-005**: Junto con la creación, el sistema DEBE abrir una ventana de 24 horas contada desde el momento de la creación, dentro de la cual el Propietario puede registrar su reclamo. [NEEDS CLARIFICATION: si la duración de la ventana debe ser configurable o es fija en 24 horas]
+- **FR-005**: Junto con la creación, el sistema DEBE abrir una ventana de 24 horas contada desde el momento de la creación, dentro de la cual el Propietario puede registrar su reclamo. El **SLA límite de respuesta a disputas de garantía está fijado en 24 horas**.
 - **FR-006**: Dentro de la ventana abierta, el sistema DEBE permitir al Propietario registrado de la embarcación registrar su reclamo (descripción de los daños o problemas) sobre la disputa existente. El registro del reclamo NO cambia el estado de la disputa (sigue PENDIENTE).
 - **FR-007**: El texto opcional de novedades adjuntado al cerrar la navegación (CU-07) NO cuenta como reclamo presentado.
 - **FR-008**: Vencida la ventana de 24 horas sin reclamo registrado, el sistema DEBE cerrar automáticamente la disputa en estado RECHAZADA ejecutando la operación de `Actualizar estado de disputa de garantía` (`CU-17`, `<<include>>`), sin intervención del Admin, con motivo de sistema "sin reclamo en ventana" (campo informativo).
 - **FR-009**: Un intento de reclamo fuera de la ventana (disputa ya en RECHAZADA por vencimiento) DEBE rechazarse sin modificar el estado de la disputa.
 - **FR-010**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE manipular el depósito en garantía, ni ejecutar pagos, reembolsos, liquidaciones ni ninguna operación financiera**. Toda decisión monetaria pertenece exclusivamente a Módulo 3 a partir del estado final de la disputa.
-- **FR-011**: Solo el cierre automático en RECHAZADA DEBE publicarse a Módulo 3 a través de `Recibir información de disputa de garantía` (`CU-18`). La creación en PENDIENTE es interna de Módulo 2 y NO se publica.
+- **FR-011**: Cada transición a estado final (`RECHAZADA` o `ACEPTADA`), incluyendo el cierre automático en `RECHAZADA` por vencimiento de ventana y las resoluciones administrativas, DEBE publicarse a Módulo 3 a través de `Recibir información de disputa de garantía` (`CU-18`). La creación inicial en `PENDIENTE` es de ámbito exclusivamente interno de Módulo 2 y NO se publica.
 - **FR-012**: Mientras la ventana de 24 horas esté en curso (disputa en PENDIENTE), el sistema DEBE renderizar un banner destacado (color amarillo/crema) con el título "Ventana para reportar disputa de garantía abierta", un texto con la cuenta regresiva exacta y el botón de acción principal negro "Reportar problema".
-- **FR-013**: Si el estado final de la disputa es favorable al anfitrión, el sistema DEBE mostrar un banner verde con el título "Tu reclamo fue aceptado" y el texto explicativo indicando que el sistema de pagos gestionará la liquidación del depósito.
+- **FR-013**: Si el estado final de la disputa es favorable al Propietario, el sistema DEBE mostrar un banner verde con el título "Tu reclamo fue aceptado" y el texto explicativo indicando que el sistema de pagos gestionará la liquidación del depósito.
 - **FR-014**: Si la disputa transiciona a RECHAZADA por vencimiento de la ventana, el sistema DEBE mostrar un banner rojo con el título "Disputa cerrada automáticamente" y exponer explícitamente el motivo del sistema: "Sin reclamo en ventana. La ventana de 24h venció sin que reportaras ningún problema".
 - **FR-015**: Si el Propietario registró un reporte exitosamente, el sistema DEBE renderizar permanentemente una tarjeta inferior titulada "Tu reclamo", mostrando textualmente la descripción enviada y la fecha/hora exacta del registro para fines de auditoría.
 - **FR-016**: El sistema DEBE desplegar una ventana emergente titulada "Reportar problema con la garantía" al hacer clic en el botón "Reportar problema", la cual incluya:
@@ -126,5 +126,5 @@ Si el Propietario no reporta nada dentro de las 24 horas, el propio caso de uso 
 ## Dudas abiertas de este spec
 
 - **D-01**: ¿Puede el Propietario registrar más de un reclamo o editar el ya registrado mientras la ventana sigue abierta, o solo se admite un único registro?
-- **D-02**: ¿La duración de la ventana de 24 horas debe ser configurable por parámetro o es fija?
+- **D-02**: ~~¿La duración de la ventana de 24 horas debe ser configurable por parámetro o es fija?~~ **Resuelto**: la ventana y el SLA límite de respuesta a disputas de garantía están fijados en 24 horas.
 - **D-03**: Política de reintentos del mecanismo de vencimiento (evento diferido / job) ante fallos de ejecución — se define en arquitectura.

@@ -49,12 +49,17 @@ Cualquier caso de uso de Módulo 2 que necesite crear una reserva en su estado i
 6. **Scenario**: Cancelación voluntaria de una reserva en estado Reservada, o por inasistencia
     - **Given** una reserva en estado principal "Reservada"
     - **When** `Solicitar cancelación` o `Marcar inasistencia` piden el cambio, aportando el tipo o motivo correspondiente
-    - **Then** el sistema actualiza el estado principal a "Cancelada" y asigna el sub-estado que corresponda (`Flexible`, `Moderado`, `Tardío`, `Por Anfitrión` o `Por Inasistencia`)
+    - **Then** el sistema actualiza el estado principal a "Cancelada" y asigna el sub-estado que corresponda (`Flexible`, `Moderado`, `Tardío`, `Por Propietario` o `Por Inasistencia`)
 
 7. **Scenario**: Expiración automática al cumplirse los 15 minutos
-    - **Given** una reserva en estado principal "Pendiente de Pago" cuyo temporizador TTL de 15 minutos ya venció sin confirmación de pago
+    - **Given** una reserva en estado principal "Iniciada" o "Pendiente de Pago" cuyo temporizador TTL de 15 minutos ya venció sin confirmación de pago
     - **When** el temporizador interno del sistema dispara el cambio
-    - **Then** el sistema actualiza el estado principal a "Expirada" de forma segura y completa
+    - **Then** el sistema actualiza el estado principal a "Expirada" de forma segura y completa (transiciones válidas: `Iniciada → Expirada` y `Pendiente de Pago → Expirada`)
+
+8. **Scenario**: Notificación de pago fallido o rechazado definitivo desde CU-13
+    - **Given** una reserva en estado principal "Pendiente de Pago"
+    - **When** el caso de uso `Confirmar pago` (CU-13) procesa un resultado de pago rechazado o fallido definitivo
+    - **Then** el sistema actualiza el estado principal a "Pago Fallido", guardando el motivo de rechazo y liberando la embarcación en Módulo 1
 
 ---
 
@@ -78,10 +83,15 @@ En los momentos clave del ciclo de vida de la reserva (a partir de que hay inten
     - **When** se guarda ese cambio
     - **Then** el sistema llama a la API `Asignar estado operativo` de Módulo 1 enviando el estado operativo "En Navegación"
 
-3. **Scenario**: Un cierre normal, cancelación o expiración liberan la embarcación a "Disponible"
-    - **Given** una reserva que pasa a "Completada", a "Cancelada" o a "Expirada"
+3. **Scenario**: Un cierre normal, cancelación ordinaria, expiración o pago fallido liberan la embarcación a "Disponible"
+    - **Given** una reserva que pasa a "Completada", a "Cancelada" (sin avería), a "Expirada" o a "Pago Fallido"
     - **When** se procesa el cambio de estado
     - **Then** el sistema llama a la API `Asignar estado operativo` de Módulo 1 enviando el estado operativo "Disponible"
+
+4. **Scenario**: Cancelación por avería reportada por el Propietario pasa la embarcación a "En Mantenimiento/Limpieza"
+    - **Given** una reserva en estado "Reservada" cancelada por el Propietario reportando avería o desperfecto mecánico
+    - **When** se procesa la transición a "Cancelada" con sub-estado "Por Propietario"
+    - **Then** el sistema llama a la API `Asignar estado operativo` de Módulo 1 enviando el estado operativo "En Mantenimiento/Limpieza"
 
 ---
 
@@ -124,7 +134,7 @@ Si llega un pedido de cambio de estado que no está permitido por la máquina de
 - **Sin bloqueo antes del pago (Condición de carrera pre-pago)**: Dado que en estado `Iniciada` no hay retención de la embarcación, es posible que dos Arrendatarios distintos tengan reservas en `Iniciada` para el mismo barco y las mismas fechas simultáneamente. El primer usuario que complete `Iniciar pago` transicionará su reserva a `Pendiente de Pago` y ganará el bloqueo en Módulo 1 (`Reservado`). Si el segundo usuario intenta `Iniciar pago` después, Módulo 2 validará la disponibilidad en Módulo 1, descubrirá que ya está reservado por el primero y rechazará la transición a `Pendiente de Pago`.
 - **"Pendiente de Pago" no se puede cancelar por voluntad propia**: La reserva se libera solo de forma pasiva cuando vence el temporizador TTL de 15 minutos.
 - **Falla pasajera de conexión con Módulo 1 o 3**: Mecanismo de cola y reintentos (0% de eventos perdidos).
-- **Los estados finales no se pueden tocar nunca más**: `Completada`, `Cancelada` y `Expirada` son definitivos.
+- **Los estados finales no se pueden tocar nunca más**: `Completada`, `Cancelada`, `Expirada` y `Pago Fallido` son definitivos.
 
 ---
 
@@ -134,23 +144,25 @@ Si llega un pedido de cambio de estado que no está permitido por la máquina de
 
 - **FR-001**: El sistema DEBE ser el único lugar donde se actualiza el estado y sub-estado de cualquier reserva en Módulo 2, invocado obligatoriamente mediante relaciones `<<include>>` por los casos de uso transaccionales (incluyendo `Iniciar pago`).
 - **FR-002**: El sistema DEBE seguir esta lista oficial de estados de la reserva:
-    - **Estados Principales de la Reserva**: `Iniciada`, `Pendiente de Pago`, `Reservada`, `En Navegación`, `Completada`, `Cancelada`, `Expirada`. El estado inicial de toda reserva al crearse es siempre `Iniciada` (disparado únicamente por `Iniciar reserva` al presionar "Reservar"). `Iniciada`, `Pendiente de Pago`, `En Navegación` y `Expirada` no tienen sub-estados.
-    - **Sub-estados de Cancelación**: `Flexible`, `Moderado`, `Tardío`, `Por Anfitrión`, `Por Inasistencia`.
-    - **Estados terminales**: `Completada`, `Cancelada` y `Expirada`.
+    - **Estados Principales de la Reserva**: `Iniciada`, `Pendiente de Pago`, `Reservada`, `En Navegación`, `Completada`, `Cancelada`, `Expirada`, `Pago Fallido`. El estado inicial de toda reserva al crearse es siempre `Iniciada` (disparado únicamente por `Iniciar reserva` al presionar "Reservar"). `Iniciada`, `Pendiente de Pago`, `En Navegación`, `Expirada` y `Pago Fallido` no tienen sub-estados.
+    - **Sub-estados de Cancelación**: `Flexible`, `Moderado`, `Tardío`, `Por Propietario`, `Por Inasistencia`.
+    - **Estados terminales**: `Completada`, `Cancelada`, `Expirada` y `Pago Fallido`.
 - **FR-003**: El sistema DEBE verificar de forma estricta que el cambio de estado pedido sea uno de los permitidos:
     - `Creación → Iniciada`: única forma de entrar a la máquina de estados, disparada por `Iniciar reserva` al presionar "Reservar".
     - `Iniciada → Pendiente de Pago`: disparada por `Iniciar pago`.
-    - `Pendiente de Pago → Reservada` o `Expirada`.
+    - `Iniciada → Expirada`: ocurre cuando el TTL de 15 minutos vence sin que se haya iniciado el pago.
+    - `Pendiente de Pago → Reservada`, `Expirada` o `Pago Fallido`.
     - `Reservada → En Navegación` o `Cancelada`.
     - `En Navegación → Completada`.
 - **FR-004**: Si el cambio pedido es válido, el sistema DEBE actualizar y guardar de forma atómica el estado principal.
 - **FR-005**: Si el cambio pedido no es válido, el sistema DEBE rechazar la solicitud.
-- **FR-006**: El sistema DEBE tener control de concurrencia para evitar que dos solicitudes de actualización sobre la misma reserva choquen.
+- **FR-006**: El sistema DEBE tener control de concurrencia para evitar que dos solicitudes de actualización sobre la misma reserva choquen. [PENDIENTE DE DEFINICIÓN: Estrategia de concurrencia y uso de @Version/Optimistic Locking a confirmar por negocio]
 - **FR-007**: El sistema DEBE sincronizar el estado operativo con Módulo 1 bajo las siguientes reglas:
     - `Creación a Iniciada`: NO se notifica bloqueo a Módulo 1.
     - `Iniciada a Pendiente de Pago`: llamar a `Asignar estado operativo` (poner en `Reservado`).
     - Pasa a `En Navegación`: actualizar a `En Navegación`.
-    - Pasa a `Completada`, `Cancelada` o `Expirada`: actualizar a `Disponible`.
+    - Pasa a `Completada`, `Expirada`, `Pago Fallido` o `Cancelada` (sin reporte de avería): actualizar a `Disponible`.
+    - Pasa a `Cancelada` con reporte de avería o desperfecto mecánico por parte del Propietario: actualizar a `En Mantenimiento/Limpieza` (inhabilitando temporalmente el activo).
 - **FR-008**: El sistema DEBE llamar a la API externa de Módulo 3 (`Recibir estado de reserva`) ante cada cambio de estado a partir de `Pendiente de Pago` (inclusive).
 - **FR-009**: **Texto de novedades en el cierre**: Si el cierre de la navegación incluye el texto opcional de novedades provisto por el Propietario, el sistema DEBE adjuntarlo como campo informativo en la notificación de `Completada` a Módulo 3, sin que ello modifique el tratamiento del cierre.
 - **FR-010**: **REGLA DE NEGOCIO ESTRICTA (Sin cálculo financiero):** Módulo 2 **NO DEBE** calcular montos ni hacer transferencias de dinero. Toda valoración económica es de Módulo 3.
