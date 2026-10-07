@@ -1,14 +1,14 @@
 # Implementation Plan: Módulo 2 — Operación de Reservas, Tiempos y Cancelaciones (SEA-SHARE)
 
 **Date**: 2026-09-27
-**Spec**: [`context/sea-share.md`](context/sea-share.md) · [`context/consistencia-m2-m3.md`](context/consistencia-m2-m3.md) · [`features/CU-01..CU-18/spec.md`](features/)
+**Spec**: [`context/sea-share.md`](context/sea-share.md) · [`context/consistencia-m2-m3.md`](context/consistencia-m2-m3.md) · [`features/CU-01..CU-21/spec.md`](features/)
 **Alcance**: Plan **general** del módulo backend. Los planes técnicos detallados de cada caso de uso se redactarán en una tarea posterior, uno por CU.
 
 ## Summary
 
 Este plan define la estrategia de construcción del **Módulo 2** de SEA-SHARE: un servicio backend en **Java 21 + Spring Boot 3.5**, empaquetado con **Maven**, que usa **RabbitMQ** como broker de mensajería para la integración asíncrona y la entrega garantizada de eventos hacia el Módulo 3 ("el sistema").
 
-El módulo es dueño del **ciclo de vida de la reserva** (18 casos de uso, CU-01 a CU-18) y se integra con dos sistemas externos mediante contratos de API: **Módulo 1** (Gestión de Flota y Activos P2P) como fuente de verdad de la flota y **Módulo 3** (Liquidación, Seguros y Dispersión de Fondos) como autoridad única en todo cálculo monetario.
+El módulo es dueño del **ciclo de vida de la reserva** (21 casos de uso: CU-01 a CU-18 operativos y CU-19 a CU-21 de vista de consulta) y se integra con dos sistemas externos mediante contratos de API: **Módulo 1** (Gestión de Flota y Activos P2P) como fuente de verdad de la flota y **Módulo 3** (Liquidación, Seguros y Dispersión de Fondos) como autoridad única en todo cálculo monetario.
 
 Dos restricciones del contexto gobiernan toda la arquitectura:
 
@@ -35,7 +35,7 @@ La consecuencia de diseño es una **arquitectura hexagonal con un único escrito
 
 | Objetivo | Fuente |
 | :--- | :--- |
-| Consultas a Módulo 1 (`Consultar información de embarcación`, estado operativo) < 300 ms | SC-001 de CU-09 y CU-10 |
+| Consultas a Módulo 1 (`Consultar información de embarcación`, estado operativo) < 300 ms | SC-001 de CU-09 y CU-10 *(marcado en ambos specs como `PENDIENTE DE DEFINICIÓN`, valor a confirmar por negocio)* |
 | Consulta de información de reserva para Módulo 3 < 200 ms | SC-001 de CU-15 |
 | Notificaciones a APIs externas tras consolidar el cambio < 500 ms | SC-002 de CU-08 y CU-14 |
 | Notificaciones de Módulo 1 / Módulo 3 en < 1 s (cancelación, inasistencia, check-in, check-out, confirmación de pago) | SC-005 de CU-04, SC-004 de CU-05, SC-002 de CU-06 y CU-07, SC-001 de CU-13 |
@@ -52,7 +52,7 @@ La consecuencia de diseño es una **arquitectura hexagonal con un único escrito
 - **La integración con Módulo 1 es exclusivamente por API** (FR-007 de CU-10). Módulo 2 no implementa el inventario físico.
 - **Atribución de términos** según `consistencia-m2-m3.md` §1: se usa **Arrendatario** y **Propietario** (nunca "turista" ni "anfitrión"), **"el sistema"** para Módulo 3 (nunca "Módulo 3" dentro del vocabulario de SPEC/Finanzas) y **"Sistema de Reservas y Operaciones"** para Módulo 2 en las interacciones con Finanzas.
 
-**Scale/Scope**: 1 servicio · 18 casos de uso · 2 contextos acotados (Reservas, Disputa de Garantía) · 2 sistemas externos · 7 interacciones formalizadas (tabla §5 de `consistencia-m2-m3.md`) · Volumen de usuarios y concurrencia esperado **NEEDS CLARIFICATION** (el contexto no define cifras de escala ni requisitos de capacidad).
+**Scale/Scope**: 1 servicio · 21 casos de uso · 2 contextos acotados (Reservas, Disputa de Garantía) · 2 sistemas externos · 7 interacciones formalizadas (tabla §5 de `consistencia-m2-m3.md`) · Volumen de usuarios y concurrencia esperado **NEEDS CLARIFICATION** (el contexto no define cifras de escala ni requisitos de capacidad).
 
 ### Decisiones arquitectónicas transversales
 
@@ -83,7 +83,7 @@ Documentación/
 │   ├── sea-share.md
 │   └── consistencia-m2-m3.md
 ├── features/                  # Solo lectura en esta tarea — planes por CU luego
-│   └── CU-01..CU-18/
+│   └── CU-01..CU-21/
 │       ├── spec.md            # (existente)
 │       └── plan.md            # (se creará en la tarea posterior, un archivo por CU)
 ├── diagrams/                  # Solo lectura
@@ -92,7 +92,7 @@ Documentación/
 
 ### Source Code (repository root)
 
-Estructura **por contexto acotado**, y dentro de cada uno por capa hexagonal (`domain` → `application` → `infrastructure`), con un paquete `shared` para lo transversal. Se elige esta opción porque los 18 CUs se reparten de forma natural en dos contextos con máquinas de estado propias (Reservas y Disputa de Garantía), y porque los specs describen fronteras estrictas ("API externa", "sin acceso directo a BD", "sin cálculos de dinero") que la estructura debe hacer explícitas.
+Estructura **por contexto acotado**, y dentro de cada uno por capa hexagonal (`domain` → `application` → `infrastructure`), con un paquete `shared` para lo transversal. Se elige esta opción porque los 21 CUs se reparten de forma natural en dos contextos con máquinas de estado propias (Reservas y Disputa de Garantía), y porque los specs describen fronteras estrictas ("API externa", "sin acceso directo a BD", "sin cálculos de dinero") que la estructura debe hacer explícitas.
 
 ```text
 SeaShare-modulo-2/
@@ -114,7 +114,7 @@ SeaShare-modulo-2/
 │   │   ├── web/                 # Manejo global de errores, versionado de API, OpenAPI
 │   │   └── observability/       # Correlation id, MDC, métricas
 │   │
-│   ├── reservas/                                  # Contexto: Reservas — CU-01 a CU-15
+│   ├── reservas/                                  # Contexto: Reservas — CU-01 a CU-15, CU-19 a CU-21
 │   │   ├── domain/
 │   │   │   ├── model/           # Reserva, EstadoReserva, SubEstadoCancelacion,
 │   │   │   │                     # AuditoriaEstado, CheckIn, CheckOut, Cancelacion, NoShow
@@ -126,7 +126,7 @@ SeaShare-modulo-2/
 │   │   │   ├── port/out/        # Puertos de salida: repositorios, Módulo 1, Módulo 3, reloj
 │   │   │   └── usecase/         # Orquestación de cada caso de uso
 │   │   └── infrastructure/
-│   │       ├── web/             # Controllers REST          (CU-01..07, 13, 15)
+│   │       ├── web/             # Controllers REST          (CU-01..07, 13, 15, 19, 20, 21)
 │   │       ├── client/          # Clientes HTTP Módulo 1 / Módulo 3
 │   │       │                    #   (CU-09, 10, 11, 12, 14)
 │   │       ├── messaging/       # Publicadores, outbox relay, consumidores
@@ -185,7 +185,7 @@ SeaShare-modulo-2/
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-**Purpose**: Infraestructura crítica que debe existir **antes** de implementar cualquier caso de uso. Los 18 CUs dependen de estos elementos: todos los que cambian estado pasan por la persistencia transaccional y el outbox, todos los que validan ventanas dependen del reloj y de la zona horaria por puerto, y todos los que notifican a Módulo 3 dependen de la topología RabbitMQ.
+**Purpose**: Infraestructura crítica que debe existir **antes** de implementar cualquier caso de uso. Los 21 CUs dependen de estos elementos: todos los que cambian estado pasan por la persistencia transaccional y el outbox, todos los que validan ventanas dependen del reloj y de la zona horaria por puerto, y todos los que notifican a Módulo 3 dependen de la topología RabbitMQ.
 
 - [ ] T011 **Manejo global de errores**: jerarquía de excepciones de dominio mapeada a código HTTP y cuerpo de error uniforme; validar que ninguna respuesta de error expone datos sensibles ni *stack traces*
 - [ ] T012 **Seguridad**: autenticación y autorización por rol (**Arrendatario**, **Propietario**, **Admin**) más identidad de servicio para Módulo 3 (CU-13 y CU-15); endpoints protegidos por defecto; CORS y TLS. **NEEDS CLARIFICATION**: el mecanismo de autenticación no está definido en los specs
@@ -209,7 +209,7 @@ SeaShare-modulo-2/
 
 **Qué CUs agrupa**: **CU-09** (Proveer información de embarcación), **CU-10** (Brindar información de estado operativo), **CU-11** (Proveer información cotización de reserva), **CU-12** (Brindar cálculo total de la reserva)
 
-**Justificación**: los cuatro son adaptadores **sin máquina de estados, sin persistencia de dominio y sin efectos secundarios**: solo consultan Módulo 1 o Módulo 3 y devuelven el resultado sin transformarlo. Esto los convierte en el punto de entrada natural del proyecto: son verificables de forma aislada contra dobles de prueba, sin depender de ningún otro CU ni de la base de datos, yilteran y condicionan la frontera más delicada del sistema — el límite "sin dinero" y el comportamiento *fail-safe* ante fallos de Módulo 1. Además son **desbloqueantes**: CU-02 y CU-04 dependen de la zona horaria del puerto que entrega CU-09, CU-01 depende del modo lote de CU-11, y CU-03 depende de la liquidación final de CU-12. Empezar por ellos permite avanzar en paralelo con el núcleo de dominio y fija los contratos de integración con Módulo 1 y Módulo 3 antes de construir lógica de negocio encima.
+**Justificación**: los cuatro son adaptadores **sin máquina de estados, sin persistencia de dominio y sin efectos secundarios**: solo consultan Módulo 1 o Módulo 3 y devuelven el resultado sin transformarlo. Esto los convierte en el punto de entrada natural del proyecto: son verificables de forma aislada contra dobles de prueba, sin depender de ningún otro CU ni de la base de datos, y filtran y condicionan la frontera más delicada del sistema — el límite "sin dinero" y el comportamiento *fail-safe* ante fallos de Módulo 1. Además son **desbloqueantes**: CU-02 y CU-04 dependen de la zona horaria del puerto que entrega CU-09, CU-01 depende del modo lote de CU-11, y CU-03 depende de la liquidación final de CU-12. Empezar por ellos permite avanzar en paralelo con el núcleo de dominio y fija los contratos de integración con Módulo 1 y Módulo 3 antes de construir lógica de negocio encima.
 
 > Las tareas técnicas detalladas de cada CU se definirán en su propio plan específico más adelante.
 
@@ -235,37 +235,47 @@ SeaShare-modulo-2/
 
 ---
 
-## Phase 6: Embudo de conversión — de la búsqueda al pago confirmado (P1)
+## Phase 6: Vistas de consulta — CU-19, CU-20, CU-21 (P1)
+
+**Qué CUs agrupa**: **CU-19** (Ver detalle de embarcación), **CU-20** (Ver mis reservas), **CU-21** (Ver detalle de reserva)
+
+**Justificación**: son los tres casos base de las relaciones `<<extend>>` del conjunto — CU-02 (`Iniciar reserva`) se ancla a CU-19, CU-01 extiende hacia CU-19, CU-04 (`Solicitar cancelación`) se ancla a CU-21 y CU-03 declara su extensión sobre CU-20 (con la nota del spec que sugiere CU-21, pendiente de revisión formal — ver riesgo A). Los tres son de **solo lectura, sin máquina de estados ni efectos secundarios**: CU-19 consulta Módulo 1 (vía CU-09) y la cotización individual (vía CU-11); CU-20 y CU-21 leen reservas ya persistidas y exponen el detalle sin escrituras, en línea con las restricciones monetarias de CU-15 (exponen el total oficial, cero montos derivados). Se colocan como fase propia **antes del embudo** para que los casos base existan antes que sus extenders y para desbloquear la verificación de las extensiones que comparten los recorridos de las Fases 7 y 8. Dependen de la Fase 2 (persistencia de CU-20/CU-21) y de la Fase 3 (CU-19 requiere la cotización individual y los datos de Módulo 1).
+
+> Las tareas técnicas detalladas de cada CU se definirán en su propio plan específico más adelante.
+
+---
+
+## Phase 7: Embudo de conversión — de la búsqueda al pago confirmado (P1)
 
 **Qué CUs agrupa**: **CU-01** (Buscar embarcaciones disponibles), **CU-02** (Iniciar reserva), **CU-03** (Iniciar pago), **CU-13** (Confirmar pago)
 
-**Justificación**: es la **vertical de mayor valor de negocio** del marketplace (sin ella el producto no genera ingresos) y forma un único recorrido de principio a fin: búsqueda con cotización por lote → creación de la reserva en `Iniciada` con el TTL en curso → adquisición del bloqueo de inventario y paso a `Pendiente de Pago` → confirmación del pago reportada por Módulo 3 y paso a `Reservada`. Se agrupan porque comparten la misma presión de concurrencia y el mismo indicador de negocio: dos Arrendatarios compiten por el mismo barco y las mismas fechas, y el spec exige cero sobreventa y respuesta atómica. Contiene la condición de no-bloqueo en `Iniciada` (varias reservas concurrentes para el mismo barco) y la carrera de sobreventa en `Pendiente de Pago`. Requiere las Fases 3 (contratos de cotización y liquidación), 4 (máquina de estados) y 5 (notificación a Módulo 3) completas.
+**Justificación**: es la **vertical de mayor valor de negocio** del marketplace (sin ella el producto no genera ingresos) y forma un único recorrido de principio a fin: búsqueda con cotización por lote → creación de la reserva en `Iniciada` con el TTL en curso → adquisición del bloqueo de inventario y paso a `Pendiente de Pago` → confirmación del pago reportada por Módulo 3 y paso a `Reservada`. Se agrupan porque comparten la misma presión de concurrencia y el mismo indicador de negocio: dos Arrendatarios compiten por el mismo barco y las mismas fechas, y el spec exige cero sobreventa y respuesta atómica. Contiene la condición de no-bloqueo en `Iniciada` (varias reservas concurrentes para el mismo barco) y la carrera de sobreventa en `Pendiente de Pago`. Requiere las Fases 3 (contratos de cotización y liquidación), 4 (máquina de estados), 5 (notificación a Módulo 3) y 6 (vistas base de las extensiones CU-02 y CU-03) completas.
 
 > Las tareas técnicas detalladas de cada CU se definirán en su propio plan específico más adelante.
 
 ---
 
-## Phase 7: Operaciones en muelle — check-in, check-out, inasistencia y cancelación (P2)
+## Phase 8: Operaciones en muelle — check-in, check-out, inasistencia y cancelación (P2)
 
 **Qué CUs agrupa**: **CU-06** (Marcar inicio de navegación), **CU-07** (Marcar fin de navegación), **CU-05** (Marcar inasistencia), **CU-04** (Solicitar cancelación)
 
-**Justificación**: los cuatro comparten **actor (Propietario), contexto físico (operación en el muelle) y punto de entrada** sobre una reserva que ya está `Reservada` o `En Navegación`. Dependen de la Fase 4 y de la zona horaria del puerto entregada por CU-09 en la Fase 3. Se agrupan y no se distribuyen porque comparten la misma familia de reglas de **ventana temporal y clasificación** (margen de salida, 30 minutos de tolerancia, 72 h y 24 h de cancelación) y porque las transiciones que producen convergen en las mismas ramifications de la máquina de estados. Dentro de la fase el orden sugerido es **check-in → check-out → cancelación → inasistencia**: los dos primeros son el camino feliz y los mejor especificados, mientras que los dos últimos concentran la mayoría de los `[NEEDS CLARIFICATION]` abiertos (margen de ventana no definido en CU-06, política de fallo de Módulo 1 en CU-05, clasificación del motivo del propietario en CU-04) y conviene abordarlos cuando la máquina de estados ya esté probada. El valor de negocio es completar el ciclo operativo del alquiler.
+**Justificación**: los cuatro comparten **actor (Propietario), contexto físico (operación en el muelle) y punto de entrada** sobre una reserva que ya está `Reservada` o `En Navegación`. Dependen de la Fase 4, de la zona horaria del puerto entregada por CU-09 en la Fase 3 y de la Fase 6 (CU-21 es el caso base de `Solicitar cancelación`). Se agrupan y no se distribuyen porque comparten la misma familia de reglas de **ventana temporal y clasificación** (margen de salida, 30 minutos de tolerancia, 72 h y 24 h de cancelación) y porque las transiciones que producen convergen en las mismas ramifications de la máquina de estados. Dentro de la fase el orden sugerido es **check-in → check-out → cancelación → inasistencia**: los dos primeros son el camino feliz y los mejor especificados, mientras que los dos últimos concentran la mayoría de los `[NEEDS CLARIFICATION]` abiertos (margen de ventana no definido en CU-06, política de fallo de Módulo 1 en CU-05, clasificación del motivo del propietario en CU-04) y conviene abordarlos cuando la máquina de estados ya esté probada. El valor de negocio es completar el ciclo operativo del alquiler.
 
 > Las tareas técnicas detalladas de cada CU se definirán en su propio plan específico más adelante.
 
 ---
 
-## Phase 8: Disputa de garantía (P2)
+## Phase 9: Disputa de garantía (P2)
 
 **Qué CUs agrupa**: **CU-16** (Generar disputa de garantía), **CU-17** (Actualizar estado de disputa de garantía), **CU-18** (Recibir información de disputa de garantía)
 
-**Justificación**: constituye un **contexto acotado independiente**, con su propia máquina de estados (`PENDIENTE` / `RECHAZADA` / `ACEPTADA`), sus propias entidades y sus propias invariantes, sin ninguna transición sobre la reserva. Solo es alcanzable a través de CU-07 (`Completada`) y puede desarrollarse **en paralelo con la Fase 7** una vez que exista la infraestructura de mensajería de la Fase 2. Se mantiene como fase aparte precisamente para permitir ese paralelismo y para no mezclar dos máquinas de estado en los mismos archivos. Concentra el requisito asíncrono más estricto del módulo: CU-18 publica **solo** en estados finales, **cero mensajes en `PENDIENTE`**, con identificador único para deduplicación, sin ningún monto ni instrucción de pago, y con reintento hasta confirmación del broker. Cierra el ciclo financiero del depósito de garantía.
+**Justificación**: constituye un **contexto acotado independiente**, con su propia máquina de estados (`PENDIENTE` / `RECHAZADA` / `ACEPTADA`), sus propias entidades y sus propias invariantes, sin ninguna transición sobre la reserva. Solo es alcanzable a través de CU-07 (`Completada`) y puede desarrollarse **en paralelo con la Fase 8** una vez que exista la infraestructura de mensajería de la Fase 2. Se mantiene como fase aparte precisamente para permitir ese paralelismo y para no mezclar dos máquinas de estado en los mismos archivos. Concentra el requisito asíncrono más estricto del módulo: CU-18 publica **solo** en estados finales, **cero mensajes en `PENDIENTE`**, con identificador único para deduplicación, sin ningún monto ni instrucción de pago, y con reintento hasta confirmación del broker. Cierra el ciclo financiero del depósito de garantía.
 
 > Las tareas técnicas detalladas de cada CU se definirán en su propio plan específico más adelante.
 
 ---
 
-## Phase 9: Polish & Cross-Cutting Concerns
+## Phase 10: Polish & Cross-Cutting Concerns
 
 **Purpose**: Mejoras que afectan a múltiples casos de uso.
 
@@ -288,26 +298,29 @@ SeaShare-modulo-2/
 - **Fase 3 — Adaptadores de lectura**: depende de la Fase 2 (clientes HTTP, manejo de errores). No depende de ninguna otra fase de CU
 - **Fase 4 — Máquina de estados**: depende de la Fase 2 (persistencia, outbox, reloj). No depende de la Fase 3
 - **Fase 5 — Superficie Módulo 3**: depende de las Fases 2 y 4
-- **Fase 6 — Embudo de conversión**: depende de las Fases 3, 4 y 5
-- **Fase 7 — Operaciones en muelle**: depende de las Fases 3, 4 y 5
-- **Fase 8 — Disputa de garantía**: depende de la Fase 2 y del disparo de CU-07 (Fase 7), aunque su núcleo de dominio puede desarrollarse en paralelo con la Fase 7
-- **Polish (Fase 9)**: depende de las fases de CU deseadas
+- **Fase 6 — Vistas de consulta**: depende de las Fases 2 (persistencia de CU-20/CU-21) y 3 (CU-19: cotización individual y datos de Módulo 1); CU-20 y CU-21 leen reservas gestionadas desde la Fase 4
+- **Fase 7 — Embudo de conversión**: depende de las Fases 3, 4, 5 y 6
+- **Fase 8 — Operaciones en muelle**: depende de las Fases 3, 4, 5 y 6
+- **Fase 9 — Disputa de garantía**: depende de la Fase 2 y del disparo de CU-07 (Fase 8), aunque su núcleo de dominio puede desarrollarse en paralelo con la Fase 8
+- **Polish (Fase 10)**: depende de las fases de CU deseadas
 
 ### Orden y paralelismo
 
 ```text
-Fase 1 ──▶ Fase 2 ──┬──▶ Fase 3 (lectura) ──┬──▶ Fase 6 (conversión)
+Fase 1 ──▶ Fase 2 ──┬──▶ Fase 3 (lectura) ──┬──▶ Fase 7 (conversión)
                     │                       │
-                    ├──▶ Fase 4 (núcleo) ───┼──▶ Fase 7 (muelle) ──┬──▶ Fase 8 (disputa)
+                    ├──▶ Fase 4 (núcleo) ───┼──▶ Fase 8 (muelle) ──┬──▶ Fase 9 (disputa)
                     │         │             │                      │          ▲
                     │         └──▶ Fase 5 ───┘                      └──────────┘
                     │            (Módulo 3)
-                    └──▶ Fase 8 (dominio, en paralelo)
+                    ├──▶ Fase 6 (vistas) ──▶ Fase 7 / Fase 8
+                    └──▶ Fase 9 (dominio, en paralelo)
 ```
 
 - **Fases 3 y 4** pueden ejecutarse simultáneamente tras completar la Fase 2: no comparten código de dominio.
-- **Fases 6 y 7** pueden ejecutarse en paralelo una vez cerradas las Fases 3, 4 y 5.
-- **Fase 8** puede avanzar en paralelo con la Fase 7 si se acuerda el contrato de integración del disparo desde `Completada`.
+- **Fase 6 (vistas)** puede ejecutarse en paralelo con las Fases 4 y 5 una vez cerradas las Fases 2 y 3.
+- **Fases 7 y 8** pueden ejecutarse en paralelo una vez cerradas las Fases 3, 4, 5 y 6.
+- **Fase 9** puede avanzar en paralelo con la Fase 8 si se acuerda el contrato de integración del disparo desde `Completada`.
 
 ### Dentro de cada CU
 
@@ -323,53 +336,53 @@ Fase 1 ──▶ Fase 2 ──┬──▶ Fase 3 (lectura) ──┬──▶ F
 
 Esta sección **no resuelve** las inconsistencias: las señala para que se cierren antes de escribir el plan técnico del CU afectado.
 
+> **Reauditoría 2026-10-06** contra el estado de los `spec.md` posterior al commit `c999890` ("Docs: Corregir inconsistencias de specs"). Los ítems cuya inconsistencia ya fue corregida en los specs se **eliminaron** de esta sección. Eliminados: A — expiración del TTL desde `Iniciada`, bloqueo en Módulo 1 al entrar en `Iniciada`, rubros derivados (Comisión/Neto/USD) en las vistas, CU-12 sobre reserva inexistente, `Pago Fallido` inexistente, dirección `<<include>>` CU-01/CU-11, publicación de la disputa `RECHAZADA`, tabla de sincronización con Módulo 1 y cobertura 18/21 (este plan ahora cubre CU-01 a CU-21, ver Fase 6); C — expiración del TTL en pantalla (CU-03 ya lo resolvió: inhabilitar botones, modal, redirigir a CU-01 y liberar el inventario); E — FR-005-enunciado-como-pregunta en CU-13 y variantes de nomenclatura (todas unificadas; sin rastros de "anfitrión").
+
 ### A. Contradicciones que afectan el agrupamiento y el orden de las fases
 
-1. **La expiración del TTL desde `Iniciada` no está definida.** El TTL arranca en `Iniciada` (CU-02 FR-012 y CU-08 FR-002) y el edge case "Bloqueo Temporal Garantizado" de CU-02 afirma que, al vencer, el sistema expira pasivamente la reserva y notifica a Módulo 1 que libere la embarcación; pero CU-08 FR-003 solo permite `Pendiente de Pago → Expirada`. La referencia a una "Duda D-01" que CU-02 contenía se eliminó en la actualización del 2026-09-28, pero la contradicción de fondo permanece y quedó más explícita, porque ahora CU-02 afirma la expiración desde `Iniciada` sin que la matriz la permita. Afecta a las Fases 4 y 6.
-2. **Modelo de creación de la reserva inconsistente.** CU-08, CU-02 y CU-03 dicen que la reserva nace en `Iniciada` y luego pasa a `Pendiente de Pago`; CU-11, CU-12 y CU-14 afirman repetidamente que Módulo 3 y CU-02 crean la reserva **ya en** `Pendiente de Pago` y que ahí se activa el TTL. Afecta a las Fases 3, 4 y 6.
-3. **El bloqueo de la embarcación en Módulo 1 al entrar en `Iniciada` es contradictorio.** *(nuevo)* CU-02 FR-013, US1 Scenario 1, SC-001 y el edge case "Bloqueo Temporal Garantizado" exigen bloquear la embarcación en Módulo 1 como efecto directo de pasar a `Iniciada`. CU-08 lo prohíbe en tres lugares: FR-007 ("`Creación a Iniciada`: NO se notifica bloqueo a Módulo 1"), US1 Scenario 1 ("no notifica bloqueo a Módulo 1") y **SC-003** ("Cero (0%) embarcaciones bloqueadas físicamente en Módulo 1 sin que exista una reserva en estado `Pendiente de Pago` que respalde el bloqueo"). `consistencia-m2-m3.md` §2 refuerza la postura de CU-08 ("la embarcación deja de listarse como disponible"). El efecto en cascada es amplio: vuelve imposible el `Given` de CU-03 US2 y de CU-02 Scenario 2 (dos reservas en `Iniciada` sobre el mismo barco), contradice CU-11 (cotizar no reserva inventario) y CU-12 (edge cases "sin reserva persistida aún" y "no se producen bloqueos de inventario en Módulo 1"), y contradice el propio edge case de CU-08 "Sin bloqueo antes del pago". Afecta a las Fases 4 y 6.
-4. **Módulo 3 nunca entrega los rubros derivados que las vistas exigen.** *(nuevo)* CU-21 FR-010, FR-011, FR-012 y FR-013 exigen mostrar al Propietario los rubros "Comisión" y "Neto a recibir"; CU-03 FR-012 nombra la "comisión de la plataforma" en el desglose; CU-04 FR-015 declara "El monto de retención lo calcula el sistema de pagos"; y CU-20 FR-010 exige mostrar "+ $200.00 depósito reembolsado" y "Reembolso emitido - Sin cargo - cancelación gratuita". Pero CU-15, único canal de lectura hacia Módulo 3, prohíbe en FR-006 entregar cualquier valor monetario derivado y su FR-002 no los incluye; CU-12 FR-005 tampoco los lista entre los rubros recibidos de Módulo 3. CU-20 FR-010 contradice además su propia FR-004. No existe canal ni regla que haga llegar esos datos. Afecta a las Fases 3, 5, 6 y 7.
-5. **CU-12 opera sobre una reserva que, según CU-03, ya existe.** *(nuevo)* CU-03 FR-002 exige que la reserva esté en `Iniciada` para poder iniciar el pago, y solo entonces invoca a CU-12; pero CU-12, en su disparador, en FR-003, en US1 y en la entidad `TotalCalculationRequest`, afirma reiteradamente "sin reserva persistida aún" y "sin `reservation_id`: aún no existe reserva persistida". Además su edge case "Solicitud de cálculo con embarcación no disponible en Módulo 1" presupone que el bloqueo se produce en `Pendiente de Pago` y no en `Iniciada`, lo que depende de cómo se cierre el punto 3. Afecta a las Fases 3 y 6.
-6. **`Iniciar pago` se declara extensión de `Ver mis reservas`, pero la relación no está declarada en el caso base.** *(nuevo)* CU-03 FR-001 afirma ser la extensión anclada a `Ver mis reservas`; sin embargo CU-20 nunca declara ni condiciona esa extensión, a diferencia de todas las demás relaciones `<<extend>>` del conjunto, y su FR-006 solo habilita extender hacia `Ver detalle de reserva`. Semánticamente el pago se habilita desde el detalle (CU-21 FR-005), igual que la reserva se habilita desde el detalle de la embarcación (CU-19 FR-007). Afecta a la Fase 6.
-7. **El estado `Pago Fallido` se usa pero no existe.** CU-13 lo menciona en su escenario 2 y en FR-005, pero no figura en la lista oficial de CU-08 FR-002 ni en su matriz de transiciones FR-003, y tampoco está cubierto por la tabla de sincronización con Módulo 1 (FR-007). Afecta a las Fases 4 y 6.
-8. **La dirección del `<<include>>` entre CU-01 y CU-11 está invertida.** CU-01 FR-003 dice invocar CU-11 en modo **lote**; CU-11 dice ser invocado por CU-01 en modo **individual**. Afecta a las Fases 3 y 6.
-9. **Dos specs discrepan sobre quién publica la disputa `RECHAZADA`.** CU-16 FR-011 dice que **solo** el cierre automático se publica; CU-17 FR-007 dice que **cada** transición a `RECHAZADA` o `ACEPTADA` se publica. CU-18 resuelve a favor de "cada estado final", pero CU-16 nunca se actualizó. Afecta a la Fase 8.
-10. **La tabla de sincronización con Módulo 1 (CU-08 FR-007) está incompleta.** No contempla `En Mantenimiento/Limpieza`, exigido por CU-04 FR-011 cuando el propietario reporta una avería, aunque CU-04 sí lo exige. Afecta a las Fases 4 y 7.
-11. **El plan cubre 18 de los 21 casos de uso existentes.** *(nuevo)* El plan declara 18 CUs (título, alcance, resumen, árbol de directorios y las nueve fases), pero el repositorio contiene 21 specs: `Ver detalle de embarcación` (CU-19), `Ver mis reservas` (CU-20) y `Ver detalle de reserva` (CU-21) no aparecen en ninguna fase. No son periféricos: CU-19 es la base de la extensión que dispara `Iniciar reserva` (CU-19 FR-007) y el invocador de la cotización en modo individual (CU-19 FR-005); CU-03 FR-001 se ancla a CU-20; y CU-21 es el caso base de `Solicitar cancelación` (CU-04 FR-001) y el origen de los banners de las Fases 6 y 7. Además CU-20 y CU-21 son specs casi enteramente de presentación, en tensión con la decisión arquitectónica 8 ("Fuera de alcance: la UI"). Afecta a todas las fases.
+1. **Modelo de creación de la reserva inconsistente (parcialmente resuelto).** CU-08, CU-02 y CU-03 ya coinciden en que la reserva nace en `Iniciada` y transiciona a `Pendiente de Pago`; pero quedan enunciados residuales en CU-11 (Key Entities: "creada en estado `Pendiente de Pago` por el caso de uso `Iniciar reserva`" y SC-006 "reservas creadas en estado `Pendiente de Pago`"), en CU-14 (FR-001 "`Pendiente de Pago` (estado inicial de toda reserva)" y SC-001 "a partir de la creación en `Pendiente de Pago`") y en CU-12 (SC-003 "reservas creadas en 'Pendiente de Pago'"). Afecta a las Fases 3, 4 y 7.
+
+2. **CU-03 se ancla como extensión a `Ver mis reservas` (CU-20), pero el caso base no lo declara y el spec sugiere ahora `Ver detalle de reserva` (CU-21).** CU-03 mantiene en su cabecera y en FR-001 la extensión anclada a CU-20, que nunca declara esa relación (su FR-006 solo habilita extender hacia CU-21); además la actualización del 2026-10-06 añadió en CU-03 una nota: *"A nivel de flujo de plataforma se sugiere que este caso de uso extienda de CU-21, pendiente de revisión formal con el equipo"*. **Decisión abierta** — el equipo aún no resuelve cuál es el caso base (ver *Notes*). Afecta a la Fase 7.
+
+3. ***(nuevo)* La carrera sobre `Iniciada` es contradictoria entre CU-02 y CU-08/CU-03.** CU-02 (Scenario 2, FR-014 y SC-002) exige resolver por First-Come First-Served **al crear** la reserva: solo la primera transacción entra a `Iniciada` y el segundo usuario recibe HTTP 409 Conflict. CU-08 (edge case "Sin bloqueo antes del pago") y CU-03 (US2, cuyo `Given` parte de dos reservas en `Iniciada` compitiendo) asumen que dos reservas en `Iniciada` coexisten para el mismo barco/fechas y que la carrera se resuelve al transicionar a `Pendiente de Pago`. Además, como Módulo 1 no bloquea el inventario hasta `Pendiente de Pago`, la validación atómica de CU-02 FR-010 contra Módulo 1 no podría producir ese 409. Afecta a las Fases 4 y 7.
+
+4. ***(nuevo)* `Pago Fallido` no está propagado a los specs que enumeran estados.** El estado ya existe en CU-08 (FR-002, FR-003, FR-007) y CU-13 (FR-005), pero no aparece en CU-04 SC-001 (estados no cancelables), CU-05 FR-006 y CU-06 FR-004 (estados incompatibles que se rechazan), CU-14 US2 (estados terminales notificados) ni en `consistencia-m2-m3.md`. Afecta a las Fases 4, 5, 7 y 8.
+
+5. ***(nuevo)* `consistencia-m2-m3.md` §2 contradice a CU-08 en el conjunto y denominación de estados.** El documento de consistencia afirma que al vencer el TTL "la reserva vuelve a **Disponible**" (CU-08 usa `Expirada`), nombra `Disponible`/`Reservado` en lugar de `Expirada`/`Reservada`, no reconoce `Expirada` ni `Pago Fallido`, y declara que "ambos documentos reconocen exactamente los mismos 9 estados" (CU-08 define 8 estados principales + 5 sub-estados de cancelación). Este plan depende de ese documento para la atribución de términos (Constraints). Afecta a las Fases 4, 5 y 7.
+
+6. ***(nuevo)* Los estados desde los que se puede cancelar no están definidos de forma única.** `consistencia-m2-m3.md` §2 deja explícitamente "pendiente de definir" desde cuáles estados es válido cancelar (Iniciada, Pendiente, Reservado o En Navegación); CU-04 FR-002 permite cancelar **solo** desde `Reservada`; CU-08 no contempla `Iniciada → Cancelada`; y CU-04 SC-001 lista los no cancelables (`Pendiente de Pago`, `En Navegación`, `Completada`, `Expirada`, `Cancelada`) sin incluir `Iniciada` ni `Pago Fallido`. Afecta a las Fases 4, 7 y 8.
 
 ### B. Vacíos que bloquean la redacción de un plan de CU
 
-1. CU-06 FR-003: la "ventana de tiempo autorizada para la salida" y su "margen previo permitido" nunca se cuantifican, a diferencia de los 30 min, 72 h y 24 h, que sí lo están. *(Parcialmente acotado en la capa de presentación, pero no resuelto: CU-21 FR-016/017/018 exige que el botón "Marcar inicio de la navegación" esté presente pero deshabilitado antes de la hora pactada y se habilite al superarla, lo que fija el margen previo efectivo en 0; sin embargo CU-06 FR-003 sigue sin cifra y CU-06 US2/US3 siguen exigiendo el rechazo "dentro de la ventana de preparación previa".)*
-2. CU-01 FR-002: la fuente de verdad de la disponibilidad y del listado es ambigua ("del catálogo/Módulo 1 de manera implícita u otra fuente de verdad"), y CU-10 no es referenciado por ningún spec, aunque existe como CU.
+1. CU-06 FR-003: el **margen previo** quedó fijado en 0, coherente con CU-21 FR-016/017/018 (el botón "Marcar inicio de la navegación" se habilita "a partir de la hora exacta de zarpe pactada (sin antelación)"). Persisten dos vacíos: el **límite posterior** al zarpe para ejecutar el check-in (CU-06 añadió un `[NEED CLARIFICATION]` nuevo al respecto) y los textos de CU-06 US2/US3, que siguen hablando de rechazo "dentro de la ventana de preparación previa", en tensión con el "sin antelación" de su propio FR-003.
+2. CU-01 FR-002: la fuente de verdad quedó resuelta (el listado se obtiene obligatoriamente vía `<<include>>` a `Proveer información de embarcación` en modo lote; CU-01 no accede a Módulo 1 por otro canal). **CU-10 sigue sin ser referenciado por ningún spec**, aunque existe como CU.
 3. CU-07: "Sin esta acción, el proceso se detiene y la reserva termina cancelándose automáticamente" — ninguna spec define esa cancelación automática, su disparador ni su sub-estado.
 4. CU-14: US1 describe la notificación como "síncrona" y US2/FR-005 añaden cola de reintentos; no queda claro cuál aplica al camino feliz y cuál al de fallo. CU-18 acentúa la ambigüedad al declarar explícitamente que su publicación **no** es síncrona.
 5. **Parámetros de reintento nunca cuantificados** en ningún spec (CU-08, CU-14, CU-18): número máximo de intentos, intervalos, *backoff* y política de DLQ. CU-18 difiere explícitamente la infraestructura de cola al contrato de integración.
 6. **Seguridad subespecificada en todo el conjunto de specs**: solo hay chequeos de rol; no existe mecanismo de autenticación, modelo de tokens, TLS, manejo de PII, _rate limiting_ ni protección del log de auditoría. Bloqueante para la Fase 2.
 7. **Idempotencia inconsistente**: estricta en la entrada (CU-13), delegada a Módulo 3 en la salida (CU-14 y CU-18) y **ausente** en la cola de reintentos de CU-08, que es justamente la fuente de eventos duplicables.
-8. **SLAs contradictorios o sin cuantificar**: 200 ms (CU-15), 300 ms (CU-09 y CU-10), 500 ms (CU-08 y CU-14), "menos de 1 segundo" (CU-04, CU-05, CU-06, CU-07 y CU-13), "límites de UX aceptables" sin cifra (CU-01) y tres placeholders abiertos (CU-11 y CU-12).
+8. **SLAs contradictorios o sin cuantificar**: 200 ms (CU-15), 300 ms (CU-09 y CU-10 — ambos specs marcan su SC-001 como `PENDIENTE DE DEFINICIÓN`, valor a confirmar por negocio), 500 ms (CU-08 y CU-14), "menos de 1 segundo" (CU-04, CU-05, CU-06, CU-07 y CU-13), "límites de UX aceptables" sin cifra (CU-01 SC-002, ahora con `[NEEDS CLARIFICATION]` explícito) y los placeholders abiertos de CU-11 y CU-12 intactos.
 9. **Volumen y capacidad nunca definidos**: número de usuarios, número de reservas y volumen de reservas concurrentes.
-10. **Divisa**: CU-11 y CU-12 transportan `currency` (COP, USD) y prohíben la conversión local, pero ninguna spec fija en qué moneda se almacena la reserva ni cómo se reconcilian cotizaciones en monedas distintas. CU-20 FR-010 agrava el punto con un ejemplo en USD ("+ $200.00 depósito reembolsado") dentro de un producto que opera en COP.
+10. **Divisa**: CU-11 y CU-12 transportan `currency` (COP, USD) y prohíben la conversión local, pero ninguna spec fija en qué moneda se almacena la reserva ni cómo se reconcilian cotizaciones en monedas distintas. La actualización eliminó el ejemplo en USD de CU-20 FR-010 (ya no muestra montos, solo el estado del depósito) y CU-21 FR-010 exige el total "en COP"; CU-12 (edge case "Moneda del cobro") sigue admitiendo COP o USD según lo devuelto por Módulo 3.
 11. CU-05: dos `[NEEDS CLARIFICATION]` sobre la política ante fallo de Módulo 1 al resolver la zona horaria (¿reintentar o rechazar temporalmente la inasistencia?).
-12. CU-13: dos `[NEEDS CLARIFICATION]` — política ante pago rechazado (¿cancelar o permitir reintento dentro del TTL?) y duplicación de la misma pregunta en FR-005.
-13. CU-11: cuatro `[NEEDS CLARIFICATION]` — límite de lote (50 o 100) y los dos SLAs. CU-12: tres — nombre formal del endpoint (hay dos candidatos) y su SLA.
-14. CU-16, CU-17 y CU-18: seis dudas abiertas entre las tres specs — reclamo múltiple o editable dentro de la ventana, si la ventana de 24 h es configurable, política de reintento del job diferido, si el Admin puede resolver una disputa `PENDIENTE` sin reclamo registrado, longitud máxima del motivo, y garantías de orden y estrategia de versionado de `eventId`.
-
-### C. Vacíos de alcance de la interfaz (fuera del alcance del backend)
-
-1. CU-03, edge case "Expiración del temporizador TTL en pantalla (00:00)": al llegar el contador a cero el sistema "DEBE inhabilitar la acción de 'Confirmar y Pagar', notificar la expiración del tiempo de reserva y **redirigir al usuario o liberar el inventario bloqueado**". La disyunción nunca se resolvió: no se sabe cuál de las dos rutas aplica, ni si son excluyentes, ni quién ejecuta la liberación. Este plan declara la UI fuera de alcance (decisión arquitectónica 8), pero la alternativa "liberar el inventario bloqueado" sí tiene consecuencia de backend y debe cerrarse junto con el punto A.3. Afecta a la Fase 6.
+12. CU-13: sigue abierta la política ante pago rechazado/fallido (¿reintento dentro del TTL remanente o fallo inmediato?) — `[NEEDS CLARIFICATION]` en FR-005 y en US2 Scenario 1; la antigua duplicación de la misma pregunta quedó eliminada.
+13. CU-11: siguen abiertos el límite de lote de Módulo 3 (50 o 100, repetido en varios FR) y su SLA (placeholder). CU-12: siguen abiertos el nombre formal del endpoint (dos candidatos) y su SLA. Nota: CU-01 FR-008 y CU-11 FR-003 fijaron el tamaño de página de la vista en 20 embarcaciones, que no coincide con el límite por solicitud que impone Módulo 3.
+14. CU-16, CU-17 y CU-18: cerrada la duda de la ventana de 24 h (es **fija**; se añadió como SLA en CU-16 FR-005, CU-17 FR-013 y CU-18 FR-007). Siguen abiertos: reclamo múltiple o editable dentro de la ventana (CU-16 D-01), política de reintento del job diferido (CU-16 D-03, ahora con `[NEEDS CLARIFICATION]` en el spec), si el Admin puede resolver una disputa `PENDIENTE` sin reclamo registrado (CU-17 D-01), longitud máxima del motivo (CU-17), y garantías de orden y versionado de `eventId` + detalles de la cola (CU-18 D-01/D-02, diferidos al contrato de integración).
+15. ***(nuevo)* Estrategia de concurrencia a confirmar**: CU-08 FR-006 quedó marcado como `[PENDIENTE DE DEFINICIÓN]` ("Estrategia de concurrencia y uso de `@Version`/Optimistic Locking a confirmar por negocio"), pese a que FR-004 exige atomicidad y FR-006 control de concurrencia. Condiciona las decisiones T013/T014.
+16. ***(nuevo)* Política de reintentos hacia Módulo 1 pendiente**: CU-09 FR-008 y CU-10 FR-006 añadieron `[PENDIENTE DE DEFINICIÓN]` sobre reintentos ante fallos/timeout, en tensión con el fail-safe inmediato (rechazo preventivo) que esos mismos specs y este plan exigen (Constraints).
+17. ***(nuevo)* Estrategia de idempotencia del webhook de pago pendiente**: CU-13 FR-007 añadió `[PENDIENTE DE DEFINICIÓN]` ("Estrategia de idempotencia de pago en la validación del webhook"), complemento del ítem B.7.
 
 ### D. Decisiones de infraestructura no cubiertas por los specs
 
-1. **Base de datos nunca mencionada** en el contexto, pese a ser requisito de atomicidad (CU-08 FR-004), control de concurrencia (CU-08 FR-006) y "cero sobreventa" (CU-02 SC-002, CU-03 SC-002). Además los specs se contradicen sobre su existencia: CU-09 afirma que Módulo 2 "NO guarda ni copia los detalles técnicos de los barcos en su base de datos" y CU-02 US1 Scenario 3 habla de que la reserva "no se crea", frente a CU-08 FR-004, CU-12 US3, CU-14 US1 ("se consolida el cambio en base de datos") y CU-14 SC-002, que asumen persistencia. `Technical Context` ya marca Storage como `NEEDS CLARIFICATION`. Decisión bloqueante para la Fase 2.
+1. **Base de datos nunca mencionada** en el contexto, pese a ser requisito de atomicidad (CU-08 FR-004), control de concurrencia (CU-08 FR-006) y "cero sobreventa" (CU-02 SC-002, CU-03 SC-002). La contradicción sobre su existencia se cerró: CU-02, CU-08, CU-12 y CU-14 asumen de forma consistente que la reserva se **persiste en base de datos** al crearse/transicionar, y CU-09 solo niega que Módulo 2 copie los detalles técnicos de los barcos (no que Módulo 2 carezca de base de datos). `Technical Context` mantiene Storage como `NEEDS CLARIFICATION`. Decisión bloqueante para la Fase 2.
+2. ***(nuevo)* Tensión reintentos vs fail-safe**: el plan asume en T019 y en Constraints reintentos solo ante fallos transitorios para los clientes HTTP, mientras CU-09 FR-008 y CU-10 FR-006 dejan esa política como `[PENDIENTE DE DEFINICIÓN]`. Debe definirse antes de la Fase 2.
 
 ### E. Higiene documental (no bloquea, conviene corregir en los planes por CU)
 
-1. CU-13 usa `[NEEDS CLARIFICATION]` como enunciado de requisito: FR-005 es íntegramente una pregunta, no un requisito.
-2. Inconsistencia de nomenclatura entre specs: el plan ahora reconoce cinco variantes del nombre de Módulo 1 ("Gestión de Flota y Activos P2P", "Gestión de Flota", "Gestión de Embarcación", "Gestión de Activos P2P" y "Gestión de Flotas"), dos del nombre de Módulo 3 ("Liquidación, Seguros y Dispersión de Fondos" y "Gestión Liquidación") y dos del nombre de Módulo 2 ("Operación de Reservas, Tiempos y Cancelaciones" y "Gestión de Reserva"). Se adopta la nomenclatura canónica de `consistencia-m2-m3.md` §1.
-3. CU-11 invoca un "Contrato UC01 de Módulo 3" que nunca se cita ni se adjunta, y su fórmula contractual `(tarifa base × duración) + (tarifa de seguro × pasajeros)` no aparece en ningún documento de contexto. *(Reescrito: la parte que señalaba los escenarios de aceptación "intactos" de CU-08 US3/US4 se retira porque esos specs ya listan sus escenarios, y la parte que señalaba una sección de dudas inexistente en CU-01 se retira porque la referencia colgante estaba en CU-02 y se eliminó.)*
-4. CU-01 y CU-19 contienen el bloque `### Functional Requirements` duplicado, lo que rompe su estructura; en CU-19 queda además un encabezado de requisitos vacío. CU-01 y CU-02 cierran sin salto de línea final.
-5. Erratas heredadas de la actualización del 2026-09-28: "**ohne** evaluar umbrales horarios" (alemán) en CU-04, US2 Independent Test; "propieatario" en CU-06 FR-013; doble guion en el listado de CU-03; y los specs modificados que ya no numeran sus requisitos de forma contigua (CU-03 mantiene huecos: FR-004 a FR-006 no existen) pese a que este plan los cita por número.
-6. **No pude revisar el diagrama**: `diagrams/Sea-Share module-Modulo 2.drawio (6).png` es una imagen y este modelo no admite entrada visual. Conviene contrastar este plan contra el diagrama, en particular el agrupamiento de casos de uso y las relaciones `<<include>>` y `<<extend>>`.
+1. CU-11 invoca un "Contrato UC01 de Módulo 3" que nunca se cita ni se adjunta, y su fórmula contractual `(tarifa base × duración) + (tarifa de seguro × pasajeros)` no aparece en ningún documento de contexto. *(Reescrito: la parte que señalaba los escenarios de aceptación "intactos" de CU-08 US3/US4 se retira porque esos specs ya listan sus escenarios, y la parte que señalaba una sección de dudas inexistente en CU-01 se retira porque la referencia colgante estaba en CU-02 y se eliminó.)*
+2. **Duplicados y estructura corregidos, persiste falta de salto de línea final**: CU-01 y CU-19 ya no contienen el bloque `### Functional Requirements` duplicado (la actualización lo consolidó y CU-19 perdió el encabezado vacío); pero 15 de los 21 specs siguen cerrando sin salto de línea final (CU-02 ya corregido; pendientes CU-01, CU-03, CU-04, CU-05, CU-06, CU-07, CU-08, CU-09, CU-10, CU-11, CU-14, CU-15, CU-19, CU-20 y CU-21).
+3. **Erratas y numeración**: "**ohne**" (CU-04, US2 Independent Test) y "propieatario" (CU-06 FR-013) corregidas, y el doble guion de CU-03 eliminado; la numeración de requisitos quedó contigua en todos los specs (CU-03 ya no tiene los huecos FR-004 a FR-006) — pero CU-04 introdujo un **`FR-007-bis`** que rompe la secuencia de su propio FR-007.
+4. **No pude revisar el diagrama**: `diagrams/Sea-Share module-Modulo 2.drawio (6).png` es una imagen y este modelo no admite entrada visual. Conviene contrastar este plan contra el diagrama, en particular el agrupamiento de casos de uso y las relaciones `<<include>>` y `<<extend>>`.
 
 ---
 
@@ -380,5 +393,6 @@ Esta sección **no resuelve** las inconsistencias: las señala para que se cierr
 - `context/`, `features/`, `diagrams/` y `templates/` se tratan como **solo lectura**.
 - Este plan describe **qué fases existen y en qué orden**; no prescribe tareas de implementación de ningún CU.
 - Cada CU debe ser verificable de forma independiente; un plan específico que no pueda demostrarlo debe revisarse antes de implementarse.
+- La decisión del caso base de CU-03 (CU-20 vs CU-21, ítem A.2) queda **abierta** a revisión formal del equipo; el plan no la presupone: la Fase 7 programa CU-03 después de las tres vistas de consulta.
 - Detener la implementación ante cualquier `[NEEDS CLARIFICATION]` abierto del spec correspondiente: la guía SDD lo establece como regla de oro.
 - Commit por tarea o por grupo lógico; detenerse en cada checkpoint de fase para validar.
