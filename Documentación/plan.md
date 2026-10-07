@@ -377,21 +377,13 @@ Esta sección **no resuelve** las inconsistencias: las señala para que se cierr
 1. **Base de datos nunca mencionada** en el contexto, pese a ser requisito de atomicidad (CU-08 FR-004), control de concurrencia (CU-08 FR-006) y "cero sobreventa" (CU-02 SC-002, CU-03 SC-002). La contradicción sobre su existencia se cerró: CU-02, CU-08, CU-12 y CU-14 asumen de forma consistente que la reserva se **persiste en base de datos** al crearse/transicionar, y CU-09 solo niega que Módulo 2 copie los detalles técnicos de los barcos (no que Módulo 2 carezca de base de datos). `Technical Context` mantiene Storage como `NEEDS CLARIFICATION`. Decisión bloqueante para la Fase 2.
 2. ***(nuevo)* Tensión reintentos vs fail-safe**: el plan asume en T019 y en Constraints reintentos solo ante fallos transitorios para los clientes HTTP, mientras CU-09 FR-008 y CU-10 FR-006 dejan esa política como `[PENDIENTE DE DEFINICIÓN]`. Debe definirse antes de la Fase 2.
 
-### E. Higiene documental (no bloquea, conviene corregir en los planes por CU)
-
-> **Higiene cerrada 2026-10-06**: los tres ítems de esta sección fueron resueltos con una **excepción explícita** de solo-lectura autorizada sobre `features/` (edición limitada a higiene documental, sin cambio de contenido semántico). `context/` no se modificó.
-
-1. ~~CU-11 invoca un "Contrato UC01 de Módulo 3" que nunca se cita ni se adjunta, y su fórmula contractual no aparece en ningún documento de contexto.~~ **Resuelto**: la referencia y las tres apariciones de la fórmula en CU-11 quedaron marcadas con `[NEEDS CLARIFICATION]` / nota de fuente ("fórmula declarada por Módulo 3, contrato UC01 no incluido en este repositorio"), siguiendo el patrón que ya usa CU-12 para el nombre de su endpoint. El contrato UC01 sigue siendo un artefacto externo **pendiente de entrega por el equipo de Módulo 3**.
-2. ~~Falta de salto de línea final en 15 de los 21 specs.~~ **Resuelto**: los 21 `spec.md` cierran ahora con salto de línea final.
-3. ~~Erratas y numeración: CU-04 introdujo un `FR-007-bis` que rompe la secuencia de su propio FR-007.~~ **Resuelto**: `FR-007-bis` se renumeró como `FR-008` y `FR-008…FR-016` pasaron a `FR-009…FR-017` (numeración contigua FR-001…FR-017); la única referencia externa afectada, `FR-012 de CU-04` en este plan, se actualizó a `FR-013`. Restaban erratas ya corregidas con anterioridad: "**ohne**" (CU-04) y "propieatario" (CU-06 FR-013).
-
 ---
 
 ## Notes
 
 - La etiqueta `[CU-nn]` en los planes por CU mantendrá la trazabilidad hasta el spec de origen.
 - Los planes por CU se redactarán **después** de la aprobación de este plan general, en archivos `features/CU-nn-*/plan.md`, sin modificar los `spec.md` existentes.
-- `context/`, `features/`, `diagrams/` y `templates/` se tratan como **solo lectura**. **Excepción aplicada (2026-10-06)**: higiene documental de la sección E sobre `features/` (salto de línea final, renumeración de `FR-007-bis` en CU-04 y marcado `[NEEDS CLARIFICATION]` en CU-11), autorizada explícitamente y sin cambios de contenido semántico.
+- `context/`, `features/`, `diagrams/` y `templates/` se tratan como **solo lectura**. **Excepción aplicada (2026-10-06)**: higiene documental sobre `features/` (salto de línea final, renumeración de `FR-007-bis` en CU-04 y marcado `[NEEDS CLARIFICATION]` en CU-11), autorizada explícitamente y sin cambios de contenido semántico.
 - Este plan describe **qué fases existen y en qué orden**; no prescribe tareas de implementación de ningún CU.
 - Cada CU debe ser verificable de forma independiente; un plan específico que no pueda demostrarlo debe revisarse antes de implementarse.
 - La decisión del caso base de CU-03 (CU-20 vs CU-21, ítem A.2) queda **abierta** a revisión formal del equipo; el plan no la presupone: la Fase 7 programa CU-03 después de las tres vistas de consulta.
