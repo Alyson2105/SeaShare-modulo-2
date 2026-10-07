@@ -12,7 +12,7 @@ El módulo es dueño del **ciclo de vida de la reserva** (21 casos de uso: CU-01
 
 Dos restricciones del contexto gobiernan toda la arquitectura:
 
-1. **Regla de negocio estricta "Sin dinero"** (FR-010 de CU-08, FR-002 de CU-11 y CU-12, FR-012 de CU-04): Módulo 2 **jamás** calcula, suma, redondea, retiene ni convierte importes monetarios. Todo monto proviene de Módulo 3. Esta regla es la razón de ser de la separación entre los adaptadores de lectura financiera y el dominio de reservas.
+1. **Regla de negocio estricta "Sin dinero"** (FR-010 de CU-08, FR-002 de CU-11 y CU-12, FR-013 de CU-04): Módulo 2 **jamás** calcula, suma, redondea, retiene ni convierte importes monetarios. Todo monto proviene de Módulo 3. Esta regla es la razón de ser de la separación entre los adaptadores de lectura financiera y el dominio de reservas.
 2. **Módulo 1 es la única fuente de verdad de la flota**: Módulo 2 no accede a su base de datos, no cachea sus datos y no duplica atributos de la embarcación (`embarcacion_id`, `propietario_id`). La enunciación de "cero (0) accesos directos a la base de datos de Módulo 1" en CU-09 y CU-10 es un requisito arquitectónico, no una sugerencia.
 
 La consecuencia de diseño es una **arquitectura hexagonal con un único escritor de estado**: CU-08 (`Actualizar estado de reserva`) es la única vía por la que cambia el estado de una reserva, lo que permite un control de concurrencia y una auditoría centralizados, y convierte a la reserva en el *aggregate root* del módulo.
@@ -379,9 +379,11 @@ Esta sección **no resuelve** las inconsistencias: las señala para que se cierr
 
 ### E. Higiene documental (no bloquea, conviene corregir en los planes por CU)
 
-1. CU-11 invoca un "Contrato UC01 de Módulo 3" que nunca se cita ni se adjunta, y su fórmula contractual `(tarifa base × duración) + (tarifa de seguro × pasajeros)` no aparece en ningún documento de contexto. *(Reescrito: la parte que señalaba los escenarios de aceptación "intactos" de CU-08 US3/US4 se retira porque esos specs ya listan sus escenarios, y la parte que señalaba una sección de dudas inexistente en CU-01 se retira porque la referencia colgante estaba en CU-02 y se eliminó.)*
-2. **Duplicados y estructura corregidos, persiste falta de salto de línea final**: CU-01 y CU-19 ya no contienen el bloque `### Functional Requirements` duplicado (la actualización lo consolidó y CU-19 perdió el encabezado vacío); pero 15 de los 21 specs siguen cerrando sin salto de línea final (CU-02 ya corregido; pendientes CU-01, CU-03, CU-04, CU-05, CU-06, CU-07, CU-08, CU-09, CU-10, CU-11, CU-14, CU-15, CU-19, CU-20 y CU-21).
-3. **Erratas y numeración**: "**ohne**" (CU-04, US2 Independent Test) y "propieatario" (CU-06 FR-013) corregidas, y el doble guion de CU-03 eliminado; la numeración de requisitos quedó contigua en todos los specs (CU-03 ya no tiene los huecos FR-004 a FR-006) — pero CU-04 introdujo un **`FR-007-bis`** que rompe la secuencia de su propio FR-007.
+> **Higiene cerrada 2026-10-06**: los tres ítems de esta sección fueron resueltos con una **excepción explícita** de solo-lectura autorizada sobre `features/` (edición limitada a higiene documental, sin cambio de contenido semántico). `context/` no se modificó.
+
+1. ~~CU-11 invoca un "Contrato UC01 de Módulo 3" que nunca se cita ni se adjunta, y su fórmula contractual no aparece en ningún documento de contexto.~~ **Resuelto**: la referencia y las tres apariciones de la fórmula en CU-11 quedaron marcadas con `[NEEDS CLARIFICATION]` / nota de fuente ("fórmula declarada por Módulo 3, contrato UC01 no incluido en este repositorio"), siguiendo el patrón que ya usa CU-12 para el nombre de su endpoint. El contrato UC01 sigue siendo un artefacto externo **pendiente de entrega por el equipo de Módulo 3**.
+2. ~~Falta de salto de línea final en 15 de los 21 specs.~~ **Resuelto**: los 21 `spec.md` cierran ahora con salto de línea final.
+3. ~~Erratas y numeración: CU-04 introdujo un `FR-007-bis` que rompe la secuencia de su propio FR-007.~~ **Resuelto**: `FR-007-bis` se renumeró como `FR-008` y `FR-008…FR-016` pasaron a `FR-009…FR-017` (numeración contigua FR-001…FR-017); la única referencia externa afectada, `FR-012 de CU-04` en este plan, se actualizó a `FR-013`. Restaban erratas ya corregidas con anterioridad: "**ohne**" (CU-04) y "propieatario" (CU-06 FR-013).
 
 ---
 
@@ -389,7 +391,7 @@ Esta sección **no resuelve** las inconsistencias: las señala para que se cierr
 
 - La etiqueta `[CU-nn]` en los planes por CU mantendrá la trazabilidad hasta el spec de origen.
 - Los planes por CU se redactarán **después** de la aprobación de este plan general, en archivos `features/CU-nn-*/plan.md`, sin modificar los `spec.md` existentes.
-- `context/`, `features/`, `diagrams/` y `templates/` se tratan como **solo lectura**.
+- `context/`, `features/`, `diagrams/` y `templates/` se tratan como **solo lectura**. **Excepción aplicada (2026-10-06)**: higiene documental de la sección E sobre `features/` (salto de línea final, renumeración de `FR-007-bis` en CU-04 y marcado `[NEEDS CLARIFICATION]` en CU-11), autorizada explícitamente y sin cambios de contenido semántico.
 - Este plan describe **qué fases existen y en qué orden**; no prescribe tareas de implementación de ningún CU.
 - Cada CU debe ser verificable de forma independiente; un plan específico que no pueda demostrarlo debe revisarse antes de implementarse.
 - La decisión del caso base de CU-03 (CU-20 vs CU-21, ítem A.2) queda **abierta** a revisión formal del equipo; el plan no la presupone: la Fase 7 programa CU-03 después de las tres vistas de consulta.
