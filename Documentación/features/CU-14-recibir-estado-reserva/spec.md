@@ -23,7 +23,7 @@ Como sistema (Módulo 2), quiero notificar a Módulo 3 cada vez que una reserva 
 1. **Scenario**: Notificación inicial al arrancar el proceso de pago
     - **Given** una reserva recién creada en estado `Pendiente de Pago` debido a que el Arrendatario ejecutó `Iniciar pago`
     - **When** se consolida el nuevo estado en la base de datos
-    - **Then** el sistema emite una notificación síncrona a Módulo 3 informando que la reserva identificada entró a `Pendiente de Pago`, activando el interés financiero sobre el contrato
+    - **Then** el sistema emite, por la cola de entrega garantizada (primer intento asíncrono), la notificación a Módulo 3 informando que la reserva identificada entró a `Pendiente de Pago`, activando el interés financiero sobre el contrato
 
 2. **Scenario**: Notificaciones de ciclo de vida activo
     - **Given** una reserva que transiciona a `Reservada`, `En Navegación`, o cualquier estado terminal (`Completada`, `Cancelada`, `Expirada`)
@@ -65,7 +65,7 @@ Como sistema, quiero encolar y reintentar las notificaciones dirigidas a Módulo
 - **FR-002**: El *payload* de la notificación DEBE contener obligatoriamente: identificador de la reserva, nuevo estado principal, sub-estado (si aplica), marca temporal exacta del evento (en formato ISO 8601) y actor que disparó el evento.
 - **FR-003**: Si el estado es `Cancelada`, la notificación DEBE incluir el sub-estado (`Flexible`, `Moderado`, `Tardío`, `Por Propietario`, `Por Inasistencia`) y la anticipación temporal cronológica.
 - **FR-004**: Si el cierre de la navegación incluye texto opcional de novedades provisto por el Propietario, la notificación de `Completada` DEBE incluirlo como campo informativo, sin que ello modifique el tratamiento del cierre.
-- **FR-005**: El sistema DEBE implementar un mecanismo de entrega garantizada (cola de reintentos) para asegurar que las notificaciones alcancen Módulo 3 ante fallos temporales de red o timeouts.
+- **FR-005**: El sistema DEBE implementar un mecanismo de entrega garantizada (cola de reintentos) para asegurar que las notificaciones alcancen Módulo 3 ante fallos temporales de red o timeouts. Esta cola gobierna tanto el camino feliz (primer intento) como el de fallo (reintentos con backoff); no existe envío síncrono directo. Política de reintento: máximo 5 intentos por evento (primer intento inmediato), backoff exponencial con jitter de 1 s, 5 s, 25 s y 125 s, solo ante 5xx o timeout (nunca ante un 4xx permanente); tras el quinto fallo, derivación a DLQ y alerta.
 - **FR-006**: **REGLA ESTRICTA**: El sistema **NO DEBE** calcular ni incluir datos financieros procesados en la notificación. Finanzas es responsable de interpretar el estado operativo y traducir ese evento a dinero.
 
 ---

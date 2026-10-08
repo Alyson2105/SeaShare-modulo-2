@@ -16,7 +16,7 @@
 
 Al terminar el viaje y regresar al puerto, el Propietario revisa la embarcación junto al cliente y registra el fin de la navegación, pudiendo adjuntar un texto opcional de novedades si detectó algún daño o incumplimiento. En ese instante, el sistema verifica que la reserva esté en estado 'En Navegación', cambia la reserva al estado 'Completada' mediante la invocación a 'Actualizar estado reserva' (`<<include>>`), notifica al Módulo 1 para que vuelva a poner el barco como 'Disponible' y le avisa al Módulo 3 para que le entregue el pago al Propietario y le devuelva la garantía al turista.
 
-**Why this priority**: Es el paso clave que le permite al cliente pasar de una reserva temporal a la confirmación de su viaje. Sin esta acción, el proceso se detiene y la reserva termina cancelándose automáticamente.
+**Why this priority**: Es el paso clave que le permite al cliente pasar de una reserva temporal a la confirmación de su viaje. Sin esta acción, el proceso se detiene y la reserva permanece en `En Navegación`: no se cierra el ciclo, Módulo 3 no libera el pago al Propietario ni devuelve la garantía y no se abre la ventana de disputa de 24 horas.
 
 **Independent Test**: Se prueba con una reserva en estado "En Navegación", registrando el fin de viaje por parte del Propietario (con y sin texto de novedades). Se comprueba que la reserva pasa a "Completada", la embarcación se marca como "Disponible" en Módulo 1 y Módulo 3 recibe la notificación de cierre sin que Módulo 2 realice cálculos monetarios.
 

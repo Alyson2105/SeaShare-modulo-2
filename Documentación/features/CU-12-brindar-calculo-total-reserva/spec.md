@@ -91,7 +91,7 @@ Todos los conceptos entregados por Módulo 3 (tarifa base, seguro de accidentes,
 - **Solicitud de cálculo con embarcación no disponible en Módulo 1**:
   - Si al momento de solicitar el cálculo total se detecta que la embarcación ya no está disponible en Módulo 1 (por ejemplo, porque otro Arrendatario inició el pago previamente y la pasó a `Reservado`), el sistema cancela el proceso y notifica que el horario ha sido tomado por otro usuario.
 - **Moneda del cobro**:
-  - Módulo 2 adopta y presenta la moneda (ej. COP, USD) devuelta por Módulo 3 sin realizar conversiones de cambio.
+  - Módulo 2 adopta y presenta la moneda (ej. COP, USD) devuelta por Módulo 3 sin realizar conversiones de cambio. La moneda (`currency`) se persiste literalmente junto con los montos en la reserva y es la moneda oficial de esa reserva: no se convierte localmente ni se admite mezclar monedas dentro de una misma reserva.
 - **TTL del snapshot de cotización**:
   - El snapshot de cotización generado por Módulo 3 vence de manera idéntica y sincronizada a los 15 minutos del TTL de la reserva. Si el TTL de la reserva (iniciado en estado `Iniciada`) vence, el snapshot de cotización asociado también caduca y no puede utilizarse para iniciar el pago.
 - **Idempotencia ante múltiples pulsaciones de "CU-03 Iniciar pago"**:

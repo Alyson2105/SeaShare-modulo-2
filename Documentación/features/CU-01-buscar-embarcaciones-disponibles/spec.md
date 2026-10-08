@@ -92,6 +92,6 @@ Como Arrendatario, quiero poder ver el catálogo completo de embarcaciones dispo
 ### Measurable Outcomes
 
 - **SC-001**: El 100% de los resultados presentados incluyen la tarifa estimada provista por Módulo 3 (salvo en caídas de servicio).
-- **SC-002**: El tiempo de respuesta de la búsqueda, incluyendo la invocación en lote de cotizaciones, debe mantenerse por debajo de los límites de UX aceptables. [NEEDS CLARIFICATION: no hay un umbral de latencia numérico definido en la documentación del proyecto — tu propio plan.md ya lo marca como SLA pendiente para CU-01].
+- **SC-002**: El tiempo de respuesta de la búsqueda, incluyendo la invocación en lote de cotizaciones, no debe superar los 2000 milisegundos en condiciones normales.
 - **SC-003**: El 100% de las búsquedas sin filtros ingresados devuelven el catálogo completo disponible sin error.
 - **SC-004**: El 100% de las entradas con formato inválido son rechazadas antes de invocar a Módulo 1 o a Módulo 3.

@@ -100,7 +100,7 @@ Si al consultar el Módulo 1 el servicio no responde, falla o tarda demasiado ti
 - **FR-005**: El sistema DEBE verificar de forma estricta que la cantidad de pasajeros sea menor o igual a la capacidad máxima permitida por el barco.
 - **FR-006**: Si la cantidad de pasajeros supera el límite del barco, el sistema DEBE rechazar la solicitud, mostrar un aviso de exceso de personas y detener el flujo actual.
 - **FR-007**: Si el barco no existe en Módulo 1, el sistema DEBE rechazar la solicitud e informar que el barco no fue encontrado.
-- **FR-008**: Si la consulta a Módulo 1 falla por desconexión o tiempo de espera agotado, el sistema DEBE aplicar un bloqueo preventivo (*fail-safe*), cancelando el proceso e informando la falla de conexión. [PENDIENTE DE DEFINICIÓN: política de reintentos hacia Módulo 1 ante fallos de conexión o timeout]
+- **FR-008**: Si la consulta a Módulo 1 falla por desconexión o tiempo de espera agotado, el sistema DEBE aplicar un bloqueo preventivo (*fail-safe*), cancelando el proceso e informando la falla de conexión. Política de reintentos: se admite como máximo un (1) reintento rápido ante timeout o desconexión transitoria, dentro del presupuesto de latencia; si el reintento también falla, se aplica el fail-safe de inmediato. Nunca se reintenta ante un error 4xx.
 - **FR-009**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE manejar precios, ni calcular cotizaciones, comisiones o garantías**. Su función es únicamente descriptiva y de control de capacidad física.
 - **FR-010**: El sistema DEBE guardar un registro simple de la consulta realizada para mantener la trazabilidad operativa.
 
@@ -118,7 +118,7 @@ Si al consultar el Módulo 1 el servicio no responde, falla o tarda demasiado ti
 
 ### Measurable Outcomes
 
-- **SC-001**: El 100% de las consultas de información técnica a Módulo 1 se responden en menos de 300 milisegundos en condiciones normales. [PENDIENTE DE DEFINICIÓN: SLA de respuesta de consulta operativa en milisegundos — valor objetivo a confirmar por negocio]
+- **SC-001**: El 100% de las consultas de información técnica a Módulo 1 se responden en menos de 300 milisegundos en condiciones normales.
 - **SC-002**: Cero (0%) operaciones permitidas donde el número de personas supere la capacidad máxima oficial del barco.
 - **SC-003**: Cero (0) accesos directos a la base de datos de Módulo 1 o cálculos de precios realizados dentro de Módulo 2.
 - **SC-004**: El 100% de las fallas de conexión con Módulo 1 resultan en un rechazo preventivo seguro (*fail-safe*).

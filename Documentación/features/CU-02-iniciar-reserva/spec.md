@@ -9,6 +9,7 @@
     - `Ver detalle de embarcación` (`<<extend>>`): Este caso de uso (`Iniciar reserva`) **es la extensión** que se ancla a `Ver detalle de embarcación`. Se activa cuando el Arrendatario decide iniciar el proceso de reserva.
     - `Buscar embarcaciones disponibles` (`<<extend>>`): Este caso de uso (`Iniciar reserva`) **es la extensión** que se ancla a `Buscar embarcaciones disponibles`. Se activa cuando el Arrendatario inicia la reserva directamente desde la tarjeta del catálogo.
     - `Actualizar estado reserva` (`<<include>>`): Para crear la reserva formalmente en estado `Iniciada` (persistida en base de datos) y encender el TTL de 15 minutos. En este estado NO se notifica bloqueo a Módulo 1.
+    - `Brindar información de estado operativo` (`<<include>>`): Para verificar, vía la API de Módulo 1, que la embarcación figura como `Disponible` antes de crear la reserva.
 
 ---
 
@@ -62,7 +63,7 @@ Como Arrendatario, una vez validados los detalles de mi viaje, quiero **llenar m
 - **FR-007**: El sistema DEBE proveer en el mismo formulario un campo de texto opcional para capturar el "Correo electrónico" del titular.
 - **FR-008**: El sistema DEBE validar visualmente el formulario en caso de datos faltantes o incorrectos, mostrando un banner de error general (ej. "Completa el nombre del titular y el celular de contacto para continuar."), marcando los bordes de los campos afectados en rojo y desplegando mensajes de ayuda específicos debajo de cada input (ej. "Ingresa el nombre del titular de la reserva.").
 - **FR-009**: El sistema DEBE incluir un botón de acción principal en la parte inferior del modal con el texto "Continuar a pagar", el cual debe estar deshabilitado visualmente si existen errores de validación en el formulario.
-- **FR-010**: El sistema DEBE validar de forma atómica que las fechas sigan disponibles en Módulo 1 antes de proceder con la creación al presionar el botón de continuar.
+- **FR-010**: El sistema DEBE validar de forma atómica que las fechas sigan disponibles en Módulo 1 antes de proceder con la creación al presionar el botón de continuar, mediante la invocación `(<<include>>)` a `Brindar información de estado operativo`.
 - **FR-011**: Si los datos son válidos y hay disponibilidad, el sistema DEBE invocar a `Actualizar estado reserva` (`<<include>>`) para persistir la reserva en base de datos en estado `Iniciada`.
 - **FR-012**: Al asentar la reserva en `Iniciada`, el sistema DEBE iniciar el temporizador TTL de 15 minutos asociado a esa transacción.
 - **FR-013**: En estado `Iniciada`, el sistema NO DEBE notificar bloqueo de inventario a Módulo 1. El aviso a Módulo 1 (`Asignar estado operativo` → `Reservado`) ocurre exclusivamente al transicionar la reserva a `Pendiente de Pago` mediante `Iniciar pago`.

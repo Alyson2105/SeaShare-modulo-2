@@ -133,7 +133,7 @@ Si llega un pedido de cambio de estado que no está permitido por la máquina de
 
 - **Sin bloqueo antes del pago (Condición de carrera pre-pago)**: Dado que en estado `Iniciada` no hay retención de la embarcación, es posible que dos Arrendatarios distintos tengan reservas en `Iniciada` para el mismo barco y las mismas fechas simultáneamente. El primer usuario que complete `Iniciar pago` transicionará su reserva a `Pendiente de Pago` y ganará el bloqueo en Módulo 1 (`Reservado`). Si el segundo usuario intenta `Iniciar pago` después, Módulo 2 validará la disponibilidad en Módulo 1, descubrirá que ya está reservado por el primero y rechazará la transición a `Pendiente de Pago`.
 - **"Pendiente de Pago" no se puede cancelar por voluntad propia**: La reserva se libera solo de forma pasiva cuando vence el temporizador TTL de 15 minutos.
-- **Falla pasajera de conexión con Módulo 1 o 3**: Mecanismo de cola y reintentos (0% de eventos perdidos).
+- **Falla pasajera de conexión con Módulo 1 o 3**: Mecanismo de cola y reintentos (0% de eventos perdidos). Política de reintento: máximo 5 intentos por evento (primer intento inmediato), backoff exponencial con jitter de 1 s, 5 s, 25 s y 125 s entre intentos; solo se reintenta ante 5xx o timeout, nunca ante un 4xx permanente; tras el quinto fallo el evento se deriva a la cola de letras muertas (DLQ) y se dispara una alerta.
 - **Los estados finales no se pueden tocar nunca más**: `Completada`, `Cancelada`, `Expirada` y `Pago Fallido` son definitivos.
 
 ---
@@ -156,7 +156,7 @@ Si llega un pedido de cambio de estado que no está permitido por la máquina de
     - `En Navegación → Completada`.
 - **FR-004**: Si el cambio pedido es válido, el sistema DEBE actualizar y guardar de forma atómica el estado principal.
 - **FR-005**: Si el cambio pedido no es válido, el sistema DEBE rechazar la solicitud.
-- **FR-006**: El sistema DEBE tener control de concurrencia para evitar que dos solicitudes de actualización sobre la misma reserva choquen. [PENDIENTE DE DEFINICIÓN: Estrategia de concurrencia y uso de @Version/Optimistic Locking a confirmar por negocio]
+- **FR-006**: El sistema DEBE tener control de concurrencia para evitar que dos solicitudes de actualización sobre la misma reserva choquen. La estrategia es el bloqueo optimista con columna de versión (`@Version`): ante dos escrituras concurrentes sobre la misma reserva, la segunda recibe un conflicto y se rechaza (HTTP 409) sin sobrescribir el estado consolidado. La validación atómica de disponibilidad del inventario en `Iniciar pago` (CU-03) utiliza bloqueo pesimista de fila.
 - **FR-007**: El sistema DEBE sincronizar el estado operativo con Módulo 1 bajo las siguientes reglas:
     - `Creación a Iniciada`: NO se notifica bloqueo a Módulo 1.
     - `Iniciada a Pendiente de Pago`: llamar a `Asignar estado operativo` (poner en `Reservado`).
@@ -166,6 +166,7 @@ Si llega un pedido de cambio de estado que no está permitido por la máquina de
 - **FR-008**: El sistema DEBE llamar a la API externa de Módulo 3 (`Recibir estado de reserva`) ante cada cambio de estado a partir de `Pendiente de Pago` (inclusive).
 - **FR-009**: **Texto de novedades en el cierre**: Si el cierre de la navegación incluye el texto opcional de novedades provisto por el Propietario, el sistema DEBE adjuntarlo como campo informativo en la notificación de `Completada` a Módulo 3, sin que ello modifique el tratamiento del cierre.
 - **FR-010**: **REGLA DE NEGOCIO ESTRICTA (Sin cálculo financiero):** Módulo 2 **NO DEBE** calcular montos ni hacer transferencias de dinero. Toda valoración económica es de Módulo 3.
+- **FR-011**: Cada evento saliente hacia Módulo 3 DEBE portar un identificador único de evento (`eventId`, UUID) generado en la misma transacción local que la transición de estado (patrón outbox). La entrega es *at-least-once*; la deduplicación de eventos duplicados corresponde a Módulo 3 mediante ese `eventId`.
 
 ---
 

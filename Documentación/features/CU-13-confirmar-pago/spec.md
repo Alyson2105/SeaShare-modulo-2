@@ -47,7 +47,7 @@ Módulo 3 notifica que la transacción de pago fue rechazada por la pasarela (fo
 1. **Scenario**: Pago rechazado con tiempo de TTL remanente
    - **Given** una reserva en estado "Pendiente de Pago" con tiempo remanente en su TTL de 15 minutos
    - **When** Módulo 3 notifica que el pago fue "Rechazado" con un motivo específico
-   - **Then** el sistema registra el fallo del intento de pago [NEEDS CLARIFICATION: ¿el rechazo cancela inmediatamente la reserva y libera el activo, o mantiene el estado "Pendiente de Pago" permitiendo al Arrendatario reintentar el pago con otro medio antes de que expiren los 15 minutos?]
+   - **Then** el sistema registra el fallo del intento de pago, mantiene la reserva en `Pendiente de Pago` y permite al Arrendatario reintentar el pago con otro medio antes de que expiren los 15 minutos del TTL
 
 2. **Scenario**: Rechazo definitivo que culmina la reserva
    - **Given** una reserva cuyo intento de pago fue rechazado y no admite más reintentos (o agotó su TTL)
@@ -97,12 +97,14 @@ Si Módulo 3 reintenta la entrega del mensaje de confirmación de pago (por rein
   - El sistema DEBE invocar el caso de uso "CU-08 Actualizar estado reserva" (vía `<<include>>`) para transicionar el estado de la reserva a "Reservada".
 - **FR-005**: Si el resultado de la transacción es **Rechazado** o **Fallido**:
   - El sistema DEBE registrar el resultado fallido y el motivo en el historial de la reserva.
-  - El sistema DEBE actualizar el estado de la reserva invocando a "CU-08 Actualizar estado reserva" para transicionar a `Pago Fallido` y liberar la embarcación en Módulo 1 ante rechazo definitivo, o mantener la reserva en `Pendiente de Pago` mientras reste tiempo en el TTL para admitir un reintento del cobro [NEEDS CLARIFICATION: confirmación de la política operativa sobre reintento de pago dentro del TTL remanente versus cancelación/fallo inmediato].
+  - Si el rechazo admite reintento y aún resta tiempo en el TTL, el sistema DEBE mantener la reserva en `Pendiente de Pago` y permitir al Arrendatario reintentar el cobro con otro medio hasta el vencimiento exacto del TTL de 15 minutos (sin ventana de gracia).
+  - Al vencer el TTL sin una confirmación aprobada, la reserva transiciona a `Expirada` (vía `CU-08 Actualizar estado reserva`) y se libera la embarcación en Módulo 1.
+  - Ante un rechazo definitivo que no admita reintentos, el sistema DEBE invocar "CU-08 Actualizar estado reserva" para transicionar a `Pago Fallido`, liberando la embarcación en Módulo 1.
 - **FR-006**: Si el sistema recibe una notificación de pago **Aprobado** cuando el temporizador TTL ya expiró y la reserva se encuentra en estado "Expirada":
   - El sistema NO DEBE transicionar la reserva a "Reservada".
   - El sistema DEBE responder a Módulo 3 con un código/mensaje de rechazo indicando que la reserva expiró por tiempo límite.
   - El sistema DEBE solicitar/instruir a Módulo 3 la reversión automática de los fondos cobrados al Arrendatario en la pasarela.
-- **FR-007**: El sistema DEBE ser estrictamente idempotente: si recibe una notificación con un identificador de transacción y estado idénticos a una confirmación previamente procesada para la misma reserva, DEBE responder afirmativamente sin repetir transiciones de estado ni generar nuevas llamadas colaterales. [PENDIENTE DE DEFINICIÓN: Estrategia de idempotencia de pago en la validación del webhook]
+- **FR-007**: El sistema DEBE ser estrictamente idempotente: si recibe una notificación con un identificador de transacción y estado idénticos a una confirmación previamente procesada para la misma reserva, DEBE responder afirmativamente sin repetir transiciones de estado ni generar nuevas llamadas colaterales. La estrategia de idempotencia se basa en la clave única `(id_transaccion_externo, resultado)` por reserva: la primera notificación procesada persiste esa clave en el historial de la reserva; cualquier notificación duplicada con la misma clave responde afirmativamente (HTTP 200) sin reejecutar transiciones ni llamadas colaterales.
 - **FR-008**: El sistema **NO DEBE realizar cálculos de montos, cobros directos, retenciones de depósitos de garantía ni comunicarse directamente con pasarelas de pago**; toda esa operación es de exclusiva competencia de Módulo 3.
 
 ### Key Entities
