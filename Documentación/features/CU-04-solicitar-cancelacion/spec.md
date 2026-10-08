@@ -7,6 +7,7 @@
 - **Casos de uso internos de Módulo 2**:
     - `Ver detalle de reserva` (`<<extend>>`): Este caso de uso (`Solicitar cancelación`) **es la extensión** que se ancla a `Ver detalle de reserva` (la flecha del diagrama apunta al caso base). Se activa cuando el usuario, revisando su reserva confirmada en la vista profunda, decide ejercer la cancelación.
     - `Actualizar estado reserva` (`<<include>>`): Para ejecutar la transición formal al estado principal terminal `Cancelada` con el sub-estado clasificado (`Flexible`, `Moderado`, `Tardío`, `Por Propietario` o `Por Inasistencia`).
+    - `Proveer información de embarcación` (`CU-09`, `<<include>>`): Para consultar el puerto de atraque de la embarcación y determinar la zona horaria oficial del activo aplicable al cálculo de anticipación.
 
 ---
 
@@ -80,8 +81,8 @@ Como Propietario de la embarcación, quiero cancelar una reserva en estado Reser
 - **Inconsistencia o ausencia de hora pactada de inicio**:
     - Si el sistema no puede determinar la hora pactada de inicio de la reserva por datos corruptos o incompletos, DEBE rechazar el flujo con un error descriptivo en lugar de asumir una clasificación por defecto.
 - **Huso horario del puerto de atraque**:
-    - La anticipación temporal DEBE computarse utilizando la fecha y hora oficial del puerto donde está atracada la embarcación, obtenida mediante la API `Consultar información embarcación` de Módulo 1 (nunca la hora del dispositivo del usuario ni la del servidor central sin ajuste de huso).
-- **Indisponibilidad o timeout de `Consultar información embarcación`**:
+    - La anticipación temporal DEBE computarse utilizando la fecha y hora oficial del puerto donde está atracada la embarcación, obtenida mediante la invocación a `Proveer información de embarcación` (`CU-09`, `<<include>>`) (nunca la hora del dispositivo del usuario ni la del servidor central sin ajuste de huso).
+- **Indisponibilidad o timeout de `Proveer información de embarcación`**:
     - Si el sistema no puede obtener el puerto de atraque y su zona horaria al momento de procesar la cancelación, el sistema NO DEBE calcular la anticipación con una zona horaria asumida por defecto. DEBE detener temporalmente la solicitud y retornar un error de servicio no disponible para reintento.
 - **Inadmisibilidad en reservas "Pendiente de Pago"**:
     - El estado "Pendiente de Pago" no es cancelable voluntariamente por ningún actor. La salida pasiva consiste en no realizar el pago y permitir que el temporizador TTL expire automáticamente la reserva y libere el activo en Módulo 1.
@@ -104,7 +105,7 @@ Como Propietario de la embarcación, quiero cancelar una reserva en estado Reser
 - **FR-002**: El sistema DEBE permitir solicitar la cancelación de una reserva si y solo si la reserva existe y se encuentra en estado principal `Reservada` (previo al check-in o inicio formal de la navegación).
 - **FR-003**: El sistema DEBE verificar y validar que el usuario solicitante sea unívocamente el Arrendatario titular o el Propietario registrado de la embarcación asociada a la reserva. Si el usuario no está legitimado o es un tercero no autorizado, el sistema DEBE rechazar la operación de manera estricta.
 - **FR-004**: El sistema DEBE excluir explícitamente y denegar por completo las solicitudes de cancelación activa sobre reservas que se encuentren en estado `Iniciada`, `Pendiente de Pago`, `Pago Fallido`, `En Navegación`, `Completada`, `Expirada` o previamente `Cancelada`. En los casos de `Iniciada` y `Pendiente de Pago`, el sistema debe rechazar la cancelación indicando que no admite cancelación activa y debe esperarse la expiración natural del TTL.
-- **FR-005**: El sistema DEBE consultar a la API externa `Consultar información embarcación` de Módulo 1 para obtener el puerto de atraque de la embarcación y determinar la zona horaria oficial del activo. Si la API de Módulo 1 no responde o falla, el sistema NO DEBE asumir una zona horaria por defecto y DEBE detener el flujo con error descriptivo.
+- **FR-005**: El sistema DEBE invocar a `Proveer información de embarcación` (`CU-09`, `<<include>>`) para obtener el puerto de atraque de la embarcación y determinar la zona horaria oficial del activo. Si la consulta a Módulo 1 no responde o falla, el sistema NO DEBE asumir una zona horaria por defecto y DEBE detener el flujo con error descriptivo.
 - **FR-006**: Si el solicitante es el Arrendatario, el sistema DEBE calcular el tiempo de anticipación exacto (en horas y minutos) como la diferencia entre la fecha/hora de la solicitud de cancelación y la fecha/hora pactada de inicio de la reserva, bajo la zona horaria oficial del puerto de atraque.
 - **FR-007**: Si el solicitante es el Arrendatario, el sistema DEBE clasificar automáticamente la cancelación aplicando las siguientes reglas de negocio temporales:
     - **Flexible**: Cuando la anticipación es mayor o igual a 72 horas (`anticipacion >= 72 horas`).
@@ -138,7 +139,7 @@ Como Propietario de la embarcación, quiero cancelar una reserva en estado Reser
 - **Reserva (`Reservation`)**: Entidad principal de Módulo 2 que cambia de estado de `Reservada` a `Cancelada`, adoptando el sub-estado clasificado (`Flexible`, `Moderado`, `Tardío`, `Por Propietario` o `Por Inasistencia`).
 - **Evento de Cancelación (`CancellationEvent`)**: Registro auditable de dominio en Módulo 2. Atributos clave: identificador, referencia a reserva, actor solicitante, timestamp oficial, anticipación calculada, sub-estado contractual resultante y justificación.
 - **Clasificación de Cancelación**: Categoría de dominio resultante del cálculo de anticipación o rol del actor, persistida como sub-estado de la reserva y comunicada a Módulo 3.
-- **Embarcación** *(entidad externa, propiedad de Módulo 1)*: Referenciada por identificador; su puerto de atraque (y zona horaria) se consulta vía `Consultar información embarcación` y su estado operativo se actualiza a `Disponible` o `En Mantenimiento/Limpieza` vía `Asignar estado operativo`.
+- **Embarcación** *(entidad externa, propiedad de Módulo 1)*: Referenciada por identificador; su puerto de atraque (y zona horaria) se consulta vía `Proveer información de embarcación` (`CU-09`, `<<include>>`) y su estado operativo se actualiza a `Disponible` o `En Mantenimiento/Limpieza` vía `Actualizar estado reserva` (`CU-08`).
 
 ---
 
@@ -150,7 +151,7 @@ Como Propietario de la embarcación, quiero cancelar una reserva en estado Reser
 - **SC-002**: El 100% de las solicitudes válidas de cancelación del Arrendatario reciben la clasificación correcta según la franja horaria correspondiente (`Flexible` ≥ 72h, `Moderado` 24h a 72h, `Tardío` < 24h).
 - **SC-003**: El 100% de las solicitudes de cancelación del Propietario reciben la clasificación `Por Propietario`, independientemente del tiempo restante para el zarpe.
 - **SC-004**: Cero (0%) clasificaciones emitidas cuando alguna entrada obligatoria (hora pactada de zarpe, zona horaria o identidad del solicitante) esté ausente o sea inválida.
-- **SC-005**: El 100% de las cancelaciones confirmadas invocan secuencialmente a `Actualizar estado reserva` y notifican la actualización de la embarcación en Módulo 1 (`Asignar estado operativo`) en menos de 1 segundo tras procesar la solicitud.
+- **SC-005**: El 100% de las cancelaciones confirmadas invocan secuencialmente a `Actualizar estado reserva` y emiten el primer intento de notificación para la actualización de la embarcación en Módulo 1 (`Asignar estado operativo`) en menos de 1 segundo tras procesar la solicitud.
 - **SC-006**: El 100% de los eventos de cancelación y sus sub-estados son notificados y confirmados por la API de Módulo 3 (`Recibir estado de reserva`) para la liquidación de fondos (0% de eventos perdidos silenciosamente).
 - **SC-007**: Cero (0) cálculos de reembolsos, comisiones o penalidades monetarias realizados dentro de Módulo 2.
 - **SC-008**: Cero (0%) cancelaciones autorizadas a usuarios que no sean el Arrendatario titular o el Propietario registrado de la reserva.

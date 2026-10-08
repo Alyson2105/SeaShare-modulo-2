@@ -136,7 +136,7 @@ Si se intenta registrar el inicio de la navegación sobre una reserva que ya est
 ### Measurable Outcomes
 
 - **SC-001**: Cero (0%) inicios de navegación permitidos en reservas que no estén en estado "Reservada".
-- **SC-002**: El 100% de los registros válidos cambian la reserva a `En Navegación` y actualizan la embarcación en Módulo 1 (`Asignar estado operativo`) en menos de 1 segundo.
+- **SC-002**: El 100% de los registros válidos cambian la reserva a `En Navegación` y emiten el primer intento de notificación para actualizar la embarcación en Módulo 1 (`Asignar estado operativo`) en menos de 1 segundo.
 - **SC-003**: Cero (0%) posibilidad de marcar inasistencia o cancelación una vez confirmado el cambio a "En Navegación".
 - **SC-004**: El 100% de los inicios de viaje notifican a Módulo 3 para la activación del seguro náutico.
 - **SC-005**: Cero (0) cobros de dinero, cobros de garantía o cálculo de tarifas realizados en Módulo 2 durante el registro de salida.

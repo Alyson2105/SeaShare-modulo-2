@@ -64,7 +64,7 @@ Como sistema, quiero evitar que dos usuarios bloqueen la misma embarcación para
 
 ## Edge Cases
 
-- **Inicio de pago sin disponibilidad**: Si al validar de forma atómica las fechas ya se encuentran bloqueadas por otra reserva (en `Pendiente de Pago` o `Reservada`), el sistema DEBE denegar inmediatamente el inicio del flujo sin transicionar la reserva (permanece en `Iniciada`).
+- **Inicio de pago sin disponibilidad**: Si al validar de forma atómica bajo lock la embarcación ya no figura Disponible en el chequeo instantáneo de estado operativo (CU-10) (bloqueada por otra reserva en `Pendiente de Pago` o `Reservada`), el sistema DEBE denegar inmediatamente el inicio del flujo sin transicionar la reserva (permanece en `Iniciada`).
 - **Temporizador TTL de 15 minutos en curso**: El temporizador corre desde que la reserva entró a `Iniciada` y sigue consumiéndose al entrar a `Pendiente de Pago`. Si el usuario abandona la pasarela y vuelve a entrar, el temporizador NO se reinicia.
 - **Expiración del temporizador TTL en pantalla (00:00)**: El corte en el backend es estricto a los 15 minutos exactos sin ventana de gracia. Al llegar el contador a 00:00 en pantalla, el sistema DEBE deshabilitar los botones de inmediato, mostrar un modal de expiración, redirigir a CU-01 y el backend debe liberar el inventario.
 
@@ -78,7 +78,7 @@ Como sistema, quiero evitar que dos usuarios bloqueen la misma embarcación para
 - **FR-002**: El sistema DEBE permitir iniciar el proceso de pago única y exclusivamente si la reserva se encuentra en estado `Iniciada`.
 - **FR-003**: El sistema DEBE invocar obligatoriamente al caso de uso subordinado `Brindar cálculo total de la reserva` (`<<include>>`) para solicitar a Módulo 3 el monto final vinculante, incluyendo el desglose de tarifa base, seguro náutico y depósito de garantía.
 - **FR-004**: **REGLA DE NEGOCIO ESTRICTA**: El sistema **NO DEBE** manipular, sumar ni recalcular el valor devuelto por el cálculo total. Debe utilizar la estructura financiera entregada por Módulo 3 de manera intacta.
-- **FR-005**: Si el cálculo total es devuelto con éxito, el sistema DEBE validar de forma atómica que las fechas de la reserva sigan disponibles (que no hayan sido bloqueadas por otra reserva que haya entrado a `Pendiente de Pago` o `Reservada` instantes antes), mediante la invocación `(<<include>>)` a `Brindar información de estado operativo`.
+- **FR-005**: Si el cálculo total es devuelto con éxito, el sistema DEBE validar de forma atómica bajo lock que la embarcación figure Disponible en el chequeo instantáneo de estado operativo mediante la invocación `(<<include>>)` a `Brindar información de estado operativo` (CU-10) (verificando que no haya sido bloqueada por otra reserva que haya entrado a `Pendiente de Pago` o `Reservada` instantes antes).
 - **FR-006**: Si la disponibilidad es validada, el sistema DEBE invocar al orquestador `Actualizar estado reserva` (`<<include>>`) para transicionar la reserva de `Iniciada` a `Pendiente de Pago`.
 - **FR-007**: Al confirmarse la transición a `Pendiente de Pago`, el sistema NO DEBE reiniciar el temporizador TTL: el temporizador iniciado en `Iniciada` sigue corriendo y conserva su vencimiento original.
 - **FR-008**: Si el proceso de validación concurrente falla (las fechas acaban de ser ocupadas), el sistema DEBE rechazar el inicio del pago sin transicionar la reserva (permanece en `Iniciada`) y notificar al usuario.

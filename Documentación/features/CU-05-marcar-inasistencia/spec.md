@@ -4,9 +4,9 @@
 **Created**: 2026-09-06  
 **Primary Actor**: Propietario (dueño de la embarcación)  
 **External Dependencies (APIs)**:
-- **Módulo 1 (Gestión de Flota y Activos P2P)**: API externa `Consultar información embarcación` (para obtener el puerto de atraque de la embarcación y determinar la zona horaria oficial aplicable al cálculo de los 30 minutos de espera); y API externa `Asignar estado operativo` (liberación del barco a estado `Disponible`, orquestada indirectamente a través del caso de uso `Actualizar estado reserva`).
+- **Módulo 1 (Gestión de Flota y Activos P2P)**: API externa `Asignar estado operativo` (liberación del barco a estado `Disponible`, orquestada indirectamente a través del caso de uso `Actualizar estado reserva`).
 - **Módulo 3 (Liquidación, Seguros y Dispersión de Fondos)**: API externa `Recibir estado de reserva` (comunicación del nuevo estado principal `Cancelada` y sub-estado `Por Inasistencia`, orquestada indirectamente a través de `Actualizar estado reserva`, para que Módulo 3 entregue el pago de compensación al propietario).
-- **Casos de uso internos de Módulo 2**: `Actualizar estado reserva` (`<<include>>`).
+- **Casos de uso internos de Módulo 2**: `Actualizar estado reserva` (`<<include>>`), `Proveer información de embarcación` (`CU-09`, `<<include>>`: para obtener el puerto de atraque de la embarcación y determinar la zona horaria oficial aplicable al cálculo de los 30 minutos de espera).
 
 ---
 
@@ -58,7 +58,7 @@ Si el Propietario intenta reportar la inasistencia del cliente antes de que pase
 
 ### User Story 3 - Rechazar el reporte de inasistencia en reservas no válidas o por usuarios no autorizados (Priority: P2)
 
-Si se intenta marcar la inasistencia en una reserva que ya inició el viaje, que está pendiente de pago, cancelada, completada o vencida, o si la solicitud la realiza una persona diferente al Propietario del barco, el sistema rechaza la acción de inmediato.
+Si se intenta marcar la inasistencia en una reserva que está iniciada, pendiente de pago, con pago fallido, que ya inició el viaje, cancelada, completada o vencida, o si la solicitud la realiza una persona diferente al Propietario del barco, el sistema rechaza la acción de inmediato.
 
 **Why this priority**: Evita errores en el sistema, confusiones en viajes que ya salieron y que personas no autorizadas cancelen reservas ajenas.
 
@@ -83,11 +83,11 @@ Si se intenta marcar la inasistencia en una reserva que ya inició el viaje, que
 - **Elección entre iniciar viaje con retraso o marcar inasistencia**: Pasados los 30 minutos de cortesía, si el cliente llega tarde (por ejemplo, al minuto 35), el Propietario decide si le permite abordar e iniciar el viaje o si marca la inasistencia:
     - Si el Propietario presiona "Marcar inicio de la navegación", la reserva pasa a "En Navegación" y ya no se podrá marcar inasistencia.
     - Si el Propietario presiona "CU-05 Marcar inasistencia", la reserva pasa a "Cancelada" (sub-estado "Por Inasistencia") y el viaje queda cancelado de forma definitiva.
-- **Zona horaria del puerto donde está el barco**: Los 30 minutos de espera se calculan según la hora real del puerto donde se encuentra el barco (obtenida mediante `Consultar información embarcación` en Módulo 1), evitando problemas si el teléfono del Propietario tiene una hora distinta.
+- **Zona horaria del puerto donde está el barco**: Los 30 minutos de espera se calculan según la hora real del puerto donde se encuentra el barco (obtenida mediante `Proveer información de embarcación` (`CU-09`, `<<include>>`)), evitando problemas si el teléfono del Propietario tiene una hora distinta.
 - **Coincidencia entre cancelación del cliente y reporte de inasistencia**: Si el cliente cancela desde su aplicación al mismo tiempo que el Propietario reporta la inasistencia, el sistema procesa la primera solicitud que reciba y rechaza la segunda por encontrarse en un estado ya cerrado.
 - **Reservas que no han sido pagadas**: Una reserva que está en "Pendiente de Pago" no aplica para reporte de inasistencia. Si el cliente no paga a tiempo, la reserva se cancela por tiempo límite agotado (TTL), no por inasistencia.
 - **Prohibición de calcular dinero en Módulo 2**: El Módulo 2 **NO calcula pagos, compensaciones ni penalidades en dinero**. Su función termina al verificar el tiempo transcurrido, cambiar el estado e informar al Módulo 3 el sub-estado "Por Inasistencia" para que el Módulo 3 realice la entrega del dinero.
-- **Falla al consultar la información del barco**: Si no se puede consultar el puerto y la zona horaria del barco en Módulo 1 al momento de verificar la hora, el sistema NO debe asumir una zona horaria por defecto: DEBE rechazar temporalmente la solicitud de inasistencia devolviendo un error de servicio no disponible (503) para que el Propietario reintente, sin cambiar el estado de la reserva (coherente con CU-04).
+- **Falla al consultar la información del barco**: Si no se puede consultar el puerto y la zona horaria del barco vía `Proveer información de embarcación` (CU-09) al momento de verificar la hora, el sistema NO debe asumir una zona horaria por defecto: DEBE rechazar temporalmente la solicitud de inasistencia devolviendo un error de servicio no disponible (503) para que el Propietario reintente, sin cambiar el estado de la reserva (coherente con CU-04).
 
 ---
 
@@ -98,7 +98,7 @@ Si se intenta marcar la inasistencia en una reserva que ya inició el viaje, que
 - **FR-001**: El sistema DEBE permitir registrar la inasistencia (No-Show) de una reserva si y solo si la reserva existe y se encuentra en estado principal "Reservada".
 - **FR-002**: El sistema DEBE verificar y garantizar que el usuario que solicita marcar la inasistencia sea estrictamente el Propietario registrado de la embarcación.
 - **FR-003**: El sistema DEBE validar que hayan transcurrido al menos treinta (30) minutos continuos desde la fecha y hora pactada de inicio de la reserva (`tiempo_actual >= fecha_hora_inicio + 30 minutos`). La tolerancia de inasistencia (No-Show) está fijada en **30 minutos**.
-- **FR-004**: La validación de la ventana de tolerancia de 30 minutos DEBE calcularse tomando como referencia la zona horaria del puerto donde opera la embarcación, obtenida mediante la API `Consultar información embarcación` de Módulo 1.
+- **FR-004**: La validación de la ventana de tolerancia de 30 minutos DEBE calcularse tomando como referencia la zona horaria del puerto donde opera la embarcación, obtenida mediante la invocación a `Proveer información de embarcación` (`CU-09`, `<<include>>`).
 - **FR-005**: Si no han transcurrido los 30 minutos de tolerancia, el sistema DEBE rechazar la solicitud, calcular y mostrar al Propietario los minutos y segundos exactos que faltan de espera, y NO DEBE realizar cambios de estado ni enviar notificaciones.
 - **FR-006**: Si la reserva se encuentra en cualquier estado diferente a "Reservada" (incluyendo `Iniciada`, `Pendiente de Pago`, `Pago Fallido`, `En Navegación`, `Completada`, `Expirada` o `Cancelada`), el sistema DEBE rechazar la solicitud e informar la incompatibilidad del estado.
 - **FR-007**: Al confirmar el reporte de inasistencia, el sistema DEBE invocar el caso de uso subordinado "CU-08 Actualizar estado reserva" (`<<include>>`), solicitando cambiar el estado a `Cancelada` con el sub-estado de cancelación `Por Inasistencia` .
@@ -106,7 +106,7 @@ Si se intenta marcar la inasistencia en una reserva que ya inició el viaje, que
 - **FR-009**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE calcular montos de compensación, devoluciones, comisiones ni realizar pagos bancarios**. El Módulo 2 solo verifica el tiempo y actualiza el estado; la entrega de dinero al propietario la realiza el Módulo 3 al recibir el aviso del sub-estado "Por Inasistencia".
 - **FR-010**: El sistema DEBE indicar a "CU-08 Actualizar estado reserva" que llame a la API de Módulo 1 (`Asignar estado operativo`) para liberar la embarcación al estado `Disponible`.
 - **FR-011**: El sistema DEBE indicar a "CU-08 Actualizar estado reserva" que llame a la API de Módulo 3 (`Recibir estado de reserva`) para comunicar el estado `Cancelada` y el sub-estado `Por Inasistencia`.
-- **FR-012**: Si la API `Consultar información embarcación` de Módulo 1 no responde o no entrega la zona horaria, el sistema NO DEBE calcular la tolerancia con una zona horaria asumida por defecto y DEBE detener temporalmente la solicitud, devolviendo un error de servicio no disponible (503) para que el Propietario reintente, sin cambiar el estado de la reserva (ver Edge Cases).
+- **FR-012**: Si la consulta a `Proveer información de embarcación` (`CU-09`, `<<include>>`) no responde o no entrega la zona horaria, el sistema NO DEBE calcular la tolerancia con una zona horaria asumida por defecto y DEBE detener temporalmente la solicitud, devolviendo un error de servicio no disponible (503) para que el Propietario reintente, sin cambiar el estado de la reserva (ver Edge Cases).
 - **FR-013**: El sistema DEBE mostrar en la pantalla de la reserva del Propietario un banner informativo que indique el estado del tiempo de cortesía:
     - Estado en curso (0 a 30 min): Muestra un contador regresivo con los minutos y segundos faltantes para habilitar el reporte.
     - Estado cumplido (>30 min): Muestra los minutos transcurridos desde la hora pactada e indica que el Propietario puede decidir entre iniciar el viaje o marcar inasistencia.
@@ -127,7 +127,7 @@ Si se intenta marcar la inasistencia en una reserva que ya inició el viaje, que
 
 - **Reserva (`Reservation`)**: Entidad de dominio en Módulo 2. Atributos evaluados: identificador, identificador del propietario, identificador de la embarcación, fecha/hora de inicio, estado principal ("Reservada" → "Cancelada"), sub-estado ("Por Inasistencia").
 - **Registro de Inasistencia (`NoShowEvent`)**: Registro del evento para auditoría. Atributos: identificador del evento, identificador de la reserva, identificador del propietario, fecha/hora del reporte, minutos de espera observados y comentarios del propietario.
-- **Embarcación**: Activo registrado en el Módulo 1 cuya zona horaria se consulta mediante `Consultar información embarcación`.
+- **Embarcación**: Activo registrado en el Módulo 1 cuya zona horaria se consulta mediante `Proveer información de embarcación` (`CU-09`, `<<include>>`).
 
 ---
 
@@ -136,8 +136,8 @@ Si se intenta marcar la inasistencia en una reserva que ya inició el viaje, que
 ### Measurable Outcomes
 
 - **SC-001**: Cero (0%) reportes de inasistencia aceptados antes de cumplirse exactamente los 30 minutos de espera posteriores a la hora acordada de salida.
-- **SC-002**: Cero (0%) reportes de inasistencia aceptados en reservas que estén en estado "En Navegación", "Completada", "Cancelada", "Expirada" o "Pendiente de Pago".
+- **SC-002**: Cero (0%) reportes de inasistencia aceptados en reservas que estén en estado "Iniciada", "Pendiente de Pago", "Pago Fallido", "En Navegación", "Completada", "Cancelada" o "Expirada".
 - **SC-003**: El 100% de los intentos realizados antes de tiempo muestran un mensaje con el tiempo exacto que resta para cumplir los 30 minutos de espera.
-- **SC-004**: El 100% de los reportes válidos cambian la reserva a Cancelada (sub-estado Por Inasistencia) y notifican a Módulo 1 y Módulo 3 en menos de 1 segundo.
+- **SC-004**: El 100% de los reportes válidos cambian la reserva a Cancelada (sub-estado Por Inasistencia) y emiten el primer intento de notificación a Módulo 1 y Módulo 3 en menos de 1 segundo.
 - **SC-005**: Cero (0) cálculos de dinero, penalidades o pagos realizados dentro del Módulo 2.
 - **SC-006**: Cero (0%) solicitudes de inasistencia autorizadas a personas diferentes al propietario del barco.

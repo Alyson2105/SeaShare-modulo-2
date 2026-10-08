@@ -83,12 +83,17 @@ En los momentos clave del ciclo de vida de la reserva (a partir de que hay inten
     - **When** se guarda ese cambio
     - **Then** el sistema llama a la API `Asignar estado operativo` de Módulo 1 enviando el estado operativo "En Navegación"
 
-3. **Scenario**: Un cierre normal, cancelación ordinaria, expiración o pago fallido liberan la embarcación a "Disponible"
-    - **Given** una reserva que pasa a "Completada", a "Cancelada" (sin avería), a "Expirada" o a "Pago Fallido"
+3. **Scenario**: Un cierre normal, cancelación ordinaria, expiración desde Pendiente de Pago o pago fallido liberan la embarcación a "Disponible"
+    - **Given** una reserva que pasa a "Completada", a "Cancelada" (sin avería), a "Pago Fallido" o a "Expirada" desde "Pendiente de Pago"
     - **When** se procesa el cambio de estado
     - **Then** el sistema llama a la API `Asignar estado operativo` de Módulo 1 enviando el estado operativo "Disponible"
 
-4. **Scenario**: Cancelación por avería reportada por el Propietario pasa la embarcación a "En Mantenimiento/Limpieza"
+4. **Scenario**: Expiración desde Iniciada no notifica a Módulo 1
+    - **Given** una reserva en estado "Iniciada" que expira por vencimiento del TTL pasando a "Expirada"
+    - **When** se procesa el cambio de estado
+    - **Then** el sistema NO llama a la API `Asignar estado operativo` de Módulo 1 (nunca hubo bloqueo previo en Módulo 1; notificarlo liberaría indebidamente el bloqueo de otra reserva vigente)
+
+5. **Scenario**: Cancelación por avería reportada por el Propietario pasa la embarcación a "En Mantenimiento/Limpieza"
     - **Given** una reserva en estado "Reservada" cancelada por el Propietario reportando avería o desperfecto mecánico
     - **When** se procesa la transición a "Cancelada" con sub-estado "Por Propietario"
     - **Then** el sistema llama a la API `Asignar estado operativo` de Módulo 1 enviando el estado operativo "En Mantenimiento/Limpieza"
@@ -161,7 +166,8 @@ Si llega un pedido de cambio de estado que no está permitido por la máquina de
     - `Creación a Iniciada`: NO se notifica bloqueo a Módulo 1.
     - `Iniciada a Pendiente de Pago`: llamar a `Asignar estado operativo` (poner en `Reservado`).
     - Pasa a `En Navegación`: actualizar a `En Navegación`.
-    - Pasa a `Completada`, `Expirada`, `Pago Fallido` o `Cancelada` (sin reporte de avería): actualizar a `Disponible`.
+    - Pasa a `Expirada` desde `Pendiente de Pago`, o pasa a `Completada`, `Pago Fallido` o `Cancelada` (sin reporte de avería): actualizar a `Disponible`.
+    - `Iniciada a Expirada`: NO se notifica a Módulo 1 (nunca hubo bloqueo en Módulo 1; notificarlo liberaría erróneamente el bloqueo de otra reserva vigente, provocando doble booking).
     - Pasa a `Cancelada` con reporte de avería o desperfecto mecánico por parte del Propietario: actualizar a `En Mantenimiento/Limpieza` (inhabilitando temporalmente el activo).
 - **FR-008**: El sistema DEBE llamar a la API externa de Módulo 3 (`Recibir estado de reserva`) ante cada cambio de estado a partir de `Pendiente de Pago` (inclusive).
 - **FR-009**: **Texto de novedades en el cierre**: Si el cierre de la navegación incluye el texto opcional de novedades provisto por el Propietario, el sistema DEBE adjuntarlo como campo informativo en la notificación de `Completada` a Módulo 3, sin que ello modifique el tratamiento del cierre.
@@ -183,5 +189,5 @@ Si llega un pedido de cambio de estado que no está permitido por la máquina de
 ### Measurable Outcomes
 
 - **SC-001**: Cero (0%) cambios de estado no permitidos.
-- **SC-002**: El 100% de los cambios disparan avisos a APIs externas en < 500 ms.
-- **SC-003**: Cero (0%) embarcaciones bloqueadas físicamente en Módulo 1 sin que exista una reserva en estado `Pendiente de Pago` que respalde el bloqueo.
+- **SC-002**: El tiempo de emisión del primer intento de aviso a APIs externas no supera los 500 milisegundos tras la consolidación del estado en la base de datos local.
+- **SC-003**: Cero (0%) embarcaciones bloqueadas físicamente en Módulo 1 sin que exista una reserva en estado `Pendiente de Pago`, `Reservada` o `En Navegación` que respalde el bloqueo.

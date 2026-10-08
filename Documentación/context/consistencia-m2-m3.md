@@ -85,7 +85,7 @@ Reservada → Cancelada (Por Propietario)            → Reembolso 100% al Arren
 - **Qué es**: 10% de la tarifa base diaria de la embarcación.
 - **Momento en la reserva**: se calcula y se congela en "Solicitar el valor calculado de la reserva" (antes de confirmar pago); se cobra junto con alquiler y seguro como **un único monto** en "Procesar cobro" (sin operación separada en la pasarela, aunque Módulo 3 conserva el desglose internamente); se retiene tras "Completada" hasta que se resuelve la disputa de garantía.
 - **Qué módulo interviene**: Módulo 2 crea y gestiona la disputa (otorga la ventana para reportar daños y decide el resultado operativo); Módulo 3 solo ejecuta la consecuencia financiera (reembolso o liquidación total) a partir del estado recibido, usando montos que ya tiene registrados internamente — nunca recibe montos de Módulo 2.
-- **Información que Módulo 2 debe enviar a Módulo 3**: únicamente identificador de reserva, identificador de disputa, estado (`PENDIENTE`/`RECHAZADO`/`COMPLETADO`), clave idempotente y, si es `RECHAZADO`, un motivo opcional. Nunca montos ni instrucciones de pago.
+- **Información que Módulo 2 debe enviar a Módulo 3**: únicamente identificador de reserva, identificador de disputa, estado (`RECHAZADA`/`ACEPTADA`), clave idempotente y, si es `RECHAZADA`, un motivo opcional. Nunca montos ni instrucciones de pago.
 - **Qué ocurre después de resolver**: el depósito se entrega **completo** al Arrendatario o **completo** al Propietario; no existe retención parcial en ningún caso.
 
 ---
@@ -98,10 +98,10 @@ Reservada → Cancelada (Por Propietario)            → Reembolso 100% al Arren
 - **Qué módulo la gestiona**: Módulo 2 gestiona la disputa por completo; Módulo 3 únicamente consume su resultado final y ejecuta la operación financiera correspondiente.
 - **Estados** (definidos solo en `contexto-modulo3.md`; `sea-share.md` no usa el término "disputa" ni estos nombres — ver §6):
   - `PENDIENTE`: existe o continúa en revisión; sin acción financiera.
-  - `RECHAZADO`: el reclamo no procede (incluye ausencia de reclamo al vencer la ventana); depósito 100% al Arrendatario.
-  - `COMPLETADO`: el reclamo procede; depósito 100% al Propietario.
+  - `RECHAZADA`: el reclamo no procede (incluye ausencia de reclamo al vencer la ventana); depósito 100% al Arrendatario.
+  - `ACEPTADA`: el reclamo procede; depósito 100% al Propietario.
 - **Qué ocurre al resolverse**: Módulo 2 notifica el estado final a Módulo 3, que ejecuta el reembolso o la liquidación total con sus propios registros.
-- **Efecto sobre reserva/garantía**: cierra el ciclo financiero del depósito de esa reserva. Mientras no exista `RECHAZADO` o `COMPLETADO`, el depósito se considera "pendiente de resolución" y puede seguir contabilizándose en reportes financieros sucesivos.
+- **Efecto sobre reserva/garantía**: cierra el ciclo financiero del depósito de esa reserva. Mientras no exista `RECHAZADA` o `ACEPTADA`, el depósito se considera "pendiente de resolución" y puede seguir contabilizándose en reportes financieros sucesivos.
 
 ---
 
@@ -115,7 +115,7 @@ Reservada → Cancelada (Por Propietario)            → Reembolso 100% al Arren
 | Procesar cobro | Módulo 2 (reserva en `Pendiente de Pago`) | Módulo 3 | ID reserva, token/referencia segura de pago. |
 | Solicitar confirmación de pago | Módulo 2 | Módulo 3 | ID reserva → estado del cobro. |
 | Brindar el estado de la reserva | Módulo 2 | Módulo 3 | ID reserva, estado principal y sub-estado de cancelación si aplica. Unidireccional: Módulo 3 no responde ni notifica fallos a Módulo 2. |
-| Brindar información de disputa de garantía | Módulo 2 | Módulo 3 | ID reserva, ID disputa, estado (`PENDIENTE`/`RECHAZADO`/`COMPLETADO`), clave idempotente, motivo opcional. Unidireccional, sin montos. |
+| Brindar información de disputa de garantía | Módulo 2 | Módulo 3 | ID reserva, ID disputa, estado (`RECHAZADA`/`ACEPTADA`), clave idempotente, motivo opcional. Unidireccional, sin montos. |
 
 ---
 

@@ -22,7 +22,7 @@ Como Arrendatario, quiero buscar embarcaciones disponibles utilizando fechas, ca
 
 ***Why this priority***: Es el primer paso en la experiencia de usuario y permite la exploración del inventario. Sin este caso de uso, el usuario no podría encontrar embarcaciones para reservar.
 
-***Independent Test***: Se prueba ingresando fechas futuras, una cantidad de pasajeros y el tipo de embarcacion. Se verifica que el sistema consulte disponibilidad en el catálogo (vía `Proveer información de embarcación`, modo lote) y utilice `CU-11 Proveer información cotización de reserva` para mostrar las opciones con tarifas estimadas calculadas por Módulo 3.
+***Independent Test***: Se prueba ingresando fechas futuras, una cantidad de pasajeros y el tipo de embarcacion. Se verifica que el sistema consulte el catálogo (vía `Proveer información de embarcación`, modo lote) y utilice `CU-11 Proveer información cotización de reserva` para mostrar las opciones con tarifas estimadas calculadas por Módulo 3.
 
 ***Acceptance Scenarios***:
 
@@ -61,6 +61,7 @@ Como Arrendatario, quiero poder ver el catálogo completo de embarcaciones dispo
 - **Búsqueda sin filtros**: Ver User Story 2. El sistema NO rechaza la búsqueda vacía; devuelve el catálogo completo.
 - **Filtros con formato inválido**: Si el usuario ingresa un valor con formato incorrecto (texto donde se espera un número de pasajeros, un valor que no es una fecha válida en el campo de fecha), el sistema DEBE rechazar esa entrada específica e indicar el formato esperado, sin ejecutar la búsqueda. Esta validación es **únicamente de formato** — el sistema NO aplica aquí ninguna regla de negocio sobre las fechas (por ejemplo, no rechaza una fecha de fin anterior a la de inicio, ni una fecha ya pasada, ni un rango de fechas excesivamente largo); ese tipo de validación, si existe, se resuelve en un caso de uso posterior (como `Iniciar reserva`), no en la búsqueda.
 - **Punto de Extensión Hacia Detalle**: Este caso de uso es el punto de partida que permite extender hacia `Ver detalle de embarcación` una vez que el usuario hace clic en una tarjeta del catálogo para avanzar en el embudo.
+- **Disponibilidad por rango de fechas fuera de alcance**: La validación de disponibilidad por rango de fechas se encuentra fuera del alcance del catálogo y la búsqueda (semántica documentada: el catálogo no filtra por estado operativo de las embarcaciones). La verificación y el eventual rechazo por indisponibilidad se delegan a los casos de uso transaccionales (`Iniciar reserva` en CU-02 mediante chequeo instantáneo de estado operativo y `Iniciar pago` en CU-03 bajo lock atómico), resolviéndose la exclusividad bajo la regla First-Come First-Served (FCFS).
 
 ---
 

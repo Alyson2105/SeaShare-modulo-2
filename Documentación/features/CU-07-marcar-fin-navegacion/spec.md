@@ -5,7 +5,7 @@
 **Primary Actor**: Propietario (dueño de la embarcación al recibir la embarcación en muelle)  
 **External Dependencies (APIs)**:
 - **Módulo 1 (Gestión de Flota y Activos P2P)**: API externa `Asignar estado operativo` (cambio del estado del barco a `Disponible` al cerrar la navegación).
-- **Módulo 3 (Liquidación, Seguros y Dispersión de Fondos)**: API externa `Recibir estado de reserva` (notificación del estado `Completada` para que Módulo 3 libere el pago al propietario y devuelva la garantía, adjuntando el texto de novedades si existe).
+- **Módulo 3 (Liquidación, Seguros y Dispersión de Fondos)**: API externa `Recibir estado de reserva` (notificación del estado `Completada` para que Módulo 3 libera el pago al Propietario; la garantía permanece retenida hasta la resolución de la disputa (ventana de 24 h), adjuntando el texto de novedades si existe).
 - **Casos de uso internos de Módulo 2**: `Actualizar estado reserva` (`<<include>>`), `Generar disputa de garantía` (`CU-16`, `<<include>>`: al confirmar el cierre se crea la disputa en PENDIENTE con ventana de 24 horas).
 
 ---
@@ -14,9 +14,9 @@
 
 ### User Story 1 - El Propietario registra el fin de la navegación (Priority: P1)
 
-Al terminar el viaje y regresar al puerto, el Propietario revisa la embarcación junto al cliente y registra el fin de la navegación, pudiendo adjuntar un texto opcional de novedades si detectó algún daño o incumplimiento. En ese instante, el sistema verifica que la reserva esté en estado 'En Navegación', cambia la reserva al estado 'Completada' mediante la invocación a 'Actualizar estado reserva' (`<<include>>`), notifica al Módulo 1 para que vuelva a poner el barco como 'Disponible' y le avisa al Módulo 3 para que le entregue el pago al Propietario y le devuelva la garantía al turista.
+Al terminar el viaje y regresar al puerto, el Propietario revisa la embarcación junto al cliente y registra el fin de la navegación, pudiendo adjuntar un texto opcional de novedades si detectó algún daño o incumplimiento. En ese instante, el sistema verifica que la reserva esté en estado 'En Navegación', cambia la reserva al estado 'Completada' mediante la invocación a 'Actualizar estado reserva' (`<<include>>`), notifica al Módulo 1 para que vuelva a poner el barco como 'Disponible' y le avisa al Módulo 3 para que libera el pago al Propietario; la garantía permanece retenida hasta la resolución de la disputa (ventana de 24 h).
 
-**Why this priority**: Es el paso clave que le permite al cliente pasar de una reserva temporal a la confirmación de su viaje. Sin esta acción, el proceso se detiene y la reserva permanece en `En Navegación`: no se cierra el ciclo, Módulo 3 no libera el pago al Propietario ni devuelve la garantía y no se abre la ventana de disputa de 24 horas.
+**Why this priority**: Es el paso clave que le permite al cliente pasar de una reserva temporal a la confirmación de su viaje. Sin esta acción, el proceso se detiene y la reserva permanece en `En Navegación`: no se cierra el ciclo, Módulo 3 no libera el pago al Propietario; la garantía permanece retenida hasta la resolución de la disputa (ventana de 24 h) y no se abre la ventana de disputa de 24 horas.
 
 **Independent Test**: Se prueba con una reserva en estado "En Navegación", registrando el fin de viaje por parte del Propietario (con y sin texto de novedades). Se comprueba que la reserva pasa a "Completada", la embarcación se marca como "Disponible" en Módulo 1 y Módulo 3 recibe la notificación de cierre sin que Módulo 2 realice cálculos monetarios.
 
@@ -85,7 +85,7 @@ Si alguien intenta registrar el fin de la navegación sobre una reserva que no e
 - **FR-004**: Al confirmar la entrega, el sistema DEBE invocar el caso de uso subordinado "CU-08 Actualizar estado reserva" (`<<include>>`), solicitando cambiar la reserva al estado principal `Completada` y adjuntando el texto de novedades si el Propietario lo proveyó.
 - **FR-005**: El sistema DEBE guardar un registro de la entrega, incluyendo: identificador de la reserva, identificador del propietario, fecha y hora real de entrega y el texto de novedades si fue provisto.
 - **FR-006**:  El sistema DEBE indicar a "CU-08 Actualizar estado reserva" que llame a la API de Módulo 1 (`Asignar estado operativo`) para actualizar la embarcación a estado `Disponible`.
-- **FR-007**:  El sistema DEBE indicar a "CU-08 Actualizar estado reserva" que llame a la API de Módulo 3 (`Recibir estado de reserva`) para notificar el cierre del viaje, de modo que Módulo 3 libere el pago al propietario y le devuelva la garantía al cliente, adjuntando el texto de novedades si fue provisto.
+- **FR-007**:  El sistema DEBE indicar a "CU-08 Actualizar estado reserva" que llame a la API de Módulo 3 (`Recibir estado de reserva`) para notificar el cierre del viaje, de modo que Módulo 3 libera el pago al Propietario; la garantía permanece retenida hasta la resolución de la disputa (ventana de 24 h), adjuntando el texto de novedades si fue provisto.
 - **FR-008**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE calcular costos de reparación, cobros por demora ni realizar devoluciones o retenciones de dinero**. La evaluación financiera le corresponde exclusivamente al Módulo 3.
 - **FR-009**: Si la reserva se encuentra en cualquier estado diferente a "En Navegación", el sistema DEBE rechazar la solicitud e informar que el estado no es compatible.
 - **FR-010**: Al confirmar el cierre (reserva a `Completada`), el sistema DEBE invocar `Generar disputa de garantía` (`CU-16`, `<<include>>`) para crear la disputa asociada en estado PENDIENTE y abrir la ventana de 24 horas para el reclamo del Propietario. El plazo de reporte y novedades post-viaje está fijado en **24 horas**.
@@ -113,7 +113,7 @@ Si alguien intenta registrar el fin de la navegación sobre una reserva que no e
 ### Measurable Outcomes
 
 - **SC-001**: Cero (0%) registros de fin de navegación permitidos sobre reservas que no estén en estado "En Navegación".
-- **SC-002**: El 100% de los registros de fin de navegación cambian la reserva a `Completada` y actualizan el barco como `Disponible` en Módulo 1 en menos de 1 segundo.
+- **SC-002**: El 100% de los registros de fin de navegación cambian la reserva a `Completada` y emiten el primer intento de notificación para actualizar el barco como `Disponible` en Módulo 1 en menos de 1 segundo.
 - **SC-003**: Cero (0) cobros, evaluaciones de daños o cálculo de dinero realizados dentro del Módulo 2.
 - **SC-004**: El 100% de las entregas quedan registradas con la hora real de desembarque para auditorías.
 - **SC-005**: Cero (0%) registros de entrega autorizados a personas diferentes al propietario del barco.

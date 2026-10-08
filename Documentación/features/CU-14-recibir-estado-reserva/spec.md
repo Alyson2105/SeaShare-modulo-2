@@ -38,7 +38,7 @@ Como sistema, quiero encolar y reintentar las notificaciones dirigidas a Módulo
 
 ***Why this priority***: Una notificación perdida significa que un seguro no se activó o que un propietario nunca recibió su dinero. La entrega garantizada (Event Delivery Guarantee) es innegociable en arquitecturas desacopladas.
 
-***Independent Test***: Se simula una caída (HTTP 503 o timeout) en la API de Módulo 3. Se dispara un cambio de estado en Módulo 2. Se verifica que Módulo 2 guarde la transición exitosamente y encole el mensaje de notificación, reintentándolo periódicamente hasta recibir un HTTP 200 OK.
+***Independent Test***: Se simula una caída (HTTP 503 o timeout) en la API de Módulo 3. Se dispara un cambio de estado en Módulo 2. Se verifica que Módulo 2 guarde la transición exitosamente y encole el mensaje de notificación, reintentándolo según FR-005 (máx. 5 intentos con backoff) y derivando a DLQ si se agotan.
 
 ***Acceptance Scenarios***:
 
@@ -52,7 +52,7 @@ Como sistema, quiero encolar y reintentar las notificaciones dirigidas a Módulo
 ### Edge Cases
 
 - **Idempotencia en la Recepción**: Si Módulo 2 envía dos veces la misma notificación por un falso timeout de red, Módulo 3 debe ser capaz de procesarla de forma idempotente. Módulo 2 envía identificadores únicos por cada transición para facilitar esto.
-- **Texto de novedades en el cierre**: Si el cierre incluye texto opcional de novedades, el *payload* de `Completada` lo lleva como campo informativo. Dicho texto no modifica el tratamiento del cierre (liberación del pago y devolución de la garantía).
+- **Texto de novedades en el cierre**: Si el cierre incluye texto opcional de novedades, el *payload* de `Completada` lo lleva como campo informativo. Dicho texto no modifica el tratamiento del cierre (liberación del pago y retención de la garantía hasta la resolución de la disputa).
 - **Prohibición de Cálculo Monetario**: Las notificaciones de estado son puramente operativas. **Módulo 2 JAMÁS incluye en el *payload* cálculos de penalidades, montos de reembolso o valoraciones de daños**. Solo notifica el estado (ej. `Cancelada`), el sub-estado (ej. `Tardío`) y el actor responsable.
 
 ---

@@ -69,7 +69,7 @@ El envío se realiza por cola de mensajes (Módulo 2 publica, Módulo 3 consume)
 ### Functional Requirements
 
 - **FR-001**: El sistema DEBE publicar un mensaje en la cola únicamente cuando la disputa alcance un estado final (RECHAZADA o ACEPTADA), con Módulo 2 como publicador y Módulo 3 como consumidor. El estado PENDIENTE es interno de Módulo 2 y NO genera ningún mensaje. NO es una consulta síncrona de solicitud/respuesta.
-- **FR-002**: El mensaje DEBE contener únicamente: el estado de la disputa (uno de RECHAZADA, ACEPTADA) y los identificadores necesarios para relacionarlo con la reserva (identificador de reserva) y con la disputa correspondiente (identificador de disputa).
+- **FR-002**: El mensaje DEBE contener únicamente: el estado de la disputa (uno de RECHAZADA, ACEPTADA), los identificadores necesarios para relacionarlo con la reserva (identificador de reserva) y con la disputa correspondiente (identificador de disputa), y un motivo opcional si el estado es RECHAZADA.
 - **FR-003**: El mensaje NO DEBE contener: monto del depósito, monto a reembolsar, monto a liquidar, porcentaje, instrucción de pago, referencia de pasarela ni ninguna decisión técnica de transferencia.
 - **FR-004**: Cada mensaje DEBE incluir un identificador único de evento (identificador de disputa + estado + eventId o número de versión incremental), de forma que Módulo 3 pueda descartar duplicados o reenvíos sin reconsultar el estado completo.
 - **FR-005**: Si la publicación en el broker falla, el sistema DEBE reintentarla hasta confirmarla, sin perder el evento.
@@ -78,7 +78,7 @@ El envío se realiza por cola de mensajes (Módulo 2 publica, Módulo 3 consume)
 
 ### Key Entities
 
-- **Evento de disputa de garantía**: mensaje publicado en la cola por cada transición a estado final. Atributos clave: identificador único del evento (disputa + estado + eventId/versión), identificador de la disputa, identificador de la reserva, estado (RECHAZADA / ACEPTADA), marca temporal del cambio.
+- **Evento de disputa de garantía**: mensaje publicado en la cola por cada transición a estado final. Atributos clave: identificador único del evento (disputa + estado + eventId/versión), identificador de la disputa, identificador de la reserva, estado (RECHAZADA / ACEPTADA), motivo opcional (si aplica en RECHAZADA), marca temporal del cambio.
 - **Disputa de garantía** *(objeto de dominio referenciado; vive en `CU-16`/`CU-17`)*: se referencia por sus identificadores para relacionar cada mensaje con la disputa y la reserva correspondientes.
 
 ---
