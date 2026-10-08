@@ -22,56 +22,61 @@ Una reserva es el acuerdo entre Arrendatario y Propietario para el alquiler temp
 - **Cuándo comienza**: la reserva como entidad nace cuando el Arrendatario oprime "Reservar" → estado **Iniciada**. Antes de eso (pantalla de exploración) solo existe una *intención de reserva* sin ID, cubierta por "Solicitar estimación para reserva" en modo lote.
 - **Información que necesita Módulo 3 de Módulo 2**: identificador de reserva, embarcación, días, pasajeros, propietario y capacidad máxima ("Brindar información de reserva"); el estado vigente de la reserva ("Brindar el estado de la reserva"); el estado de la disputa de garantía ("Brindar información de disputa de garantía").
 - **Información que necesita Módulo 2 de Módulo 3**: estimación preliminar ("Solicitar estimación para reserva"), desglose y valor total definitivo ("Solicitar el valor calculado de la reserva"), y el resultado del cobro ("Solicitar confirmación de pago").
-- **Qué ocurre al reservar**: → Iniciada; arranca el TTL de 15 min; la embarcación deja de listarse como disponible.
-- **Qué ocurre al pagar**: el Arrendatario oprime "Confirmar pago" → Pendiente; esto habilita a Finanzas a ejecutar "Procesar cobro"; el TTL sigue corriendo desde "Iniciada" (no se reinicia).
-- **Qué ocurre cuando el pago se confirma**: Módulo 2 consulta "Solicitar confirmación de pago"; solo un resultado aprobado y verificable avanza la reserva a Reservado.
-- **Qué ocurre si expira**: si el TTL vence (iniciado en "Iniciada") sin confirmación exitosa, la reserva vuelve a Disponible; cualquier autorización pendiente en la pasarela debe cancelarse o quedar en conciliación (no se asume que el pago falló).
-- **Qué ocurre si se cancela**: según la ventana de tiempo (ver tabla de estados).
+- **Qué ocurre al reservar**: → Iniciada; arranca el TTL de 15 min; la embarcación **continúa figurando disponible** en Módulo 1 hasta que se formaliza el pago (varias reservas en `Iniciada` pueden coexistir para el mismo barco y fechas).
+- **Qué ocurre al pagar**: el Arrendatario oprime "Confirmar pago" → `Pendiente de Pago`; esto habilita a Finanzas a ejecutar "Procesar cobro" y es el momento en que la embarcación pasa a `Reservado` en Módulo 1; el TTL sigue corriendo desde "Iniciada" (no se reinicia).
+- **Qué ocurre cuando el pago se confirma**: Módulo 2 consulta "Solicitar confirmación de pago"; solo un resultado aprobado y verificable avanza la reserva a `Reservada`.
+- **Qué ocurre si expira**: si el TTL vence (iniciado en "Iniciada") sin confirmación exitosa, la reserva pasa a `Expirada` y la embarcación vuelve a `Disponible` en Módulo 1; cualquier autorización pendiente en la pasarela debe cancelarse o quedar en conciliación (no se asume que el pago falló).
+- **Qué ocurre si el pago se rechaza sin posibilidad de retiro**: la reserva pasa a `Pago Fallido` y la embarcación vuelve a `Disponible` en Módulo 1.
+- **Qué ocurre si se cancela**: solo es válido desde `Reservada` (ver rama de cancelación).
 - **Qué ocurre al finalizar**: el Propietario marca la reserva como Completada tras la devolución → Finanzas liquida alquiler + seguro de inmediato; el depósito de garantía queda pendiente hasta el resultado de la disputa de garantía.
 
-No se detectó contradicción entre ambos documentos sobre el origen del TTL (ambos coinciden en que nace en "Iniciada" y no se reinicia en "Pendiente"); `contexto-modulo3.md` simplemente añade el detalle operación-a-operación que `sea-share.md` no desarrolla.
+No se detectó contradicción entre ambos documentos sobre el origen del TTL (ambos coinciden en que nace en "Iniciada" y no se reinicia en "Pendiente de Pago"); `contexto-modulo3.md` simplemente añade el detalle operación-a-operación que `sea-share.md` no desarrolla.
 
 ### Flujo de la reserva
 
 ```text
-Disponible
+Disponible (embarcación, Módulo 1)
    ↓ (Arrendatario oprime "Reservar")
-Iniciada  ───────────────┐  (arranca TTL 15 min)
-   ↓ (Arrendatario confirma pago)      │
-Pendiente ── (mismo TTL, no se reinicia) │
-   ↓ (Finanzas confirma pago)           │  TTL vence sin pago confirmado
-Reservado                               ↓
-   ↓ (check-in)                    Disponible
-En Navegación
+Iniciada  ───────────────────────┐  (arranca TTL 15 min; M1 aún no bloquea)
+   ↓ (Arrendatario confirma pago)                │
+Pendiente de Pago ── (mismo TTL, no se reinicia) │
+   ↓ (Finanzas confirma pago)      │  TTL vence sin pago confirmado   │ rechazo definitivo
+Reservada                           ↓                                   ↓
+   ↓ (check-in)                Expirada                             Pago Fallido
+En Navegación                 (embarcación → Disponible en M1)
    ↓ (Propietario marca devuelta)
 Completada
    ↓ (resultado de disputa de garantía — ver §4)
 [depósito → Arrendatario]  o  [depósito → Propietario]
 ```
 
-Rama de cancelación (puede iniciarse en Iniciada, Pendiente, Reservado o En Navegación — **pendiente de definir**: ningún documento aclara desde cuáles de estos estados es válido cancelar):
+Rama de cancelación (**solo se admite desde `Reservada`** — pago confirmado y previo al check-in; `Iniciada` y `Pendiente de Pago` no admiten cancelación activa y se resuelven por expiración del TTL; `Pago Fallido`, `En Navegación`, `Completada` y `Expirada` tampoco son cancelables):
 
 ```text
-… → Cancelado Flexiblemente (>72h)          → Reembolso 100%
-… → Cancelado Moderadamente (72h–24h)       → Reembolso 50% + dispersión 50% al Propietario
-… → Cancelado Tardíamente / No-Show (<24h)  → Dispersión 100% al Propietario, sin reembolso
+Reservada → Cancelada (Flexible)   (>72h)          → Reembolso 100%
+Reservada → Cancelada (Moderado)  (72h–24h)        → Reembolso 50% + dispersión 50% al Propietario
+Reservada → Cancelada (Tardío / Por Inasistencia) (<24h) → Dispersión 100% al Propietario, sin reembolso
+Reservada → Cancelada (Por Propietario)            → Reembolso 100% al Arrendatario (cancelación del anfitrión)
 ```
 
 ### Estados de la reserva
 
-| Estado | Qué significa | Qué ocurre para llegar a este estado |
+| Estado de la reserva | Qué significa | Qué ocurre para llegar a este estado |
 | --- | --- | --- |
-| Disponible | La embarcación no está asociada a ninguna reserva. | Estado inicial, o retorno tras vencer el TTL sin pago confirmado. |
-| Iniciada | Arranca el bloqueo temporal (TTL) de 15 min; la embarcación deja de listarse. | El Arrendatario oprime "Reservar". |
-| Pendiente | Continúa el mismo TTL (no se reinicia); habilita "Procesar cobro". | El Arrendatario oprime "Confirmar pago". |
-| Reservado | Pago confirmado; reserva exitosa; aún sin uso. | Finanzas confirma el pago dentro del TTL. |
+| Iniciada | Arranca el TTL de 15 min; la embarcación aún no se bloquea en Módulo 1. | El Arrendatario oprime "Reservar". |
+| Pendiente de Pago | Continúa el mismo TTL (no se reinicia); habilita "Procesar cobro"; la embarcación pasa a `Reservado` en Módulo 1. | El Arrendatario oprime "Confirmar pago". |
+| Reservada | Pago confirmado; reserva exitosa; aún sin uso. | Finanzas confirma el pago dentro del TTL. |
 | En Navegación | Contrato activo; embarcación en uso. | Se realiza el check-in. |
 | Completada | Alquiler y seguro se liquidan de inmediato; depósito queda pendiente. | El Propietario marca la reserva como completada tras la devolución. |
-| Cancelado Flexiblemente | >72h de anticipación; reembolso 100% (menos costos transaccionales); sin dispersión. | El Arrendatario cancela con más de 72h de anticipación. |
-| Cancelado Moderadamente | 72h–24h de anticipación; reembolso 50% + dispersión 50% al Propietario. | El Arrendatario cancela entre 72h y 24h de anticipación. |
-| Cancelado Tardíamente / No-Show | <24h; sin reembolso; dispersión 100% al Propietario. | El Arrendatario cancela con <24h, o no se presenta 30 min después de la hora pactada. |
+| Cancelada | Cancelación activa desde `Reservada`, o por No-Show (inasistencia); el sub-estado define la compensación. | El Arrendatario o el Propietario cancelan desde `Reservada`, o transcurren los 30 min de espera sin presentación. |
+| Expirada | El TTL venció sin confirmación de pago; la embarcación vuelve a `Disponible` en Módulo 1. | Vence el TTL (iniciado en `Iniciada`) sin pago confirmado. |
+| Pago Fallido | Rechazo definitivo del cobro que no admite reintento; la embarcación vuelve a `Disponible` en Módulo 1. | El cobro se rechaza sin posibilidad de reintento dentro del TTL. |
 
-Ambos documentos reconocen exactamente los mismos 9 estados (contando las 3 variantes de cancelación por separado); no hay estados presentes en un módulo y ausentes en el otro.
+**Sub-estados de cancelación** (sobre `Cancelada`): `Flexible` (>72h), `Moderado` (72h–24h), `Tardío` (<24h), `Por Propietario` y `Por Inasistencia`.
+
+**Vocabulario de Finanzas**: "Pendiente" se corresponde con `Pendiente de Pago`; "Reservado" con `Reservada`; "Cancelado Flexible/Moderado/Tardío" con `Cancelada` + su sub-estado. `Expirada` y `Pago Fallido` son estados de la reserva en Módulo 2; Módulo 3 los recibe como notificaciones de estado y libera la retención del inventario.
+
+**Coherencia de estados**: Módulo 2 y Módulo 3 reconocen el **mismo conjunto de estados**. Módulo 2 maneja 8 estados principales más 5 sub-estados de cancelación (definidos por CU-08 FR-002/FR-003); Módulo 3 distingue las compensaciones por el sub-estado recibido. `Disponible`/`En Mantenimiento` en el flujo son **estados de la embarcación (Módulo 1)**, no estados de la reserva.
 
 ---
 
@@ -107,9 +112,9 @@ Ambos documentos reconocen exactamente los mismos 9 estados (contando las 3 vari
 | Solicitar estimación para reserva | Módulo 2 | Módulo 3 | Lista de IDs de embarcación (fechas/pasajeros opcionales). |
 | Brindar información de reserva | Módulo 2 | Módulo 3 | ID reserva, ID embarcación, días, pasajeros, propietario, capacidad máxima. Unidireccional: Módulo 3 no responde. |
 | Solicitar el valor calculado de la reserva | Módulo 2 | Módulo 3 | ID reserva → desglose (alquiler, seguro, depósito, total). |
-| Procesar cobro | Módulo 2 (reserva en "Pendiente") | Módulo 3 | ID reserva, token/referencia segura de pago. |
+| Procesar cobro | Módulo 2 (reserva en `Pendiente de Pago`) | Módulo 3 | ID reserva, token/referencia segura de pago. |
 | Solicitar confirmación de pago | Módulo 2 | Módulo 3 | ID reserva → estado del cobro. |
-| Brindar el estado de la reserva | Módulo 2 | Módulo 3 | ID reserva, uno de los 9 estados. Unidireccional: Módulo 3 no responde ni notifica fallos a Módulo 2. |
+| Brindar el estado de la reserva | Módulo 2 | Módulo 3 | ID reserva, estado principal y sub-estado de cancelación si aplica. Unidireccional: Módulo 3 no responde ni notifica fallos a Módulo 2. |
 | Brindar información de disputa de garantía | Módulo 2 | Módulo 3 | ID reserva, ID disputa, estado (`PENDIENTE`/`RECHAZADO`/`COMPLETADO`), clave idempotente, motivo opcional. Unidireccional, sin montos. |
 
 ---

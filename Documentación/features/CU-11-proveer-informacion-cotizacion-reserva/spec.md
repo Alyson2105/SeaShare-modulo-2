@@ -160,7 +160,7 @@ En ningún caso Módulo 2 asume precios por defecto, ni completa valores faltant
 - **Naturaleza de solo lectura de la cotización (sin retención de fondos ni compromisos contables)**:
   - La cotización en ambos modos es una operación de consulta de solo lectura, idempotente y sin efectos secundarios contables en Módulo 3. No retiene cupos, no realiza cargos en pasarelas ni compromete fondos. Si el Arrendatario abandona el proceso o la reserva no se confirma, no existe ningún proceso de compensación ni reversión (*rollback*) en Módulo 3.
 - **Concurrencia sobre inventario**:
-  - Obtener una cotización exitosa no reserva ni garantiza la disponibilidad del activo en el calendario. La reserva del activo y la resolución de concurrencia entre usuarios que compiten por las mismas fechas se ejecutan de manera atómica al persistir la reserva en el caso de uso `Iniciar reserva`.
+  - Obtener una cotización exitosa no reserva ni garantiza la disponibilidad del activo en el calendario. La reserva del activo y la resolución de concurrencia entre usuarios que compiten por las mismas fechas se ejecutan de manera atómica al formalizar el cobro: la transición a `Pendiente de Pago` en el caso de uso `Iniciar pago`.
 
 ---
 
@@ -188,7 +188,7 @@ En ningún caso Módulo 2 asume precios por defecto, ni completa valores faltant
   - Identificador o referencia única de la cotización emitida por Módulo 3.
   - **Bandera de advertencia obligatoria**, preservando de manera literal e inalterada el texto exacto:
     `"Valor estimado. No incluye cargos adicionales ni depósito de seguridad"`.
-- **FR-013**: En **Modo Individual**, el sistema DEBE obligar a que `Iniciar reserva` presente la advertencia obligatoria al Arrendatario antes de formalizar el pago, y DEBE registrar los montos monetarios recibidos de Módulo 3 en la reserva creada en estado "Pendiente de Pago".
+- **FR-013**: En **Modo Individual**, el sistema DEBE obligar a que `Iniciar reserva` presente la advertencia obligatoria al Arrendatario antes de formalizar el pago, y DEBE registrar los montos monetarios recibidos de Módulo 3 en la reserva recién creada en estado `Iniciada`.
 - **FR-014**: En **Modo Individual**, si el Arrendatario modifica las fechas, horarios, la embarcación o la cantidad de pasajeros antes de que la reserva se persista formalmente, el sistema DEBE descartar la cotización previa y solicitar una nueva cotización individual a Módulo 3 con los datos actualizados.
 - **FR-015**: En **Modo Individual**, si la embarcación no posee tarifas activas en Módulo 3, o si el monto total devuelto es menor o igual a cero sin autorización expresa, el sistema DEBE abortar la creación de la reserva y notificar la inconsistencia tarifaria.
 - **FR-016**: En **Modo Individual**, si Módulo 3 no responde dentro del tiempo de espera fijado o se produce un fallo de red, el sistema DEBE aplicar un bloqueo de seguridad (*fail-safe*), cancelando el proceso en `Iniciar reserva` e impidiendo que se generen reservas sin precio oficial asociado.
@@ -202,7 +202,7 @@ En ningún caso Módulo 2 asume precios por defecto, ni completa valores faltant
 - **Respuesta de Cotización en Lote (`BatchQuoteResponse`)**: Conjunto consolidado de tarifas base estimadas por embarcación devueltas por Módulo 3. Contiene pares de `boat_id` y monto de tarifa base, código de moneda y lista de identificadores no cotizables.
 - **Solicitud de Cotización Individual (`SingleQuoteRequest`)**: Conjunto de parámetros requeridos para la cotización de un viaje específico. Atributos: identificador de la embarcación (`boat_id`), fecha y hora de inicio (`start_time`), fecha y hora de fin (`end_time`), cantidad de pasajeros (`passenger_count`) e identificador del arrendatario (`renter_id`).
 - **Respuesta de Cotización Individual (`SingleQuoteResponse`)**: Resultado financiero emitido por Módulo 3 para un viaje. Atributos: identificador de cotización (`quote_id`), monto total (`total_amount`), desglose de conceptos (`base_rental_amount`, `insurance_amount`), moneda (`currency`), bandera de advertencia obligatoria (`warning_banner`: `"Valor estimado. No incluye cargos adicionales ni depósito de seguridad"`) y marca temporal de cálculo.
-- **Reserva (`Reservation`)**: Entidad de Módulo 2 creada en estado "Pendiente de Pago" por el caso de uso `Iniciar reserva`, la cual adopta los valores monetarios exactos de la cotización individual sin alteraciones.
+- **Reserva (`Reservation`)**: Entidad de Módulo 2 creada en estado `Iniciada` por el caso de uso `Iniciar reserva` y transicionada a `Pendiente de Pago` por `Iniciar pago`, la cual adopta los valores monetarios exactos de la cotización individual sin alteraciones.
 
 ---
 
@@ -215,6 +215,6 @@ En ningún caso Módulo 2 asume precios por defecto, ni completa valores faltant
 - **SC-003**: En modo lote, el 100% de las listas de embarcaciones que superen el límite máximo de Módulo 3 (50 embarcaciones [NEEDS CLARIFICATION: confirmar si el umbral máximo de lote de Módulo 3 es de 50 o 100 embarcaciones]) son fragmentadas y consolidadas sin pérdida de datos ni fallos en la consulta.
 - **SC-004**: En modo lote, la existencia de embarcaciones sin tarifas configuradas en Módulo 3 genera un cero por ciento (0%) de interrupciones o caídas en la visualización de las embarcaciones válidas del catálogo.
 - **SC-005**: El 100% de los rechazos de Módulo 3 por fechas inválidas (pasadas, fin menor a inicio, duración 0) impiden de forma controlada la creación de la reserva en Módulo 2, informando el motivo exacto al Arrendatario.
-- **SC-006**: Cero por ciento (0%) de reservas creadas en estado "Pendiente de Pago" con montos nulos, negativos o sin cotización válida confirmada previamente por Módulo 3.
+- **SC-006**: Cero por ciento (0%) de reservas que alcanzan el estado `Pendiente de Pago` con montos nulos, negativos o sin cotización válida confirmada previamente por Módulo 3.
 - **SC-007**: El 100% de las modificaciones de parámetros del viaje (fechas o cantidad de pasajeros) previas a la confirmación de la reserva invalidan la cotización previa y generan una nueva solicitud a Módulo 3.
 - **SC-008**: El tiempo de entrega de la cotización individual desde la selección de datos hasta su presentación en `Iniciar reserva` no excede [NEEDS CLARIFICATION: definir SLA objetivo de latencia de Módulo 3, p. ej. 800 ms], y para la previsualización en lote no excede [NEEDS CLARIFICATION: definir SLA objetivo de latencia de Módulo 3, p. ej. 1500 ms].

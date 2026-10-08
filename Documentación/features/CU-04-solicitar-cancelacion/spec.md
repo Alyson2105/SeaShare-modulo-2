@@ -103,7 +103,7 @@ Como Propietario de la embarcación, quiero cancelar una reserva en estado Reser
 - **FR-001**: El sistema DEBE activarse como una extensión (`<<extend>>`) desde el caso base `Ver detalle de reserva` cuando el usuario desea ejercer una cancelación.
 - **FR-002**: El sistema DEBE permitir solicitar la cancelación de una reserva si y solo si la reserva existe y se encuentra en estado principal `Reservada` (previo al check-in o inicio formal de la navegación).
 - **FR-003**: El sistema DEBE verificar y validar que el usuario solicitante sea unívocamente el Arrendatario titular o el Propietario registrado de la embarcación asociada a la reserva. Si el usuario no está legitimado o es un tercero no autorizado, el sistema DEBE rechazar la operación de manera estricta.
-- **FR-004**: El sistema DEBE excluir explícitamente y denegar por completo las solicitudes de cancelación activa sobre reservas que se encuentren en estado `Pendiente de Pago`, `En Navegación`, `Completada`, `Expirada` o previamente `Cancelada`. En el caso particular de `Pendiente de Pago`, el sistema debe rechazar la cancelación indicando que no admite cancelación activa y debe esperarse la expiración natural del TTL.
+- **FR-004**: El sistema DEBE excluir explícitamente y denegar por completo las solicitudes de cancelación activa sobre reservas que se encuentren en estado `Iniciada`, `Pendiente de Pago`, `Pago Fallido`, `En Navegación`, `Completada`, `Expirada` o previamente `Cancelada`. En los casos de `Iniciada` y `Pendiente de Pago`, el sistema debe rechazar la cancelación indicando que no admite cancelación activa y debe esperarse la expiración natural del TTL.
 - **FR-005**: El sistema DEBE consultar a la API externa `Consultar información embarcación` de Módulo 1 para obtener el puerto de atraque de la embarcación y determinar la zona horaria oficial del activo. Si la API de Módulo 1 no responde o falla, el sistema NO DEBE asumir una zona horaria por defecto y DEBE detener el flujo con error descriptivo.
 - **FR-006**: Si el solicitante es el Arrendatario, el sistema DEBE calcular el tiempo de anticipación exacto (en horas y minutos) como la diferencia entre la fecha/hora de la solicitud de cancelación y la fecha/hora pactada de inicio de la reserva, bajo la zona horaria oficial del puerto de atraque.
 - **FR-007**: Si el solicitante es el Arrendatario, el sistema DEBE clasificar automáticamente la cancelación aplicando las siguientes reglas de negocio temporales:
@@ -146,7 +146,7 @@ Como Propietario de la embarcación, quiero cancelar una reserva en estado Reser
 
 ### Measurable Outcomes
 
-- **SC-001**: Cero (0%) cancelaciones permitidas sobre reservas en estado no cancelable (`Pendiente de Pago`, `En Navegación`, `Completada`, `Expirada` o `Cancelada`).
+- **SC-001**: Cero (0%) cancelaciones permitidas sobre reservas en estado no cancelable (`Iniciada`, `Pendiente de Pago`, `Pago Fallido`, `En Navegación`, `Completada`, `Expirada` o `Cancelada`).
 - **SC-002**: El 100% de las solicitudes válidas de cancelación del Arrendatario reciben la clasificación correcta según la franja horaria correspondiente (`Flexible` ≥ 72h, `Moderado` 24h a 72h, `Tardío` < 24h).
 - **SC-003**: El 100% de las solicitudes de cancelación del Propietario reciben la clasificación `Por Propietario`, independientemente del tiempo restante para el zarpe.
 - **SC-004**: Cero (0%) clasificaciones emitidas cuando alguna entrada obligatoria (hora pactada de zarpe, zona horaria o identidad del solicitante) esté ausente o sea inválida.

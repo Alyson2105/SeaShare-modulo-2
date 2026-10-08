@@ -7,6 +7,7 @@
 - **Casos de uso internos de Módulo 2**:
     - `Ver mis reservas` (`<<extend>>`): Este caso de uso extiende a la lista general, activándose cuando el usuario elige ver la información a fondo.
     - `Solicitar cancelación` (`<<extend>>`): El detalle de la reserva es extendido por la cancelación. Si el usuario está viendo los detalles y decide cancelar, se activa ese flujo.
+    - `Iniciar pago` (`<<extend>>`): El detalle de la reserva es extendido por el pago. Si el usuario está viendo el resumen de una reserva en estado `Iniciada` y decide proceder al pago, se activa ese flujo.
 
 ---
 
@@ -86,6 +87,7 @@ Como Arrendatario o Propietario revisando los detalles de una reserva en estado 
 - **FR-018**: Al agotarse los 30 minutos de tolerancia, el sistema DEBE cambiar el banner a una alerta roja ("Tiempo de cortesía cumplido") indicando que han pasado los 30 minutos y el cliente no se ha presentado. En el panel lateral, el sistema DEBE habilitar el botón "Marcar inasistencia" con fondo rojo y mantener habilitado el botón de inicio de navegación por si el cliente llega tarde.
 - **FR-019**: Al registrar la salida y transicionar a `En Navegación`, el sistema DEBE remover por completo el panel lateral de "Acciones de embarque" y reemplazar los banners de espera por un banner ancho de color verde ("El viaje está en curso") que muestre la hora real de salida y contenga en su interior el botón de acción "Marcar fin de la navegación".
 - **FR-020**: Si el Propietario marca el No-Show (estado `Cancelada por inasistencia`), el sistema DEBE remover el panel de acciones de embarque y mostrar un banner superior de estado terminal (fondo rojo tenue con icono de verificación) indicando "Reserva cancelada por inasistencia" junto con los minutos de espera registrados y el nombre del actor que reportó la acción.
+- **FR-021**: Si la reserva se encuentra en estado `Iniciada`, el sistema DEBE proveer un punto de acceso en la interfaz para detonar el flujo `Iniciar pago` (`<<extend>>`).
 ### Key Entities
 
 - **Detalle de Reserva (`ReservationDetail`)**: La entidad `Reservation` completa recuperada de la base de datos de Módulo 2, conteniendo el estado consolidado de la transacción y sus tiempos.

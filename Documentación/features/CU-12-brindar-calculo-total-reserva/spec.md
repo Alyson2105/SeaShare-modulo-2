@@ -134,6 +134,6 @@ Todos los conceptos entregados por Módulo 3 (tarifa base, seguro de accidentes,
 
 - **SC-001**: El 100% de los importes finales totales, seguros y depósitos de garantía asociados a las reservas para cobro provienen directamente de Módulo 3, con un cero por ciento (0%) de cálculos o redondeos aritméticos ejecutados en Módulo 2.
 - **SC-002**: El 100% de los cálculos finales entregados por este caso de uso incluyen de forma desglosada la tarifa base, el seguro de pasajeros y el depósito de garantía.
-- **SC-003**: Cero por ciento (0%) de reservas creadas en "Pendiente de Pago" o enviadas a cobro sin haber obtenido exitosamente el cálculo total definitivo de Módulo 3.
+- **SC-003**: Cero por ciento (0%) de reservas que alcanzan `Pendiente de Pago` o se envían a cobro sin haber obtenido exitosamente el cálculo total definitivo de Módulo 3.
 - **SC-004**: En el 100% de los casos de falla de red o rechazo de Módulo 3, la reserva permanece en estado `Iniciada` (sin transicionar a `Pendiente de Pago`) y no se producen bloqueos de inventario en Módulo 1.
 - **SC-005**: El tiempo de respuesta de obtención del cálculo total desde la invocación interna hasta la entrega a `Iniciar pago` es menor a [NEEDS CLARIFICATION: definir SLA objetivo de latencia de Módulo 3 para cálculo final, ej. 800 ms].

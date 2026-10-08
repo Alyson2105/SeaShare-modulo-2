@@ -30,10 +30,10 @@ Como Arrendatario, una vez validados los detalles de mi viaje, quiero **llenar m
     - **When** acciona la intención de reservar (confirma el checkout)
     - **Then** el sistema persiste la reserva en base de datos asociándola a ese nombre y contacto, invoca a `Actualizar estado reserva` (`<<include>>`) fijando el estado en `Iniciada`, enciende el TTL de 15 minutos y deja los datos listos para el pago. En este estado **NO se bloquea el inventario en Módulo 1**.
 
-2. **Scenario**: Colisión por concurrencia al intentar apartar el barco (First-Come First-Served → HTTP 409)
-    - **Given** dos Arrendatarios intentando crear una reserva para el mismo barco y las mismas fechas al mismo tiempo
-    - **When** ambos envían sus datos simultáneamente
-    - **Then** el sistema aplica control de concurrencia atómico bajo criterio First-Come First-Served (FCFS), permite que solo la primera transacción entre a `Iniciada` (ganando el TTL de 15 minutos) y retorna **HTTP 409 Conflict** al segundo usuario indicando que las fechas ya no están disponibles.
+2. **Scenario**: Dos reservas en `Iniciada` compiten por las mismas fechas y la carrera se resuelve al pagar (First-Come First-Served → HTTP 409)
+    - **Given** dos Arrendatarios con reservas en estado `Iniciada` para el mismo barco y las mismas fechas (ambas coexisten; en `Iniciada` no hay retención de inventario en Módulo 1)
+    - **When** ambos ejecutan `Iniciar pago` para la misma embarcación y fechas
+    - **Then** el sistema aplica control de concurrencia atómico bajo criterio First-Come First-Served (FCFS) al transicionar a `Pendiente de Pago`: solo la primera transacción confirmada gana el bloqueo en Módulo 1 y retorna **HTTP 409 Conflict** al segundo usuario indicando que las fechas acaban de ser reservadas.
 
 3. **Scenario**: Abandono de la intención de reserva por falta de datos
     - **Given** un Arrendatario configurando su reserva
@@ -63,11 +63,11 @@ Como Arrendatario, una vez validados los detalles de mi viaje, quiero **llenar m
 - **FR-007**: El sistema DEBE proveer en el mismo formulario un campo de texto opcional para capturar el "Correo electrónico" del titular.
 - **FR-008**: El sistema DEBE validar visualmente el formulario en caso de datos faltantes o incorrectos, mostrando un banner de error general (ej. "Completa el nombre del titular y el celular de contacto para continuar."), marcando los bordes de los campos afectados en rojo y desplegando mensajes de ayuda específicos debajo de cada input (ej. "Ingresa el nombre del titular de la reserva.").
 - **FR-009**: El sistema DEBE incluir un botón de acción principal en la parte inferior del modal con el texto "Continuar a pagar", el cual debe estar deshabilitado visualmente si existen errores de validación en el formulario.
-- **FR-010**: El sistema DEBE validar de forma atómica que las fechas sigan disponibles en Módulo 1 antes de proceder con la creación al presionar el botón de continuar, mediante la invocación `(<<include>>)` a `Brindar información de estado operativo`.
+- **FR-010**: El sistema DEBE validar que las fechas sigan disponibles en Módulo 1 antes de proceder con la creación al presionar el botón de continuar, mediante la invocación `(<<include>>)` a `Brindar información de estado operativo`. Este chequeo es previo y no bloquea inventario: la garantía de exclusividad (FCFS) se resuelve de forma atómica en `Iniciar pago` al transicionar a `Pendiente de Pago`.
 - **FR-011**: Si los datos son válidos y hay disponibilidad, el sistema DEBE invocar a `Actualizar estado reserva` (`<<include>>`) para persistir la reserva en base de datos en estado `Iniciada`.
 - **FR-012**: Al asentar la reserva en `Iniciada`, el sistema DEBE iniciar el temporizador TTL de 15 minutos asociado a esa transacción.
 - **FR-013**: En estado `Iniciada`, el sistema NO DEBE notificar bloqueo de inventario a Módulo 1. El aviso a Módulo 1 (`Asignar estado operativo` → `Reservado`) ocurre exclusivamente al transicionar la reserva a `Pendiente de Pago` mediante `Iniciar pago`.
-- **FR-014**: Ante colisión concurrente de solicitudes de reserva para la misma embarcación y fechas, el sistema DEBE resolver por First-Come First-Served (FCFS): la primera transacción confirmada persiste la reserva en `Iniciada`; al segundo usuario se le retorna **HTTP 409 Conflict** indicando que las fechas ya no están disponibles.
+- **FR-014**: Varias reservas en `Iniciada` pueden coexistir para la misma embarcación y fechas (sin retención en Módulo 1 durante `Iniciada`). Ante colisión concurrente de `Iniciar pago`, el sistema DEBE resolver por First-Come First-Served (FCFS) al transicionar a `Pendiente de Pago`, validando de forma atómica la disponibilidad en Módulo 1 y con bloqueo pesimista de fila: solo la primera transacción confirmada gana el bloqueo (`Reservado` en Módulo 1); al competidor perdedor se le retorna **HTTP 409 Conflict** indicando que las fechas acaban de ser tomadas por otro usuario.
 ---
 
 ### Key Entities
@@ -81,5 +81,5 @@ Como Arrendatario, una vez validados los detalles de mi viaje, quiero **llenar m
 ### Measurable Outcomes
 
 - **SC-001**: El 100% de las acciones de registro válidas persisten la reserva en estado `Iniciada` y arrancan el TTL de 15 minutos, sin bloquear el inventario en Módulo 1 en este estado.
-- **SC-002**: Cero (0%) sobreventas cuando dos usuarios intentan iniciar una reserva sobre el mismo inventario en el mismo instante; el segundo recibe HTTP 409 Conflict.
+- **SC-002**: Cero (0%) sobreventas cuando dos usuarios compiten por la misma embarcación y fechas: a lo sumo una sola reserva alcanza `Pendiente de Pago`/`Reservada`; el competidor perdedor recibe HTTP 409 Conflict en `Iniciar pago`.
 - **SC-003**: Cero (0) operaciones aritméticas o cálculos de tarifas ejecutados internamente por este caso de uso.

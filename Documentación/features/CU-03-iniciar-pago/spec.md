@@ -7,12 +7,12 @@
 - **Módulo 3 – Liquidación, Seguros y Dispersión de Fondos**: Interfaz de la pasarela o motor de pagos donde se enviará al usuario con el monto exacto a cobrar.
 
 - **Casos de uso internos de Módulo 2**:
-    - `Ver mis reservas` (`<<extend>>`): Este caso de uso (`Iniciar pago`) **es la extensión** que se ancla a `Ver mis reservas` (la flecha del diagrama apunta al caso base). Se activa cuando el Arrendatario decide proceder al pago de una reserva existente que se encuentra preliminar.
+    - `Ver detalle de reserva` (`<<extend>>`): Este caso de uso (`Iniciar pago`) **es la extensión** que se ancla a `Ver detalle de reserva` (la flecha del diagrama apunta al caso base). Se activa cuando el Arrendatario decide proceder al pago de una reserva en estado `Iniciada`.
     - `Brindar cálculo total de la reserva` `(<<include>>)`: Para obtener el monto final, exacto y desglosado (con seguro y garantía) antes de cobrar.
     - `Actualizar estado reserva` `(<<include>>)`: Para transicionar la reserva de `Iniciada` a `Pendiente de Pago` y activar el bloqueo de la embarcación (el TTL ya viene corriendo desde `Iniciada`).
     - `Brindar información de estado operativo` `(<<include>>)`: Para verificar, vía la API de Módulo 1, que la embarcación figura como `Disponible` en la validación atómica previa al bloqueo.
 
-> [!NOTE] Sugerencia de diseño: A nivel de flujo de plataforma se sugiere que este caso de uso extienda de CU-21, pendiente de revisión formal con el equipo.
+> [!NOTE] Resolución (2026-10-07): el caso base de `Iniciar pago` es `Ver detalle de reserva` (CU-21), donde se muestra el resumen de pago. `Ver mis reservas` (CU-20) solo habilita la navegación hacia el detalle.
 
 ---
 
@@ -24,13 +24,13 @@ Como Arrendatario con una reserva en estado `Iniciada` (con su TTL ya en curso d
 
 ***Why this priority***: Es el embudo transaccional crítico. Garantiza que el usuario pague exactamente lo que dictamina Finanzas y que la plataforma proteja la disponibilidad del barco exclusivamente para él mientras introduce su método de pago.
 
-***Independent Test***: Se prueba con una reserva en estado `Iniciada` con su TTL en curso (accesible desde `Ver mis reservas`). Se ejecuta la acción de pagar y se verifica que el sistema llame a `Brindar cálculo total de la reserva`, transicione la reserva a estado `Pendiente de Pago` (llamando a `Actualizar estado reserva`, sin reiniciar el TTL que sigue corriendo desde `Iniciada`) y entregue los datos correctos para redirigir a la pasarela de Módulo 3.
+***Independent Test***: Se prueba con una reserva en estado `Iniciada` con su TTL en curso (accesible desde `Ver detalle de reserva`). Se ejecuta la acción de pagar y se verifica que el sistema llame a `Brindar cálculo total de la reserva`, transicione la reserva a estado `Pendiente de Pago` (llamando a `Actualizar estado reserva`, sin reiniciar el TTL que sigue corriendo desde `Iniciada`) y entregue los datos correctos para redirigir a la pasarela de Módulo 3.
 
 ***Acceptance Scenarios***:
 
 1. **Scenario**: Transición exitosa a Pendiente de Pago e inicio de pasarela
     - **Given** un Arrendatario con una reserva en estado `Iniciada` con su TTL en curso, para fechas disponibles
-    - **When** el usuario decide proceder con el pago (extendiendo desde `Ver mis reservas`)
+    - **When** el usuario decide proceder con el pago (extendiendo desde `Ver detalle de reserva`)
     - **Then** el sistema invoca `(<<include>>)` a "Brindar cálculo total de la reserva" para obtener el valor final, luego invoca `(<<include>>)` a "Actualizar estado reserva" transicionando la reserva de `Iniciada` a `Pendiente de Pago` (el TTL sigue corriendo desde `Iniciada`, no se reinicia) y redirige al motor de Módulo 3.
 
 2. **Scenario**: Falla al obtener el cálculo total desde Módulo 3
@@ -74,7 +74,7 @@ Como sistema, quiero evitar que dos usuarios bloqueen la misma embarcación para
 
 ### Functional Requirements
 
-- **FR-001**: El sistema DEBE activarse como una extensión (`<<extend>>`) desde el caso base `Ver mis reservas` cuando el Arrendatario decide efectuar el pago de una reserva preliminar.
+- **FR-001**: El sistema DEBE activarse como una extensión (`<<extend>>`) desde el caso base `Ver detalle de reserva` cuando el Arrendatario decide efectuar el pago de una reserva en estado `Iniciada`.
 - **FR-002**: El sistema DEBE permitir iniciar el proceso de pago única y exclusivamente si la reserva se encuentra en estado `Iniciada`.
 - **FR-003**: El sistema DEBE invocar obligatoriamente al caso de uso subordinado `Brindar cálculo total de la reserva` (`<<include>>`) para solicitar a Módulo 3 el monto final vinculante, incluyendo el desglose de tarifa base, seguro náutico y depósito de garantía.
 - **FR-004**: **REGLA DE NEGOCIO ESTRICTA**: El sistema **NO DEBE** manipular, sumar ni recalcular el valor devuelto por el cálculo total. Debe utilizar la estructura financiera entregada por Módulo 3 de manera intacta.
