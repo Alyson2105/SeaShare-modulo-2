@@ -335,8 +335,9 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?q=IslaFicticiaInexist
 ### Notas Transversales
 
 - **Disponibilidad por rango de fechas fuera de alcance**: según la decisión arquitectónica H1 y el Edge Case de CU-01, este endpoint de catálogo **no** evalúa conflictos de disponibilidad por calendario de fechas ni bloquea activos. La verificación de estado operativo instantáneo y la exclusividad transaccional se resuelven en `Iniciar reserva` (CU-02) e `Iniciar pago` (CU-03) bajo política First-Come First-Served (FCFS).
-- **Degradación funcional ante falla de Módulo 3**: si el adaptador hacia Módulo 3 experimenta timeout o indisponibilidad (Edge Case "Ausencia de Cotización Temporal"), el catálogo **no** retorna 503; entrega la lista de embarcaciones con `quotation_available: false` y `estimated_fare: null`. En cambio, si falla Módulo 1 (fuente de verdad física), se aplica el *fail-safe* obligatorio retornando `503 Service Unavailable`.
-- **Navegación e interacción UI**: las entidades retornadas incluyen los metadatos visuales requeridos (`photo_url`, `type`, `captain_included`, `context_label`) para renderizar directamente las tarjetas del catálogo y permitir la selección que extiende hacia [`CU-19-ver-detalle-embarcacion.md`](CU-19-ver-detalle-embarcacion.md) (FR-004, FR-005, FR-007).
+- **Degradación funcional ante falla de Módulo 3**: si el adaptador hacia Módulo 3 experimenta timeout o indisponibilidad (Edge Case "Ausencia de Cotización Temporal"), el catálogo **no** retorna 503; entrega la lista de embarcaciones con `cotizacion_disponible: false` y `tarifa_estimada: null`. En cambio, si falla Módulo 1 (fuente de verdad física), se aplica el *fail-safe* obligatorio retornando `503 Service Unavailable`.
+- **Navegación e interacción UI**: las entidades retornadas incluyen los metadatos visuales requeridos (`foto_url`, `tipo`, `capitan_incluido`, `etiqueta_contexto`) para renderizar directamente las tarjetas del catálogo y permitir la selección que extiende hacia [`CU-19-ver-detalle-embarcacion.md`](CU-19-ver-detalle-embarcacion.md) (FR-004, FR-005, FR-007).
+- **Filtro por tipo**: El filtro por `tipo` lo aplica Módulo 2 sobre la lista recibida de Módulo 1; M1 no recibe ese parámetro.
 
 ---
 

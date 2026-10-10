@@ -159,8 +159,9 @@ GET /api/v1/embarcaciones
 |---|---|---|---|
 | `page` | number (entero $\ge 1$) | No | Página solicitada (default: 1) |
 | `size` | number (entero) | No | Tamaño de página solicitado por M2 (fijo en 20 para el catálogo, FR-008) |
-| `type` | string | No | Filtro de categoría opcional (`Lancha`, `Velero`, `Yate`, `Catamaran`) |
 | `q` | string | No | Filtro textual opcional por nombre o ubicación |
+
+*(Nota: Módulo 1 no filtra por tipo de embarcación. Módulo 2 aplica el filtro por `tipo` sobre la respuesta, usando el campo `tipo` de cada elemento).*
 
 ---
 
@@ -204,7 +205,7 @@ GET /api/v1/embarcaciones
 **Petición `curl`**:
 
 ```bash
-curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones?page=1&size=20&type=Yate" \
+curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones?page=1&size=20" \
   -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.serviceIdentityM2Token" \
   -H "Accept: application/json"
 ```
