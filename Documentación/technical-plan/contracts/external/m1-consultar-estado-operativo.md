@@ -28,7 +28,7 @@ Módulo 1 es el **administrador del inventario físico** en la plataforma SEA-SH
 ### Método HTTP y URL
 
 ```http
-GET /api/v1/embarcaciones/{embarcacionId}/estado-operativo
+GET /api/v1/embarcaciones/{vessel_id}/estado-operativo
 ```
 
 ### Elementos de la Petición (Request)
@@ -44,7 +44,7 @@ GET /api/v1/embarcaciones/{embarcacionId}/estado-operativo
 
 | Nombre | Tipo | Obligatorio | Descripción |
 |---|---|---|---|
-| `embarcacionId` | string (UUID) | Sí | Identificador único de la embarcación en Módulo 1 (FR-001) |
+| `vessel_id` | string (UUID) | Sí | Identificador único de la embarcación en Módulo 1 (FR-001) |
 
 **Query Parameters**: No tiene.
 
@@ -60,15 +60,15 @@ GET /api/v1/embarcaciones/{embarcacionId}/estado-operativo
 
 ```json
 {
-  "embarcacion_id": "string (UUID)",
-  "estado_operativo": "string (enum oficial de Módulo 1)",
-  "fecha_consulta": "string (ISO 8601 timestamp con zona horaria)"
+  "vessel_id": "string (UUID)",
+  "operational_status": "string (enum oficial de Módulo 1)",
+  "queried_at": "string (ISO 8601 timestamp con zona horaria)"
 }
 ```
 
 #### Matriz de Estados Operativos Oficiales (FR-003, FR-004, FR-005):
 
-| Valor de `estado_operativo` | Significado en Módulo 1 | Dictamen en Módulo 2 | Efecto en CU-02 / CU-03 |
+| Valor de `operational_status` | Significado en Módulo 1 | Dictamen en Módulo 2 | Efecto en CU-02 / CU-03 |
 |---|---|---|---|
 | `Disponible` | Activo náutico libre para alquiler comercial | **Apto para Reserva** | Permite continuar con la creación de reserva o inicio de pago |
 | `Reservado` | Activo bloqueado temporalmente por pago en curso o reserva confirmada | **No Apto para Reserva** | Rechaza con `409 Conflict` (motivo: bloqueado por otro proceso) |
@@ -93,9 +93,9 @@ curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones/d3b07384-d113-
 
 ```json
 {
-  "embarcacion_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-  "estado_operativo": "Disponible",
-  "fecha_consulta": "2026-10-09T12:05:00-05:00"
+  "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
+  "operational_status": "Disponible",
+  "queried_at": "2026-10-09T12:05:00-05:00"
 }
 ```
 
@@ -115,9 +115,9 @@ curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones/8f4b2319-58b9-
 
 ```json
 {
-  "embarcacion_id": "8f4b2319-58b9-4c8d-b0a3-9e41f7d12a99",
-  "estado_operativo": "Reservado",
-  "fecha_consulta": "2026-10-09T12:05:02-05:00"
+  "vessel_id": "8f4b2319-58b9-4c8d-b0a3-9e41f7d12a99",
+  "operational_status": "Reservado",
+  "queried_at": "2026-10-09T12:05:02-05:00"
 }
 ```
 
@@ -127,7 +127,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones/8f4b2319-58b9-
 
 | Código HTTP M1 | Causa en Módulo 1 | Reacción Arquitectónica de Módulo 2 | Mapeo al Endpoint de M2 |
 |---|---|---|---|
-| `400 Bad Request` | `embarcacionId` con formato UUID corrupto | Módulo 2 aborta sin reintento | `400 Bad Request` (`ID_INVALIDO`) |
+| `400 Bad Request` | `vessel_id` con formato UUID corrupto | Módulo 2 aborta sin reintento | `400 Bad Request` (`ID_INVALIDO`) |
 | `401 Unauthorized` / `403 Forbidden` | Credencial de servicio de M2 rechazada | Alerta crítica de seguridad en observabilidad | `500 Internal Server Error` (`ERROR_INTERNO`) |
 | `404 Not Found` | Embarcación no existe en los registros de flota | Declara activo inexistente sin reintento (SC-005) | `404 Not Found` (`EMBARCACION_NO_DISPONIBLE`) |
 | `500 Internal Server Error` / `502 Bad Gateway` | Falla interna en los servidores de Módulo 1 | Aplica máximo 1 reintento rápido; si persiste, activa *fail-safe* preventivo | `503 Service Unavailable` (`SERVICIO_FLOTA_NO_DISPONIBLE`) |
@@ -150,7 +150,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones/8f4b2319-58b9-
 ## 5. Puntos Abiertos y Aclaraciones Necesarias
 
 - `[NEEDS CLARIFICATION: mecanismo de autenticación servicio-a-servicio]`: acordar con el equipo de Módulo 1 la validación de identidad mediante JWT de servicio en cabecera `Authorization: Bearer <token>`.
-- `[NEEDS CLARIFICATION: endpoint formal en Módulo 1]`: ratificar la ruta `GET /api/v1/embarcaciones/{embarcacionId}/estado-operativo` en la especificación OpenAPI de Módulo 1.
+- `[NEEDS CLARIFICATION: endpoint formal en Módulo 1]`: ratificar la ruta `GET /api/v1/embarcaciones/{vessel_id}/estado-operativo` en la especificación OpenAPI de Módulo 1.
 
 ---
 
@@ -158,15 +158,15 @@ curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones/8f4b2319-58b9-
 
 | Requisito / Criterio | Descripción en Spec CU-10 | Elemento de este Contrato |
 |---|---|---|
-| **FR-001** | Interfaz interna receptora de identificador de barco | Path parameter `embarcacionId` |
-| **FR-002** | Consulta directa a API externa de Módulo 1 | Endpoint `GET /api/v1/embarcaciones/{id}/estado-operativo` |
+| **FR-001** | Interfaz interna receptora de identificador de barco | Path parameter `vessel_id` |
+| **FR-002** | Consulta directa a API externa de Módulo 1 | Endpoint `GET /api/v1/embarcaciones/{vessel_id}/estado-operativo` |
 | **FR-003** | Reconocimiento de los cuatro estados oficiales | Matriz de estados operativos en la Sección 2 |
 | **FR-004** | Dictamen de Apto para Reserva solo ante `Disponible` | Regla operativa vinculada a `200 OK` en CU-02 y CU-03 |
 | **FR-005** | Dictamen de No Apto ante los otros 3 estados | Mapeo de rechazo hacia error `409 Conflict` |
 | **FR-006** | Fail-safe preventivo y reintentos (máx 1 rápido) | Sección 4: Timeout 300 ms, 1 reintento, corte seguro |
 | **FR-007** | Prohibición absoluta de acceso a base de datos de M1 | Integración exclusivamente vía HTTP REST |
 | **FR-008** | Regla "Sin dinero" (cero precios o cobros) | Payload estricto sin campos financieros |
-| **FR-009** | Registro auditable de cada consulta realizada | Trazabilidad con `fecha_consulta` y correlation id |
+| **FR-009** | Registro auditable de cada consulta realizada | Trazabilidad con `queried_at` y correlation id |
 | **SC-001** | 100% de consultas resueltas en < 300 ms | Read Timeout configurado en 300 ms |
 | **SC-002** | 0% reservas en barcos no disponibles | Verificado por la matriz de estados en backend |
 | **SC-003** | 100% de errores de conexión bloquean preventivamente | Comportamiento fail-safe documentado en la Sección 4 |

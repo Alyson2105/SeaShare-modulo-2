@@ -37,7 +37,7 @@ Módulo 1 es el **administrador del inventario físico y del estado de amarre** 
 ### Método HTTP y URL
 
 ```http
-PUT /api/v1/embarcaciones/{embarcacionId}/estado-operativo
+PUT /api/v1/embarcaciones/{vessel_id}/estado-operativo
 ```
 
 *(Ruta y verbo sujetos a ratificación con M1: `PUT` o `PATCH` [NEEDS CLARIFICATION]).*
@@ -56,7 +56,7 @@ PUT /api/v1/embarcaciones/{embarcacionId}/estado-operativo
 
 | Nombre | Tipo | Obligatorio | Descripción |
 |---|---|---|---|
-| `embarcacionId` | string (UUID) | Sí | Identificador único del activo naval en Módulo 1 |
+| `vessel_id` | string (UUID) | Sí | Identificador único del activo naval en Módulo 1 |
 
 **Query Parameters**: No tiene.
 
@@ -64,15 +64,15 @@ PUT /api/v1/embarcaciones/{embarcacionId}/estado-operativo
 
 ```json
 {
-  "estado_operativo": "string (Disponible | Reservado | En Navegación | En Mantenimiento/Limpieza)",
-  "motivo": "string (descripción operativa opcional)",
-  "reserva_id": "string (UUID, identificador de la reserva para auditoría cruzada)"
+  "operational_status": "string (Disponible | Reservado | En Navegación | En Mantenimiento/Limpieza)",
+  "reason": "string (descripción operativa opcional)",
+  "reservation_id": "string (UUID, identificador de la reserva para auditoría cruzada)"
 }
 ```
 
 *Validaciones de entrada*:
-- `estado_operativo`: debe ser estrictamente uno de los cuatro estados oficiales de flota.
-- `reserva_id`: UUID válido de la reserva que origina la mutación de estado.
+- `operational_status`: debe ser estrictamente uno de los cuatro estados oficiales de flota.
+- `reservation_id`: UUID válido de la reserva que origina la mutación de estado.
 
 ---
 
@@ -84,9 +84,9 @@ PUT /api/v1/embarcaciones/{embarcacionId}/estado-operativo
 
 ```json
 {
-  "embarcacion_id": "string (UUID)",
-  "estado_operativo": "string (enum actualizado)",
-  "actualizado_en": "string (ISO 8601 timestamp con zona horaria)"
+  "vessel_id": "string (UUID)",
+  "operational_status": "string (enum actualizado)",
+  "updated_at": "string (ISO 8601 timestamp con zona horaria)"
 }
 ```
 
@@ -104,9 +104,9 @@ curl -X PUT "https://flota.seashare.internal/api/v1/embarcaciones/d3b07384-d113-
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{
-    "estado_operativo": "Reservado",
-    "motivo": "Bloqueo temporal por proceso de pago iniciado",
-    "reserva_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001"
+    "operational_status": "Reservado",
+    "reason": "Bloqueo temporal por proceso de pago iniciado",
+    "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001"
   }'
 ```
 
@@ -114,9 +114,9 @@ curl -X PUT "https://flota.seashare.internal/api/v1/embarcaciones/d3b07384-d113-
 
 ```json
 {
-  "embarcacion_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-  "estado_operativo": "Reservado",
-  "actualizado_en": "2026-10-09T12:05:00-05:00"
+  "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
+  "operational_status": "Reservado",
+  "updated_at": "2026-10-09T12:05:00-05:00"
 }
 ```
 
@@ -132,9 +132,9 @@ curl -X PUT "https://flota.seashare.internal/api/v1/embarcaciones/d3b07384-d113-
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{
-    "estado_operativo": "En Mantenimiento/Limpieza",
-    "motivo": "Cancelación por avería en motor reportada por propietario",
-    "reserva_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001"
+    "operational_status": "En Mantenimiento/Limpieza",
+    "reason": "Cancelación por avería en motor reportada por propietario",
+    "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001"
   }'
 ```
 
@@ -142,9 +142,9 @@ curl -X PUT "https://flota.seashare.internal/api/v1/embarcaciones/d3b07384-d113-
 
 ```json
 {
-  "embarcacion_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-  "estado_operativo": "En Mantenimiento/Limpieza",
-  "actualizado_en": "2026-10-09T12:30:15-05:00"
+  "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
+  "operational_status": "En Mantenimiento/Limpieza",
+  "updated_at": "2026-10-09T12:30:15-05:00"
 }
 ```
 
@@ -185,11 +185,11 @@ curl -X PUT "https://flota.seashare.internal/api/v1/embarcaciones/d3b07384-d113-
 | Requisito / Criterio | Descripción en Spec CU-08 | Elemento de este Contrato |
 |---|---|---|
 | **FR-007 (Regla 1)** | `Iniciada`: cero aviso de bloqueo a M1 | Exclusión explícita documentada en la Sección 1 |
-| **FR-007 (Regla 2)** | `Pendiente de Pago`: actualizar a `Reservado` | Request body con `estado_operativo: "Reservado"` (Ejemplo 1) |
-| **FR-007 (Regla 3)** | `En Navegación`: actualizar a `En Navegación` | Request body con `estado_operativo: "En Navegación"` |
-| **FR-007 (Regla 4)** | Cierre normal, cancelación ordinaria o expiración liberan | Request body con `estado_operativo: "Disponible"` |
+| **FR-007 (Regla 2)** | `Pendiente de Pago`: actualizar a `Reservado` | Request body con `operational_status: "Reservado"` (Ejemplo 1) |
+| **FR-007 (Regla 3)** | `En Navegación`: actualizar a `En Navegación` | Request body con `operational_status: "En Navegación"` |
+| **FR-007 (Regla 4)** | Cierre normal, cancelación ordinaria o expiración liberan | Request body con `operational_status: "Disponible"` |
 | **FR-007 (Regla 5)** | Expiración desde `Iniciada`: NO notificar a M1 | Invariante técnica garantizada en la Sección 1 |
-| **FR-007 (Regla 6)** | Cancelación por avería del propietario: `En Mantenimiento` | Request body con `estado_operativo: "En Mantenimiento/Limpieza"` (Ejemplo 2) |
+| **FR-007 (Regla 6)** | Cancelación por avería del propietario: `En Mantenimiento` | Request body con `operational_status: "En Mantenimiento/Limpieza"` (Ejemplo 2) |
 | **FR-010** | Regla "Sin cálculo financiero" | Payload sin referencias económicas |
 | **SC-002** | Emisión del primer aviso en < 500 ms | Read Timeout de 300 ms y outbox relay optimizado |
 | **SC-003** | 0% embarcaciones bloqueadas sin reserva de respaldo | Reglas de correspondencia exacta de estados en Sección 1 |

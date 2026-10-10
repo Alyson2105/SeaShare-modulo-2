@@ -40,17 +40,17 @@ Payload:
 | Campo | Tipo | Obligatorio | De dónde sale en M2 |
 |---|---|---|---|
 | `reservation_id` | UUID | Sí | La reserva recién creada |
-| `boat_id` | UUID | Sí | `embarcacion_id` de la reserva |
-| `start_date` | date (YYYY-MM-DD) | Sí | `fecha_inicio` |
-| `end_date` | date (YYYY-MM-DD) | Sí | `fecha_fin` |
-| `passengers` | integer | Sí | `pasajeros` |
-| `owner_id` | UUID | Sí | `propietario.propietario_id` de M1 (CU-09) |
-| `max_capacity` | integer | Sí | `capacidad_maxima` de M1 (CU-09) |
+| `vessel_id` | UUID | Sí | `vessel_id` de la reserva |
+| `start_date` | date (YYYY-MM-DD) | Sí | `start_at` |
+| `end_date` | date (YYYY-MM-DD) | Sí | `end_at` |
+| `passengers` | integer | Sí | `passengers` |
+| `owner_id` | UUID | Sí | `owner.owner_id` de M1 (CU-09) |
+| `max_capacity` | integer | Sí | `max_capacity` de M1 (CU-09) |
 
 ```json
 {
   "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
-  "boat_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
+  "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
   "start_date": "2026-11-15",
   "end_date": "2026-11-17",
   "passengers": 8,

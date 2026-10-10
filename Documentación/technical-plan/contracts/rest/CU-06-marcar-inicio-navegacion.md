@@ -25,7 +25,7 @@ Al ejecutarse exitosamente:
 ### Método HTTP y URL
 
 ```http
-POST /api/v1/reservas/{reservaId}/inicio-navegacion
+POST /api/v1/reservas/{reservation_id}/inicio-navegacion
 ```
 
 ### Elementos de la Petición (Request)
@@ -42,7 +42,7 @@ POST /api/v1/reservas/{reservaId}/inicio-navegacion
 
 | Nombre | Tipo | Obligatorio | Descripción |
 |---|---|---|---|
-| `reservaId` | string (UUID) | Sí | Identificador de la reserva en estado `Reservada` |
+| `reservation_id` | string (UUID) | Sí | Identificador de la reserva en estado `Reservada` |
 
 **Query Parameters**: No tiene.
 
@@ -50,14 +50,14 @@ POST /api/v1/reservas/{reservaId}/inicio-navegacion
 
 ```json
 {
-  "hora_real_salida": "string (ISO 8601 timestamp opcional; si se omite, se asigna el instante actual del servidor)",
-  "notas_entrega": "string (texto libre opcional con observaciones de la entrega en muelle)"
+  "actual_departure_at": "string (ISO 8601 timestamp opcional; si se omite, se asigna el instante actual del servidor)",
+  "delivery_notes": "string (texto libre opcional con observaciones de la entrega en muelle)"
 }
 ```
 
 *Validaciones de entrada (FR-006, FR-013)*:
-- `notas_entrega`: texto opcional (máx. 1000 caracteres).
-- `hora_real_salida`: si se suministra, debe ser una marca temporal válida posterior o igual a la hora pactada de inicio.
+- `delivery_notes`: texto opcional (máx. 1000 caracteres).
+- `actual_departure_at`: si se suministra, debe ser una marca temporal válida posterior o igual a la hora pactada de inicio.
 
 ---
 
@@ -69,13 +69,13 @@ POST /api/v1/reservas/{reservaId}/inicio-navegacion
 
 ```json
 {
-  "reserva_id": "string (UUID)",
-  "estado": "string (valor literal: 'En Navegación')",
-  "fecha_inicio_real": "string (ISO 8601 timestamp con zona horaria del puerto)",
-  "embarcacion_id": "string (UUID)",
-  "embarcacion_estado_operativo": "string (valor literal: 'En Navegación')",
-  "seguro_activado": "boolean (true)",
-  "mensaje": "string (confirmación operativa del zarpe)"
+  "reservation_id": "string (UUID)",
+  "status": "string (valor literal: 'En Navegación')",
+  "actual_departure_at": "string (ISO 8601 timestamp con zona horaria del puerto)",
+  "vessel_id": "string (UUID)",
+  "vessel_operational_status": "string (valor literal: 'En Navegación')",
+  "insurance_activated": "boolean (true)",
+  "message": "string (confirmación operativa del zarpe)"
 }
 ```
 
@@ -99,8 +99,8 @@ curl -X POST "https://api.seashare.com/api/v1/reservas/e4f81c92-7a20-4215-9c5e-8
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{
-    "hora_real_salida": "2026-11-15T09:05:00-05:00",
-    "notas_entrega": "Inspección de chalecos completada. Pasajeros informados sobre rutas de seguridad. Embarcación zarpa de Marina Santa Marta en condiciones óptimas."
+    "actual_departure_at": "2026-11-15T09:05:00-05:00",
+    "delivery_notes": "Inspección de chalecos completada. Pasajeros informados sobre rutas de seguridad. Embarcación zarpa de Marina Santa Marta en condiciones óptimas."
   }'
 ```
 
@@ -108,13 +108,13 @@ curl -X POST "https://api.seashare.com/api/v1/reservas/e4f81c92-7a20-4215-9c5e-8
 
 ```json
 {
-  "reserva_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
-  "estado": "En Navegación",
-  "fecha_inicio_real": "2026-11-15T09:05:00-05:00",
-  "embarcacion_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-  "embarcacion_estado_operativo": "En Navegación",
-  "seguro_activado": true,
-  "mensaje": "Inicio de navegación registrado exitosamente. La reserva ha pasado a En Navegación y la póliza de seguro náutico ha sido activada en Finanzas."
+  "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
+  "status": "En Navegación",
+  "actual_departure_at": "2026-11-15T09:05:00-05:00",
+  "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
+  "vessel_operational_status": "En Navegación",
+  "insurance_activated": true,
+  "message": "Inicio de navegación registrado exitosamente. La reserva ha pasado a En Navegación y la póliza de seguro náutico ha sido activada en Finanzas."
 }
 ```
 
@@ -129,7 +129,7 @@ curl -X POST "https://api.seashare.com/api/v1/reservas/e4f81c92-7a20-4215-9c5e-8
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.propietarioToken" \
   -H "Content-Type: application/json" \
   -d '{
-    "notas_entrega": "El cliente arribó con 40 minutos de demora; se acordó salida efectiva manteniendo la hora de regreso estipulada."
+    "delivery_notes": "El cliente arribó con 40 minutos de demora; se acordó salida efectiva manteniendo la hora de regreso estipulada."
   }'
 ```
 
@@ -137,13 +137,13 @@ curl -X POST "https://api.seashare.com/api/v1/reservas/e4f81c92-7a20-4215-9c5e-8
 
 ```json
 {
-  "reserva_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
-  "estado": "En Navegación",
-  "fecha_inicio_real": "2026-11-15T09:40:00-05:00",
-  "embarcacion_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-  "embarcacion_estado_operativo": "En Navegación",
-  "seguro_activado": true,
-  "mensaje": "Inicio de navegación registrado exitosamente tras llegada tardía. La opción de inasistencia ha quedado inhabilitada de forma permanente."
+  "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
+  "status": "En Navegación",
+  "actual_departure_at": "2026-11-15T09:40:00-05:00",
+  "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
+  "vessel_operational_status": "En Navegación",
+  "insurance_activated": true,
+  "message": "Inicio de navegación registrado exitosamente tras llegada tardía. La opción de inasistencia ha quedado inhabilitada de forma permanente."
 }
 ```
 
@@ -153,14 +153,14 @@ curl -X POST "https://api.seashare.com/api/v1/reservas/e4f81c92-7a20-4215-9c5e-8
 
 | Código | Caso | Cuerpo de respuesta (ejemplo) |
 |---|---|---|
-| `400 Bad Request` | `reservaId` no es un UUID válido | `{ "codigo": "ID_INVALIDO", "mensaje": "El identificador de reserva no es válido" }` |
-| `401 Unauthorized` | Token ausente, inválido o expirado | `{ "codigo": "NO_AUTENTICADO", "mensaje": "Token de autenticación ausente o inválido" }` |
-| `403 Forbidden` | El usuario autenticado no es el Propietario registrado de la embarcación (FR-002, SC-006) | `{ "codigo": "PERFIL_NO_AUTORIZADO", "mensaje": "Solo el propietario registrado de la embarcación puede marcar el inicio de la navegación" }` |
-| `404 Not Found` | La reserva no existe en Módulo 2 | `{ "codigo": "RESERVA_NO_ENCONTRADA", "mensaje": "La reserva especificada no existe" }` |
-| `409 Conflict` (Salida Anticipada) | Intento de registrar el zarpe antes de la fecha y hora pactada (FR-003, FR-011) | `{ "codigo": "SALIDA_ANTICIPADA", "mensaje": "El registro de salida solo se habilita a partir de la fecha y hora exacta programada para el zarpe (2026-11-15T09:00:00-05:00)" }` |
-| `409 Conflict` (Estado Incompatible) | La reserva no está en estado `Reservada` (ej. está `Iniciada`, `Pendiente de Pago`, `Cancelada`, `Expirada`) (FR-004, SC-001) | `{ "codigo": "ESTADO_INCOMPATIBLE", "mensaje": "No se puede iniciar navegación en una reserva con estado actual: Pendiente de Pago" }` |
-| `409 Conflict` (Viaje Ya Iniciado) | La reserva ya se encuentra en `En Navegación` (reintento duplicado) | `{ "codigo": "VIAJE_YA_INICIADO", "mensaje": "La navegación ya ha sido registrada previamente para esta reserva" }` |
-| `500 Internal Server Error` | Excepción interna no controlada durante la actualización | `{ "codigo": "ERROR_INTERNO", "mensaje": "Ocurrió un error inesperado al registrar el inicio de navegación" }` |
+| `400 Bad Request` | `reservation_id` no es un UUID válido | `{ "code": "ID_INVALIDO", "message": "El identificador de reserva no es válido" }` |
+| `401 Unauthorized` | Token ausente, inválido o expirado | `{ "code": "NO_AUTENTICADO", "message": "Token de autenticación ausente o inválido" }` |
+| `403 Forbidden` | El usuario autenticado no es el Propietario registrado de la embarcación (FR-002, SC-006) | `{ "code": "PERFIL_NO_AUTORIZADO", "message": "Solo el propietario registrado de la embarcación puede marcar el inicio de la navegación" }` |
+| `404 Not Found` | La reserva no existe en Módulo 2 | `{ "code": "RESERVA_NO_ENCONTRADA", "message": "La reserva especificada no existe" }` |
+| `409 Conflict` (Salida Anticipada) | Intento de registrar el zarpe antes de la fecha y hora pactada (FR-003, FR-011) | `{ "code": "SALIDA_ANTICIPADA", "message": "El registro de salida solo se habilita a partir de la fecha y hora exacta programada para el zarpe (2026-11-15T09:00:00-05:00)" }` |
+| `409 Conflict` (Estado Incompatible) | La reserva no está en estado `Reservada` (ej. está `Iniciada`, `Pendiente de Pago`, `Cancelada`, `Expirada`) (FR-004, SC-001) | `{ "code": "ESTADO_INCOMPATIBLE", "message": "No se puede iniciar navegación en una reserva con estado actual: Pendiente de Pago" }` |
+| `409 Conflict` (Viaje Ya Iniciado) | La reserva ya se encuentra en `En Navegación` (reintento duplicado) | `{ "code": "VIAJE_YA_INICIADO", "message": "La navegación ya ha sido registrada previamente para esta reserva" }` |
+| `500 Internal Server Error` | Excepción interna no controlada durante la actualización | `{ "code": "ERROR_INTERNO", "message": "Ocurrió un error inesperado al registrar el inicio de navegación" }` |
 
 ---
 
@@ -193,8 +193,8 @@ No aplica. Operación puntual sobre una reserva individual.
 | **FR-002** | Validación estricta de identidad del Propietario | Chequeo de pertenencia reflejado en `403 PERFIL_NO_AUTORIZADO` |
 | **FR-003** | Habilitación estricta a partir de la hora pactada (sin antelación) | Error `409 SALIDA_ANTICIPADA` |
 | **FR-004** | Incompatibilidad con estados no permitidos | Matriz de errores tipados en la Sección 3 |
-| **FR-005** | Transición a `En Navegación` mediante CU-08 | Respuesta `200 OK` con `estado: "En Navegación"` |
-| **FR-006** | Registro de auditoría (hora real y notas de salida) | Campos `hora_real_salida` y `notas_entrega` del request |
+| **FR-005** | Transición a `En Navegación` mediante CU-08 | Respuesta `200 OK` con `status: "En Navegación"` |
+| **FR-006** | Registro de auditoría (hora real y notas de salida) | Campos `actual_departure_at` y `delivery_notes` del request |
 | **FR-007** | Notificación de `En Navegación` a Módulo 1 | Integración respaldada por [`m1-asignar-estado-operativo.md`](../external/m1-asignar-estado-operativo.md) |
 | **FR-008** | Notificación a Módulo 3 para activación de seguro | Evento AMQP respaldado por [`CU-14-estado-reserva.md`](../event/CU-14-estado-reserva.md) |
 | **FR-009** | Desactivación permanente de No-Show y cancelación | Invariante técnica garantizada en Notas Transversales |
