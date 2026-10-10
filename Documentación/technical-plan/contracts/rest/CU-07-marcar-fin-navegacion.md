@@ -24,7 +24,7 @@ Al ejecutarse exitosamente:
 ### Método HTTP y URL
 
 ```http
-POST /api/v1/reservas/{reservaId}/fin-navegacion
+POST /api/v1/reservas/{reservation_id}/fin-navegacion
 ```
 
 ### Elementos de la Petición (Request)
@@ -41,7 +41,7 @@ POST /api/v1/reservas/{reservaId}/fin-navegacion
 
 | Nombre | Tipo | Obligatorio | Descripción |
 |---|---|---|---|
-| `reservaId` | string (UUID) | Sí | Identificador de la reserva en estado `En Navegación` |
+| `reservation_id` | string (UUID) | Sí | Identificador de la reserva en estado `En Navegación` |
 
 **Query Parameters**: No tiene.
 
@@ -49,14 +49,14 @@ POST /api/v1/reservas/{reservaId}/fin-navegacion
 
 ```json
 {
-  "hora_real_desembarque": "string (ISO 8601 timestamp opcional; si se omite, se asigna el instante actual)",
-  "novedades": "string (texto libre opcional con descripción de daños, fallas o faltantes detectados en muelle)"
+  "actual_arrival_at": "string (ISO 8601 timestamp opcional; si se omite, se asigna el instante actual)",
+  "remarks": "string (texto libre opcional con descripción de daños, fallas o faltantes detectados en muelle)"
 }
 ```
 
 *Validaciones de entrada (FR-003, FR-012)*:
-- `novedades`: texto libre opcional (máx. 2000 caracteres).
-- `hora_real_desembarque`: si se envía, debe ser un timestamp válido con zona horaria.
+- `remarks`: texto libre opcional (máx. 2000 caracteres).
+- `actual_arrival_at`: si se envía, debe ser un timestamp válido con zona horaria.
 
 ---
 
@@ -68,14 +68,14 @@ POST /api/v1/reservas/{reservaId}/fin-navegacion
 
 ```json
 {
-  "reserva_id": "string (UUID)",
-  "estado": "string (valor literal: 'Completada')",
-  "fecha_fin_real": "string (ISO 8601 timestamp con zona horaria del puerto)",
-  "embarcacion_id": "string (UUID)",
-  "embarcacion_estado_operativo": "string (valor literal: 'Disponible')",
-  "disputa_garantia_id": "string (UUID generado por CU-16)",
-  "ventana_disputa_expira_en": "string (ISO 8601 timestamp exactamente a las 24 horas del cierre)",
-  "mensaje": "string (confirmación operativa del cierre y apertura de la ventana de disputa)"
+  "reservation_id": "string (UUID)",
+  "status": "string (valor literal: 'Completada')",
+  "actual_arrival_at": "string (ISO 8601 timestamp con zona horaria del puerto)",
+  "vessel_id": "string (UUID)",
+  "vessel_operational_status": "string (valor literal: 'Disponible')",
+  "dispute_id": "string (UUID generado por CU-16)",
+  "dispute_window_expires_at": "string (ISO 8601 timestamp exactamente a las 24 horas del cierre)",
+  "message": "string (confirmación operativa del cierre y apertura de la ventana de disputa)"
 }
 ```
 
@@ -99,7 +99,7 @@ curl -X POST "https://api.seashare.com/api/v1/reservas/e4f81c92-7a20-4215-9c5e-8
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{
-    "hora_real_desembarque": "2026-11-18T18:00:00-05:00"
+    "actual_arrival_at": "2026-11-18T18:00:00-05:00"
   }'
 ```
 
@@ -107,14 +107,14 @@ curl -X POST "https://api.seashare.com/api/v1/reservas/e4f81c92-7a20-4215-9c5e-8
 
 ```json
 {
-  "reserva_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
-  "estado": "Completada",
-  "fecha_fin_real": "2026-11-18T18:00:00-05:00",
-  "embarcacion_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-  "embarcacion_estado_operativo": "Disponible",
-  "disputa_garantia_id": "c1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
-  "ventana_disputa_expira_en": "2026-11-19T18:00:00-05:00",
-  "mensaje": "Fin de navegación registrado exitosamente. La reserva ha pasado a Completada, la embarcación quedó Disponible y se abrió la ventana de 24 horas para revisión de garantía."
+  "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
+  "status": "Completada",
+  "actual_arrival_at": "2026-11-18T18:00:00-05:00",
+  "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
+  "vessel_operational_status": "Disponible",
+  "dispute_id": "c1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
+  "dispute_window_expires_at": "2026-11-19T18:00:00-05:00",
+  "message": "Fin de navegación registrado exitosamente. La reserva ha pasado a Completada, la embarcación quedó Disponible y se abrió la ventana de 24 horas para revisión de garantía."
 }
 ```
 
@@ -130,8 +130,8 @@ curl -X POST "https://api.seashare.com/api/v1/reservas/e4f81c92-7a20-4215-9c5e-8
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{
-    "hora_real_desembarque": "2026-11-18T18:35:00-05:00",
-    "novedades": "Desembarque con 35 minutos de retraso sobre la hora pactada. Se constató rotura menor en la escalerilla de baño de popa."
+    "actual_arrival_at": "2026-11-18T18:35:00-05:00",
+    "remarks": "Desembarque con 35 minutos de retraso sobre la hora pactada. Se constató rotura menor en la escalerilla de baño de popa."
   }'
 ```
 
@@ -139,14 +139,14 @@ curl -X POST "https://api.seashare.com/api/v1/reservas/e4f81c92-7a20-4215-9c5e-8
 
 ```json
 {
-  "reserva_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
-  "estado": "Completada",
-  "fecha_fin_real": "2026-11-18T18:35:00-05:00",
-  "embarcacion_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-  "embarcacion_estado_operativo": "Disponible",
-  "disputa_garantia_id": "c1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
-  "ventana_disputa_expira_en": "2026-11-19T18:35:00-05:00",
-  "mensaje": "Fin de navegación registrado con novedades. Las incidencias han sido notificadas a Finanzas y se habilitó la ventana de 24 horas para formalizar el reclamo de depósito de garantía."
+  "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
+  "status": "Completada",
+  "actual_arrival_at": "2026-11-18T18:35:00-05:00",
+  "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
+  "vessel_operational_status": "Disponible",
+  "dispute_id": "c1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
+  "dispute_window_expires_at": "2026-11-19T18:35:00-05:00",
+  "message": "Fin de navegación registrado con novedades. Las incidencias han sido notificadas a Finanzas y se habilitó la ventana de 24 horas para formalizar el reclamo de depósito de garantía."
 }
 ```
 
@@ -156,13 +156,13 @@ curl -X POST "https://api.seashare.com/api/v1/reservas/e4f81c92-7a20-4215-9c5e-8
 
 | Código | Caso | Cuerpo de respuesta (ejemplo) |
 |---|---|---|
-| `400 Bad Request` | `reservaId` no es un UUID válido | `{ "codigo": "ID_INVALIDO", "mensaje": "El identificador de reserva no es válido" }` |
-| `401 Unauthorized` | Token ausente, inválido o expirado | `{ "codigo": "NO_AUTENTICADO", "mensaje": "Token de autenticación ausente o inválido" }` |
-| `403 Forbidden` | El usuario autenticado no es el Propietario registrado de la embarcación (FR-002, SC-005) | `{ "codigo": "PERFIL_NO_AUTORIZADO", "mensaje": "Solo el propietario registrado de la embarcación puede marcar el fin de la navegación" }` |
-| `404 Not Found` | La reserva no existe en Módulo 2 | `{ "codigo": "RESERVA_NO_ENCONTRADA", "mensaje": "La reserva especificada no existe" }` |
-| `409 Conflict` (Estado Incompatible) | La reserva no se encuentra en estado `En Navegación` (ej. está `Reservada`, `Completada`, `Cancelada`) (FR-009, SC-001) | `{ "codigo": "ESTADO_INCOMPATIBLE", "mensaje": "No se puede finalizar la navegación en una reserva con estado actual: Reservada" }` |
-| `409 Conflict` (Viaje Ya Cerrado) | La reserva ya fue cerrada previamente (operación terminal inmutable) | `{ "codigo": "VIAJE_YA_COMPLETADO", "mensaje": "La reserva ya se encuentra Completada y no admite nuevas modificaciones" }` |
-| `500 Internal Server Error` | Error no controlado durante la consolidación del cierre | `{ "codigo": "ERROR_INTERNO", "mensaje": "Ocurrió un error inesperado al marcar el fin de navegación" }` |
+| `400 Bad Request` | `reservation_id` no es un UUID válido | `{ "code": "ID_INVALIDO", "message": "El identificador de reserva no es válido" }` |
+| `401 Unauthorized` | Token ausente, inválido o expirado | `{ "code": "NO_AUTENTICADO", "message": "Token de autenticación ausente o inválido" }` |
+| `403 Forbidden` | El usuario autenticado no es el Propietario registrado de la embarcación (FR-002, SC-005) | `{ "code": "PERFIL_NO_AUTORIZADO", "message": "Solo el propietario registrado de la embarcación puede marcar el fin de la navegación" }` |
+| `404 Not Found` | La reserva no existe en Módulo 2 | `{ "code": "RESERVA_NO_ENCONTRADA", "message": "La reserva especificada no existe" }` |
+| `409 Conflict` (Estado Incompatible) | La reserva no se encuentra en estado `En Navegación` (ej. está `Reservada`, `Completada`, `Cancelada`) (FR-009, SC-001) | `{ "code": "ESTADO_INCOMPATIBLE", "message": "No se puede finalizar la navegación en una reserva con estado actual: Reservada" }` |
+| `409 Conflict` (Viaje Ya Cerrado) | La reserva ya fue cerrada previamente (operación terminal inmutable) | `{ "code": "VIAJE_YA_COMPLETADO", "message": "La reserva ya se encuentra Completada y no admite nuevas modificaciones" }` |
+| `500 Internal Server Error` | Error no controlado durante la consolidación del cierre | `{ "code": "ERROR_INTERNO", "message": "Ocurrió un error inesperado al marcar el fin de navegación" }` |
 
 ---
 
@@ -193,16 +193,16 @@ No aplica. Operación puntual sobre una reserva individual.
 |---|---|---|
 | **FR-001** | Cierre exclusivo sobre reservas en estado `En Navegación` | Validación de estado previo y error `409 ESTADO_INCOMPATIBLE` |
 | **FR-002** | Validación estricta de identidad del Propietario | Chequeo de pertenencia reflejado en `403 PERFIL_NO_AUTORIZADO` |
-| **FR-003** | Campo de texto opcional para reporte de novedades | Campo `novedades` en request body |
-| **FR-004** | Transición a `Completada` mediante CU-08 | Respuesta `200 OK` con `estado: "Completada"` |
-| **FR-005** | Registro de auditoría (hora real de entrega y novedades) | Campos `fecha_fin_real` y log del evento de entrega |
+| **FR-003** | Campo de texto opcional para reporte de novedades | Campo `remarks` en request body |
+| **FR-004** | Transición a `Completada` mediante CU-08 | Respuesta `200 OK` con `status: "Completada"` |
+| **FR-005** | Registro de auditoría (hora real de entrega y novedades) | Campos `actual_arrival_at` y log del evento de entrega |
 | **FR-006** | Liberación de la embarcación a `Disponible` en M1 | Notificación respaldada por [`m1-asignar-estado-operativo.md`](../external/m1-asignar-estado-operativo.md) |
 | **FR-007** | Notificación de `Completada` a M3 (pago libre, garantía retenida) | Evento AMQP respaldado por [`CU-14-estado-reserva.md`](../event/CU-14-estado-reserva.md) |
 | **FR-008** | Regla estricta "Sin dinero" (cero cálculo de daños o demoras) | Cero campos monetarios en la interfaz |
 | **FR-009** | Rechazo sobre reservas que no estén `En Navegación` | Matriz de errores tipados de la Sección 3 |
-| **FR-010** | Apertura de ventana de disputa de 24 horas vía CU-16 | Campos devueltos `disputa_garantia_id` y `ventana_disputa_expira_en` |
+| **FR-010** | Apertura de ventana de disputa de 24 horas vía CU-16 | Campos devueltos `dispute_id` y `dispute_window_expires_at` |
 | **SC-001** | Cero cierres permitidos fuera de `En Navegación` | Validación estricta de máquina de estados |
 | **SC-002** | Notificación a M1 para liberar barco en < 1 segundo | Outbox transaccional y SLA operativo |
 | **SC-003** | Cero evaluaciones de daños o cobros ejecutados en M2 | Neutralidad financiera garantizada |
-| **SC-004** | 100% de entregas registradas con hora real | Campo `fecha_fin_real` auditado |
+| **SC-004** | 100% de entregas registradas con hora real | Campo `actual_arrival_at` auditado |
 | **SC-005** | Cero cierres autorizados a no-propietarios | Control estricto de legitimación por JWT |

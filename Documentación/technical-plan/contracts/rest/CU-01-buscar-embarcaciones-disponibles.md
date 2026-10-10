@@ -35,10 +35,10 @@ GET /api/v1/embarcaciones
 
 | Nombre | Tipo | Obligatorio | Descripción |
 |---|---|---|---|
-| `fecha_inicio` | string (ISO 8601, `YYYY-MM-DD`) | No | Fecha inicial deseada para el alquiler náutico (FR-001) |
-| `fecha_fin` | string (ISO 8601, `YYYY-MM-DD`) | No | Fecha final deseada para el alquiler náutico (FR-001) |
-| `pasajeros` | number (entero positivo) | No | Cantidad de personas requeridas para la travesía (FR-001) |
-| `tipo` | string | No | Categoría de embarcación (`Lancha`, `Velero`, `Yate`, `Catamaran`) (FR-001, FR-006) |
+| `start_at` | string (ISO 8601, `YYYY-MM-DD`) | No | Fecha inicial deseada para el alquiler náutico (FR-001) |
+| `end_at` | string (ISO 8601, `YYYY-MM-DD`) | No | Fecha final deseada para el alquiler náutico (FR-001) |
+| `passengers` | number (entero positivo) | No | Cantidad de personas requeridas para la travesía (FR-001) |
+| `type` | string | No | Categoría de embarcación (`Lancha`, `Velero`, `Yate`, `Catamaran`) (FR-001, FR-006) |
 | `q` | string | No | Búsqueda textual rápida por nombre comercial, marina o isla (FR-006) |
 | `page` | number (entero $\ge 1$) | No | Número de página solicitada. Valor por defecto: `1` (FR-008) |
 
@@ -58,38 +58,38 @@ GET /api/v1/embarcaciones
 
 ```json
 {
-  "paginacion": {
-    "pagina": "number (entero)",
-    "tamano_pagina": "number (entero, fijo 20)",
-    "total_elementos": "number (entero)",
-    "total_paginas": "number (entero)"
+  "pagination": {
+    "page": "number (entero)",
+    "page_size": "number (entero, fijo 20)",
+    "total_items": "number (entero)",
+    "total_pages": "number (entero)"
   },
-  "etiqueta_contexto": "string",
-  "embarcaciones": [
+  "context_label": "string",
+  "vessels": [
     {
-      "embarcacion_id": "string (UUID)",
-      "nombre": "string",
-      "tipo": "string",
-      "foto_url": "string (URL)",
-      "puerto": {
-        "nombre": "string",
-        "latitud": "number",
-        "longitud": "number",
-        "zona_horaria": "string"
+      "vessel_id": "string (UUID)",
+      "name": "string",
+      "type": "string",
+      "photo_url": "string (URL)",
+      "port": {
+        "name": "string",
+        "latitude": "number",
+        "longitude": "number",
+        "timezone": "string"
       },
-      "capacidad_maxima": "number (entero)",
-      "capitan_incluido": "boolean",
-      "cotizacion_disponible": "boolean",
-      "tarifa_estimada": {
-        "monto": "number (BigDecimal literal entregado por Módulo 3)",
-        "moneda": "string (ej. COP)"
+      "max_capacity": "number (entero)",
+      "captain_included": "boolean",
+      "quotation_available": "boolean",
+      "estimated_fare": {
+        "amount": "number (BigDecimal literal entregado por Módulo 3)",
+        "currency": "string (ej. COP)"
       }
     }
   ]
 ]
 ```
 
-*(Si la cotización para una embarcación no está disponible por contingencia en Módulo 3, `cotizacion_disponible` es `false` y `tarifa_estimada` es `null`, cumpliendo SC-001 y Edge Case "Ausencia de Cotización Temporal").*
+*(Si la cotización para una embarcación no está disponible por contingencia en Módulo 3, `quotation_available` es `false` y `estimated_fare` es `null`, cumpliendo SC-001 y Edge Case "Ausencia de Cotización Temporal").*
 
 **Headers de respuesta**:
 
@@ -107,7 +107,7 @@ GET /api/v1/embarcaciones
 **Petición `curl`**:
 
 ```bash
-curl -X GET "https://api.seashare.com/api/v1/embarcaciones?fecha_inicio=2026-11-15&fecha_fin=2026-11-17&pasajeros=6&tipo=Yate&page=1" \
+curl -X GET "https://api.seashare.com/api/v1/embarcaciones?start_at=2026-11-15&end_at=2026-11-17&passengers=6&type=Yate&page=1" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTIyMzMzNC00NDU1LTY2NzctODg5OS1hYWJiY2NkZGVlZmYiLCJyb2wiOiJBcnJlbmRhdGFyaW8iLCJpYXQiOjE3OTE1NDAwMDB9.sampleToken" \
   -H "Accept: application/json"
 ```
@@ -116,50 +116,50 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?fecha_inicio=2026-11-
 
 ```json
 {
-  "paginacion": {
-    "pagina": 1,
-    "tamano_pagina": 20,
-    "total_elementos": 2,
-    "total_paginas": 1
+  "pagination": {
+    "page": 1,
+    "page_size": 20,
+    "total_items": 2,
+    "total_pages": 1
   },
-  "etiqueta_contexto": "Resultados de búsqueda en el Caribe colombiano",
-  "embarcaciones": [
+  "context_label": "Resultados de búsqueda en el Caribe colombiano",
+  "vessels": [
     {
-      "embarcacion_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-      "nombre": "Yate Tayrona Sea Breeze",
-      "tipo": "Yate",
-      "foto_url": "https://cdn.seashare.com/flota/yate-tayrona-01.jpg",
-      "puerto": {
-        "nombre": "Marina Internacional de Santa Marta",
-        "latitud": 11.2443,
-        "longitud": -74.2125,
-        "zona_horaria": "America/Bogota"
+      "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
+      "name": "Yate Tayrona Sea Breeze",
+      "type": "Yate",
+      "photo_url": "https://cdn.seashare.com/flota/yate-tayrona-01.jpg",
+      "port": {
+        "name": "Marina Internacional de Santa Marta",
+        "latitude": 11.2443,
+        "longitude": -74.2125,
+        "timezone": "America/Bogota"
       },
-      "capacidad_maxima": 12,
-      "capitan_incluido": true,
-      "cotizacion_disponible": true,
-      "tarifa_estimada": {
-        "monto": 3200000.00,
-        "moneda": "COP"
+      "max_capacity": 12,
+      "captain_included": true,
+      "quotation_available": true,
+      "estimated_fare": {
+        "amount": 3200000.00,
+        "currency": "COP"
       }
     },
     {
-      "embarcacion_id": "8f4b2319-58b9-4c8d-b0a3-9e41f7d12a99",
-      "nombre": "Cartagena Grand Luxury",
-      "tipo": "Yate",
-      "foto_url": "https://cdn.seashare.com/flota/cartagena-luxury-03.jpg",
-      "puerto": {
-        "nombre": "Muelle de la Bodeguita, Cartagena",
-        "latitud": 10.4211,
-        "longitud": -75.5489,
-        "zona_horaria": "America/Bogota"
+      "vessel_id": "8f4b2319-58b9-4c8d-b0a3-9e41f7d12a99",
+      "name": "Cartagena Grand Luxury",
+      "type": "Yate",
+      "photo_url": "https://cdn.seashare.com/flota/cartagena-luxury-03.jpg",
+      "port": {
+        "name": "Muelle de la Bodeguita, Cartagena",
+        "latitude": 10.4211,
+        "longitude": -75.5489,
+        "timezone": "America/Bogota"
       },
-      "capacidad_maxima": 10,
-      "capitan_incluido": true,
-      "cotizacion_disponible": true,
-      "tarifa_estimada": {
-        "monto": 4500000.00,
-        "moneda": "COP"
+      "max_capacity": 10,
+      "captain_included": true,
+      "quotation_available": true,
+      "estimated_fare": {
+        "amount": 4500000.00,
+        "currency": "COP"
       }
     }
   ]
@@ -182,50 +182,50 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?page=1" \
 
 ```json
 {
-  "paginacion": {
-    "pagina": 1,
-    "tamano_pagina": 20,
-    "total_elementos": 25,
-    "total_paginas": 2
+  "pagination": {
+    "page": 1,
+    "page_size": 20,
+    "total_items": 25,
+    "total_pages": 2
   },
-  "etiqueta_contexto": "Populares esta semana",
-  "embarcaciones": [
+  "context_label": "Populares esta semana",
+  "vessels": [
     {
-      "embarcacion_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-      "nombre": "Yate Tayrona Sea Breeze",
-      "tipo": "Yate",
-      "foto_url": "https://cdn.seashare.com/flota/yate-tayrona-01.jpg",
-      "puerto": {
-        "nombre": "Marina Internacional de Santa Marta",
-        "latitud": 11.2443,
-        "longitud": -74.2125,
-        "zona_horaria": "America/Bogota"
+      "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
+      "name": "Yate Tayrona Sea Breeze",
+      "type": "Yate",
+      "photo_url": "https://cdn.seashare.com/flota/yate-tayrona-01.jpg",
+      "port": {
+        "name": "Marina Internacional de Santa Marta",
+        "latitude": 11.2443,
+        "longitude": -74.2125,
+        "timezone": "America/Bogota"
       },
-      "capacidad_maxima": 12,
-      "capitan_incluido": true,
-      "cotizacion_disponible": true,
-      "tarifa_estimada": {
-        "monto": 3200000.00,
-        "moneda": "COP"
+      "max_capacity": 12,
+      "captain_included": true,
+      "quotation_available": true,
+      "estimated_fare": {
+        "amount": 3200000.00,
+        "currency": "COP"
       }
     },
     {
-      "embarcacion_id": "6a9e10fa-13f5-4de9-9e87-a25e9821d303",
-      "nombre": "Catamarán Rosario Dreams",
-      "tipo": "Catamaran",
-      "foto_url": "https://cdn.seashare.com/flota/rosario-catamaran-01.jpg",
-      "puerto": {
-        "nombre": "Club Náutico de Cartagena",
-        "latitud": 10.4072,
-        "longitud": -75.5398,
-        "zona_horaria": "America/Bogota"
+      "vessel_id": "6a9e10fa-13f5-4de9-9e87-a25e9821d303",
+      "name": "Catamarán Rosario Dreams",
+      "type": "Catamaran",
+      "photo_url": "https://cdn.seashare.com/flota/rosario-catamaran-01.jpg",
+      "port": {
+        "name": "Club Náutico de Cartagena",
+        "latitude": 10.4072,
+        "longitude": -75.5398,
+        "timezone": "America/Bogota"
       },
-      "capacidad_maxima": 16,
-      "capitan_incluido": true,
-      "cotizacion_disponible": true,
-      "tarifa_estimada": {
-        "monto": 2800000.00,
-        "moneda": "COP"
+      "max_capacity": 16,
+      "captain_included": true,
+      "quotation_available": true,
+      "estimated_fare": {
+        "amount": 2800000.00,
+        "currency": "COP"
       }
     }
   ]
@@ -247,29 +247,29 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?page=1" \
 
 ```json
 {
-  "paginacion": {
-    "pagina": 1,
-    "tamano_pagina": 20,
-    "total_elementos": 1,
-    "total_paginas": 1
+  "pagination": {
+    "page": 1,
+    "page_size": 20,
+    "total_items": 1,
+    "total_pages": 1
   },
-  "etiqueta_contexto": "Catálogo general (Tarifas en actualización)",
-  "embarcaciones": [
+  "context_label": "Catálogo general (Tarifas en actualización)",
+  "vessels": [
     {
-      "embarcacion_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-      "nombre": "Yate Tayrona Sea Breeze",
-      "tipo": "Yate",
-      "foto_url": "https://cdn.seashare.com/flota/yate-tayrona-01.jpg",
-      "puerto": {
-        "nombre": "Marina Internacional de Santa Marta",
-        "latitud": 11.2443,
-        "longitud": -74.2125,
-        "zona_horaria": "America/Bogota"
+      "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
+      "name": "Yate Tayrona Sea Breeze",
+      "type": "Yate",
+      "photo_url": "https://cdn.seashare.com/flota/yate-tayrona-01.jpg",
+      "port": {
+        "name": "Marina Internacional de Santa Marta",
+        "latitude": 11.2443,
+        "longitude": -74.2125,
+        "timezone": "America/Bogota"
       },
-      "capacidad_maxima": 12,
-      "capitan_incluido": true,
-      "cotizacion_disponible": false,
-      "tarifa_estimada": null
+      "max_capacity": 12,
+      "captain_included": true,
+      "quotation_available": false,
+      "estimated_fare": null
     }
   ]
 }
@@ -290,14 +290,14 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?q=IslaFicticiaInexist
 
 ```json
 {
-  "paginacion": {
-    "pagina": 1,
-    "tamano_pagina": 20,
-    "total_elementos": 0,
-    "total_paginas": 0
+  "pagination": {
+    "page": 1,
+    "page_size": 20,
+    "total_items": 0,
+    "total_pages": 0
   },
-  "etiqueta_contexto": "Sin resultados disponibles",
-  "embarcaciones": []
+  "context_label": "Sin resultados disponibles",
+  "vessels": []
 }
 ```
 
@@ -307,11 +307,11 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?q=IslaFicticiaInexist
 
 | Código | Caso | Cuerpo de respuesta (ejemplo) |
 |---|---|---|
-| `400 Bad Request` | Parámetros de búsqueda con formato sintáctico inválido (ej. fecha no ISO 8601, número de pasajeros negativo o no numérico, tipo no admitido) (FR-010, SC-004) | `{ "codigo": "PARAMETROS_INVALIDOS", "mensaje": "Los parámetros de búsqueda proporcionados no cumplen con el formato requerido" }` |
-| `401 Unauthorized` | Token ausente, inválido o expirado | `{ "codigo": "NO_AUTENTICADO", "mensaje": "Token de autenticación ausente o inválido" }` |
-| `403 Forbidden` | El claim de rol del JWT no corresponde a Arrendatario | `{ "codigo": "PERFIL_NO_AUTORIZADO", "mensaje": "Este recurso requiere perfil Arrendatario" }` |
-| `503 Service Unavailable` | Caída o tiempo de espera agotado al consultar el catálogo de Módulo 1 (*fail-safe* preventivo) | `{ "codigo": "SERVICIO_FLOTA_NO_DISPONIBLE", "mensaje": "No se pudo consultar el catálogo de embarcaciones en este momento" }` |
-| `500 Internal Server Error` | Excepción interna no controlada en el servicio | `{ "codigo": "ERROR_INTERNO", "mensaje": "Ocurrió un error inesperado al procesar la búsqueda" }` |
+| `400 Bad Request` | Parámetros de búsqueda con formato sintáctico inválido (ej. fecha no ISO 8601, número de pasajeros negativo o no numérico, tipo no admitido) (FR-010, SC-004) | `{ "code": "PARAMETROS_INVALIDOS", "message": "Los parámetros de búsqueda proporcionados no cumplen con el formato requerido" }` |
+| `401 Unauthorized` | Token ausente, inválido o expirado | `{ "code": "NO_AUTENTICADO", "message": "Token de autenticación ausente o inválido" }` |
+| `403 Forbidden` | El claim de rol del JWT no corresponde a Arrendatario | `{ "code": "PERFIL_NO_AUTORIZADO", "message": "Este recurso requiere perfil Arrendatario" }` |
+| `503 Service Unavailable` | Caída o tiempo de espera agotado al consultar el catálogo de Módulo 1 (*fail-safe* preventivo) | `{ "code": "SERVICIO_FLOTA_NO_DISPONIBLE", "message": "No se pudo consultar el catálogo de embarcaciones en este momento" }` |
+| `500 Internal Server Error` | Excepción interna no controlada en el servicio | `{ "code": "ERROR_INTERNO", "message": "Ocurrió un error inesperado al procesar la búsqueda" }` |
 
 ---
 
@@ -319,7 +319,7 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?q=IslaFicticiaInexist
 
 - **Política de tamaño**: la paginación es fija y mandatoria en **20 embarcaciones por página** (FR-008). No se permite al cliente alterar el tamaño de la página para resguardar los umbrales máximos de cotización en lote hacia Módulo 3.
 - **Transmisión segmentada**: el backend de Módulo 2 transmite a Módulo 1 y Módulo 3 únicamente los identificadores correspondientes al lote de 20 embarcaciones de la página solicitada (FR-008).
-- **Control de límites**: si `page` excede `total_paginas`, la lista `embarcaciones` se entrega vacía con los metadatos correspondientes.
+- **Control de límites**: si `page` excede `total_pages`, la lista `vessels` se entrega vacía con los metadatos correspondientes.
 
 ---
 
@@ -328,7 +328,7 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?q=IslaFicticiaInexist
 - Requiere JWT emitido por el servicio de identidad centralizado de SEA-SHARE.
 - Perfil autorizado: **Arrendatario**.
 - El controlador REST valida estrictamente el claim de rol (`rol == "Arrendatario"`) antes de disparar las consultas subordinadas de catálogo y cotización.
-- **Regla estricta "Sin dinero"**: Módulo 2 jamás calcula subtotales, promedios ni tarifas nocturnas. El importe monetario contenido en `tarifa_estimada.monto` se transporta como `BigDecimal` literal entregado por Módulo 3 (FR-002 de CU-11, SC-001).
+- **Regla estricta "Sin dinero"**: Módulo 2 jamás calcula subtotales, promedios ni tarifas nocturnas. El importe monetario contenido en `estimated_fare.amount` se transporta como `BigDecimal` literal entregado por Módulo 3 (FR-002 de CU-11, SC-001).
 
 ---
 
@@ -345,17 +345,17 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?q=IslaFicticiaInexist
 
 | Requisito / Criterio | Descripción en Spec | Elemento de este Contrato |
 |---|---|---|
-| **FR-001** | Criterios opcionales de búsqueda (fechas, pasajeros, tipo) | Query parameters: `fecha_inicio`, `fecha_fin`, `pasajeros`, `tipo` |
+| **FR-001** | Criterios opcionales de búsqueda (fechas, pasajeros, tipo) | Query parameters: `start_at`, `end_at`, `passengers`, `type` |
 | **FR-002** | Consulta de inventario mediante `Proveer información de embarcación` | Invocación interna al adaptador de catálogo respaldado por [`m1-consultar-informacion-embarcacion.md`](../external/m1-consultar-informacion-embarcacion.md) |
 | **FR-003** | Cotización en lote mediante `CU-11` | Invocación interna al adaptador en lote respaldado por [`m3-estimacion-lote.md`](../external/m3-estimacion-lote.md) |
-| **FR-004** | Datos mínimos del activo y tarifa estimada devuelta | Propiedades del objeto `embarcaciones`: `nombre`, `tipo`, `foto_url`, `puerto`, `capacidad_maxima`, `tarifa_estimada` |
-| **FR-005** | Punto de extensión hacia `Ver detalle de embarcación` | Identificador `embarcacion_id` para invocar [`CU-19-ver-detalle-embarcacion.md`](CU-19-ver-detalle-embarcacion.md) |
-| **FR-006** | Búsqueda rápida de texto y categorías | Query parameters: `q`, `tipo` |
-| **FR-007** | Contexto dinámico y contador de resultados | Campos del envelope: `etiqueta_contexto`, `paginacion.total_elementos` |
-| **FR-008** | Paginación en lotes fijos de 20 embarcaciones | Objeto `paginacion` con `tamano_pagina: 20` y parámetro `page` |
+| **FR-004** | Datos mínimos del activo y tarifa estimada devuelta | Propiedades del objeto `vessels`: `name`, `type`, `photo_url`, `port`, `max_capacity`, `estimated_fare` |
+| **FR-005** | Punto de extensión hacia `Ver detalle de embarcación` | Identificador `vessel_id` para invocar [`CU-19-ver-detalle-embarcacion.md`](CU-19-ver-detalle-embarcacion.md) |
+| **FR-006** | Búsqueda rápida de texto y categorías | Query parameters: `q`, `type` |
+| **FR-007** | Contexto dinámico y contador de resultados | Campos del envelope: `context_label`, `pagination.total_items` |
+| **FR-008** | Paginación en lotes fijos de 20 embarcaciones | Objeto `pagination` con `page_size: 20` y parámetro `page` |
 | **FR-009** | Búsqueda sin filtros retorna catálogo completo | Manejo en query params vacíos (Ejemplo exitoso 2) |
 | **FR-010** | Rechazo preventivo ante entradas con formato inválido | Respuesta `400 Bad Request` con código `PARAMETROS_INVALIDOS` |
-| **SC-001** | 100% de resultados con tarifa de M3 (salvo caídas) | Objeto `tarifa_estimada` poblado literalmente y campo `cotizacion_disponible` |
+| **SC-001** | 100% de resultados con tarifa de M3 (salvo caídas) | Objeto `estimated_fare` poblado literalmente y campo `quotation_available` |
 | **SC-002** | Latencia < 2000 ms en condiciones normales | Documentado en objetivos técnicos de integración |
 | **SC-003** | 100% de búsquedas sin filtros devuelven catálogo completo | Validado en contrato y Ejemplo 2 |
 | **SC-004** | Rechazo previo sin consultar Módulo 1 o Módulo 3 | Validación sintáctica previa reflejada en error `400` |
