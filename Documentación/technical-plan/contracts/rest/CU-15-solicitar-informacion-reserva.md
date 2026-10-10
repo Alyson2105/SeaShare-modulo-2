@@ -23,9 +23,9 @@ Este endpoint de lectura síncrona de alto rendimiento permite a Módulo 3 obten
    - Entrega los identificadores clave de la transacción (`reservation_id`, `renter_id`, `vessel_id`, `owner_id`), fechas/horas pactadas de zarpe y desembarque, cantidad de pasajeros y estado principal actual.
    - Provee la referencia original de la cotización vinculante (`original_quotation_reference`).
 2. **Exposición de Metadatos Específicos por Estado**:
-   - **En `Pendiente de Pago` (`FR-005`)**: Entrega la marca de tiempo exacta de expiración del temporizador TTL de 15 minutos (`expires_at`) y los segundos restantes, permitiendo a Módulo 3 validar que la autorización bancaria o cobro no se ejecute fuera de la ventana hábil.
-   - **En `Completada` (`FR-003`)**: Entrega la fecha y hora real de check-out en muelle, la bandera de detección de daños (`damage_detected: boolean`) y el texto literal de observaciones o novedades reportadas por el Propietario (`reported_remarks`), insumo fundamental para que Módulo 3 determine la custodia o liberación del depósito de garantía.
-   - **En `Cancelada` (`FR-004`)**: Entrega el sub-estado clasificado (`Flexible`, `Moderado`, `Tardío`, `Por Propietario`, `Por Inasistencia`), el actor que detonó la cancelación (`cancellation_actor`) y las horas exactas de anticipación calculadas (`cancellation_anticipation_hours`), delegando en Módulo 3 el cálculo aritmético del reembolso.
+   - **En `PENDING_PAYMENT` (`FR-005`)**: Entrega la marca de tiempo exacta de expiración del temporizador TTL de 15 minutos (`expires_at`) y los segundos restantes, permitiendo a Módulo 3 validar que la autorización bancaria o cobro no se ejecute fuera de la ventana hábil.
+   - **En `COMPLETED` (`FR-003`)**: Entrega la fecha y hora real de check-out en muelle, la bandera de detección de daños (`damage_detected: boolean`) y el texto literal de observaciones o novedades reportadas por el Propietario (`reported_remarks`), insumo fundamental para que Módulo 3 determine la custodia o liberación del depósito de garantía.
+   - **En `CANCELLED` (`FR-004`)**: Entrega el sub-estado clasificado (`FLEXIBLE`, `MODERATE`, `LATE`, `BY_OWNER`, `NO_SHOW`), el actor que detonó la cancelación (`cancellation_actor`) y las horas exactas de anticipación calculadas (`cancellation_anticipation_hours`), delegando en Módulo 3 el cálculo aritmético del reembolso.
 3. **Regla Estricta "Sin Dinero" (Zero Financial Calculations, `FR-006`, `SC-003`)**:
    - Módulo 2 **no calcula penalidades monetarias, no tasa económicamente los daños, no liquida porcentajes de comisión ni deduce reembolsos**.
    - Módulo 2 expone exclusivamente magnitudes físicas y temporales (horas, fechas, estados, textos descriptivos). Toda la valoración económica y dispersión bancaria pertenece en forma exclusiva a Módulo 3.
@@ -39,7 +39,7 @@ Este endpoint de lectura síncrona de alto rendimiento permite a Módulo 3 obten
 ## 3. Definición del Endpoint
 
 - **Método HTTP**: `GET`
-- **Ruta Oficial**: `/api/v1/internal/reservas/{reservation_id}`
+- **Ruta Oficial**: `/api/v1/internal/reservations/{reservation_id}`
 - **Formato de Petición / Respuesta**: `application/json`
 - **Codificación**: `UTF-8`
 
@@ -47,7 +47,7 @@ Este endpoint de lectura síncrona de alto rendimiento permite a Módulo 3 obten
 
 | Header | Tipo | Obligatorio | Descripción |
 | :--- | :--- | :--- | :--- |
-| `Authorization` | String | Sí | Token Bearer JWT firmado con identidad de servicio de Módulo 3 (`service: modulo-3`). |
+| `Authorization` | String | Sí | Token Bearer JWT firmado con identidad de servicio de Módulo 3 (`service: module-3`). |
 | `Accept` | String | Sí | Debe ser `application/json`. |
 | `X-Correlation-Id` | String (UUID) | Opcional | Identificador de correlación para observabilidad distribuida entre M3 y M2. |
 
@@ -78,7 +78,7 @@ Este endpoint de lectura síncrona de alto rendimiento permite a Módulo 3 obten
     "duration_nights": 2
   },
   "passengers": 4,
-  "primary_status": "Reservada",
+  "primary_status": "RESERVED",
   "cancellation_sub_status": null,
   "cancellation_actor": null,
   "cancellation_anticipation_hours": null,
@@ -115,9 +115,9 @@ Este endpoint de lectura síncrona de alto rendimiento permite a Módulo 3 obten
 | `dates.duration_days` | Entero | No nulo | Cantidad total de días del alquiler. |
 | `dates.duration_nights`| Entero | No nulo | Cantidad de noches contempladas en la reserva. |
 | `passengers` | Entero | No nulo | Ocupantes autorizados para el viaje náutico. |
-| `primary_status` | String (Enum) | No nulo | Estado vigente en Módulo 2 (`Iniciada`, `Pendiente de Pago`, `Reservada`, `En Navegación`, `Completada`, `Cancelada`, `Expirada`, `Pago Fallido`). |
-| `cancellation_sub_status`| String (Enum) | Nulo condicional | Sub-estado si `primary_status == Cancelada`: `"Flexible"`, `"Moderado"`, `"Tardío"`, `"Por Propietario"`, `"Por Inasistencia"`. |
-| `cancellation_actor` | String (Enum) | Nulo condicional | Actor que originó la cancelación: `"Arrendatario"`, `"Propietario"`, `"Sistema_TTL"`, `"Sistema_NoShow"`. |
+| `primary_status` | String (Enum) | No nulo | Estado vigente en Módulo 2 (`INITIATED`, `PENDING_PAYMENT`, `RESERVED`, `IN_NAVIGATION`, `COMPLETED`, `CANCELLED`, `EXPIRED`, `PAYMENT_FAILED`). |
+| `cancellation_sub_status`| String (Enum) | Nulo condicional | Sub-estado si `primary_status == CANCELLED`: `"FLEXIBLE"`, `"MODERATE"`, `"LATE"`, `"BY_OWNER"`, `"NO_SHOW"`. |
+| `cancellation_actor` | String (Enum) | Nulo condicional | Actor que originó la cancelación: `"RENTER"`, `"OWNER"`, `"SYSTEM_TTL"`, `"SYSTEM_NO_SHOW"`. |
 | `cancellation_anticipation_hours` | Number (Float) | Nulo condicional | Horas exactas con decimales de anticipación evaluadas al momento de cancelar. |
 | `checkin_checkout` | Objeto | No nulo | Datos de operación física en muelle. |
 | `checkin_checkout.checkin_at` | String (ISO 8601) | Nulo condicional | Timestamp del zarpe real confirmado por el Propietario. |
@@ -125,7 +125,7 @@ Este endpoint de lectura síncrona de alto rendimiento permite a Módulo 3 obten
 | `checkin_checkout.reported_remarks` | String | Nulo condicional | Texto literal de observaciones o daños ingresado por el Propietario al finalizar. |
 | `checkin_checkout.damage_detected` | Boolean | No nulo | Indicador booleano reportado en el checkout sobre novedades de averías. |
 | `ttl_timer` | Objeto | No nulo | Estado del temporizador de 15 minutos de reserva. |
-| `ttl_timer.applies` | Boolean | No nulo | Verdadero si la reserva está sujeta a ventana TTL (`Iniciada` o `Pendiente de Pago`). |
+| `ttl_timer.applies` | Boolean | No nulo | Verdadero si la reserva está sujeta a ventana TTL (`INITIATED` o `PENDING_PAYMENT`). |
 | `ttl_timer.expires_at` | String (ISO 8601) | Nulo condicional | Marca de tiempo exacta en que expira la reserva si no se confirma el pago. |
 | `ttl_timer.remaining_seconds` | Entero | No nulo | Segundos restantes de la ventana de pago al momento de procesar este GET. |
 | `original_quotation_reference` | String (UUID) | No nulo | Identificador de cotización preliminar emitido previamente por Módulo 3. |
@@ -136,11 +136,11 @@ Este endpoint de lectura síncrona de alto rendimiento permite a Módulo 3 obten
 
 ## 5. Ejemplos de Petición y Respuesta
 
-### Ejemplo 1: Consulta de reserva en estado `Pendiente de Pago` (Validación de ventana TTL para cobro)
+### Ejemplo 1: Consulta de reserva en estado `PENDING_PAYMENT` (Validación de ventana TTL para cobro)
 
 #### Petición HTTP (`curl`)
 ```bash
-curl -X GET "https://api.seashare.com/api/v1/internal/reservas/c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e" \
+curl -X GET "https://api.seashare.com/api/v1/internal/reservations/c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -H "Accept: application/json" \
   -H "X-Correlation-Id: e1111111-2222-3333-4444-555555555555"
@@ -162,7 +162,7 @@ curl -X GET "https://api.seashare.com/api/v1/internal/reservas/c1f7a8b2-5e4d-4c3
     "duration_nights": 2
   },
   "passengers": 4,
-  "primary_status": "Pendiente de Pago",
+  "primary_status": "PENDING_PAYMENT",
   "cancellation_sub_status": null,
   "cancellation_actor": null,
   "cancellation_anticipation_hours": null,
@@ -185,11 +185,11 @@ curl -X GET "https://api.seashare.com/api/v1/internal/reservas/c1f7a8b2-5e4d-4c3
 
 ---
 
-### Ejemplo 2: Consulta de reserva en estado `Completada` con novedades (Liquidación de garantía)
+### Ejemplo 2: Consulta de reserva en estado `COMPLETED` con novedades (Liquidación de garantía)
 
 #### Petición HTTP (`curl`)
 ```bash
-curl -X GET "https://api.seashare.com/api/v1/internal/reservas/f5a6b7c8-9d0e-1f2a-3b4c-5d6e7f8a9b0c" \
+curl -X GET "https://api.seashare.com/api/v1/internal/reservations/f5a6b7c8-9d0e-1f2a-3b4c-5d6e7f8a9b0c" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -H "Accept: application/json"
 ```
@@ -210,7 +210,7 @@ curl -X GET "https://api.seashare.com/api/v1/internal/reservas/f5a6b7c8-9d0e-1f2
     "duration_nights": 1
   },
   "passengers": 4,
-  "primary_status": "Completada",
+  "primary_status": "COMPLETED",
   "cancellation_sub_status": null,
   "cancellation_actor": null,
   "cancellation_anticipation_hours": null,
@@ -233,11 +233,11 @@ curl -X GET "https://api.seashare.com/api/v1/internal/reservas/f5a6b7c8-9d0e-1f2
 
 ---
 
-### Ejemplo 3: Consulta de reserva en estado `Cancelada` con sub-estado `Moderado` (Cálculo de reembolso)
+### Ejemplo 3: Consulta de reserva en estado `CANCELLED` con sub-estado `MODERATE` (Cálculo de reembolso)
 
 #### Petición HTTP (`curl`)
 ```bash
-curl -X GET "https://api.seashare.com/api/v1/internal/reservas/d2e3f4a5-6b7c-8d9e-0f1a-2b3c4d5e6f7a" \
+curl -X GET "https://api.seashare.com/api/v1/internal/reservations/d2e3f4a5-6b7c-8d9e-0f1a-2b3c4d5e6f7a" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -H "Accept: application/json"
 ```
@@ -258,9 +258,9 @@ curl -X GET "https://api.seashare.com/api/v1/internal/reservas/d2e3f4a5-6b7c-8d9
     "duration_nights": 0
   },
   "passengers": 6,
-  "primary_status": "Cancelada",
-  "cancellation_sub_status": "Moderado",
-  "cancellation_actor": "Arrendatario",
+  "primary_status": "CANCELLED",
+  "cancellation_sub_status": "MODERATE",
+  "cancellation_actor": "RENTER",
   "cancellation_anticipation_hours": 36.5,
   "checkin_checkout": {
     "checkin_at": null,
@@ -287,7 +287,7 @@ Todos los errores retornan un sobre uniforme con `code` y `message`:
 
 ```json
 {
-  "code": "CODIGO_ERROR",
+  "code": "ERROR_CODE",
   "message": "Descripción detallada del motivo de rechazo."
 }
 ```
@@ -313,7 +313,7 @@ En cumplimiento estricto de `FR-006` y `SC-003`, este contrato no calcula ningú
 Este endpoint garantiza no poseer efectos colaterales (`SC-002`, `FR-007`). No muta registros, no reinicia temporizadores TTL de 15 minutos ni compite contra el job scheduler de barrido de la base de datos.
 
 ### 7.3 Latencia Ultra-Baja (< 200 ms)
-La consulta resuelve mediante búsqueda directa por clave primaria en PostgreSQL (`SELECT ... FROM reserva WHERE id = :id`), garantizando tiempos de respuesta inferiores a 20 ms a nivel de base de datos y cumpliendo holgadamente el SLA de 200 ms pactado en `SC-001`.
+La consulta resuelve mediante búsqueda directa por clave primaria en PostgreSQL (`SELECT ... FROM reservation WHERE id = :id`), garantizando tiempos de respuesta inferiores a 20 ms a nivel de base de datos y cumpliendo holgadamente el SLA de 200 ms pactado en `SC-001`.
 
 ---
 
@@ -321,11 +321,11 @@ La consulta resuelve mediante búsqueda directa por clave primaria en PostgreSQL
 
 | Requisito Funcional / Criterio | Descripción en Spec | Cobertura en este Contrato |
 | :--- | :--- | :--- |
-| **FR-001** | Exponer un endpoint de lectura síncrona dedicado a proveer información a Módulo 3. | Definido en `/api/v1/internal/reservas/{reservation_id}`. |
+| **FR-001** | Exponer un endpoint de lectura síncrona dedicado a proveer información a Módulo 3. | Definido en `/api/v1/internal/reservations/{reservation_id}`. |
 | **FR-002** | Retornar payload estructurado con IDs (reserva, arrendatario, embarcación), fechas/horas, pasajeros, estado principal y cotización original. | Campos `reservation_id`, `renter_id`, `vessel_id`, `dates`, `passengers`, `primary_status`, `original_quotation_reference`. |
-| **FR-003** | En `Completada`, incluir fecha/hora real de check-out y texto de observaciones/daños si existe. | Campos `checkin_checkout.checkout_at`, `reported_remarks` y `damage_detected`. |
-| **FR-004** | En `Cancelada`, incluir sub-estado, actor y horas exactas de anticipación calculadas. | Campos `cancellation_sub_status`, `cancellation_actor` y `cancellation_anticipation_hours`. |
-| **FR-005** | En `Pendiente de Pago`, incluir marca de tiempo de expiración del TTL (15 min) y segundos restantes. | Bloque `ttl_timer` (`expires_at`, `remaining_seconds`). |
+| **FR-003** | En `COMPLETED`, incluir fecha/hora real de check-out y texto de observaciones/daños si existe. | Campos `checkin_checkout.checkout_at`, `reported_remarks` y `damage_detected`. |
+| **FR-004** | En `CANCELLED`, incluir sub-estado, actor y horas exactas de anticipación calculadas. | Campos `cancellation_sub_status`, `cancellation_actor` y `cancellation_anticipation_hours`. |
+| **FR-005** | En `PENDING_PAYMENT`, incluir marca de tiempo de expiración del TTL (15 min) y segundos restantes. | Bloque `ttl_timer` (`expires_at`, `remaining_seconds`). |
 | **FR-006** | REGLA ESTRICTA: Cero cálculos de penalidades, reembolsos o tasación económica de daños. | Verificado en schema. No contiene montos derivados ni deducciones. |
 | **FR-007** | Garantizar que no genera escrituras en BD ni llamadas hacia Módulo 1. | Endpoint idempotente de solo lectura documentado en sección 2 y 7.2. |
 | **SC-001** | 100% de consultas resueltas y entregadas en menos de 200 milisegundos. | Arquitectura optimizada sobre clave primaria en BD documentada en 7.3. |

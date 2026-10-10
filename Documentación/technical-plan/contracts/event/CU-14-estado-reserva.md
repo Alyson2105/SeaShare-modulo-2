@@ -15,8 +15,8 @@ Cada vez que una reserva cambia de estado, M2 le avisa a M3 cuál es el estado n
 ## 2. Cuándo se publica
 
 - Cada vez que CU-08 cambia el estado de una reserva y ese estado está en la tabla de la sección 4.
-- La primera publicación es `PENDIENTE`. Cuando la reserva nace en Iniciada no se publica ningún cambio de estado (solo el evento de información de reserva, ver CU-02).
-- Si el arrendatario reintenta el pago con otra tarjeta (CU-03), se publica `PENDIENTE` otra vez con un `Message-Id` y un token de pago nuevos. El TTL no se reinicia.
+- La primera publicación es `PENDING`. Cuando la reserva nace en Iniciada no se publica ningún cambio de estado (solo el evento de información de reserva, ver CU-02).
+- Si el arrendatario reintenta el pago con otra tarjeta (CU-03), se publica `PENDING` otra vez con un `Message-Id` y un token de pago nuevos. El TTL no se reinicia.
 
 ## 3. Dónde se publica
 
@@ -42,24 +42,24 @@ Payload:
 | `reservation_id` | UUID | Sí | Identificador de la reserva |
 | `status` | string | Sí | Estado nuevo, según la tabla de abajo |
 | `status_changed_at` | datetime (ISO 8601) | Sí | Cuándo ocurrió el cambio |
-| `payment_token_ref` | string | Solo si `status` = `PENDIENTE` | Token de pago generado por el frontend. M2 lo transporta sin interpretarlo |
-| `payment_method_type` | string | No | Tipo de medio de pago (solo en `PENDIENTE`) |
-| `payment_metadata` | object | No | Datos no sensibles del pago: `payer_email`, `payment_method_id`, `installments`, `last_four` (solo en `PENDIENTE`) |
+| `payment_token_ref` | string | Solo si `status` = `PENDING` | Token de pago generado por el frontend. M2 lo transporta sin interpretarlo |
+| `payment_method_type` | string | No | Tipo de medio de pago (solo en `PENDING`) |
+| `payment_metadata` | object | No | Datos no sensibles del pago: `payer_email`, `payment_method_id`, `installments`, `last_four` (solo en `PENDING`) |
 
 Qué estado de M2 se publica como qué `status`:
 
 | Estado en M2 | `status` que recibe M3 |
 |---|---|
-| Pendiente de Pago | `PENDIENTE` |
-| Reservada | `RESERVADO` |
-| En Navegación | `EN_NAVEGACION` |
-| Completada | `COMPLETADA` |
-| Cancelada · Flexible | `CANCELADO_FLEXIBLEMENTE` |
-| Cancelada · Moderado | `CANCELADO_MODERADAMENTE` |
-| Cancelada · Tardío | `CANCELADO_TARDIAMENTE` |
-| Cancelada · Por Propietario | `CANCELADO_POR_ANFITRION` |
-| Cancelada · Por Inasistencia | `CANCELADO_TARDIAMENTE` (provisional: mismo tratamiento financiero) |
-| Expirada con cobro aprobado tardío | `EXPIRADA` (pendiente de M3, ver sección 6) |
+| Pendiente de Pago | `PENDING` |
+| Reservada | `RESERVED` |
+| En Navegación | `IN_NAVIGATION` |
+| Completada | `COMPLETED` |
+| Cancelada · Flexible | `CANCELLED_FLEXIBLE` |
+| Cancelada · Moderado | `CANCELLED_MODERATE` |
+| Cancelada · Tardío | `CANCELLED_LATE` |
+| Cancelada · Por Propietario | `CANCELLED_BY_OWNER` |
+| Cancelada · Por Inasistencia | `CANCELLED_LATE` (provisional: mismo tratamiento financiero) |
+| Expirada con cobro aprobado tardío | `EXPIRED` (pendiente de M3, ver sección 6) |
 | Iniciada, Expirada sin cobro, Pago Fallido | No se publican |
 
 M3 solo reconoce los estados de su lista. Cualquier otro valor lo registra como inconsistencia y no hace nada, por eso M2 no publica nada fuera de esta tabla.
@@ -71,7 +71,7 @@ Pendiente de pago:
 ```json
 {
   "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
-  "status": "PENDIENTE",
+  "status": "PENDING",
   "status_changed_at": "2026-10-09T12:05:00-05:00",
   "payment_token_ref": "tok_12345abcdef",
   "payment_method_type": "CREDIT_CARD",
@@ -89,7 +89,7 @@ Reservada:
 ```json
 {
   "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
-  "status": "RESERVADO",
+  "status": "RESERVED",
   "status_changed_at": "2026-10-09T12:08:45-05:00"
 }
 ```
@@ -99,7 +99,7 @@ Cancelada moderadamente:
 ```json
 {
   "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
-  "status": "CANCELADO_MODERADAMENTE",
+  "status": "CANCELLED_MODERATE",
   "status_changed_at": "2026-11-13T10:00:00-05:00"
 }
 ```
@@ -109,7 +109,7 @@ Completada:
 ```json
 {
   "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
-  "status": "COMPLETADA",
+  "status": "COMPLETED",
   "status_changed_at": "2026-11-18T18:30:00-05:00"
 }
 ```
@@ -117,10 +117,10 @@ Completada:
 ## 6. Reglas de procesamiento
 
 1. **Cuándo se publica**: cada vez que CU-08 cambia el estado de una reserva y ese estado está en la tabla de la sección 4. El evento se guarda en la misma transacción que el cambio de estado (outbox) y un proceso aparte lo publica. Los eventos de una misma reserva se publican en el orden en que ocurrieron los cambios.
-2. **Primera publicación**: `PENDIENTE`. Cuando la reserva nace en Iniciada no se publica ningún cambio de estado (solo el evento de información de reserva, ver CU-02).
+2. **Primera publicación**: `PENDING`. Cuando la reserva nace en Iniciada no se publica ningún cambio de estado (solo el evento de información de reserva, ver CU-02).
 3. **Estados no incluidos**: M3 solo reconoce los estados de su lista; cualquier otro lo registra como inconsistencia y no hace nada. Por eso M2 no publica Iniciada, Expirada sin cobro ni Pago Fallido.
 4. **Pendiente de pago**: el `payment_token_ref` es obligatorio. Si CU-03 no lo recibe, responde 400 y la reserva no cambia de estado.
-5. **Reintento de pago**: si el arrendatario reintenta con otra tarjeta (CU-03), se publica `PENDIENTE` de nuevo con un `Message-Id` y un token nuevos. El TTL no se reinicia.
+5. **Reintento de pago**: si el arrendatario reintenta con otra tarjeta (CU-03), se publica `PENDING` de nuevo con un `Message-Id` y un token nuevos. El TTL no se reinicia.
 6. **Sin dinero**: el mensaje nunca lleva montos, tarifas ni número de tarjeta. M3 deduce el sub-estado y la anticipación a partir del `status`.
 7. **Idempotencia**: M2 no publica dos veces la misma transición. Si el mensaje se entrega más de una vez, M3 lo descarta por `Message-Id` y confirma (`ack`) solo después de guardarlo.
 8. **Respuesta**: no aplica (unidireccional). Para M2 el mensaje se considera entregado cuando el broker confirma la recepción (publisher confirm); recién entonces se marca como publicado en el outbox.
@@ -130,8 +130,8 @@ Completada:
    - El outbox no se puede escribir: falla la transacción completa y el estado de la reserva no cambia.
 
 Pendientes con M3:
-1. Agregar el estado `EXPIRADA`. Si M3 ya cobró y M2 expiró la reserva por carrera de TTL, M3 debe reembolsar el 100 %. Sin este estado no hay forma de pedir ese reembolso.
-2. Opcional: agregar `CANCELADO_POR_INASISTENCIA`, con el mismo tratamiento que `CANCELADO_TARDIAMENTE`.
+1. Agregar el estado `EXPIRED`. Si M3 ya cobró y M2 expiró la reserva por carrera de TTL, M3 debe reembolsar el 100 %. Sin este estado no hay forma de pedir ese reembolso.
+2. Opcional: agregar `CANCELLED_BY_NO_SHOW`, con el mismo tratamiento que `CANCELLED_LATE`.
 3. Confirmar que M3 ignora campos que no están en su contrato.
 
 ## 7. Trazabilidad

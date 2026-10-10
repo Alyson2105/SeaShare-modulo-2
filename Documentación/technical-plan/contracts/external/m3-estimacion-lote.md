@@ -85,7 +85,7 @@ POST /api/v1/estimates/batch
   "unavailable": [
     {
       "boat_id": "string (UUID)",
-      "reason": "SIN_TARIFA_BASE"
+      "reason": "NO_BASE_RATE"
     }
   ]
 }
@@ -95,9 +95,9 @@ Módulo 2 parsea `estimated_total` como `BigDecimal`, sin redondeo ni operacione
 
 **Detalles del payload de Módulo 3**:
 
-* No transporta el campo `currency` / `moneda` en el payload JSON; Módulo 2 asume la divisa oficial de operación de la plataforma (`COP`) según los acuerdos de consistencia.
+* No transporta el campo `currency` en el payload JSON; Módulo 2 asume la divisa oficial de operación de la plataforma (`COP`) según los acuerdos de consistencia.
 * La lista `unavailable` identifica embarcaciones que carecen de tarifa base, sin tumbar la cotización de las demás embarcaciones del lote (FR-007, SC-004).
-* Las embarcaciones que M3/Flota no reconocen no aparecen ni en `estimates` ni en `unavailable`: M2 las trata como cotización no disponible (`cotizacion_disponible: false`).
+* Las embarcaciones que M3/Flota no reconocen no aparecen ni en `estimates` ni en `unavailable`: M2 las trata como cotización no disponible (`quote_available: false`).
 
 \---
 
@@ -173,7 +173,7 @@ curl -X POST "https://finanzas.seashare.internal/api/v1/estimates/batch" \\
   "unavailable": [
     {
       "boat_id": "a9999999-0000-0000-0000-000000000001",
-      "reason": "SIN_TARIFA_BASE"
+      "reason": "NO_BASE_RATE"
     }
   ]
 }
@@ -187,12 +187,12 @@ Los errores de Módulo 3 se reciben en formato `application/problem+json` e incl
 
 |Código HTTP M3|`code` causa|Reacción de Módulo 2|Mapeo al cliente final|
 |-|-|-|-|
-|400|`BATCH_SIZE_EXCEEDED`|Registra el error de integración; no reintenta|Catálogo con `cotizacion_disponible: false`|
-|400|`VALIDATION_ERROR`|Alerta de integración; no reintenta|Catálogo con `cotizacion_disponible: false`|
-|401 / 403|`UNAUTHENTICATED` / `FORBIDDEN`|Alerta crítica de seguridad|Catálogo con `cotizacion_disponible: false`|
-|503|`FLEET_UNAVAILABLE`|Fail-safe; continúa con la renderización del catálogo|Catálogo con `cotizacion_disponible: false` y `tarifa_estimada: null`|
-|503|`FINANCIAL_PARAMETERS_NOT_CONFIGURED`|Fail-safe; continúa con la renderización del catálogo|Catálogo con `cotizacion_disponible: false` y `tarifa_estimada: null`|
-|500 / timeout|`INTERNAL_ERROR`  tiempo de espera agotado|Fail-safe; continúa con la renderización del catálogo|Catálogo con `cotizacion_disponible: false` y `tarifa_estimada: null`|
+|400|`BATCH_SIZE_EXCEEDED`|Registra el error de integración; no reintenta|Catálogo con `quote_available: false`|
+|400|`VALIDATION_ERROR`|Alerta de integración; no reintenta|Catálogo con `quote_available: false`|
+|401 / 403|`UNAUTHENTICATED` / `FORBIDDEN`|Alerta crítica de seguridad|Catálogo con `quote_available: false`|
+|503|`FLEET_UNAVAILABLE`|Fail-safe; continúa con la renderización del catálogo|Catálogo con `quote_available: false` y `estimated_rate: null`|
+|503|`FINANCIAL_PARAMETERS_NOT_CONFIGURED`|Fail-safe; continúa con la renderización del catálogo|Catálogo con `quote_available: false` y `estimated_rate: null`|
+|500 / timeout|`INTERNAL_ERROR`  tiempo de espera agotado|Fail-safe; continúa con la renderización del catálogo|Catálogo con `quote_available: false` y `estimated_rate: null`|
 
 \---
 
@@ -227,7 +227,7 @@ Los errores de Módulo 3 se reciben en formato `application/problem+json` e incl
 |**FR-005**|Fragmentación de peticiones si superan 50 barcos|Umbral fijado en la Sección 4|
 |**FR-006**|Estimación de lote con tarifa base final + seguro de 1 pasajero|Supuestos de M3 documentados en la Sección 1|
 |**FR-007**|Manejo de embarcaciones sin tarifa sin abortar|Arreglo `unavailable` de M3 manejado en las secciones 2 y 3|
-|**FR-008**|Falla de M3 no interrumpe la navegación de catálogo|Matriz de degradación (Sección 3) hacia `cotizacion_disponible: false`|
+|**FR-008**|Falla de M3 no interrumpe la navegación de catálogo|Matriz de degradación (Sección 3) hacia `quote_available: false`|
 |**FR-017**|Operación de solo lectura sin compromisos contables|Especificación stateless en la Sección 1|
 |**SC-001**|100% de precios entregados literalmente por M3|Inmutabilidad de `estimated_total`|
 |**SC-003**|Fragmentación sin pérdida de datos ante lotes extensos|Segmentación documentada en la Sección 4|

@@ -19,7 +19,7 @@ Cada elemento retornado constituye el punto de extensión hacia la vista detalla
 ### Método HTTP y URL
 
 ```http
-GET /api/v1/embarcaciones
+GET /api/v1/vessels
 ```
 
 ### Elementos de la Petición (Request)
@@ -38,7 +38,7 @@ GET /api/v1/embarcaciones
 | `start_at` | string (ISO 8601, `YYYY-MM-DD`) | No | Fecha inicial deseada para el alquiler náutico (FR-001) |
 | `end_at` | string (ISO 8601, `YYYY-MM-DD`) | No | Fecha final deseada para el alquiler náutico (FR-001) |
 | `passengers` | number (entero positivo) | No | Cantidad de personas requeridas para la travesía (FR-001) |
-| `type` | string | No | Categoría de embarcación (`Lancha`, `Velero`, `Yate`, `Catamaran`) (FR-001, FR-006) |
+| `type` | string | No | Categoría de embarcación (`MOTORBOAT`, `SAILBOAT`, `YACHT`, `CATAMARAN`) (FR-001, FR-006) |
 | `q` | string | No | Búsqueda textual rápida por nombre comercial, marina o isla (FR-006) |
 | `page` | number (entero $\ge 1$) | No | Número de página solicitada. Valor por defecto: `1` (FR-008) |
 
@@ -107,7 +107,7 @@ GET /api/v1/embarcaciones
 **Petición `curl`**:
 
 ```bash
-curl -X GET "https://api.seashare.com/api/v1/embarcaciones?start_at=2026-11-15&end_at=2026-11-17&passengers=6&type=Yate&page=1" \
+curl -X GET "https://api.seashare.com/api/v1/vessels?start_at=2026-11-15&end_at=2026-11-17&passengers=6&type=YACHT&page=1" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTIyMzMzNC00NDU1LTY2NzctODg5OS1hYWJiY2NkZGVlZmYiLCJyb2wiOiJBcnJlbmRhdGFyaW8iLCJpYXQiOjE3OTE1NDAwMDB9.sampleToken" \
   -H "Accept: application/json"
 ```
@@ -127,7 +127,7 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?start_at=2026-11-15&e
     {
       "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
       "name": "Yate Tayrona Sea Breeze",
-      "type": "Yate",
+      "type": "YACHT",
       "photo_url": "https://cdn.seashare.com/flota/yate-tayrona-01.jpg",
       "port": {
         "name": "Marina Internacional de Santa Marta",
@@ -146,7 +146,7 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?start_at=2026-11-15&e
     {
       "vessel_id": "8f4b2319-58b9-4c8d-b0a3-9e41f7d12a99",
       "name": "Cartagena Grand Luxury",
-      "type": "Yate",
+      "type": "YACHT",
       "photo_url": "https://cdn.seashare.com/flota/cartagena-luxury-03.jpg",
       "port": {
         "name": "Muelle de la Bodeguita, Cartagena",
@@ -173,7 +173,7 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?start_at=2026-11-15&e
 **Petición `curl`**:
 
 ```bash
-curl -X GET "https://api.seashare.com/api/v1/embarcaciones?page=1" \
+curl -X GET "https://api.seashare.com/api/v1/vessels?page=1" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTIyMzMzNC00NDU1LTY2NzctODg5OS1hYWJiY2NkZGVlZmYiLCJyb2wiOiJBcnJlbmRhdGFyaW8iLCJpYXQiOjE3OTE1NDAwMDB9.sampleToken" \
   -H "Accept: application/json"
 ```
@@ -193,7 +193,7 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?page=1" \
     {
       "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
       "name": "Yate Tayrona Sea Breeze",
-      "type": "Yate",
+      "type": "YACHT",
       "photo_url": "https://cdn.seashare.com/flota/yate-tayrona-01.jpg",
       "port": {
         "name": "Marina Internacional de Santa Marta",
@@ -212,7 +212,7 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?page=1" \
     {
       "vessel_id": "6a9e10fa-13f5-4de9-9e87-a25e9821d303",
       "name": "Catamarán Rosario Dreams",
-      "type": "Catamaran",
+      "type": "CATAMARAN",
       "photo_url": "https://cdn.seashare.com/flota/rosario-catamaran-01.jpg",
       "port": {
         "name": "Club Náutico de Cartagena",
@@ -239,7 +239,7 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?page=1" \
 **Petición `curl`**:
 
 ```bash
-curl -X GET "https://api.seashare.com/api/v1/embarcaciones?page=1" \
+curl -X GET "https://api.seashare.com/api/v1/vessels?page=1" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.sampleToken"
 ```
 
@@ -258,7 +258,7 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?page=1" \
     {
       "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
       "name": "Yate Tayrona Sea Breeze",
-      "type": "Yate",
+      "type": "YACHT",
       "photo_url": "https://cdn.seashare.com/flota/yate-tayrona-01.jpg",
       "port": {
         "name": "Marina Internacional de Santa Marta",
@@ -282,7 +282,7 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?page=1" \
 **Petición `curl`**:
 
 ```bash
-curl -X GET "https://api.seashare.com/api/v1/embarcaciones?q=IslaFicticiaInexistente" \
+curl -X GET "https://api.seashare.com/api/v1/vessels?q=IslaFicticiaInexistente" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.sampleToken"
 ```
 
@@ -307,11 +307,11 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?q=IslaFicticiaInexist
 
 | Código | Caso | Cuerpo de respuesta (ejemplo) |
 |---|---|---|
-| `400 Bad Request` | Parámetros de búsqueda con formato sintáctico inválido (ej. fecha no ISO 8601, número de pasajeros negativo o no numérico, tipo no admitido) (FR-010, SC-004) | `{ "code": "PARAMETROS_INVALIDOS", "message": "Los parámetros de búsqueda proporcionados no cumplen con el formato requerido" }` |
-| `401 Unauthorized` | Token ausente, inválido o expirado | `{ "code": "NO_AUTENTICADO", "message": "Token de autenticación ausente o inválido" }` |
-| `403 Forbidden` | El claim de rol del JWT no corresponde a Arrendatario | `{ "code": "PERFIL_NO_AUTORIZADO", "message": "Este recurso requiere perfil Arrendatario" }` |
-| `503 Service Unavailable` | Caída o tiempo de espera agotado al consultar el catálogo de Módulo 1 (*fail-safe* preventivo) | `{ "code": "SERVICIO_FLOTA_NO_DISPONIBLE", "message": "No se pudo consultar el catálogo de embarcaciones en este momento" }` |
-| `500 Internal Server Error` | Excepción interna no controlada en el servicio | `{ "code": "ERROR_INTERNO", "message": "Ocurrió un error inesperado al procesar la búsqueda" }` |
+| `400 Bad Request` | Parámetros de búsqueda con formato sintáctico inválido (ej. fecha no ISO 8601, número de pasajeros negativo o no numérico, tipo no admitido) (FR-010, SC-004) | `{ "code": "INVALID_PARAMETERS", "message": "Los parámetros de búsqueda proporcionados no cumplen con el formato requerido" }` |
+| `401 Unauthorized` | Token ausente, inválido o expirado | `{ "code": "UNAUTHENTICATED", "message": "Token de autenticación ausente o inválido" }` |
+| `403 Forbidden` | El claim de rol del JWT no corresponde a Arrendatario | `{ "code": "FORBIDDEN_PROFILE", "message": "Este recurso requiere perfil Arrendatario" }` |
+| `503 Service Unavailable` | Caída o tiempo de espera agotado al consultar el catálogo de Módulo 1 (*fail-safe* preventivo) | `{ "code": "FLEET_SERVICE_UNAVAILABLE", "message": "No se pudo consultar el catálogo de embarcaciones en este momento" }` |
+| `500 Internal Server Error` | Excepción interna no controlada en el servicio | `{ "code": "INTERNAL_ERROR", "message": "Ocurrió un error inesperado al procesar la búsqueda" }` |
 
 ---
 
@@ -327,7 +327,7 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?q=IslaFicticiaInexist
 
 - Requiere JWT emitido por el servicio de identidad centralizado de SEA-SHARE.
 - Perfil autorizado: **Arrendatario**.
-- El controlador REST valida estrictamente el claim de rol (`rol == "Arrendatario"`) antes de disparar las consultas subordinadas de catálogo y cotización.
+- El controlador REST valida estrictamente el claim de rol (`role == "RENTER"`) antes de disparar las consultas subordinadas de catálogo y cotización.
 - **Regla estricta "Sin dinero"**: Módulo 2 jamás calcula subtotales, promedios ni tarifas nocturnas. El importe monetario contenido en `estimated_fare.amount` se transporta como `BigDecimal` literal entregado por Módulo 3 (FR-002 de CU-11, SC-001).
 
 ---
@@ -335,9 +335,9 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?q=IslaFicticiaInexist
 ### Notas Transversales
 
 - **Disponibilidad por rango de fechas fuera de alcance**: según la decisión arquitectónica H1 y el Edge Case de CU-01, este endpoint de catálogo **no** evalúa conflictos de disponibilidad por calendario de fechas ni bloquea activos. La verificación de estado operativo instantáneo y la exclusividad transaccional se resuelven en `Iniciar reserva` (CU-02) e `Iniciar pago` (CU-03) bajo política First-Come First-Served (FCFS).
-- **Degradación funcional ante falla de Módulo 3**: si el adaptador hacia Módulo 3 experimenta timeout o indisponibilidad (Edge Case "Ausencia de Cotización Temporal"), el catálogo **no** retorna 503; entrega la lista de embarcaciones con `cotizacion_disponible: false` y `tarifa_estimada: null`. En cambio, si falla Módulo 1 (fuente de verdad física), se aplica el *fail-safe* obligatorio retornando `503 Service Unavailable`.
-- **Navegación e interacción UI**: las entidades retornadas incluyen los metadatos visuales requeridos (`foto_url`, `tipo`, `capitan_incluido`, `etiqueta_contexto`) para renderizar directamente las tarjetas del catálogo y permitir la selección que extiende hacia [`CU-19-ver-detalle-embarcacion.md`](CU-19-ver-detalle-embarcacion.md) (FR-004, FR-005, FR-007).
-- **Filtro por tipo**: El filtro por `tipo` lo aplica Módulo 2 sobre la lista recibida de Módulo 1; M1 no recibe ese parámetro.
+- **Degradación funcional ante falla de Módulo 3**: si el adaptador hacia Módulo 3 experimenta timeout o indisponibilidad (Edge Case "Ausencia de Cotización Temporal"), el catálogo **no** retorna 503; entrega la lista de embarcaciones con `quote_available: false` y `estimated_rate: null`. En cambio, si falla Módulo 1 (fuente de verdad física), se aplica el *fail-safe* obligatorio retornando `503 Service Unavailable`.
+- **Navegación e interacción UI**: las entidades retornadas incluyen los metadatos visuales requeridos (`photo_url`, `type`, `captain_included`, `context_label`) para renderizar directamente las tarjetas del catálogo y permitir la selección que extiende hacia [`CU-19-ver-detalle-embarcacion.md`](CU-19-ver-detalle-embarcacion.md) (FR-004, FR-005, FR-007).
+- **Filtro por tipo**: El filtro por `type` lo aplica Módulo 2 sobre la lista recibida de Módulo 1; M1 no recibe ese parámetro.
 
 ---
 
@@ -354,7 +354,7 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones?q=IslaFicticiaInexist
 | **FR-007** | Contexto dinámico y contador de resultados | Campos del envelope: `context_label`, `pagination.total_items` |
 | **FR-008** | Paginación en lotes fijos de 20 embarcaciones | Objeto `pagination` con `page_size: 20` y parámetro `page` |
 | **FR-009** | Búsqueda sin filtros retorna catálogo completo | Manejo en query params vacíos (Ejemplo exitoso 2) |
-| **FR-010** | Rechazo preventivo ante entradas con formato inválido | Respuesta `400 Bad Request` con código `PARAMETROS_INVALIDOS` |
+| **FR-010** | Rechazo preventivo ante entradas con formato inválido | Respuesta `400 Bad Request` con código `INVALID_PARAMETERS` |
 | **SC-001** | 100% de resultados con tarifa de M3 (salvo caídas) | Objeto `estimated_fare` poblado literalmente y campo `quotation_available` |
 | **SC-002** | Latencia < 2000 ms en condiciones normales | Documentado en objetivos técnicos de integración |
 | **SC-003** | 100% de búsquedas sin filtros devuelven catálogo completo | Validado en contrato y Ejemplo 2 |

@@ -7,7 +7,7 @@ Este caso de uso expone el punto de entrada REST mediante el cual Módulo 3 (Fin
 
 Canales de entrada del resultado de pago: la lógica de negocio de este caso de uso es única y recibe un mismo objeto de confirmación (`PaymentConfirmationPayload`) por dos canales:
 
-- Canal A — Endpoint REST (FR-001): `POST /api/v1/reservas/{reservation_id}/confirmacion-pago`, definido en este contrato para el consumo de Módulo 3.
+- Canal A — Endpoint REST (FR-001): `POST /api/v1/reservations/{reservation_id}/payment-confirmation`, definido en este contrato para el consumo de Módulo 3.
 - Canal B — Adaptador de consulta a Módulo 3 (vigente hoy): Módulo 3 no cuenta actualmente con ningún contrato que invoque a Módulo 2; su contrato UC06 «Solicitar confirmación de pago» (`GET /api/v1/reservations/{reservation_id}/payment-confirmation`, ver `m3-confirmacion-pago.md`) es de consulta. Por eso un adaptador interno de Módulo 2 consulta periódicamente a Módulo 3 el estado del cobro de las reservas en Pendiente de Pago, traduce la respuesta al mismo `PaymentConfirmationPayload` y la entrega a la misma lógica que el Canal A. [NEEDS CLARIFICATION: acordar con Módulo 3 si mantendrá solo la consulta (Canal B) o si construirá además un cliente que invoque el Canal A. Mientras no lo haga, el Canal B es el único activo.]
 
 **Al procesar la confirmación (por cualquiera de los dos canales):**
@@ -28,7 +28,7 @@ Canales de entrada del resultado de pago: la lógica de negocio de este caso de 
 
 ### Método HTTP y URL
 
-POST /api/v1/reservas/{reservation_id}/confirmacion-pago
+POST /api/v1/reservations/{reservation_id}/payment-confirmation
 
 ### Elementos de la Petición (Request)
 
@@ -53,10 +53,10 @@ POST /api/v1/reservas/{reservation_id}/confirmacion-pago
 ```json
 {
   "external_transaction_id": "string (identificador unívoco de la pasarela/Módulo 3)",
-  "result": "string (enum: 'Aprobado' | 'Rechazado' | 'Fallido')",
+  "result": "string (enum: 'APPROVED' | 'REJECTED' | 'FAILED')",
   "processed_at": "string (ISO 8601 timestamp)",
   "gateway_response_code": "string (opcional)",
-  "rejection_reason": "string (opcional si result != 'Aprobado')"
+  "rejection_reason": "string (opcional si result != 'APPROVED')"
 }
 ```
 
@@ -76,7 +76,7 @@ Contrato de respuesta tipado:
 ```json
 {
   "reservation_id": "string (UUID)",
-  "status": "string (Reservada | Pendiente de Pago | Pago Fallido | Expirada)",
+  "status": "string (RESERVED | PENDING_PAYMENT | PAYMENT_FAILED | EXPIRED)",
   "processed": "boolean (true)",
   "message": "string (descripción operativa del resultado)",
   "reversal_required": "boolean (false si consolidó; true si venció TTL y M3 debe revertir)"
@@ -96,13 +96,13 @@ Contrato de respuesta tipado:
 Petición curl:
 
 ```bash
-curl -X POST "https://api.seashare.com/api/v1/reservas/e4f81c92-7a20-4215-9c5e-8812c3f1a001/confirmacion-pago" \
+curl -X POST "https://api.seashare.com/api/v1/reservations/e4f81c92-7a20-4215-9c5e-8812c3f1a001/payment-confirmation" \
   -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.m3ServiceToken" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{
     "external_transaction_id": "tx_pasarela_live_998877665544",
-    "result": "Aprobado",
+    "result": "APPROVED",
     "processed_at": "2026-10-09T12:08:45-05:00",
     "gateway_response_code": "AUTH_SUCCESS_00"
   }'
@@ -113,7 +113,7 @@ Respuesta (200 OK):
 ```json
 {
   "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
-  "status": "Reservada",
+  "status": "RESERVED",
   "processed": true,
   "message": "Pago confirmado exitosamente. Reserva consolidada en estado Reservada.",
   "reversal_required": false
@@ -125,12 +125,12 @@ Respuesta (200 OK):
 Petición curl:
 
 ```bash
-curl -X POST "https://api.seashare.com/api/v1/reservas/e4f81c92-7a20-4215-9c5e-8812c3f1a001/confirmacion-pago" \
+curl -X POST "https://api.seashare.com/api/v1/reservations/e4f81c92-7a20-4215-9c5e-8812c3f1a001/payment-confirmation" \
   -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.m3ServiceToken" \
   -H "Content-Type: application/json" \
   -d '{
     "external_transaction_id": "tx_pasarela_live_998877665544",
-    "result": "Aprobado",
+    "result": "APPROVED",
     "processed_at": "2026-10-09T12:08:45-05:00",
     "gateway_response_code": "AUTH_SUCCESS_00"
   }'
@@ -141,7 +141,7 @@ Respuesta (200 OK):
 ```json
 {
   "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
-  "status": "Reservada",
+  "status": "RESERVED",
   "processed": true,
   "message": "Transacción previamente procesada de forma idempotente. Estado actual: Reservada.",
   "reversal_required": false
@@ -153,12 +153,12 @@ Respuesta (200 OK):
 Petición curl:
 
 ```bash
-curl -X POST "https://api.seashare.com/api/v1/reservas/7b1a2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d/confirmacion-pago" \
+curl -X POST "https://api.seashare.com/api/v1/reservations/7b1a2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d/payment-confirmation" \
   -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.m3ServiceToken" \
   -H "Content-Type: application/json" \
   -d '{
     "external_transaction_id": "tx_pasarela_late_11223344",
-    "result": "Aprobado",
+    "result": "APPROVED",
     "processed_at": "2026-10-09T12:21:00-05:00",
     "gateway_response_code": "AUTH_SUCCESS_00"
   }'
@@ -168,10 +168,10 @@ Respuesta (409 Conflict):
 
 ```json
 {
-  "code": "RESERVA_EXPIRADA_REVERSION_REQUERIDA",
+  "code": "RESERVATION_EXPIRED_REVERSION_REQUIRED",
   "message": "La confirmación de pago fue recibida tras el vencimiento estricto del TTL de 15 minutos. El activo fue liberado y no puede ser consolidado.",
   "reservation_id": "7b1a2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d",
-  "status": "Expirada",
+  "status": "EXPIRED",
   "reversal_required": true
 }
 ```
@@ -181,12 +181,12 @@ Respuesta (409 Conflict):
 Petición curl:
 
 ```bash
-curl -X POST "https://api.seashare.com/api/v1/reservas/e4f81c92-7a20-4215-9c5e-8812c3f1a001/confirmacion-pago" \
+curl -X POST "https://api.seashare.com/api/v1/reservations/e4f81c92-7a20-4215-9c5e-8812c3f1a001/payment-confirmation" \
   -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.m3ServiceToken" \
   -H "Content-Type: application/json" \
   -d '{
     "external_transaction_id": "tx_declined_55443322",
-    "result": "Rechazado",
+    "result": "REJECTED",
     "processed_at": "2026-10-09T12:10:00-05:00",
     "gateway_response_code": "ERR_INSUFFICIENT_FUNDS",
     "rejection_reason": "Fondos insuficientes en la tarjeta"
@@ -198,7 +198,7 @@ Respuesta (200 OK):
 ```json
 {
   "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
-  "status": "Pendiente de Pago",
+  "status": "PENDING_PAYMENT",
   "processed": true,
   "message": "Intento de pago fallido registrado. La reserva continúa en Pendiente de Pago hasta el fin del TTL para permitir reintentos.",
   "reversal_required": false
@@ -209,13 +209,13 @@ Respuesta (200 OK):
 
 | Código | Caso | Cuerpo de respuesta (ejemplo) |
 | --- | --- | --- |
-| 400 Bad Request | Payload mal formado, campos faltantes o reservation_id no es UUID válido (FR-002) | { "code": "PARAMETROS_INVALIDOS", "message": "La notificación no contiene los campos obligatorios de la transacción" } |
-| 401 Unauthorized | Token de servicio de Módulo 3 ausente, inválido o expirado | { "code": "NO_AUTENTICADO", "message": "Token de identidad de servicio inválido o ausente" } |
-| 403 Forbidden | El token no cuenta con la identidad autorizada de Módulo 3 | { "code": "PERFIL_NO_AUTORIZADO", "message": "Solo el servicio de Finanzas (Módulo 3) está autorizado para invocar este endpoint" } |
-| 404 Not Found | La reserva no existe en Módulo 2 (Edge Case) | { "code": "RESERVA_NO_ENCONTRADA", "message": "La reserva especificada no existe en el sistema" } |
-| 409 Conflict | Confirmación recibida sobre reserva ya expirada (requiere reversión automática en M3, FR-006) | { "code": "RESERVA_EXPIRADA_REVERSION_REQUERIDA", "message": "Reserva expirada por tiempo límite. Se requiere reversión automática de fondos en pasarela", "reversal_required": true } |
-| 409 Conflict | Confirmación recibida en estado incompatible (ej. Pago Fallido, Completada) | { "code": "ESTADO_INCOMPATIBLE", "message": "La reserva se encuentra en un estado terminal que no admite confirmación de pago" } |
-| 500 Internal Server Error | Falla de persistencia al invocar a CU-08 (error transitorio que habilita reintento de M3, Edge Case) | { "code": "ERROR_TRANSITORIO_PERSISTENCIA", "message": "No se pudo asentar la confirmación localmente; reintente la entrega" } |
+| 400 Bad Request | Payload mal formado, campos faltantes o reservation_id no es UUID válido (FR-002) | { "code": "INVALID_PARAMETERS", "message": "La notificación no contiene los campos obligatorios de la transacción" } |
+| 401 Unauthorized | Token de servicio de Módulo 3 ausente, inválido o expirado | { "code": "UNAUTHENTICATED", "message": "Token de identidad de servicio inválido o ausente" } |
+| 403 Forbidden | El token no cuenta con la identidad autorizada de Módulo 3 | { "code": "PROFILE_NOT_AUTHORIZED", "message": "Solo el servicio de Finanzas (Módulo 3) está autorizado para invocar este endpoint" } |
+| 404 Not Found | La reserva no existe en Módulo 2 (Edge Case) | { "code": "RESERVATION_NOT_FOUND", "message": "La reserva especificada no existe en el sistema" } |
+| 409 Conflict | Confirmación recibida sobre reserva ya expirada (requiere reversión automática en M3, FR-006) | { "code": "RESERVATION_EXPIRED_REVERSION_REQUIRED", "message": "Reserva expirada por tiempo límite. Se requiere reversión automática de fondos en pasarela", "reversal_required": true } |
+| 409 Conflict | Confirmación recibida en estado incompatible (ej. Pago Fallido, Completada) | { "code": "INCOMPATIBLE_STATE", "message": "La reserva se encuentra en un estado terminal que no admite confirmación de pago" } |
+| 500 Internal Server Error | Falla de persistencia al invocar a CU-08 (error transitorio que habilita reintento de M3, Edge Case) | { "code": "TRANSIENT_PERSISTENCE_ERROR", "message": "No se pudo asentar la confirmación localmente; reintente la entrega" } |
 
 ### Canal B — Adaptador de Consulta a Módulo 3 (contrato UC06)
 
@@ -298,16 +298,16 @@ Convivencia de los canales: si Módulo 3 llega a invocar el Canal A mientras el 
 
 | Requisito / Criterio | Descripción en Spec | Elemento de este Contrato |
 | --- | --- | --- |
-| FR-001 | Punto de entrada accesible para Módulo 3 | Endpoint POST /api/v1/reservas/{reservation_id}/confirmacion-pago (Canal A); el Canal B alimenta la misma lógica |
+| FR-001 | Punto de entrada accesible para Módulo 3 | Endpoint POST /api/v1/reservations/{reservation_id}/payment-confirmation (Canal A); el Canal B alimenta la misma lógica |
 | FR-002 | Validación de campos obligatorios de la transacción | Request body: external_transaction_id, result, processed_at; traducción de la respuesta de M3 en el Canal B |
 | FR-003 | Verificación de existencia y estado Pendiente de Pago | Validaciones de backend reflejadas en errores 404 y 409; el adaptador solo consulta reservas en Pendiente de Pago |
-| FR-004 | Aprobación dentro de TTL: cancelación de timer y paso a Reservada | Respuesta exitosa 200 OK con estado: "Reservada" (Ejemplos 1 y 5) |
+| FR-004 | Aprobación dentro de TTL: cancelación de timer y paso a Reservada | Respuesta exitosa 200 OK con `estado: "RESERVED"` (Ejemplos 1 y 5) |
 | FR-005 | Manejo de rechazos/fallos y reintentos dentro del TTL | Respuesta 200 OK manteniendo Pendiente de Pago (Ejemplo 4) y tabla de traducción RECHAZADO / CANCELADO / EXPIRADO |
 | FR-006 | Aprobación con TTL expirado instruye reversión automática | Error 409 Conflict con reversal_required: true (Ejemplo 3); en el Canal B, estado EXPIRADA en CU-14 |
 | FR-007 | Idempotencia estricta por par (external_transaction_id, result) | Manejo de idempotencia documentado en Ejemplo 2 y Notas; compartida por ambos canales |
 | FR-008 | Prohibición de cálculo monetario o llamadas a pasarelas | Contrato sin aritmética monetaria ni dependencias de pasarela |
 | SC-001 | Transición a Reservada en < 1 segundo tras confirmación | Canal A: procesamiento síncrono. Canal B: hasta 5 segundos adicionales por el periodo del adaptador [NEEDS CLARIFICATION: la spec fija 1 segundo tras la recepción del resultado; en el Canal B la "recepción" ocurre en el ciclo de consulta, por lo que el criterio se cumple desde ese instante y no desde que M3 registra el resultado] |
-| SC-002 | Cero reservas pasadas a Reservada con TTL expirado | Bloqueo estricto reflejado en código RESERVA_EXPIRADA_REVERSION_REQUERIDA y en la fila APROBADO con TTL vencido del Canal B |
+| SC-002 | Cero reservas pasadas a Reservada con TTL expirado | Bloqueo estricto reflejado en código RESERVATION_EXPIRED_REVERSION_REQUIRED y en la fila APROBADO con TTL vencido del Canal B |
 | SC-003 | Cero cobros huérfanos sin instrucción de reversión | Bandera reversal_required: true (Canal A) y estado EXPIRADA en CU-14 (Canal B) |
 | SC-004 | 100% de confirmaciones repetidas respondidas de forma idempotente | Garantizado por clave única de transacción en la Sección 2 y 3 |
 | SC-005 | Cero cálculos monetarios en Módulo 2 | Neutralidad financiera de la interfaz |

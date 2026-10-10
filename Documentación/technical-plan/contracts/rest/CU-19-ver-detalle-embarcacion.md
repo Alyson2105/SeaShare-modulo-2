@@ -18,7 +18,7 @@ Ambas operaciones se segregan debido a que poseen ciclos de vida desacoplados: l
 ### Método HTTP y URL
 
 ```http
-GET /api/v1/embarcaciones/{vessel_id}
+GET /api/v1/vessels/{vessel_id}
 ```
 
 ### Elementos de la Petición (Request)
@@ -89,8 +89,8 @@ GET /api/v1/embarcaciones/{vessel_id}
 **Petición `curl`**:
 
 ```bash
-curl -X GET "https://api.seashare.com/api/v1/embarcaciones/d3b07384-d113-49cd-a5d6-812e9bcfc101" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTIyMzMzNC00NDU1LTY2NzctODg5OS1hYWJiY2NkZGVlZmYiLCJyb2wiOiJBcnJlbmRhdGFyaW8iLCJpYXQiOjE3OTE1NDAwMDB9.sampleToken" \
+curl -X GET "https://api.seashare.com/api/v1/vessels/d3b07384-d113-49cd-a5d6-812e9bcfc101" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTIyMzMzNC00NDU1LTY2NzctODg5OS1hYWJiY2NkZGVlZmYiLCJyb2wiOiJSZW50ZXIiLCJpYXQiOjE3OTE1NDAwMDB9.sampleToken" \
   -H "Accept: application/json"
 ```
 
@@ -132,12 +132,12 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones/d3b07384-d113-49cd-a5
 
 | Código | Caso | Cuerpo de respuesta (ejemplo) |
 |---|---|---|
-| `400 Bad Request` | `vessel_id` no tiene estructura de UUID válido | `{ "code": "ID_INVALIDO", "message": "El identificador de embarcación proporcionado no es un UUID válido" }` |
-| `401 Unauthorized` | Token de autorización ausente, corrupto o expirado | `{ "code": "NO_AUTENTICADO", "message": "Token de autenticación inválido o ausente" }` |
-| `403 Forbidden` | El claim de rol en el token no corresponde a Arrendatario | `{ "code": "PERFIL_NO_AUTORIZADO", "message": "Este recurso requiere perfil Arrendatario" }` |
-| `404 Not Found` | La embarcación no existe en Módulo 1 o retorna capacidad inválida (capacidad = 0) (Edge Case "Inconsistencia de datos desde Módulo 1") | `{ "code": "EMBARCACION_NO_DISPONIBLE", "message": "La embarcación no está disponible para mostrar su detalle" }` |
-| `503 Service Unavailable` | Módulo 1 no responde o agota el tiempo de espera (*fail-safe* preventivo) | `{ "code": "SERVICIO_FLOTA_NO_DISPONIBLE", "message": "No se pudo consultar la información técnica de la embarcación en este momento" }` |
-| `500 Internal Server Error` | Excepción interna no controlada | `{ "code": "ERROR_INTERNO", "message": "Ocurrió un error inesperado al recuperar la embarcación" }` |
+| `400 Bad Request` | `vessel_id` no tiene estructura de UUID válido | `{ "code": "INVALID_ID", "message": "El identificador de embarcación proporcionado no es un UUID válido" }` |
+| `401 Unauthorized` | Token de autorización ausente, corrupto o expirado | `{ "code": "UNAUTHENTICATED", "message": "Token de autenticación inválido o ausente" }` |
+| `403 Forbidden` | El claim de rol en el token no corresponde a Arrendatario | `{ "code": "PROFILE_NOT_AUTHORIZED", "message": "Este recurso requiere perfil Arrendatario" }` |
+| `404 Not Found` | La embarcación no existe en Módulo 1 o retorna capacidad inválida (capacidad = 0) (Edge Case "Inconsistencia de datos desde Módulo 1") | `{ "code": "VESSEL_NOT_AVAILABLE", "message": "La embarcación no está disponible para mostrar su detalle" }` |
+| `503 Service Unavailable` | Módulo 1 no responde o agota el tiempo de espera (*fail-safe* preventivo) | `{ "code": "FLEET_SERVICE_UNAVAILABLE", "message": "No se pudo consultar la información técnica de la embarcación en este momento" }` |
+| `500 Internal Server Error` | Excepción interna no controlada | `{ "code": "INTERNAL_ERROR", "message": "Ocurrió un error inesperado al recuperar la embarcación" }` |
 
 ---
 
@@ -161,7 +161,7 @@ No aplica. Retorna un único recurso identificado unívocamente por su clave pri
 ### Método HTTP y URL
 
 ```http
-GET /api/v1/embarcaciones/{vessel_id}/cotizacion
+GET /api/v1/vessels/{vessel_id}/quotations
 ```
 
 ### Elementos de la Petición (Request)
@@ -228,8 +228,8 @@ GET /api/v1/embarcaciones/{vessel_id}/cotizacion
 **Petición `curl`**:
 
 ```bash
-curl -X GET "https://api.seashare.com/api/v1/embarcaciones/d3b07384-d113-49cd-a5d6-812e9bcfc101/cotizacion?start_at=2026-11-15&end_at=2026-11-18&passengers=8" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTIyMzMzNC00NDU1LTY2NzctODg5OS1hYWJiY2NkZGVlZmYiLCJyb2wiOiJBcnJlbmRhdGFyaW8iLCJpYXQiOjE3OTE1NDAwMDB9.sampleToken" \
+curl -X GET "https://api.seashare.com/api/v1/vessels/d3b07384-d113-49cd-a5d6-812e9bcfc101/quotations?start_at=2026-11-15&end_at=2026-11-18&passengers=8" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTIyMzMzNC00NDU1LTY2NzctODg5OS1hYWJiY2NkZGVlZmYiLCJyb2wiOiJSZW50ZXIiLCJpYXQiOjE3OTE1NDAwMDB9.sampleToken" \
   -H "Accept: application/json"
 ```
 
@@ -256,13 +256,13 @@ curl -X GET "https://api.seashare.com/api/v1/embarcaciones/d3b07384-d113-49cd-a5
 
 | Código | Caso | Cuerpo de respuesta (ejemplo) |
 |---|---|---|
-| `400 Bad Request` | Parámetros con formato inválido, `end_at` menor o igual a `start_at`, fecha en el pasado o `passengers` no numérico | `{ "code": "PARAMETROS_INVALIDOS", "message": "Las fechas ingresadas o la cantidad de pasajeros no son válidas" }` |
-| `401 Unauthorized` | Token de autenticación ausente o expirado | `{ "code": "NO_AUTENTICADO", "message": "Token de autenticación inválido o ausente" }` |
-| `403 Forbidden` | Perfil de usuario distinto de Arrendatario | `{ "code": "PERFIL_NO_AUTORIZADO", "message": "Este recurso requiere perfil Arrendatario" }` |
-| `404 Not Found` | La embarcación indicada no existe en el catálogo | `{ "code": "EMBARCACION_NO_DISPONIBLE", "message": "La embarcación solicitada no se encuentra registrada" }` |
-| `409 Conflict` | La cantidad de pasajeros ingresada supera la capacidad máxima del activo (revalidación mandatoria de backend, FR-004) | `{ "code": "CAPACIDAD_EXCEDIDA", "message": "La cantidad de passengers (8) supera la capacidad máxima de la embarcación (6)" }` |
-| `503 Service Unavailable` | Módulo 3 no responde, tiempo agotado o activo sin esquema tarifario configurado (Edge Case "Falla en la obtención de la cotización") | `{ "code": "COTIZACION_NO_DISPONIBLE", "message": "Cotización temporalmente no disponible" }` |
-| `500 Internal Server Error` | Falla interna no controlada | `{ "code": "ERROR_INTERNO", "message": "Ocurrió un error inesperado al procesar la cotización" }` |
+| `400 Bad Request` | Parámetros con formato inválido, `end_at` menor o igual a `start_at`, fecha en el pasado o `passengers` no numérico | `{ "code": "INVALID_PARAMETERS", "message": "Las fechas ingresadas o la cantidad de pasajeros no son válidas" }` |
+| `401 Unauthorized` | Token de autenticación ausente o expirado | `{ "code": "UNAUTHENTICATED", "message": "Token de autenticación inválido o ausente" }` |
+| `403 Forbidden` | Perfil de usuario distinto de Arrendatario | `{ "code": "PROFILE_NOT_AUTHORIZED", "message": "Este recurso requiere perfil Arrendatario" }` |
+| `404 Not Found` | La embarcación indicada no existe en el catálogo | `{ "code": "VESSEL_NOT_AVAILABLE", "message": "La embarcación solicitada no se encuentra registrada" }` |
+| `409 Conflict` | La cantidad de pasajeros ingresada supera la capacidad máxima del activo (revalidación mandatoria de backend, FR-004) | `{ "code": "CAPACITY_EXCEEDED", "message": "La cantidad de passengers (8) supera la capacidad máxima de la embarcación (6)" }` |
+| `503 Service Unavailable` | Módulo 3 no responde, tiempo agotado o activo sin esquema tarifario configurado (Edge Case "Falla en la obtención de la cotización") | `{ "code": "QUOTATION_UNAVAILABLE", "message": "Cotización temporalmente no disponible" }` |
+| `500 Internal Server Error` | Falla interna no controlada | `{ "code": "INTERNAL_ERROR", "message": "Ocurrió un error inesperado al procesar la cotización" }` |
 
 ---
 
@@ -295,7 +295,7 @@ No aplica. Retorna un único cálculo presupuestal consolidado para los parámet
 | **FR-001** | Recepción de identificador desde búsqueda | Path parameter `vessel_id` en ambos endpoints |
 | **FR-002** | Consulta de datos técnicos vía `Proveer información embarcación` | Endpoint 1 respaldado por [`m1-consultar-informacion-embarcacion.md`](../external/m1-consultar-informacion-embarcacion.md) |
 | **FR-003** | Selectores de fechas y pasajeros | Query parameters `start_at`, `end_at`, `passengers` del Endpoint 2 |
-| **FR-004** | Validación estricta de capacidad máxima | Manejo de error `409 Conflict` con código `CAPACIDAD_EXCEDIDA` en Endpoint 2 |
+| **FR-004** | Validación estricta de capacidad máxima | Manejo de error `409 Conflict` con código `CAPACITY_EXCEEDED` en Endpoint 2 |
 | **FR-005** | Cotización individual vía `Proveer información cotización de reserva` | Endpoint 2 respaldado por [`m3-estimacion-individual.md`](../external/m3-estimacion-individual.md) |
 | **FR-006** | Regla estricta "Sin dinero" (cero divisiones por noche) | Campo `total_amount` literal en Endpoint 2; sin campos de breakdown de tarifa nocturna |
 | **FR-007** | Transición hacia `Iniciar reserva` solo con capacidad válida y cotización exitosa | Código `200 OK` en Endpoint 2 condiciona el avance a CU-02 |
@@ -303,5 +303,5 @@ No aplica. Retorna un único cálculo presupuestal consolidado para los parámet
 | **FR-009** | Ficha técnica con atributos estructurados | Campos de respuesta de Endpoint 1: `max_capacity`, `navigation_type`, `length_feet`, `cabin_count` |
 | **FR-010** | Amenidades y validación del propietario | Campos de respuesta de Endpoint 1: `amenities`, `owner` |
 | **SC-001** | Cero operaciones matemáticas de división ejecutadas en M2 | Contrato del Endpoint 2 sin cálculos locales derivados |
-| **SC-002** | 100% de intentos con exceso de pasajeros bloqueados | Validación de backend reflejada en error `409 CAPACIDAD_EXCEDIDA` |
+| **SC-002** | 100% de intentos con exceso de pasajeros bloqueados | Validación de backend reflejada en error `409 CAPACITY_EXCEEDED` |
 | **SC-003** | Cero persistencia en BD de M2 de datos de flota | Comportamiento stateless y pass-through documentado |

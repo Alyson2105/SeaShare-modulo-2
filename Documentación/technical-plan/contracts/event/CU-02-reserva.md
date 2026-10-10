@@ -62,11 +62,11 @@ Payload:
 ## 5. Reglas de procesamiento
 
 1. **Cuándo se publica**: una vez, al guardar la reserva en estado Iniciada. El mensaje se guarda en la misma transacción que la reserva (outbox) y un proceso aparte lo publica.
-2. **Datos de M1**: CU-02 consulta a M1 (CU-09) para obtener `owner_id` y `max_capacity`. Si M1 no responde, no se crea la reserva ni se publica nada (503 `SERVICIO_FLOTA_NO_DISPONIBLE`). M3 no consulta a Flota para obtener estos datos.
+2. **Datos de M1**: CU-02 consulta a M1 (CU-09) para obtener `owner_id` y `max_capacity`. Si M1 no responde, no se crea la reserva ni se publica nada (503 `FLEET_SERVICE_UNAVAILABLE`). M3 no consulta a Flota para obtener estos datos.
 3. **Validaciones previas**: `end_date >= start_date` y `1 <= passengers <= max_capacity`. Si no se cumplen, CU-02 responde 400 y no se crea la reserva ni se publica nada.
 4. **Sin dinero**: el mensaje no lleva montos ni tarifas. M3 busca la tarifa base por su cuenta.
 5. **Reemisión**: si la reserva se vuelve a registrar, se publica de nuevo con la información más reciente. M3 la sobrescribe (upsert) y descarta los montos calculados antes.
-6. **Orden**: este mensaje se publica antes del primer cambio de estado (`PENDIENTE`). M3 solo puede calcular (CU-12) cuando ya lo procesó; si M3 responde que no encuentra la información, M2 reintenta unos instantes antes de devolver 503 `CALCULO_NO_DISPONIBLE`.
+6. **Orden**: este mensaje se publica antes del primer cambio de estado (`PENDING`). M3 solo puede calcular (CU-12) cuando ya lo procesó; si M3 responde que no encuentra la información, M2 reintenta unos instantes antes de devolver 503 `CALCULATION_UNAVAILABLE`.
 7. **Idempotencia**: cada mensaje lleva un `Message-Id` único; si se entrega más de una vez, M3 lo descarta por ese identificador.
 8. **Respuesta**: no aplica (unidireccional). Para M2 el mensaje se considera entregado cuando el broker confirma la recepción (publisher confirm); recién entonces se marca como publicado en el outbox.
 9. **Si algo falla**:

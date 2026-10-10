@@ -67,7 +67,7 @@ POST /api/v1/finance/estimates/individual
 }
 ```
 
-Módulo 3 no recibe `arrendatarioId` ni datos de usuario en esta operación de cálculo tarifario.
+Módulo 3 no recibe `renterId` ni datos de usuario en esta operación de cálculo tarifario.
 
 ### Elementos de la respuesta esperada (response)
 
@@ -128,13 +128,13 @@ Los errores de Módulo 3 se devuelven bajo el estándar `application/problem+jso
 
 | HTTP M3 | `code` en M3 | Reacción de M2 | Mapeo en respuesta REST de M2 |
 |---|---|---|---|
-| `400` | `INVALID_DATE_RANGE` | Aborta sin crear reserva | `400 PARAMETROS_INVALIDOS` |
-| `400` | `VALIDATION_ERROR` | Aborta y genera alerta de integración | `400 PARAMETROS_INVALIDOS` |
-| `401 / 403` | `UNAUTHENTICATED` / `FORBIDDEN` | Alerta crítica de infraestructura | `500 ERROR_INTERNO` |
-| `422` | `BASE_RATE_NOT_AVAILABLE` | Bloquea el avance | `503 COTIZACION_NO_DISPONIBLE` |
-| `503` | `FLEET_UNAVAILABLE` | Activa *fail-safe* | `503 COTIZACION_NO_DISPONIBLE` |
-| `503` | `FINANCIAL_PARAMETERS_NOT_CONFIGURED` | Activa *fail-safe* | `503 COTIZACION_NO_DISPONIBLE` |
-| `500` / timeout | `INTERNAL_ERROR` | Activa *fail-safe* | `503 COTIZACION_NO_DISPONIBLE` |
+| `400` | `INVALID_DATE_RANGE` | Aborta sin crear reserva | `400 INVALID_PARAMETERS` |
+| `400` | `VALIDATION_ERROR` | Aborta y genera alerta de integración | `400 INVALID_PARAMETERS` |
+| `401 / 403` | `UNAUTHENTICATED` / `FORBIDDEN` | Alerta crítica de infraestructura | `500 INTERNAL_ERROR` |
+| `422` | `BASE_RATE_NOT_AVAILABLE` | Bloquea el avance | `503 QUOTE_UNAVAILABLE` |
+| `503` | `FLEET_UNAVAILABLE` | Activa *fail-safe* | `503 QUOTE_UNAVAILABLE` |
+| `503` | `FINANCIAL_PARAMETERS_NOT_CONFIGURED` | Activa *fail-safe* | `503 QUOTE_UNAVAILABLE` |
+| `500` / timeout | `INTERNAL_ERROR` | Activa *fail-safe* | `503 QUOTE_UNAVAILABLE` |
 
 Módulo 2 no debe crear una reserva con un precio nulo, cero, aproximado o no confirmado por Módulo 3.
 
@@ -155,7 +155,7 @@ Módulo 2 no debe crear una reserva con un precio nulo, cero, aproximado o no co
 
 ## 5. Notas transversales de integración
 
-- **Identificador y vigencia de la cotización**: Módulo 3 no devuelve `quote_id` ni fechas de expiración. Módulo 2 genera su propia referencia interna (`cotizacion_id`) y define operativamente la vigencia, según CU-19.
+- **Identificador y vigencia de la cotización**: Módulo 3 no devuelve `quote_id` ni fechas de expiración. Módulo 2 genera su propia referencia interna (`quote_id`) y define operativamente la vigencia, según CU-19.
 - **Moneda**: Módulo 3 no devuelve un campo `currency`; Módulo 2 asume la constante de plataforma `COP`.
 - **Advertencia legal**: el campo `warning` debe transportarse y mostrarse sin cambios, respetando exactamente el texto definido en la sección 1.
 - **Solo estados de lectura**: la estimación no bloquea inventario ni produce cargos.
@@ -170,11 +170,11 @@ Módulo 2 no debe crear una reserva con un precio nulo, cero, aproximado o no co
 | **FR-002** | Módulo 2 no realiza cálculos monetarios | Uso literal de `estimated_total`, parseado como `BigDecimal` |
 | **FR-009** | Invocación desde `CU-19 Ver detalle de embarcación` | Parámetros `boat_id`, fechas y pasajeros |
 | **FR-010** | Validación de fechas y parámetros | Matriz de errores de la sección 3 |
-| **FR-011** | Fechas inválidas impiden crear la reserva | Mapeo de `INVALID_DATE_RANGE` a `400 PARAMETROS_INVALIDOS` |
+| **FR-011** | Fechas inválidas impiden crear la reserva | Mapeo de `INVALID_DATE_RANGE` a `400 INVALID_PARAMETERS` |
 | **FR-012** | Recepción del monto y de la advertencia obligatoria literal | Campos `estimated_total` y `warning` |
 | **FR-013** | Transferencia del valor a `CU-02 Iniciar reserva` | Uso del monto recibido en el flujo de creación de reserva |
 | **FR-014** | Recotización al cambiar fechas o pasajeros | Descarte de estimaciones obsoletas, sección 4 |
-| **FR-015** | Bloqueo si no existe tarifa base disponible | Mapeo de `BASE_RATE_NOT_AVAILABLE` a `503 COTIZACION_NO_DISPONIBLE` |
+| **FR-015** | Bloqueo si no existe tarifa base disponible | Mapeo de `BASE_RATE_NOT_AVAILABLE` a `503 QUOTE_UNAVAILABLE` |
 | **FR-016** | Una falla o timeout no debe producir una reserva con precio inválido | Política *fail-safe*, secciones 3 y 4 |
 | **FR-017** | Operación de solo lectura, sin compromisos contables | Principios de diseño, sección 1 |
 | **SC-001** | El monto procede directamente de Módulo 3 | Uso literal de `estimated_total` |

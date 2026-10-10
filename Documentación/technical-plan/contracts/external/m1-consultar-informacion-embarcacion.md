@@ -29,7 +29,7 @@ Este contrato formaliza las dos operaciones síncronas que Módulo 2 espera que 
 ### Método HTTP y URL
 
 ```http
-GET /api/v1/embarcaciones/{vessel_id}
+GET /api/v1/vessels/{vessel_id}
 ```
 
 ### Elementos de la Petición (Request)
@@ -64,7 +64,7 @@ GET /api/v1/embarcaciones/{vessel_id}
   "vessel_id": "string (UUID)",
   "name": "string",
   "registration_number": "string",
-  "type": "string (Lancha | Velero | Yate | Catamaran)",
+  "type": "string (MOTORBOAT | SAILBOAT | YACHT | CATAMARAN)",
   "max_capacity": "number (entero)",
   "length_feet": "number",
   "cabin_count": "number (entero)",
@@ -80,7 +80,7 @@ GET /api/v1/embarcaciones/{vessel_id}
   ],
   "owner": {
     "owner_id": "string (UUID)",
-    "nombre_validado": "string",
+    "validated_name": "string",
     "verified": "boolean"
   }
 }
@@ -95,7 +95,7 @@ GET /api/v1/embarcaciones/{vessel_id}
 **Petición `curl`**:
 
 ```bash
-curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones/d3b07384-d113-49cd-a5d6-812e9bcfc101" \
+curl -X GET "https://flota.seashare.internal/api/v1/vessels/d3b07384-d113-49cd-a5d6-812e9bcfc101" \
   -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.serviceIdentityM2Token" \
   -H "Accept: application/json"
 ```
@@ -107,7 +107,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones/d3b07384-d113-
   "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
   "name": "Yate Tayrona Sea Breeze",
   "registration_number": "CP-04-2021-0892",
-  "type": "Yate",
+  "type": "YACHT",
   "max_capacity": 12,
   "length_feet": 48.5,
   "cabin_count": 3,
@@ -128,7 +128,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones/d3b07384-d113-
   ],
   "owner": {
     "owner_id": "a1c2e3f4-5678-90ab-cdef-1234567890ab",
-    "nombre_validado": "Inversiones Náuticas del Caribe S.A.S.",
+    "validated_name": "Inversiones Náuticas del Caribe S.A.S.",
     "verified": true
   }
 }
@@ -141,7 +141,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones/d3b07384-d113-
 ### Método HTTP y URL
 
 ```http
-GET /api/v1/embarcaciones
+GET /api/v1/vessels
 ```
 
 ### Elementos de la Petición (Request)
@@ -161,7 +161,7 @@ GET /api/v1/embarcaciones
 | `size` | number (entero) | No | Tamaño de página solicitado por M2 (fijo en 20 para el catálogo, FR-008) |
 | `q` | string | No | Filtro textual opcional por nombre o ubicación |
 
-*(Nota: Módulo 1 no filtra por tipo de embarcación. Módulo 2 aplica el filtro por `tipo` sobre la respuesta, usando el campo `tipo` de cada elemento).*
+*(Nota: Módulo 1 no filtra por tipo de embarcación. Módulo 2 aplica el filtro por `type` sobre la respuesta, usando el campo `type` de cada elemento).*
 
 ---
 
@@ -224,7 +224,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones?page=1&size=20
     {
       "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
       "name": "Yate Tayrona Sea Breeze",
-      "type": "Yate",
+      "type": "YACHT",
       "photo_url": "https://cdn.seashare.com/flota/yate-tayrona-01.jpg",
       "port": {
         "name": "Marina Internacional de Santa Marta",
@@ -245,11 +245,11 @@ curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones?page=1&size=20
 
 | Código HTTP M1 | Causa en Módulo 1 | Reacción Arquitectónica de Módulo 2 | Código Mapeado por M2 |
 |---|---|---|---|
-| `400 Bad Request` | Parámetros o `vessel_id` con sintaxis inválida | Módulo 2 registra el error y aborta inmediatamente sin reintento | `400 Bad Request` (`ID_INVALIDO` / `PARAMETROS_INVALIDOS`) |
-| `401 Unauthorized` / `403 Forbidden` | Token de servicio de M2 rechazado o sin permisos | Módulo 2 genera alerta crítica en observabilidad y corta la ejecución | `500 Internal Server Error` (`ERROR_INTERNO`) |
-| `404 Not Found` | Embarcación no registrada en flota | En consulta individual, informa no disponibilidad del activo sin reintentos | `404 Not Found` (`EMBARCACION_NO_DISPONIBLE`) |
-| `500 Internal Server Error` / `502 Bad Gateway` | Falla interna o caída en Módulo 1 | Módulo 2 ejecuta máximo un (1) reintento rápido; si persiste, activa *fail-safe* | `503 Service Unavailable` (`SERVICIO_FLOTA_NO_DISPONIBLE`) |
-| `Timeout` (sin respuesta) | Lectura supera los 300 ms | Dispara un (1) reintento inmediato; si se agota, aborta de forma segura | `503 Service Unavailable` (`SERVICIO_FLOTA_NO_DISPONIBLE`) |
+| `400 Bad Request` | Parámetros o `vessel_id` con sintaxis inválida | Módulo 2 registra el error y aborta inmediatamente sin reintento | `400 Bad Request` (`INVALID_ID` / `INVALID_PARAMETERS`) |
+| `401 Unauthorized` / `403 Forbidden` | Token de servicio de M2 rechazado o sin permisos | Módulo 2 genera alerta crítica en observabilidad y corta la ejecución | `500 Internal Server Error` (`INTERNAL_ERROR`) |
+| `404 Not Found` | Embarcación no registrada en flota | En consulta individual, informa no disponibilidad del activo sin reintentos | `404 Not Found` (`VESSEL_UNAVAILABLE`) |
+| `500 Internal Server Error` / `502 Bad Gateway` | Falla interna o caída en Módulo 1 | Módulo 2 ejecuta máximo un (1) reintento rápido; si persiste, activa *fail-safe* | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |
+| `Timeout` (sin respuesta) | Lectura supera los 300 ms | Dispara un (1) reintento inmediato; si se agota, aborta de forma segura | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |
 
 ---
 
@@ -279,7 +279,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones?page=1&size=20
 |---|---|---|
 | **FR-001** | Interfaz interna para consultar datos de barcos | Operación 1 (individual) y Operación 2 (lote) |
 | **FR-002** | Recepción de código de barco y verificación de capacidad | Path parameter `vessel_id` y campo `max_capacity` devuelto |
-| **FR-003** | Consulta directa a API externa de Módulo 1 | Endpoints `/api/v1/embarcaciones/{id}` y `/api/v1/embarcaciones` |
+| **FR-003** | Consulta directa a API externa de Módulo 1 | Endpoints `/api/v1/vessels/{id}` y `/api/v1/vessels` |
 | **FR-004** | Campos requeridos de flota (nombre, matrícula, tipo, capacidad, puerto GPS, servicios, dueño) | Objeto JSON tipado de la Operación 1 |
 | **FR-005** | Verificación estricta de capacidad | Campo `max_capacity` utilizado por CU-09 para validar pasajeros |
 | **FR-006** | Rechazo por superación de capacidad | Lógica interna de M2 respaldada por el dato `max_capacity` de M1 |

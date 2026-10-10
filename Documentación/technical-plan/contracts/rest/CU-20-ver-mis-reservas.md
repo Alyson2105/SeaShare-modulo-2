@@ -6,8 +6,8 @@
 - **Módulo Responsable**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones
 - **Tipo de Interfaz**: REST sincrónico expuesto por Módulo 2
 - **Actor / Consumidor Autorizado**: 
-  - `ARRENDATARIO` (recupera sus reservas contratadas)
-  - `PROPIETARIO` (recupera las reservas recibidas para sus embarcaciones)
+  - `RENTER` (recupera sus reservas contratadas)
+  - `OWNER` (recupera las reservas recibidas para sus embarcaciones)
 - **Caso de Uso Base / Relaciones**: 
   - Punto base extendido por: `Ver detalle de reserva` (`<<extend>>` - CU-21)
 - **Versión del Contrato**: 1.0.0
@@ -29,12 +29,12 @@ Este endpoint de solo lectura permite a los usuarios autenticados consultar el l
    - Ordena cronológicamente de forma descendente por fecha de creación (`created_at DESC`), ubicando las transacciones más recientes al inicio.
 3. **Pestañas y Filtrado Operativo**:
    - Soporta filtrado contextual por pestañas de la interfaz:
-     - `todos`: devuelve el universo completo de reservas del usuario.
-     - `historial`: reservas activas o exitosamente completadas (`Iniciada`, `Pendiente de Pago`, `Reservada`, `En Navegación`, `Completada`).
-     - `canceladas`: reservas terminadas prematuramente (`Cancelada`, `Expirada`, `Pago Fallido`).
+     - `all`: devuelve el universo completo de reservas del usuario.
+     - `history`: reservas activas o exitosamente completadas (`INITIATED`, `PENDING_PAYMENT`, `RESERVED`, `IN_NAVIGATION`, `COMPLETED`).
+     - `cancelled`: reservas terminadas prematuramente (`CANCELLED`, `EXPIRED`, `PAYMENT_FAILED`).
 4. **Regla de Negocio "Sin Dinero" (Inmutabilidad Financiera)**:
    - El monto total expuesto en cada reserva es el valor original congelado al momento de su liquidación por Módulo 3 (`FR-004`).
-   - Módulo 2 **no calcula deducciones, penalidades ni reembolsos en reservas canceladas** (`FR-004`, `SC-001`). Los sub-estados contractuales (`Flexible`, `Moderado`, `Tardío`, `Por Propietario`, `Por Inasistencia`) se exponen como contexto cualitativo sin alterar el monto total original.
+   - Módulo 2 **no calcula deducciones, penalidades ni reembolsos en reservas canceladas** (`FR-004`, `SC-001`). Los sub-estados contractuales (`FLEXIBLE`, `MODERATE`, `LATE`, `BY_OWNER`, `NO_SHOW`) se exponen como contexto cualitativo sin alterar el monto total original.
 5. **Diferenciación Semántica de Vistas**:
    - Para el **Arrendatario**: expone datos de la embarcación, fechas, total congelado y etiquetas contextuales de reembolso gestionado por M3 (`FR-010`).
    - Para el **Propietario**: expone el nombre del arrendatario titular, cantidad de pasajeros y fechas para la coordinación logística de muelle (`FR-009`).
@@ -46,7 +46,7 @@ Este endpoint de solo lectura permite a los usuarios autenticados consultar el l
 ## 3. Definición del Endpoint
 
 - **Método HTTP**: `GET`
-- **Ruta**: `/api/v1/reservas`
+- **Ruta**: `/api/v1/reservations`
 - **Formato de Petición / Respuesta**: `application/json`
 - **Codificación**: `UTF-8`
 
@@ -63,7 +63,7 @@ Este endpoint de solo lectura permite a los usuarios autenticados consultar el l
 | :--- | :--- | :--- | :--- | :--- |
 | `page` | Entero | No | `1` | Número de página a recuperar ($\ge 1$). |
 | `limit` | Entero | No | `10` | Cantidad de reservas por página ($1 \le limit \le 50$). Por defecto 10 según FR-012. |
-| `filter` | String (Enum) | No | `todos` | Filtro por pestaña: `"todos"`, `"historial"`, `"canceladas"`. |
+| `filter` | String (Enum) | No | `all` | Filtro por pestaña: `"all"`, `"history"`, `"cancelled"`. |
 
 ---
 
@@ -79,14 +79,14 @@ Este endpoint de solo lectura permite a los usuarios autenticados consultar el l
     "total_items": 12,
     "total_pages": 2
   },
-  "applied_filter": "todos | historial | canceladas",
-  "user_role": "Arrendatario | Propietario",
+  "applied_filter": "all | history | cancelled",
+  "user_role": "RENTER | OWNER",
   "view_title": "Mis reservas | Reservas recibidas",
   "reservations": [
     {
       "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
       "reservation_code": "#RS-4492",
-      "status": "Reservada",
+      "status": "RESERVED",
       "sub_status": null,
       "status_badge": {
         "text": "Confirmada",
@@ -120,7 +120,7 @@ Este endpoint de solo lectura permite a los usuarios autenticados consultar el l
         "name": "Carlos Mendoza"
       },
       "contextual_label": null,
-      "detail_url": "/api/v1/reservas/c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
+      "detail_url": "/api/v1/reservations/c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
       "created_at": "2026-10-09T10:00:00-05:00"
     }
   ]
@@ -132,14 +132,14 @@ Este endpoint de solo lectura permite a los usuarios autenticados consultar el l
 | Campo | Tipo | Nulabilidad | Descripción |
 | :--- | :--- | :--- | :--- |
 | `pagination` | Objeto | No nulo | Objeto envoltorio de control de paginación (`page`, `page_size`, `total_items`, `total_pages`). |
-| `applied_filter` | String | No nulo | Criterio de filtro activo (`"todos"`, `"historial"`, `"canceladas"`). |
-| `user_role` | String | No nulo | Rol con el que se resolvió la consulta (`"Arrendatario"` o `"Propietario"`). |
+| `applied_filter` | String | No nulo | Criterio de filtro activo (`"all"`, `"history"`, `"cancelled"`). |
+| `user_role` | String | No nulo | Rol con el que se resolvió la consulta (`"RENTER"` o `"OWNER"`). |
 | `view_title` | String | No nulo | Título semántico según rol (`"Mis reservas"` o `"Reservas recibidas"`). |
 | `reservations` | Array | No nulo | Lista de objetos de reserva. Vacía `[]` si no hay resultados. |
 | `reservations[].reservation_id` | String (UUID) | No nulo | Identificador universal único de la reserva. |
 | `reservations[].reservation_code` | String | No nulo | Código amigable de referencia náutica (ej. `"#RS-4492"`). |
-| `reservations[].status` | String (Enum) | No nulo | Estado operativo principal (`"Iniciada"`, `"Pendiente de Pago"`, `"Reservada"`, `"En Navegación"`, `"Completada"`, `"Cancelada"`, `"Expirada"`, `"Pago Fallido"`). |
-| `reservations[].sub_status` | String (Enum) | Nulo condicional | Sub-clasificación contractual en reservas canceladas (`"Flexible"`, `"Moderado"`, `"Tardío"`, `"Por Propietario"`, `"Por Inasistencia"`). Nulo en otros estados. |
+| `reservations[].status` | String (Enum) | No nulo | Estado operativo principal (`"INITIATED"`, `"PENDING_PAYMENT"`, `"RESERVED"`, `"IN_NAVIGATION"`, `"COMPLETED"`, `"CANCELLED"`, `"EXPIRED"`, `"PAYMENT_FAILED"`). |
+| `reservations[].sub_status` | String (Enum) | Nulo condicional | Sub-clasificación contractual en reservas canceladas (`"FLEXIBLE"`, `"MODERATE"`, `"LATE"`, `"BY_OWNER"`, `"NO_SHOW"`). Nulo en otros estados. |
 | `reservations[].status_badge` | Objeto | No nulo | Metadatos visuales para badges (texto legible y color semántico: `verde`, `amarillo`, `gris`, `rojo`). |
 | `reservations[].vessel` | Objeto | No nulo | Datos referenciales mínimos de la embarcación (ID, nombre, imagen y puerto). |
 | `reservations[].dates` | Objeto | No nulo | Rango temporal pactado, días y noches de navegación. |
@@ -159,7 +159,7 @@ Este endpoint de solo lectura permite a los usuarios autenticados consultar el l
 
 #### Petición HTTP (`curl`)
 ```bash
-curl -X GET "https://api.seashare.com/api/v1/reservas?page=1&limit=10&filter=todos" \
+curl -X GET "https://api.seashare.com/api/v1/reservations?page=1&limit=10&filter=all" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -H "Accept: application/json"
 ```
@@ -173,14 +173,14 @@ curl -X GET "https://api.seashare.com/api/v1/reservas?page=1&limit=10&filter=tod
     "total_items": 3,
     "total_pages": 1
   },
-  "applied_filter": "todos",
-  "user_role": "Arrendatario",
+  "applied_filter": "all",
+  "user_role": "RENTER",
   "view_title": "Mis reservas",
   "reservations": [
     {
       "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
       "reservation_code": "#RS-4492",
-      "status": "Reservada",
+      "status": "RESERVED",
       "sub_status": null,
       "status_badge": {
         "text": "Confirmada",
@@ -214,14 +214,14 @@ curl -X GET "https://api.seashare.com/api/v1/reservas?page=1&limit=10&filter=tod
         "name": "Carlos Mendoza"
       },
       "contextual_label": null,
-      "detail_url": "/api/v1/reservas/c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
+      "detail_url": "/api/v1/reservations/c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
       "created_at": "2026-10-09T10:00:00-05:00"
     },
     {
       "reservation_id": "d2e3f4a5-6b7c-8d9e-0f1a-2b3c4d5e6f7a",
       "reservation_code": "#RS-3810",
-      "status": "Cancelada",
-      "sub_status": "Flexible",
+      "status": "CANCELLED",
+      "sub_status": "FLEXIBLE",
       "status_badge": {
         "text": "Cancelada",
         "semantic_color": "rojo",
@@ -254,13 +254,13 @@ curl -X GET "https://api.seashare.com/api/v1/reservas?page=1&limit=10&filter=tod
         "name": "Andrés Morales"
       },
       "contextual_label": "Cancelada - Ventana Flexible / Reembolso gestionado por Módulo 3",
-      "detail_url": "/api/v1/reservas/d2e3f4a5-6b7c-8d9e-0f1a-2b3c4d5e6f7a",
+      "detail_url": "/api/v1/reservations/d2e3f4a5-6b7c-8d9e-0f1a-2b3c4d5e6f7a",
       "created_at": "2026-10-01T14:20:00-05:00"
     },
     {
       "reservation_id": "f5a6b7c8-9d0e-1f2a-3b4c-5d6e7f8a9b0c",
       "reservation_code": "#RS-2950",
-      "status": "Completada",
+      "status": "COMPLETED",
       "sub_status": null,
       "status_badge": {
         "text": "Completada",
@@ -294,7 +294,7 @@ curl -X GET "https://api.seashare.com/api/v1/reservas?page=1&limit=10&filter=tod
         "name": "Carlos Mendoza"
       },
       "contextual_label": "Depósito sin disputa / Reembolso gestionado por Módulo 3",
-      "detail_url": "/api/v1/reservas/f5a6b7c8-9d0e-1f2a-3b4c-5d6e7f8a9b0c",
+      "detail_url": "/api/v1/reservations/f5a6b7c8-9d0e-1f2a-3b4c-5d6e7f8a9b0c",
       "created_at": "2026-09-02T11:00:00-05:00"
     }
   ]
@@ -307,7 +307,7 @@ curl -X GET "https://api.seashare.com/api/v1/reservas?page=1&limit=10&filter=tod
 
 #### Petición HTTP (`curl`)
 ```bash
-curl -X GET "https://api.seashare.com/api/v1/reservas?page=1&limit=10&filter=historial" \
+curl -X GET "https://api.seashare.com/api/v1/reservations?page=1&limit=10&filter=history" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -H "Accept: application/json"
 ```
@@ -321,14 +321,14 @@ curl -X GET "https://api.seashare.com/api/v1/reservas?page=1&limit=10&filter=his
     "total_items": 2,
     "total_pages": 1
   },
-  "applied_filter": "historial",
-  "user_role": "Propietario",
+  "applied_filter": "history",
+  "user_role": "OWNER",
   "view_title": "Reservas recibidas",
   "reservations": [
     {
       "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
       "reservation_code": "#RS-4492",
-      "status": "Reservada",
+      "status": "RESERVED",
       "sub_status": null,
       "status_badge": {
         "text": "Confirmada",
@@ -362,13 +362,13 @@ curl -X GET "https://api.seashare.com/api/v1/reservas?page=1&limit=10&filter=his
         "name": "Carlos Mendoza"
       },
       "contextual_label": null,
-      "detail_url": "/api/v1/reservas/c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
+      "detail_url": "/api/v1/reservations/c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
       "created_at": "2026-10-09T10:00:00-05:00"
     },
     {
       "reservation_id": "a9b8c7d6-e5f4-3a2b-1c0d-9e8f7a6b5c4d",
       "reservation_code": "#RS-4480",
-      "status": "En Navegación",
+      "status": "IN_NAVIGATION",
       "sub_status": null,
       "status_badge": {
         "text": "En navegación",
@@ -402,7 +402,7 @@ curl -X GET "https://api.seashare.com/api/v1/reservas?page=1&limit=10&filter=his
         "name": "Carlos Mendoza"
       },
       "contextual_label": null,
-      "detail_url": "/api/v1/reservas/a9b8c7d6-e5f4-3a2b-1c0d-9e8f7a6b5c4d",
+      "detail_url": "/api/v1/reservations/a9b8c7d6-e5f4-3a2b-1c0d-9e8f7a6b5c4d",
       "created_at": "2026-10-08T16:00:00-05:00"
     }
   ]
@@ -415,7 +415,7 @@ curl -X GET "https://api.seashare.com/api/v1/reservas?page=1&limit=10&filter=his
 
 #### Petición HTTP (`curl`)
 ```bash
-curl -X GET "https://api.seashare.com/api/v1/reservas?page=1&limit=10&filter=canceladas" \
+curl -X GET "https://api.seashare.com/api/v1/reservations?page=1&limit=10&filter=cancelled" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   -H "Accept: application/json"
 ```
@@ -429,8 +429,8 @@ curl -X GET "https://api.seashare.com/api/v1/reservas?page=1&limit=10&filter=can
     "total_items": 0,
     "total_pages": 0
   },
-  "applied_filter": "canceladas",
-  "user_role": "Arrendatario",
+  "applied_filter": "cancelled",
+  "user_role": "RENTER",
   "view_title": "Mis reservas",
   "reservations": []
 }
@@ -444,7 +444,7 @@ Todos los errores retornan el sobre estándar con `code` y `message`:
 
 ```json
 {
-  "code": "CODIGO_ERROR",
+  "code": "ERROR_CODE",
   "message": "Descripción detallada del motivo de rechazo."
 }
 ```
@@ -461,13 +461,13 @@ Todos los errores retornan el sobre estándar con `code` y `message`:
 ## 7. Notas Transversales y Reglas de Negocio Arquitecturales
 
 ### 7.1 Regla de Oro "Sin Dinero" (Zero Financial Calculations)
-En estricto apego a `FR-004` y `SC-001`, Módulo 2 se abstiene por completo de calcular devoluciones, porcentajes o deducciones sobre reservas `Canceladas`.
-- En una reserva en estado `Cancelada` con sub-estado `Flexible`, `Moderado` o `Tardío`, el campo `total_price.amount` exhibe literalmente el monto total que fue acordado y congelado al inicio.
+En estricto apego a `FR-004` y `SC-001`, Módulo 2 se abstiene por completo de calcular devoluciones, porcentajes o deducciones sobre reservas `CANCELLED`.
+- En una reserva en estado `CANCELLED` con sub-estado `FLEXIBLE`, `MODERATE` o `LATE`, el campo `total_price.amount` exhibe literalmente el monto total que fue acordado y congelado al inicio.
 - Cualquier valor derivado de liquidación, compensación o indemnización es propiedad de Módulo 3 y se gestionará en los reportes contables independientes de dicho módulo.
 
 ### 7.2 Aislamiento de Datos por Identidad JWT
 El controlador extrae directamente el ID del usuario (`sub` o `user_id`) y su rol del token JWT verificado en el contexto de seguridad de Spring.
-- Un usuario no puede pasar un parámetro `usuario_id` en la query string para usurpar consultas ajenas; el filtro en base de datos (`WHERE renter_id = :id` o `WHERE owner_id = :id`) es forzado por el backend a nivel de repositorio.
+- Un usuario no puede pasar un parámetro `user_id` en la query string para usurpar consultas ajenas; el filtro en base de datos (`WHERE renter_id = :id` o `WHERE owner_id = :id`) es forzado por el backend a nivel de repositorio.
 
 ### 7.3 Orden Determinista y Paginación Eficiente
 Las consultas se ejecutan con índices compuestos en base de datos (`renter_id, created_at DESC` y `owner_id, created_at DESC`), garantizando respuestas ágiles por debajo de 50 ms aun cuando el usuario acumule cientos de registros históricos.
@@ -482,9 +482,9 @@ Las consultas se ejecutan con índices compuestos en base de datos (`renter_id, 
 | **FR-002** | Filtrar registros en BD según `renter_id` o `owner_id`. | Garantizado en lógica de backend descrita en sección 2 y 7.2. |
 | **FR-003** | Presentar embarcación, rango de fechas, estado vigente y precio total. | Presente en cada elemento del arreglo `reservations[]`. |
 | **FR-004** | Precio total expuesto debe ser el monto original congelado; cero cálculos en canceladas. | Objeto `total_price` con `is_frozen: true`. Cero cálculos de penalidad o deducción. |
-| **FR-005** | Mostrar sub-estados en reservas canceladas (`Por Propietario`, `Por Inasistencia`, etc.). | Campo `sub_status` e `status_badge` contextual. |
-| **FR-006** | Enlace para invocar la vista profunda (`Ver detalle de reserva`). | Atributo `detail_url` que apunta a `/api/v1/reservas/{reservation_id}`. |
-| **FR-007** | Encabezados diferenciados ("Mis reservas" / "Reservas recibidas") y filtros de pestañas. | Campos `view_title` y parámetro `filter` (`todos`, `historial`, `canceladas`). |
+| **FR-005** | Mostrar sub-estados en reservas canceladas (`BY_OWNER`, `NO_SHOW`, etc.). | Campo `sub_status` e `status_badge` contextual. |
+| **FR-006** | Enlace para invocar la vista profunda (`Ver detalle de reserva`). | Atributo `detail_url` que apunta a `/api/v1/reservations/{reservation_id}`. |
+| **FR-007** | Encabezados diferenciados ("Mis reservas" / "Reservas recibidas") y filtros de pestañas. | Campos `view_title` y parámetro `filter` (`all`, `history`, `cancelled`). |
 | **FR-008** | Badges de estado con colores semánticos (`verde`, `amarillo`, `gris`, `rojo`). | Objeto `status_badge` con `semantic_color`. |
 | **FR-009** | En Propietario incluir nombre de arrendatario y cantidad de pasajeros. | Campos `renter.name` y `passengers` incluidos en el schema. |
 | **FR-010** | En Arrendatario incluir insignias cualitativas sin montos numéricos de reembolso. | Campo `contextual_label` con texto cualitativo (ej. "Reembolso gestionado por Módulo 3"). |

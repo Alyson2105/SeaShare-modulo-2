@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Caso de uso de Módulo 2 | CU-13 Confirmar pago, ejecutado como proceso interno programado (job). Relacionados: CU-03 Iniciar pago (publica el evento `PENDIENTE` con el token) y CU-08 Actualizar estado de reserva (aplica la transición resultante) |
+| Caso de uso de Módulo 2 | CU-13 Confirmar pago, ejecutado como proceso interno programado (job). Relacionados: CU-03 Iniciar pago (publica el evento `PENDING` con el token) y CU-08 Actualizar estado de reserva (aplica la transición resultante) |
 | Contraparte en Módulo 3 | `rest/UC06-confirmacion-pago.md` |
 | Dirección | Sistema de Reservas y Operaciones (Módulo 2) → sistema (Módulo 3) |
 | ¿Responde? | Sí (síncrono) |
@@ -13,14 +13,14 @@ Leyenda y convenciones comunes: [README](../README.md).
 
 ## 1. Propósito
 
-Módulo 3 ejecuta el cobro con la pasarela (Mercado Pago) mediante un worker asíncrono, a partir del evento `reservation.status.changed` con `status = PENDIENTE`. Módulo 3 no invoca a Módulo 2, así que Módulo 2 conoce el resultado del cobro consultando este endpoint [CU-13 FR-001].
+Módulo 3 ejecuta el cobro con la pasarela (Mercado Pago) mediante un worker asíncrono, a partir del evento `reservation.status.changed` con `status = PENDING`. Módulo 3 no invoca a Módulo 2, así que Módulo 2 conoce el resultado del cobro consultando este endpoint [CU-13 FR-001].
 
 **Invariantes:**
 
 - Módulo 2 no interpreta, calcula ni altera los montos que devuelve este endpoint. Los transporta solo para auditoría [CU-13 FR-008, SC-005].
-- Solo un estado `APROBADO` verificable dentro del TTL permite avanzar la reserva a Reservada [CU-13 FR-004, SC-002].
-- `RECHAZADO`, `CANCELADO` o `EXPIRADO` nunca se tratan como aprobado.
-- `APROBADO` no implica que la captura o la liquidación posterior ya se haya ejecutado.
+- Solo un estado `APPROVED` verificable dentro del TTL permite avanzar la reserva a Reservada [CU-13 FR-004, SC-002].
+- `REJECTED`, `CANCELLED` o `EXPIRED` nunca se tratan como aprobado.
+- `APPROVED` no implica que la captura o la liquidación posterior ya se haya ejecutado.
 
 ## 2. Petición
 
@@ -77,7 +77,7 @@ GET /api/v1/reservations/{reservation_id}/payment-confirmation
 ```json
 {
   "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
-  "status": "APROBADO",
+  "status": "APPROVED",
   "detail": null,
   "authorized_amount": "10040000.00",
   "captured_amount": null,
@@ -92,7 +92,7 @@ GET /api/v1/reservations/{reservation_id}/payment-confirmation
 ```json
 {
   "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
-  "status": "EN_PROCESO",
+  "status": "IN_PROGRESS",
   "detail": null,
   "authorized_amount": null,
   "captured_amount": null,
@@ -107,7 +107,7 @@ GET /api/v1/reservations/{reservation_id}/payment-confirmation
 ```json
 {
   "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
-  "status": "RECHAZADO",
+  "status": "REJECTED",
   "detail": "cc_rejected_insufficient_amount",
   "authorized_amount": null,
   "captured_amount": null,
@@ -121,12 +121,12 @@ GET /api/v1/reservations/{reservation_id}/payment-confirmation
 
 | `status` | Significado en Módulo 3 | Reacción de Módulo 2 (CU-13 / CU-08) |
 |---|---|---|
-| `EN_PROCESO` | La pasarela aún no reportó un resultado definitivo | Sin cambios. Vuelve a consultar en el siguiente ciclo |
-| `APROBADO` | La pasarela aprobó la autorización o el cobro | Con TTL vigente: transición a Reservada. Con la reserva ya Expirada o en Pago Fallido: cobro huérfano, Módulo 2 publica el estado `EXPIRADA` a Módulo 3 y genera alerta crítica |
-| `RECHAZADO` | La pasarela rechazó la operación | Registra el motivo. Con TTL vigente la reserva sigue en Pendiente de Pago, permitiendo reintento con otro token (CU-03) |
-| `CANCELADO` | La operación fue cancelada | Transición a Pago Fallido y liberación de la embarcación en Módulo 1 |
-| `EXPIRADO` | La autorización venció sin captura | Transición a Pago Fallido y liberación de la embarcación en Módulo 1 |
-| `DESCONOCIDO` | Estado externo no determinado (incluye falla de comunicación con la pasarela) | Se trata como `EN_PROCESO`. Se registra para auditoría |
+| `IN_PROGRESS` | La pasarela aún no reportó un resultado definitivo | Sin cambios. Vuelve a consultar en el siguiente ciclo |
+| `APPROVED` | La pasarela aprobó la autorización o el cobro | Con TTL vigente: transición a Reservada. Con la reserva ya Expirada o en Pago Fallido: cobro huérfano, Módulo 2 publica el estado `EXPIRED` a Módulo 3 y genera alerta crítica |
+| `REJECTED` | La pasarela rechazó la operación | Registra el motivo. Con TTL vigente la reserva sigue en Pendiente de Pago, permitiendo reintento con otro token (CU-03) |
+| `CANCELLED` | La operación fue cancelada | Transición a Pago Fallido y liberación de la embarcación en Módulo 1 |
+| `EXPIRED` | La autorización venció sin captura | Transición a Pago Fallido y liberación de la embarcación en Módulo 1 |
+| `UNKNOWN` | Estado externo no determinado (incluye falla de comunicación con la pasarela) | Se trata como `IN_PROGRESS`. Se registra para auditoría |
 
 ## 6. Cómo trata Módulo 2 cada error
 
@@ -136,7 +136,7 @@ Los errores de Módulo 3 llegan como `application/problem+json` con `type`, `tit
 |---|---|---|---|
 | `400` | `VALIDATION_ERROR` | `reservation_id` con formato inválido | Alerta de integración en observabilidad. No reintenta |
 | `401` / `403` | `UNAUTHENTICATED` / `FORBIDDEN` | Credencial de servicio ausente, inválida o sin permisos | Alerta crítica de infraestructura. No cambia el estado de la reserva |
-| `404` | `CHARGE_INTENT_NOT_FOUND` | No existe IntenciónDeCobro: Módulo 3 la crea de forma asíncrona al procesar el evento `PENDIENTE` y puede no haberlo procesado aún | Reintenta en el siguiente ciclo (reintentable) |
+| `404` | `CHARGE_INTENT_NOT_FOUND` | No existe IntenciónDeCobro: Módulo 3 la crea de forma asíncrona al procesar el evento `PENDING` y puede no haberlo procesado aún | Reintenta en el siguiente ciclo (reintentable) |
 | `500` / `503` / timeout | `INTERNAL_ERROR` | Falla interna o sobrecarga | Sin cambios de estado. Reintenta en el siguiente ciclo |
 
 ## 7. Resiliencia
@@ -158,8 +158,8 @@ Módulo 2 llama con la identidad de servicio `Sistema de Reservas y Operaciones`
 
 1. **Autenticación servicio a servicio:** validar emisor y claim del JWT de servicio.
 2. **SLA y timeout:** ratificar con Módulo 3 SLA menor a 300 ms y read timeout de 500 ms.
-3. **Estado `EXPIRADA` en el evento de estado:** para reembolsar un cobro aprobado después de que Módulo 2 expiró la reserva, Módulo 3 debe aceptar `EXPIRADA` en `reservation.status.changed` (ver `events/CU-14-estado-reserva.md`).
-4. **Clave idempotente de cobro con número de intento:** la clave actual `cobro-<reservation_id>` impide reintentar con otro token tras un `RECHAZADO`. Debe incluir el intento.
+3. **Estado `EXPIRED` en el evento de estado:** para reembolsar un cobro aprobado después de que Módulo 2 expiró la reserva, Módulo 3 debe aceptar `EXPIRED` en `reservation.status.changed` (ver `events/CU-14-estado-reserva.md`).
+4. **Clave idempotente de cobro con número de intento:** la clave actual `cobro-<reservation_id>` impide reintentar con otro token tras un `REJECTED`. Debe incluir el intento.
 
 ## 10. Trazabilidad
 
