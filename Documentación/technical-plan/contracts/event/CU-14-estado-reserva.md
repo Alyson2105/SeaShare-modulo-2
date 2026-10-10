@@ -1,71 +1,56 @@
-# Contrato de Evento Asíncrono: Notificación de Estado de Reserva (CU-14)
+# Contrato de Evento: Estado de Reserva (CU-14 → M3)
 
-**Módulo Productor**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones ("Sistema de Reservas y Operaciones")  
-**Módulo Consumidor**: Módulo 3 – Liquidación, Seguros y Dispersión de Fondos ("el sistema")  
-**Spec de referencia**: [`Documentación/features/CU-14-recibir-estado-reserva/spec.md`](../../features/CU-14-recibir-estado-reserva/spec.md) y [`CU-08-actualizar-estado-reserva/spec.md`](../../features/CU-08-actualizar-estado-reserva/spec.md)  
-**Fecha**: 2026-10-09
-
-Este contrato especifica el evento asíncrono unidireccional enviado por RabbitMQ desde Módulo 2 hacia Módulo 3 cuando una reserva cambia de estado a partir del inicio de la fase de cobro. Se alinea con el contrato UC07 «Brindar el estado de la reserva» de Módulo 3: un único exchange, una única routing key y un enum plano de estados.
-
----
-
-## 1. Topología AMQP (RabbitMQ)
-
-| Elemento | Nombre / Configuración |
+| Campo | Valor |
 |---|---|
-| Exchange | `seashare.reservations` (topic, durable) |
+| Módulo productor | Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones |
+| Módulo consumidor | Módulo 3 (UC07 Brindar el estado de la reserva) |
+| Spec de referencia | CU-14-recibir-estado-reserva/spec.md y CU-08-actualizar-estado-reserva/spec.md |
+| Tipo | Asíncrono, unidireccional (AMQP / RabbitMQ). M3 no responde |
+| Fecha | 2026-10-09 |
+
+## 1. Propósito
+
+Cada vez que una reserva cambia de estado, M2 le avisa a M3 cuál es el estado nuevo. M3 decide qué hacer con el dinero (cobrar, reembolsar, liquidar). M2 solo informa el estado y **nunca envía montos**.
+
+## 2. Cuándo se publica
+
+- Cada vez que CU-08 cambia el estado de una reserva y ese estado está en la tabla de la sección 4.
+- La primera publicación es `PENDIENTE`. Cuando la reserva nace en Iniciada no se publica ningún cambio de estado (solo el evento de información de reserva, ver CU-02).
+- Si el arrendatario reintenta el pago con otra tarjeta (CU-03), se publica `PENDIENTE` otra vez con un `Message-Id` y un token de pago nuevos. El TTL no se reinicia.
+
+## 3. Dónde se publica
+
+| Elemento | Valor |
+|---|---|
+| Exchange | `seashare.reservations` (topic) |
 | Routing key | `reservation.status.changed` |
-| Cola consumidora (M3) | `finance.reservation-status.v1` |
-| Binding | `reservation.status.changed` |
-| DLX | `seashare.reservations.dlx` |
-| DLQ | `finance.reservation-status.dlq` — **[PEDIR A M3: confirmar nombre]** |
+| Cola de M3 | `finance.reservation-status.v1` |
 
----
+## 4. Mensaje
 
-## 2. Metadatos y Encabezados del Mensaje (AMQP Properties)
+Headers AMQP:
 
-| Propiedad | Obligatorio | Descripción |
+| Header | Obligatorio | Valor |
 |---|---|---|
-| `Message-Id` | Sí | UUID del evento generado en el outbox (clave de deduplicación; reemplaza al antiguo `event_id` del payload) |
+| `Message-Id` | Sí | UUID único del mensaje (M3 lo usa para descartar duplicados) |
 | `Content-Type` | Sí | `application/json` |
-| `delivery_mode` | Sí | `2` (persistente) |
-| `correlation_id` | No | UUID de trazabilidad |
 
----
+Payload:
 
-## 3. Contrato del Payload (JSON Tipado)
+| Campo | Tipo | Obligatorio | Descripción |
+|---|---|---|---|
+| `reservation_id` | UUID | Sí | Identificador de la reserva |
+| `status` | string | Sí | Estado nuevo, según la tabla de abajo |
+| `status_changed_at` | datetime (ISO 8601) | Sí | Cuándo ocurrió el cambio |
+| `payment_token_ref` | string | Solo si `status` = `PENDIENTE` | Token de pago generado por el frontend. M2 lo transporta sin interpretarlo |
+| `payment_method_type` | string | No | Tipo de medio de pago (solo en `PENDIENTE`) |
+| `payment_metadata` | object | No | Datos no sensibles del pago: `payer_email`, `payment_method_id`, `installments`, `last_four` (solo en `PENDIENTE`) |
 
-```json
-{
-  "reservation_id": "string (UUID)",
-  "status": "string (PENDIENTE | RESERVADO | EN_NAVEGACION | COMPLETADA | CANCELADO_FLEXIBLEMENTE | CANCELADO_MODERADAMENTE | CANCELADO_TARDIAMENTE | CANCELADO_POR_ANFITRION | EXPIRADA*)",
-  "status_changed_at": "string (ISO 8601 con zona horaria)",
-  "payment_token_ref": "string (obligatorio solo si status = PENDIENTE)",
-  "payment_method_type": "string (opcional, solo en PENDIENTE)",
-  "payment_metadata": {
-    "payer_email": "...",
-    "payment_method_id": "...",
-    "installments": 1,
-    "last_four": "..."
-  }
-}
-```
+Qué estado de M2 se publica como qué `status`:
 
-`*` `EXPIRADA` solo cuando Módulo 3 lo habilite (ver sección 6).
-
-Se eliminan del payload: `event_id` (pasa a `Message-Id`), `reserva_id`, `embarcacion_id`, `estado_anterior`, `nuevo_estado`, `sub_estado`, `actor_disparador`, `anticipacion_horas` y `novedades_cierre`. Esos hechos operativos los consulta Módulo 3 si los necesita; no forman parte del contrato de Módulo 3.
-
-### Regla estricta «Sin dinero» (FR-006, SC-003)
-
-El único dato de pago es la referencia segura (`payment_token_ref`) que Módulo 2 transporta sin interpretar. Se prohíbe incluir cualquier monto, tarifa o número de tarjeta.
-
----
-
-## 4. Mapeo de estado M2 → `status` M3
-
-| Estado / sub-estado de Módulo 2 | `status` publicado a M3 |
+| Estado en M2 | `status` que recibe M3 |
 |---|---|
-| Pendiente de Pago | `PENDIENTE` (+ campos `payment_*`) |
+| Pendiente de Pago | `PENDIENTE` |
 | Reservada | `RESERVADO` |
 | En Navegación | `EN_NAVEGACION` |
 | Completada | `COMPLETADA` |
@@ -73,27 +58,15 @@ El único dato de pago es la referencia segura (`payment_token_ref`) que Módulo
 | Cancelada · Moderado | `CANCELADO_MODERADAMENTE` |
 | Cancelada · Tardío | `CANCELADO_TARDIAMENTE` |
 | Cancelada · Por Propietario | `CANCELADO_POR_ANFITRION` |
-| Cancelada · Por Inasistencia | `CANCELADO_TARDIAMENTE` (provisional: mismo tratamiento financiero; ver sección 6) |
-| Iniciada | No se publica (ver excepción en sección 5) |
-| Expirada (sin cobro) | No se publica |
-| Expirada con cobro aprobado tardío | `EXPIRADA` (ver sección 6) |
-| Pago Fallido | No se publica |
+| Cancelada · Por Inasistencia | `CANCELADO_TARDIAMENTE` (provisional: mismo tratamiento financiero) |
+| Expirada con cobro aprobado tardío | `EXPIRADA` (pendiente de M3, ver sección 6) |
+| Iniciada, Expirada sin cobro, Pago Fallido | No se publican |
 
-Módulo 3 solo reconoce los 10 estados definidos en su contrato; cualquier otro se registra como inconsistencia sin acción. Por eso Módulo 2 no inventa valores fuera de este mapeo.
+M3 solo reconoce los estados de su lista. Cualquier otro valor lo registra como inconsistencia y no hace nada, por eso M2 no publica nada fuera de esta tabla.
 
-### 4.1 Reglas de publicación
+## 5. Ejemplos
 
-- **Disparador:** tras consolidar cualquier transición de CU-08 listada en el mapeo, mediante outbox transaccional.
-- **Inicio:** la primera publicación es `PENDIENTE`. Al nacer `Iniciada` no se publica `reservation.status.changed`.
-- **Excepción a «nada hacia M3 en Iniciada»:** en `Iniciada` sí se publica el mensaje `reservation.info.provided` (contrato `m3-informacion-reserva.md`), que no es un cambio de estado sino la información de la reserva que Módulo 3 necesita para calcular.
-- **Reintento de pago:** cada nuevo intento (CU-03) publica `PENDIENTE` de nuevo con `Message-Id` y `payment_token_ref` nuevos. No reinicia el TTL.
-- **Anticipación y sub-estado:** Módulo 3 los deduce del `status`; Módulo 2 ya no los envía.
-
-### 4.2 Ejemplos de eventos publicados
-
-#### Variante 1 — Pendiente de pago
-
-**`Message-Id`:** `1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d`
+Pendiente de pago:
 
 ```json
 {
@@ -111,7 +84,7 @@ Módulo 3 solo reconoce los 10 estados definidos en su contrato; cualquier otro 
 }
 ```
 
-#### Variante 2 — Reservada
+Reservada:
 
 ```json
 {
@@ -121,7 +94,7 @@ Módulo 3 solo reconoce los 10 estados definidos en su contrato; cualquier otro 
 }
 ```
 
-#### Variante 3 — Cancelada moderadamente
+Cancelada moderadamente:
 
 ```json
 {
@@ -131,7 +104,7 @@ Módulo 3 solo reconoce los 10 estados definidos en su contrato; cualquier otro 
 }
 ```
 
-#### Variante 4 — Completada
+Completada:
 
 ```json
 {
@@ -141,63 +114,33 @@ Módulo 3 solo reconoce los 10 estados definidos en su contrato; cualquier otro 
 }
 ```
 
-#### Variante 5 — Cancelada por inasistencia (provisional)
+## 6. Reglas de procesamiento
 
-```json
-{
-  "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
-  "status": "CANCELADO_TARDIAMENTE",
-  "status_changed_at": "2026-11-15T09:35:00-05:00"
-}
-```
+1. **Cuándo se publica**: cada vez que CU-08 cambia el estado de una reserva y ese estado está en la tabla de la sección 4. El evento se guarda en la misma transacción que el cambio de estado (outbox) y un proceso aparte lo publica. Los eventos de una misma reserva se publican en el orden en que ocurrieron los cambios.
+2. **Primera publicación**: `PENDIENTE`. Cuando la reserva nace en Iniciada no se publica ningún cambio de estado (solo el evento de información de reserva, ver CU-02).
+3. **Estados no incluidos**: M3 solo reconoce los estados de su lista; cualquier otro lo registra como inconsistencia y no hace nada. Por eso M2 no publica Iniciada, Expirada sin cobro ni Pago Fallido.
+4. **Pendiente de pago**: el `payment_token_ref` es obligatorio. Si CU-03 no lo recibe, responde 400 y la reserva no cambia de estado.
+5. **Reintento de pago**: si el arrendatario reintenta con otra tarjeta (CU-03), se publica `PENDIENTE` de nuevo con un `Message-Id` y un token nuevos. El TTL no se reinicia.
+6. **Sin dinero**: el mensaje nunca lleva montos, tarifas ni número de tarjeta. M3 deduce el sub-estado y la anticipación a partir del `status`.
+7. **Idempotencia**: M2 no publica dos veces la misma transición. Si el mensaje se entrega más de una vez, M3 lo descarta por `Message-Id` y confirma (`ack`) solo después de guardarlo.
+8. **Respuesta**: no aplica (unidireccional). Para M2 el mensaje se considera entregado cuando el broker confirma la recepción (publisher confirm); recién entonces se marca como publicado en el outbox.
+9. **Si algo falla**:
+   - Broker caído o conexión rechazada: el evento queda en el outbox y se reintenta hasta 5 veces, con espera de 1, 5, 25 y 125 segundos. Si sigue fallando, se genera una alarma crítica. El cambio de estado ya quedó guardado.
+   - M3 rechaza el mensaje por esquema inválido: no se reintenta. M3 lo maneja con su propia DLQ y M2 no se entera (no hay respuesta).
+   - El outbox no se puede escribir: falla la transacción completa y el estado de la reserva no cambia.
 
-#### Variante 6 — Cobro huérfano tras expiración (cuando M3 habilite `EXPIRADA`)
+Pendientes con M3:
+1. Agregar el estado `EXPIRADA`. Si M3 ya cobró y M2 expiró la reserva por carrera de TTL, M3 debe reembolsar el 100 %. Sin este estado no hay forma de pedir ese reembolso.
+2. Opcional: agregar `CANCELADO_POR_INASISTENCIA`, con el mismo tratamiento que `CANCELADO_TARDIAMENTE`.
+3. Confirmar que M3 ignora campos que no están en su contrato.
 
-```json
-{
-  "reservation_id": "7b1a2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d",
-  "status": "EXPIRADA",
-  "status_changed_at": "2026-10-09T12:21:05-05:00"
-}
-```
+## 7. Trazabilidad
 
----
-
-## 5. Política de Entrega Garantizada, Reintentos y DLQ
-
-- **Patrón Outbox Transaccional**: la inserción del evento y la transición de estado se asientan atómicamente en la misma transacción de PostgreSQL. Esto garantiza **0% de eventos perdidos** ante caídas del broker o de la red (SC-001).
-- **Confirmación del Broker (*Publisher Confirms*)**: el relay de mensajería marca el mensaje como enviado solo tras recibir el `ack` de RabbitMQ.
-- **Consumo con Confirmación Manual (*Manual Ack*)**: Módulo 3 debe operar con `basicAck` explícito únicamente tras procesar e insertar el evento en su almacén local.
-- **Política de Reintentos**:
-  - Máximo **5 intentos** por evento (primer intento inmediato tras la transacción).
-  - *Backoff* exponencial con jitter: **1 s, 5 s, 25 s y 125 s** entre intentos sucesivos.
-  - Se reintenta **exclusivamente ante errores de conexión, timeouts o códigos 5xx**.
-  - Si un consumidor rechaza permanentemente con error 4xx de validación de esquema, no se reintenta.
-  - Tras el quinto intento fallido, el mensaje se transfiere automáticamente a `seashare.reservations.dlx` → `finance.reservation-status.dlq` y se dispara una alarma crítica de observabilidad.
-- **Deduplicación en Módulo 3**: la entrega es *at-least-once*. Módulo 3 debe usar la propiedad AMQP `Message-Id` como clave de deduplicación para descartar eventos duplicados sin reprocesar.
-
----
-
-## 6. Puntos Abiertos y Aclaraciones Necesarias
-
-- **[PEDIR A M3: habilitar `EXPIRADA` en el enum]**: si Módulo 3 ya cobró y Módulo 2 expiró la reserva por una carrera de TTL, Módulo 3 debe reembolsar el 100 %. Sin este estado no hay forma de solicitar el reembolso del cobro huérfano.
-- **[PEDIR A M3: opcionalmente habilitar `CANCELADO_POR_INASISTENCIA`]**: tendría el mismo tratamiento financiero que `CANCELADO_TARDIAMENTE`. Hasta entonces Módulo 2 publica `CANCELADO_TARDIAMENTE`.
-- **[PEDIR A M3: confirmar nombre de la DLQ]**: `finance.reservation-status.dlq`.
-- Confirmar que Módulo 3 ignora los campos extra no definidos en su contrato.
-
----
-
-## 7. Trazabilidad FR/SC → Elemento del Contrato
-
-| Requisito / Criterio | Descripción en Spec | Elemento de este Contrato |
+| Requisito | Descripción | Dónde se cumple |
 |---|---|---|
-| **FR-001** | Notificación a M3 a partir de `Pendiente de Pago` | Evento de estado `PENDIENTE` y regla de inicio de integración; `reservation.info.provided` se publica por separado en `Iniciada` |
-| **FR-002** | Campos requeridos: `reservation_id`, `status`, `status_changed_at` (+ `payment_*` en `PENDIENTE`) | Propiedades del payload en la sección 3 |
-| **FR-005** | Entrega garantizada: 5 intentos con backoff (1/5/25/125 s) y DLQ | Especificación formal en la sección 5 |
-| **FR-006** | Regla «Sin dinero»: cero cálculos financieros | Cero montos, tarifas o números de tarjeta en el payload |
-| **FR-011 (CU-08)** | Identificador único del evento generado en outbox | Propiedad AMQP `Message-Id` (UUID) |
-| **SC-001** | 100% de cambios notificados (0% eventos perdidos) | Outbox transaccional y topología durable RabbitMQ |
-| **SC-002** | Emisión del primer intento en menos de 500 ms | Outbox relay y SLA de publicación asíncrona |
-| **SC-003** | Cero valores monetarios calculados en el mensaje | Estructura estrictamente cualitativa del evento |
-
----
+| FR-001 | Notificar a M3 desde Pendiente de Pago | Secciones 2 y 4 |
+| FR-002 | Campos del evento | Sección 4 |
+| FR-005 | Entrega garantizada con reintentos | Sección 6 |
+| FR-006 / SC-003 | Sin dinero en el mensaje | Sección 1 y payload |
+| FR-011 de CU-08 | Identificador único del evento | `Message-Id` |
+| SC-001 | Ningún cambio de estado se pierde | Outbox (sección 6) |

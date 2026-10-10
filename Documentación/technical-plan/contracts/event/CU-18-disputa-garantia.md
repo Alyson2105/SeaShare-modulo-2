@@ -1,70 +1,65 @@
-# Contrato de Evento: Actualización de Disputa de Garantía (CU-18)
+# Contrato de Evento: Disputa de Garantía (CU-18 → M3)
 
-**Módulo Origen**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
-**Módulo Destino**: Módulo 3 – Finanzas y Pasarela de Pagos  
-**Fecha**: 2026-10-09  
-
-Este contrato define el evento asíncrono que Módulo 2 emite cuando una disputa sobre el depósito de garantía de una reserva alcanza un estado terminal (resuelta por un administrador en CU-17 o cerrada automáticamente por vencimiento de plazo en CU-16).
-
----
+| Campo | Valor |
+|---|---|
+| Módulo productor | Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones |
+| Módulo consumidor | Módulo 3 (UC08 Brindar información de disputa de garantía) |
+| Casos de uso de M2 que lo emiten | CU-16 (cierre automático) y CU-17 (resolución del Administrador) |
+| Tipo | Asíncrono, unidireccional (AMQP / RabbitMQ). M3 no responde |
+| Fecha | 2026-10-09 |
 
 ## 1. Propósito
 
-Notificar a Módulo 3 el resultado final de una disputa para que proceda con la dispersión o devolución de los fondos retenidos en el depósito de garantía, desvinculando la lógica operativa (motivos, descripciones) de la ejecución financiera.
+Cuando una disputa sobre el depósito de garantía termina, M2 le avisa a M3 el resultado final. M3 decide el movimiento de dinero con sus propios registros: devuelve el 100 % del depósito al arrendatario o se lo liquida al propietario. No existe retención parcial. El mensaje **no lleva montos**.
 
-## 2. Disparador
+## 2. Cuándo se publica
 
-El evento se publica mediante el patrón Outbox transaccional de Módulo 2 en dos escenarios:
+Solo cuando la disputa llega a un estado final:
+- **Cierre automático (CU-16):** pasaron las 24 horas sin reclamo del propietario. La disputa se cierra como RECHAZADA.
+- **Resolución del Administrador (CU-17):** decide ACEPTADA o RECHAZADA.
 
-1. **Resolución Manual (CU-17)**: Un administrador de SEA-SHARE resuelve la disputa a favor del propietario (`ACEPTADA`) o a favor del arrendatario (`RECHAZADA`).
-2. **Cierre Automático (CU-16)**: El sistema cierra la disputa por inactividad del propietario (`RECHAZADA`).
+Mientras la disputa está PENDIENTE no se publica nada. M3 acepta ese estado, pero M2 no lo necesita enviar.
 
----
+## 3. Dónde se publica
 
-## 3. Topología de Red (RabbitMQ)
-
-| Propiedad | Valor |
+| Elemento | Valor |
 |---|---|
-| **Exchange** | `seashare.reservations` (topic, durable) |
-| **Routing key** | `reservation.dispute.updated` |
-| **Cola consumidora (M3)** | `finance.guarantee-dispute.v1` |
-| **DLX / DLQ** | `seashare.reservations.dlx` / `finance.guarantee-dispute.dlq` *[PEDIR A M3: confirmar nombre]* |
+| Exchange | `seashare.reservations` (topic) |
+| Routing key | `reservation.dispute.updated` |
+| Cola de M3 | `finance.guarantee-dispute.v1` |
 
-**Headers obligatorios del mensaje**:
+## 4. Mensaje
 
-- `Message-Id`: UUID (debe tener el mismo valor que el campo `event_key` del payload).
-- `Content-Type`: `application/json`
-- `delivery_mode`: `2` (persistent)
+Headers AMQP:
 
----
-
-## 4. Estructura del Payload (JSON)
-
-Módulo 2 publica un payload simplificado, optimizado estrictamente para la máquina de estados de Módulo 3. Se eliminan campos internos de M2 (`motivo`, `origen_resolucion`, IDs de usuarios, etc.). La deduplicación en M3 se debe realizar mediante la tupla `(reservation_id, dispute_id, event_key)`.
-
-```json
-{
-  "reservation_id": "string (UUID)",
-  "dispute_id": "string (UUID)",
-  "status": "string (RECHAZADO | COMPLETADO)",
-  "status_changed_at": "string (ISO 8601)",
-  "event_key": "string (clave idempotente, ej. UUID o 'disputa-<id>-<estado>')"
-}
-```
-
-**Mapeo de valores de estado**:
-
-| **M2 (estado interno de la disputa)** | **status publicado a M3** | **Acción esperada en M3** |
+| Header | Obligatorio | Valor |
 |---|---|---|
-| **RECHAZADA** | `RECHAZADO` | M3 reembolsa el 100% del depósito al arrendatario. |
-| **ACEPTADA** | `COMPLETADO` | M3 liquida el 100% del depósito al propietario. |
-| **PENDIENTE** | *(No se publica)* | M3 acepta el estado PENDIENTE en su diseño, pero M2 no lo necesita emitir; solo publica estados terminales. |
+| `Message-Id` | Sí | UUID único del mensaje |
+| `Content-Type` | Sí | `application/json` |
 
-## 5. Ejemplos de Mensajes
+Payload:
 
-### Cierre automático por vencimiento (M2: RECHAZADA → M3: RECHAZADO)
+| Campo | Tipo | Obligatorio | Descripción |
+|---|---|---|---|
+| `reservation_id` | UUID | Sí | Identificador de la reserva |
+| `dispute_id` | UUID | Sí | Identificador de la disputa |
+| `status` | string | Sí | `RECHAZADO` o `COMPLETADO` |
+| `status_changed_at` | datetime (ISO 8601) | Sí | Cuándo se resolvió |
+| `event_key` | string | Sí | Clave única del evento para evitar duplicados |
 
-*Ocurre cuando el propietario no aporta pruebas en el tiempo límite (CU-16).*
+Qué estado de la disputa en M2 se publica como qué `status`:
+
+| Estado en M2 | `status` que recibe M3 | Qué hace M3 |
+|---|---|---|
+| RECHAZADA | `RECHAZADO` | Reembolsa el 100 % del depósito al arrendatario |
+| ACEPTADA | `COMPLETADO` | Liquida el 100 % del depósito al propietario |
+| PENDIENTE | No se publica | — |
+
+La API REST de M2 sigue usando ACEPTADA / RECHAZADA. La traducción a `COMPLETADO` / `RECHAZADO` se hace solo al armar el mensaje para M3. El motivo que escribe el Administrador se guarda en M2 y no viaja a M3.
+
+## 5. Ejemplos
+
+Cierre automático por vencimiento (RECHAZADA → `RECHAZADO`):
 
 ```json
 {
@@ -76,9 +71,7 @@ Módulo 2 publica un payload simplificado, optimizado estrictamente para la máq
 }
 ```
 
-### Resolución del Admin aceptando el reclamo (M2: ACEPTADA → M3: COMPLETADO)
-
-*Ocurre cuando el administrador falla a favor del propietario por daños comprobados (CU-17).*
+El Administrador acepta el reclamo (ACEPTADA → `COMPLETADO`):
 
 ```json
 {
@@ -90,23 +83,27 @@ Módulo 2 publica un payload simplificado, optimizado estrictamente para la máq
 }
 ```
 
-## 6. Comandos de Prueba (RabbitMQ CLI)
+## 6. Reglas de procesamiento
 
-Para simular la publicación del evento de una disputa resuelta a favor del propietario directamente en el broker de pruebas:
+1. **Solo estados finales**: se publica únicamente cuando la disputa llega a ACEPTADA o RECHAZADA (ver sección 2). Mientras está PENDIENTE no se publica nada.
+2. **Traducción de estados**: M2 usa ACEPTADA / RECHAZADA en su API REST y traduce a `COMPLETADO` / `RECHAZADO` solo al armar el mensaje (tabla de la sección 4).
+3. **Un solo evento final por disputa**: los estados finales son inmutables. Si el Administrador y el cierre automático coinciden, el control de concurrencia asegura que solo una transacción gane y emita el evento.
+4. **Motivo**: el motivo del Administrador se guarda en M2 y no viaja a M3.
+5. **Clave del evento**: `event_key` sigue el formato `disputa-<id>-<estado>`; es la misma en cualquier reenvío del mismo resultado. M3 descarta duplicados por `(reservation_id, dispute_id, event_key)`.
+6. **Sin dinero**: el mensaje no lleva montos, porcentajes ni instrucciones de pago. M3 usa el depósito que tiene registrado.
+7. **Ventana de 24 horas**: M3 no tiene temporizadores sobre esa ventana; la gestión es de M2, que envía el `RECHAZADO` cuando vence sin reclamo.
+8. **Cuándo se guarda el evento**: en la misma transacción que el cambio de estado de la disputa (outbox). Un proceso aparte lo publica.
+9. **Respuesta**: no aplica (unidireccional). Para M2 el mensaje se considera entregado cuando el broker confirma la recepción (publisher confirm); recién entonces se marca como publicado en el outbox.
+10. **Si algo falla**:
+    - Broker caído o conexión rechazada: el evento queda en el outbox y se reintenta hasta 5 veces, con espera de 1, 5, 25 y 125 segundos. Si sigue fallando, se genera una alarma crítica. El estado de la disputa ya quedó guardado.
+    - M3 no encuentra depósito registrado: M3 anota un fallo controlado sin ejecutar acciones. M2 no se entera (no hay respuesta).
+    - El outbox no se puede escribir: falla la transacción completa y el estado de la disputa no cambia.
 
-```bash
-rabbitmqadmin publish exchange="seashare.reservations" routing_key="reservation.dispute.updated" \
-  payload='{"reservation_id":"c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e","dispute_id":"d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d","status":"COMPLETADO","status_changed_at":"2026-10-09T16:45:00-05:00","event_key":"disputa-d1a2b3c4-COMPLETADO"}' \
-  properties='{"delivery_mode": 2, "content_type": "application/json", "headers": {"Message-Id": "disputa-d1a2b3c4-COMPLETADO"}}'
-```
+## 7. Trazabilidad
 
-## 7. Consideraciones Transversales
-
-### 7.1. Patrón Outbox
-
-Módulo 2 debe garantizar la entrega al menos una vez (*at-least-once delivery*). La actualización en la tabla de disputas y la inserción en la tabla `outbox_events` deben ocurrir dentro de la misma transacción de base de datos relacional.
-
-### 7.2. Ajustes de Coherencia con CU-16 y CU-17
-
-- **Desacople de Motivos**: El motivo de la resolución emitido por el Administrador se sigue guardando en la base de datos de Módulo 2 (para fines informativos y de historial), pero ya no viaja a Módulo 3 a través de este evento.
-- **Manejo de Nomenclaturas en CU-17**: El campo de respuesta en la API REST de Módulo 2 (`evento_publicado_m3`) se mantiene igual. Sin embargo, la API REST interna de M2 mantendrá la nomenclatura operativa (`ACEPTADA` / `RECHAZADA`), mientras que el traductor del evento inyectará los estados requeridos por Finanzas (`COMPLETADO` / `RECHAZADO`) exclusivamente para el payload del mensaje.
+| Requisito | Descripción | Dónde se cumple |
+|---|---|---|
+| FR-001 | Publicar solo estados finales | Sección 2 |
+| FR-003 / SC-002 | Sin montos ni instrucciones de pago | Sección 4 |
+| FR-004 / SC-003 | Identificador único para evitar duplicados | `event_key` y `Message-Id` |
+| FR-005 / SC-004 | Ningún evento se pierde | Outbox (sección 6) |
