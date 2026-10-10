@@ -1,760 +1,542 @@
 # Implementation Plan: Módulo 2 — Operación de Reservas, Tiempos y Cancelaciones (SEA-SHARE)
 
-**Date**: 2026-10-10
-**Spec**: `features/CU-01…CU-21/spec.md`. **Única fuente de verdad.** `context/sea-share.md` y `context/consistencia-m2-m3.md` son referencia secundaria; cuando discrepan de un spec, prevalece el spec.
-**Contratos**: [`contracts/`](contracts/README.md) — un archivo `.md` por contrato (REST expuesto, colas publicadas e integraciones externas consumidas).
-**Contrapartes**: Módulo 3 ("el sistema", plan de 2026-10-08, contratos UC01–UC13) y Módulo 1 (Gestión de Flota).
-
-\---
+**Date**: 2026-09-27 · **Revisión**: 2026-10-10
+**Spec**: [`features/CU-01..CU-21/spec.md`](features/) — **única fuente de verdad**. [`context/sea-share.md`](../context/sea-share.md) y [`context/consistencia-m2-m3.md`](../context/consistencia-m2-m3.md) son referencia secundaria; ante discrepancia prevalece el spec.
+**Contratos**: [`contracts/`](contracts/README.md) — un archivo `.md` por contrato (REST expuesto, eventos publicados e integraciones externas consumidas).
+**Alcance**: Plan **general** del módulo backend. Los planes técnicos detallados de cada caso de uso se redactarán en una tarea posterior, uno por CU.
 
 ## Summary
 
-Módulo 2 es el dueño del ciclo de vida de la reserva: busca y detalla embarcaciones, crea la reserva (Iniciada), bloquea el inventario al iniciar el pago, confirma el pago consultando a Módulo 3, controla los tiempos (TTL de 15 min, tolerancia de 30 min, ventanas de cancelación de 72 h y 24 h), registra check-in, check-out, inasistencia y cancelación, y gestiona la disputa de garantía. Se construye como **un único servicio Spring Boot (Java 21 + Spring Boot 3.5) con arquitectura hexagonal y dos contextos acotados (Reservas y Disputa de Garantía)**, con **PostgreSQL 16**, **RabbitMQ** (publicación garantizada hacia Módulo 3) y **Docker**.
+Este plan define la estrategia de construcción del **Módulo 2** de SEA-SHARE: un servicio backend en **Java 21 + Spring Boot 3.5**, empaquetado con **Maven**, que usa **RabbitMQ** como broker de mensajería para la integración asíncrona y la entrega garantizada de eventos hacia el Módulo 3 ("el sistema").
 
-Este documento define el orden **general**: arquitectura, tecnologías, estructura, modelo de datos, conexiones, índice de contratos, decisiones y hoja de ruta. De él se derivará un plan **específico** por CU en `features/CU-nn-\\\*/plan.md`.
+El módulo es dueño del **ciclo de vida de la reserva** (21 casos de uso: CU-01 a CU-18 operativos y CU-19 a CU-21 de vista de consulta) y se integra con dos sistemas externos mediante contratos de API: **Módulo 1** (Gestión de Flota y Activos P2P) como fuente de verdad de la flota y **Módulo 3** (Liquidación, Seguros y Dispersión de Fondos) como autoridad única en todo cálculo monetario.
 
-\---
+Dos restricciones del contexto gobiernan toda la arquitectura:
+
+1. **Regla de negocio estricta "Sin dinero"** (FR-010 de CU-08, FR-002 de CU-11 y CU-12, FR-013 de CU-04): Módulo 2 **jamás** calcula, suma, redondea, retiene ni convierte importes monetarios. Todo monto proviene de Módulo 3. Esta regla es la razón de ser de la separación entre los adaptadores de lectura financiera y el dominio de reservas.
+2. **Módulo 1 es la única fuente de verdad de la flota**: Módulo 2 no accede a su base de datos, no cachea sus datos técnicos (nombre, tipo, puerto, servicios); solo persiste los identificadores (`embarcacion_id`, `propietario_id`) como referencia, cf. CU-09 Edge Case y CU-20 FR-002. La enunciación de "cero (0) accesos directos a la base de datos de Módulo 1" en CU-09 y CU-10 es un requisito arquitectónico, no una sugerencia.
+
+La consecuencia de diseño es una **arquitectura hexagonal con un único escritor de estado**: CU-08 (`Actualizar estado de reserva`) es la única vía por la que cambia el estado de una reserva, lo que permite un control de concurrencia y una auditoría centralizados, y convierte a la reserva en el *aggregate root* del módulo.
+
+El código se organiza en **dos contextos acotados** (`reservas` y `disputa`) más un paquete **`shared` transversal**. La **comunicación entre los dos contextos** se declara en `shared/contracts` (solo interfaces, comandos y DTOs): `reservas` invoca `disputa` a través del contrato `shared/contracts/dispute/OpenDisputeUseCase` y ninguno de los dos conoce la estructura interna del otro (inversión de dependencia). `shared` se limita a esa frontera y a los tipos de dominio comunes; la plomería técnica (web, seguridad, mensajería, persistencia, observabilidad) **no** se modela dentro de `shared`. Los identificadores de código y de API se escriben en **inglés**; la documentación se mantiene en español (§ Lenguaje ubicuo).
 
 ## Technical Context
 
-**Qué es Módulo 2 técnicamente:** un único servicio backend. Expone una API REST para los usuarios, llama a Módulo 1 y a Módulo 3, y publica mensajes a Módulo 3 por RabbitMQ.
+**Language/Version**: Java 21 (LTS)
 
-### Plataforma base
+**Primary Dependencies**: Spring Boot 3.5.x · Spring Web · Spring Validation · Spring Data JPA · Spring Security (OAuth2 Resource Server) · Spring AMQP (`spring-boot-starter-amqp`, cliente RabbitMQ) · Spring Actuator · Micrometer (Prometheus) · Flyway (migraciones versionadas) · Resilience4j (timeouts, reintentos y circuit breaker de clientes externos) · ShedLock (lock de jobs en despliegues multi-réplica) · springdoc-openapi (contratos de API) · ArchUnit (reglas de arquitectura y de la regla "Sin dinero")
 
-|Elemento|Elección|Para qué se usa|
-|-|-|-|
-|Lenguaje|Java 21 (LTS)|Lenguaje del servicio, con soporte de largo plazo|
-|Framework|Spring Boot 3.5.x|Base de la aplicación, arranque y configuración|
-|Ejecución|Contenedores Docker (Linux)|Despliegue; en local se levanta todo con Docker Compose|
-|Tipo de proyecto|Backend REST + worker de mensajería|Un solo servicio que atiende HTTP y publica/procesa mensajes|
+**Storage**: **PostgreSQL 16** con claves primarias `UUID` (vía `gen_random_uuid()`), columnas de timestamp con zona horaria (`timestamptz`), *optimistic locking* con columna de versión (CU-08 FR-006), bloqueo pesimista de filas `SELECT … FOR UPDATE` donde lo exija la atomicidad (CU-03), y **migraciones versionadas con Flyway** (el esquema de `reserva` y `disputa_garantia` es estructura de datos propia, no un esquema heredado). Se eligió por: soporte nativo de `UUID`, `timestamptz`, `@Version`, locks de fila, rango de exclusividad `EXCLUDE`/`btree_gist` para duplicados de `(embarcación, fechas)` si se requiere, y soporte maduro en Flyway y Testcontainers.
 
-### Librerías principales
+**Testing**: JUnit 5 · AssertJ · Mockito · Spring Boot Test · Testcontainers (broker RabbitMQ y base de datos, para tests de integración reales) · WireMock (dobles de contrato de Módulo 1 y Módulo 3) · Awaitility (esperas asíncronas de jobs y mensajes) · ArchUnit (reglas de arquitectura)
 
-|Necesidad|Librería|Qué resuelve en el proyecto|
-|-|-|-|
-|API REST|Spring Web MVC|Endpoints de CU-01 a CU-21|
-|Validación|Spring Validation|Rechazar datos mal formados antes de procesar (fechas, pasajeros, teléfono)|
-|Base de datos|Spring Data JPA (Hibernate)|Leer y guardar reservas y disputas|
-|Migraciones|Flyway|Versionar los cambios del esquema de la base de datos|
-|Seguridad|Spring Security (OAuth2 Resource Server)|Validar el token del usuario y sus roles (Arrendatario, Propietario, Admin)|
-|Mensajería|Spring AMQP|Publicar eventos a Módulo 3 (CU-14, CU-15, CU-18)|
-|Tolerancia a fallos|Resilience4j|Timeouts, reintentos y corte de circuito al llamar a Módulo 1 y Módulo 3|
-|Tareas programadas|ShedLock|Evitar que dos instancias ejecuten a la vez el mismo job (TTL, consulta de pago, cierre de disputa)|
-|Monitoreo|Actuator + Micrometer (Prometheus)|Salud del servicio y métricas|
-|Documentación de la API|springdoc-openapi|Genera la especificación OpenAPI|
-|Control de arquitectura|ArchUnit|Falla el build si se violan las capas o se hacen cálculos con dinero|
+**Target Platform**: Linux server, JVM 21, despliegue en contenedor
 
-### Almacenamiento y mensajería
+**Project Type**: Backend REST + worker de mensajería. Servicio único que expone API HTTP y publica y consume mensajes RabbitMQ.
 
-|Elemento|Elección|Detalle|
-|-|-|-|
-|Base de datos|PostgreSQL 16|Identificadores UUID v4 y fechas con zona horaria (`timestamptz`). Los montos se guardan como `NUMERIC(18,4)` solo para conservarlos tal como los entrega Módulo 3|
-|Broker|RabbitMQ 3.13+|Colas *quorum* (replicadas, no pierden mensajes), confirmación de publicación (*publisher confirms*) y cola de mensajes fallidos (DLQ)|
+**Performance Goals** (consolidados de los `SC` de los specs; nótese la inconsistencia entre ellos):
 
-### Pruebas
+| Objetivo | Fuente |
+| :--- | :--- |
+| Consultas a Módulo 1 (`Consultar información de embarcación`, estado operativo) < 300 ms | SC-001 de CU-09 y CU-10 *(confirmado por negocio el 2026-10-07)* |
+| Búsqueda en catálogo con cotización en lote < 2000 ms | SC-002 de CU-01 *(confirmado por negocio el 2026-10-07)* |
+| Consulta de información de reserva para Módulo 3 < 200 ms | SC-001 de CU-15 |
+| Notificaciones a APIs externas tras consolidar el cambio < 500 ms | SC-002 de CU-08 y CU-14 |
+| Notificaciones de Módulo 1 / Módulo 3 en < 1 s (cancelación, inasistencia, check-in, check-out, confirmación de pago) | SC-005 de CU-04, SC-004 de CU-05, SC-002 de CU-06 y CU-07, SC-001 de CU-13 |
+| Lote e individual de cotización, y liquidación final | **NEEDS CLARIFICATION** — CU-11 y CU-12 dejan los SLA como placeholders ("p. ej. 800 ms", "p. ej. 1500 ms") |
 
-|Tipo de prueba|Herramientas|
-|-|-|
-|Unitarias|JUnit 5, AssertJ, Mockito|
-|Integración con base de datos y broker reales|Spring Boot Test + Testcontainers (PostgreSQL y RabbitMQ en contenedores)|
-|Simular Módulo 1 y Módulo 3|WireMock|
-|Esperas asíncronas (jobs, mensajes)|Awaitility|
-|Reglas de arquitectura|ArchUnit|
+**Constraints**:
 
-### Restricciones (Constraints)
+- **Cero aritmética monetaria en el código de Módulo 2** (SC-003 de CU-02, SC-003 de CU-03, SC-007 de CU-04, SC-001 de CU-12, FR-010 de CU-08). Los importes se transportan como `BigDecimal` opacos devueltos por Módulo 3.
+- **Cero sobreventa ante pagos concurrentes** (SC-002 de CU-03) y cero eventos perdidos silenciosamente (SC-006 de CU-04). Esto obliga a un patrón transaccional de tipo *outbox*: la transición de estado y el evento saliente deben confirmarse juntos.
+- **Fail-safe ante fallo de dependencia externa**: hacia Módulo 1 se admite como máximo un (1) reintento rápido ante timeout o desconexión transitoria; si el reintento también falla, el 100% de los fallos de conexión producen rechazo preventivo, no una decisión optimista (FR-008 de CU-09, FR-006 de CU-10). Módulo 1 y Módulo 3 nunca se consultan por vía alternativa, ni caché ni base de datos.
+- **Cero montos ni cálculos de dinero en los mensajes** hacia Módulo 3: ni en `Recibir estado de reserva` (SC-003 de CU-14) ni en `Recibir información de disputa de garantía` (FR-003 y SC-002 de CU-18).
+- **Idempotencia obligatoria**: en la **entrada**, CU-13 FR-007 (clave idempotente por par `(id_transaccion_externo, resultado)`), y CU-16 y CU-18 (identificador único por transición de disputa para deduplicación del lado de Módulo 3); en la **salida**, CU-08 FR-011 y CU-14 portan un `eventId` único por transición (patrón outbox) para que Módulo 3 deduplique los eventos.
+- **Evaluación de ventanas temporales siempre en la zona horaria del puerto de atraque** obtenida de Módulo 1, nunca en hora de servidor ni de dispositivo (FR-004 de CU-04 y CU-05; CU-09 US2). Si Módulo 1 no resuelve la zona horaria, la operación se detiene y se devuelve indisponibilidad de servicio: no existe zona horaria por defecto.
+- **La integración con Módulo 1 es exclusivamente por API** (FR-007 de CU-10). Módulo 2 no implementa el inventario físico.
+- **Atribución de términos** según `consistencia-m2-m3.md` §1: se usa **Arrendatario** y **Propietario** (nunca "turista" ni "anfitrión"), **"el sistema"** para Módulo 3 (nunca "Módulo 3" dentro del vocabulario de SPEC/Finanzas) y **"Sistema de Reservas y Operaciones"** para Módulo 2 en las interacciones con Finanzas.
 
-|Restricción|Qué implica|
-|-|-|
-|**Regla "Sin dinero"**|Módulo 2 jamás calcula, suma, redondea, retiene ni convierte importes. Todo monto es un `BigDecimal` opaco devuelto por Módulo 3 (llega como *string* decimal) \[FR-010 CU-08, FR-002 CU-11 y CU-12, FR-013 CU-04]|
-|**Módulo 1 es la única fuente de la flota**|Solo API, sin caché; M2 persiste únicamente `embarcacion\\\_id` y `propietario\\\_id` \[CU-09, CU-10]|
-|**Cero sobreventa y cero eventos perdidos**|Lock pesimista + FCFS en CU-03; outbox transaccional para toda notificación saliente|
-|**Fail-safe ante dependencias**|Hacia Módulo 1 un (1) reintento rápido y luego rechazo preventivo; nunca valores por defecto|
-|**Zona horaria del puerto**|Toda ventana (72 h, 24 h, 30 min) se evalúa en la zona del puerto que devuelve Módulo 1, nunca en la del servidor o del dispositivo|
-|**Sin datos de medios de pago**|El token de pago solo vive en el outbox hasta confirmarse la entrega; nunca en tablas de negocio ni en logs|
-|**Módulo 3 no llama a Módulo 2**|M2 publica y consulta; no expone endpoints para M3 \[consistencia §5]|
+**Scale/Scope**: 1 servicio · 21 casos de uso · 2 contextos acotados (Reservas, Disputa de Garantía) · 2 sistemas externos · 7 interacciones formalizadas (tabla §5 de `consistencia-m2-m3.md`) · Volumen de diseño asumido por el equipo *(a validar con negocio)*: **5.000 usuarios activos/mes · 200 reservas/día · 50 reservas concurrentes en pico · 20 RPS en el pico**.
 
-### Alcance (Scale/Scope)
+### Decisiones arquitectónicas transversales
 
-1 servicio · 21 casos de uso · 2 contextos · 2 sistemas externos (Módulo 1, Módulo 3). Volumen de diseño asumido (a validar): 5.000 usuarios activos/mes · 200 reservas/día · 50 concurrentes en pico · 20 RPS.
+**1. Hexagonal con un único escritor de estado.** El dominio de reservas no depende de Spring Web, JPA ni AMQP. Los casos de uso de UI (CU-01 a CU-07), el webhook de Módulo 3 (CU-13) y los temporizadores (TTL de 15 min, ventana de 24 h) convergen todos en CU-08, que es el *único* mutador del estado de la reserva (FR-001). Esto hace la máquina de estados verificable mediante tests unitarios exhaustivos, sin necesidad de contenedor.
 
-### Objetivos de rendimiento (Performance Goals)
+**2. Outbox transaccional + RabbitMQ para toda notificación saliente.** El contexto exige "0% de eventos perdidos" (edge case de CU-08, SC-001 de CU-14, FR-005 de CU-18: "reintenta hasta confirmarla en el broker"). Un *fire-and-forget* no lo garantiza. Se usa un patrón *outbox*: la transición de estado y el registro del evento se escriben en la misma transacción local; un *relay* scheduler publica en RabbitMQ con *publisher confirms* y marca el evento como confirmado solo tras el *ack* del broker. Esto resuelve además un problema de consistencia que los specs no abordan: Módulo 1 no participa de la transacción local, por lo que una transición confirmada puede quedar sin su notificación a Módulo 1 y sin posibilidad de *rollback*. El outbox convierte esa divergencia en un evento reintentable en lugar de una pérdida silenciosa.
 
-|Objetivo|Fuente|
-|-|-|
-|Consultas a Módulo 1 (ficha, estado operativo) < 300 ms (read timeout 300 ms, 1 reintento)|SC-001 CU-09 y CU-10|
-|Búsqueda en catálogo con cotización en lote < 2000 ms|SC-002 CU-01|
-|Primer intento de publicación a Módulo 3 < 500 ms tras consolidar el estado|SC-002 CU-08, CU-14|
-|Notificación a Módulo 1 tras la transición < 1 s (primer intento)|SC-004/005 CU-04…CU-07|
-|Cotización lote / individual / cálculo total de Módulo 3|\[NEEDS CLARIFICATION] propuesta 1000 ms de timeout en los tres (Q-M3-10)|
+**3. Topología RabbitMQ.** Exchange de tipo `topic` para la integración con Módulo 3 (enrutamiento flexible por tipo de evento: `reserva.estado.cambio`, `disputa.estado.cambio`); colas con *dead letter*; *manual ack* en todos los consumidores; reintentos con *backoff* progresivo antes de derivar a la DLQ. Parámetros de reintento fijados para CU-08 y CU-14: máximo 5 intentos (primer intento inmediato), backoff exponencial con jitter de 1 s, 5 s, 25 s y 125 s, solo ante 5xx/timeout y derivación a DLQ con alerta tras el quinto fallo. La retención, los tópicos, el *partitioning* y las garantías de orden de la cola de disputas (CU-18) siguen diferidos al contrato de integración (ver *Riesgos*).
 
-\---
+**4. Reloj inyectable y zona horaria por puerto.** Todas las ventanas (15 min de TTL, 72 h y 24 h de cancelación, 30 min de inasistencia, 24 h de disputa) se evalúan contra un `Clock` inyectado y contra el `ZoneId` del puerto devuelto por Módulo 1. Esto hace deterministas los tests de *border* (exactamente 72 h, exactamente 24 h, exactamente 30 min), que los specs exigen explícitamente.
 
-## 1\. Alcance y trazabilidad CU → componentes
+**5. Temporizadores durables, no en memoria.** El TTL de 15 min y el cierre automático de la disputa a las 24 h deben sobrevivir a un reinicio. Por eso se modelan como columnas de vencimiento (`timestamptz`) consultadas por un job `@Scheduled` de barrido en **PostgreSQL 16**, y no como `ScheduledExecutorService`.
 
-|CU|Nombre (vigente)|Actor / Disparador|Canal|¿Responde?|Contrato|
-|-|-|-|-|-|-|
-|CU-01|Buscar embarcaciones disponibles|Arrendatario|REST `GET /api/v1/embarcaciones`|Sí|[CU-01](contracts/rest/CU-01-buscar-embarcaciones.md)|
-|CU-02|Iniciar reserva|Arrendatario|REST `POST /api/v1/reservas`|Sí|[CU-02](contracts/rest/CU-02-iniciar-reserva.md)|
-|CU-03|Iniciar pago|Arrendatario|REST `GET /reservas/{id}/pago/resumen` + `POST /reservas/{id}/pago`|Sí|[CU-03](contracts/rest/CU-03-iniciar-pago.md)|
-|CU-04|Solicitar cancelación|Arrendatario / Propietario|REST `POST /reservas/{id}/cancelacion`|Sí|[CU-04](contracts/rest/CU-04-solicitar-cancelacion.md)|
-|CU-05|Marcar inasistencia|Propietario|REST `POST /reservas/{id}/inasistencia`|Sí|[CU-05](contracts/rest/CU-05-marcar-inasistencia.md)|
-|CU-06|Marcar inicio de la navegación|Propietario|REST `POST /reservas/{id}/inicio-navegacion`|Sí|[CU-06](contracts/rest/CU-06-marcar-inicio-navegacion.md)|
-|CU-07|Marcar fin de la navegación|Propietario|REST `POST /reservas/{id}/fin-navegacion`|Sí|[CU-07](contracts/rest/CU-07-marcar-fin-navegacion.md)|
-|CU-08|Actualizar estado de reserva|Interno (único escritor de estado)|Puerto interno|Sí (interno)|[CU-08](contracts/internal/CU-08-actualizar-estado.md)|
-|CU-09|Proveer información de embarcación|Interno (include de CU-01, 02, 04, 05, 19)|Puerto interno → Módulo 1|Sí (interno)|[M1 información](contracts/external/m1-consultar-informacion-embarcacion.md)|
-|CU-10|Brindar información de estado operativo|Interno (include de CU-02, CU-03)|Puerto interno → Módulo 1|Sí (interno)|[M1 estado](contracts/external/m1-consultar-estado-operativo.md)|
-|CU-11|Proveer información cotización de reserva|Interno (include de CU-01 lote, CU-19 individual)|Puerto interno → Módulo 3|Sí (interno)|[M3 lote](contracts/external/m3-estimacion-lote.md), [M3 individual](contracts/external/m3-estimacion-individual.md)|
-|CU-12|Brindar cálculo total de la reserva|Interno (include de CU-03)|Puerto interno → Módulo 3|Sí (interno)|[M3 cálculo](contracts/external/m3-valor-calculado-reserva.md)|
-|CU-13|Solicitar confirmación de pago|**Job de consulta** + consulta bajo demanda|Puerto interno → Módulo 3 (`GET payment-confirmation`)|Sí (interno)|[M3 confirmación](contracts/external/m3-confirmacion-pago.md)|
-|CU-14|Brindar el estado de la reserva|Interno (include de CU-08)|**AMQP** → Módulo 3|**No** (unidireccional)|[CU-14](contracts/events/CU-14-estado-reserva.md)|
-|CU-15|Brindar información de reserva|Interno (include de CU-02)|**AMQP** → Módulo 3|**No** (unidireccional)|[CU-15](contracts/events/CU-15-informacion-reserva.md)|
-|CU-16|Generar disputa de garantía|Sistema (desde CU-07) + Propietario (reclamo)|Puerto interno + REST `POST /disputas/{id}/reclamo`|Sí|[CU-16](contracts/rest/CU-16-registrar-reclamo.md)|
-|CU-17|Actualizar estado de disputa de garantía|Admin + job de vencimiento 24 h|REST `PUT /disputas/{id}/estado`|Sí|[CU-17](contracts/rest/CU-17-actualizar-estado-disputa.md)|
-|CU-18|Brindar información de disputa de garantía|Interno (include de CU-16, CU-17)|**AMQP** → Módulo 3|**No** (unidireccional)|[CU-18](contracts/events/CU-18-disputa-garantia.md)|
-|CU-19|Ver detalle de embarcación|Arrendatario|REST `GET /embarcaciones/{id}` y `/cotizacion`|Sí|[CU-19](contracts/rest/CU-19-detalle-embarcacion.md)|
-|CU-20|Ver mis reservas|Arrendatario / Propietario|REST `GET /reservas`|Sí|[CU-20](contracts/rest/CU-20-mis-reservas.md)|
-|CU-21|Ver detalle de reserva|Arrendatario / Propietario|REST `GET /reservas/{id}`|Sí|[CU-21](contracts/rest/CU-21-detalle-reserva.md)|
+**6. Seguridad por roles y por identidad de servicio.** Tres roles de negocio: **Arrendatario**, **Propietario** (debe ser el propietario registrado de la embarcación de esa reserva) y **Admin** (exclusivo de CU-17, que "no introduce montos ni ejecuta operaciones de pasarela"). Módulo 3 entra como identidad de servicio para CU-13 y CU-15. **NEEDS CLARIFICATION**: los specs no especifican mecanismo de autenticación, modelo de tokens, TLS, manejo de PII, *rate limiting* ni protección del log de auditoría. Bloqueante para la Fase 2.
 
-**Retiros respecto a la versión anterior**: el antiguo "Confirmar pago" (M3 llamaba a M2) y el antiguo "Solicitar información de la reserva" (M3 consultaba a M2) **desaparecen**: Módulo 3 no llama a Módulo 2 en ningún caso. Sus roles pasan a CU-13 (M2 consulta) y CU-15 (M2 publica).
+**7. Trazabilidad.** CU-09 FR-010 y CU-10 FR-009 exigen registrar cada consulta externa; CU-15 expone datos históricos. Se usa logging estructurado con *correlation id* propagado en headers HTTP y en headers AMQP.
 
-**Relaciones UML** (diagrama actualizado): `extend`: CU-02→CU-19 y CU-01; CU-19→CU-01; CU-03, CU-04→CU-21; CU-21→CU-20. `include`: CU-01→CU-09, CU-11; CU-19→CU-09, CU-11; CU-02→CU-09, CU-10, CU-15; CU-03→CU-10, CU-12; CU-04, CU-05→CU-09; CU-04…07, CU-13, TTL→CU-08; CU-08→CU-14; CU-07→CU-16; CU-16, CU-17→CU-18.
+**8. Fuera de alcance: la UI.** Varios specs contienen requisitos de presentación (por ejemplo FR-009 a FR-013 de CU-03: imagen de portada, *countdown*, banner de advertencia, checkbox de política de cancelación). Este plan cubre **solo el backend**; esos requisitos se entregarán como contrato de API y su implementación visual corresponde a un cliente externo.
 
-\---
+## Project Structure
 
-## 2\. Principios rectores
+### Documentation (this feature)
 
-1. **Un único escritor de estado**: toda transición pasa por CU-08 (matriz de transiciones, concurrencia, auditoría, outbox).
-2. **Sin dinero**: Módulo 2 transporta, persiste y muestra importes; nunca opera con ellos.
-3. **Módulo 2 publica y consulta; Módulo 3 no llama**: CU-14, CU-15 y CU-18 son unidireccionales; CU-11, CU-12 y CU-13 son consultas síncronas.
-4. **Nada de valores asumidos**: ante falla de Módulo 1 o Módulo 3 se aborta con error controlado, nunca con datos por defecto (excepción acordada: moneda COP por contrato).
-5. **Iniciada no bloquea ni notifica estado**: el bloqueo de inventario (Reservado en Módulo 1) y la primera notificación de estado a Módulo 3 ocurren al pasar a Pendiente de Pago. La única publicación en Iniciada es la información de reserva (CU-15), que no es una transición de estado.
-6. **Entrega garantizada**: transición de estado + evento saliente en la misma transacción (outbox); relay con confirmaciones del broker; idempotencia por `event\\\_id`.
-7. **Un timeout no es un resultado**: ante falla de la consulta de pago se espera al siguiente ciclo; nunca se asume ni rechazo ni aprobación.
-8. **Una aprobación tardía no confirma**: si el TTL venció, la reserva queda Expirada aunque el cobro figure aprobado; la devolución la decide Módulo 3.
-9. **Tiempo siempre en la zona del puerto** con reloj inyectable (`Clock`), lo que hace deterministas los bordes exactos (72 h, 24 h, 30 min, 900 s).
-10. **El token de pago es efímero**: se acepta en CU-03, viaja en el evento `PENDING` y no se persiste ni se registra.
-11. **Los datos de Módulo 1 no se copian**: solo ids; ficha, puerto y zona horaria se piden en cada uso.
-
-\---
-
-## 3\. Arquitectura
-
-### 3.1 Vista de contexto
-
-```mermaid
-flowchart LR
-  subgraph EXT\\\["Actores y sistemas externos"]
-    ARR\\\["Arrendatario"]
-    PRO\\\["Propietario"]
-    ADM\\\["Admin"]
-    M1\\\["Módulo 1 · Gestión de Flota"]
-    M3\\\["Módulo 3 · el sistema (finanzas)"]
-  end
-  MQ{{"RabbitMQ"}}
-  DB\\\[("PostgreSQL")]
-  subgraph SYS\\\["Módulo 2 (un servicio Spring Boot)"]
-    INF\\\["infrastructure: adaptadores de entrada (REST, jobs) y de salida (JPA, cliente M1, cliente M3, outbox, AMQP)"]
-    APP\\\["application: casos de uso y puertos"]
-    DOM\\\["domain: reserva, disputa, máquina de estados, políticas de tiempo"]
-    INF --> APP --> DOM
-  end
-  ARR -- "REST: CU-01..04, 19..21" --> INF
-  PRO -- "REST: CU-04..07, 16, 20, 21" --> INF
-  ADM -- "REST: CU-17" --> INF
-  INF -- "REST: ficha, catálogo, estado operativo (GET), asignar estado (PUT)" --> M1
-  INF -- "REST: estimaciones, valor calculado, confirmación de pago" --> M3
-  INF -- "AMQP: CU-14, CU-15, CU-18 (outbox → relay)" --> MQ
-  MQ --> M3
-  INF --> DB
+```text
+Documentación/
+├── plan.md                    # Este archivo — Plan general del Módulo 2
+├── context/                   # Solo lectura — no modificar
+│   ├── sea-share.md
+│   └── consistencia-m2-m3.md
+├── features/                  # Solo lectura en esta tarea — planes por CU luego
+│   └── CU-01..CU-21/
+│       ├── spec.md            # (existente)
+│       └── plan.md            # (se creará en la tarea posterior, un archivo por CU)
+├── diagrams/                  # Solo lectura
+└── templates/                 # Solo lectura
 ```
 
-### 3.2 Decisión de contextos: Reservas y Disputa de Garantía
+### Source Code (repository root)
 
-A diferencia de Módulo 3 (un solo dominio por el acoplamiento de datos), Módulo 2 tiene **dos máquinas de estado independientes** (reserva y disputa) sin transiciones cruzadas. Se organiza en **dos contextos acotados** con las tres capas hexagonales cada uno y un paquete `shared`.
-
-|Contexto|CU|Máquina de estados|Raíz de agregado|
-|-|-|-|-|
-|`reservas`|CU-01…15, 19, 20, 21|8 estados + 5 sub-estados de cancelación|`Reservation`|
-|`disputa`|CU-16, CU-17, CU-18|`PENDING → REJECTED \| ACCEPTED`|`GuaranteeDispute`|
-
-Punto de contacto único: `reservas` invoca `disputa` por su `port/in` al completar CU-07 (CU-16). `disputa` nunca modifica la reserva.
-
-### 3.3 Estructura del proyecto
+Estructura **por contexto acotado**, y dentro de cada uno por capa hexagonal (`domain` → `application` → `infrastructure`), con un paquete `shared` que solo contiene los contratos entre contextos y los tipos de dominio compartidos. Se elige esta opción porque los 21 CUs se reparten de forma natural en dos contextos con máquinas de estado propias (Reservas y Disputa de Garantía), y porque los specs describen fronteras estrictas ("API externa", "sin acceso directo a BD", "sin cálculos de dinero") que la estructura debe hacer explícitas.
 
 ```text
 SeaShare-modulo-2/
-
-├── docs/
-
-│   ├── plan.md                          # Este plan general
-
-│   ├── context/                         # Documentos base (sea-share, consistencia M2-M3), solo lectura
-
-│   ├── features/CU-nn-<nombre>/         # spec.md y plan.md de cada caso de uso
-
-│   ├── diagrams/                        # Diagrama UML de casos de uso, solo lectura
-
-│   ├── templates/                       # Plantillas de spec y plan, solo lectura
-
-│   └── contracts/
-
-│       ├── README.md                    # Índice, leyenda y formato de errores comunes
-
-│       ├── rest/                        # Endpoints que expone M2 (CU-01 a 07, 16, 17, 19, 20, 21)
-
-│       ├── events/                      # Mensajes que M2 publica a M3 (CU-14, 15, 18)
-
-│       └── external/                    # APIs de M1 y M3 que M2 consume
-
+├── pom.xml
+├── Dockerfile
+├── docker-compose.yml              # RabbitMQ + PostgreSQL 16
+├── .gitignore
+├── README.md
 │
-
 ├── src/main/java/com/seashare/m2/
-
-│   ├── M2Application.java               # Punto de arranque del servicio
-
+│   ├── M2Application.java
 │   │
-
-│   ├── shared/                          # Lo común a reservas y disputa
-
-│   │   ├── error/                       # Un solo lugar que convierte excepciones en respuestas de error
-
-│   │   ├── security/                    # Roles (Arrendatario, Propietario, Admin) y validación del JWT
-
-│   │   ├── time/                        # Reloj inyectable y zona horaria del puerto (ventanas de 72 h, 24 h, 30 min)
-
-│   │   ├── messaging/                   # Configuración de RabbitMQ, outbox, reintentos y DLQ
-
-│   │   ├── persistence/                 # Base de entidades, bloqueos e idempotencia
-
-│   │   ├── config/                      # Versionado de API y OpenAPI
-
-│   │   └── observability/               # Correlation id, logs y métricas
-
+│   ├── shared/                                     # Transversal a los dos contextos (Fase 2)
+│   │   ├── contracts/           # Fronteras ENTRE contextos: SOLO interfaces, comandos y DTOs
+│   │   │   └── dispute/         # OpenDisputeUseCase (lo implementa disputa), OpenDisputeCommand
+│   │   └── domain/              # Tipos compartidos puros: DomainException, ClockPort, Money (opaco, sin aritmética)
 │   │
-
-│   ├── reservas/                        # Contexto 1: CU-01 a CU-15 y CU-19 a CU-21
-
+│   ├── reservas/                                  # Contexto: Reservas — CU-01 a CU-15, CU-19 a CU-21
 │   │   ├── domain/
-
-│   │   │   ├── model/                   # Reservation y sus eventos (check-in, check-out, cancelación, no-show),
-
-│   │   │   │                            # estados y Money (guarda el monto sin permitir cálculos)
-
-│   │   │   ├── state/                   # Máquina de estados: qué transiciones son válidas (CU-08)
-
-│   │   │   ├── policy/                  # Reglas de tiempo: clasificar cancelación, tolerancia de 30 min, TTL de 15 min
-
-│   │   │   └── exception/               # Errores de negocio (transición inválida, estado incompatible)
-
+│   │   │   ├── model/           # Reservation, ReservationStatus, CancellationSubStatus,
+│   │   │   │                     # StatusAudit, CheckInEvent, CheckOutEvent, CancellationEvent, NoShowEvent
+│   │   │   ├── valueobject/     # ReservationId, BoatId, OwnerId, RenterId, IdempotencyKey, Money (opaco, sin aritmética)
+│   │   │   ├── state/           # StateMachine, ValidTransition  (CU-08)
+│   │   │   ├── service/         # CancellationClassifier, NoShowWindowPolicy, TtlPolicy  (sin dinero)
+│   │   │   └── event/           # Eventos de dominio de la reserva
 │   │   ├── application/
-
-│   │   │   ├── port/in/                 # Un caso de uso por interfaz, con su entrada y salida
-
-│   │   │   ├── port/out/                # Lo que necesitamos del exterior: BD, M1, M3, outbox, reloj
-
-│   │   │   └── service/                 # La lógica de cada caso de uso
-
+│   │   │   ├── port/in/         # Puertos de entrada (uno por CU)
+│   │   │   ├── port/out/        # Puertos de salida: repositorios, Módulo 1, Módulo 3, reloj, outbox
+│   │   │   ├── dto/             # Commands y results de aplicación
+│   │   │   └── service/         # Implementación de los casos de uso
 │   │   └── infrastructure/
-
-│   │       ├── adapter/in/
-
-│   │       │   ├── web/                 # Controllers REST que reciben las peticiones de los usuarios
-
-│   │       │   └── scheduler/           # Jobs: expirar por TTL y consultar el pago a M3 (CU-13)
-
-│   │       └── adapter/out/
-
-│   │           ├── persistence/         # Guardar y leer reservas en PostgreSQL
-
-│   │           ├── fleet/               # Cliente HTTP de Módulo 1 (ficha, estado operativo, asignar estado)
-
-│   │           ├── finance/             # Cliente HTTP de Módulo 3 (cotización, cálculo total, confirmación de pago)
-
-│   │           └── messaging/           # Outbox y publicación de mensajes a M3 (CU-14, CU-15)
-
+│   │       ├── adapter/in/web/        # Controllers REST        (CU-01..07, 13, 15, 19, 20, 21)
+│   │       ├── adapter/in/scheduler/  # TtlExpiryJob
+│   │       ├── adapter/out/fleet/     # Cliente HTTP de Módulo 1   (CU-09, 10)
+│   │       ├── adapter/out/finance/   # Cliente HTTP de Módulo 3   (CU-11, 12)
+│   │       ├── adapter/out/messaging/ # Outbox, relay y publicadores AMQP   (CU-14)
+│   │       └── adapter/out/persistence/ # Entidades JPA, repositorios, mappers
 │   │
-
-│   └── disputa/                         # Contexto 2: CU-16 a CU-18
-
+│   └── disputa/                                   # Contexto: Disputa de Garantía — CU-16 a CU-18
 │       ├── domain/
-
-│       │   ├── model/                   # GuaranteeDispute, reclamo, revisión del Admin, ventana de 24 h, estados
-
-│       │   └── state/                   # Transiciones válidas de la disputa: PENDING → ACCEPTED o REJECTED
-
+│       │   ├── model/           # GuaranteeDispute, DisputeClaim, AdminReview
+│       │   ├── valueobject/     # DisputeId, ClaimWindow, enums de estado
+│       │   ├── state/           # StateMachine de la disputa  (CU-17)
+│       │   └── event/           # DisputeEvent
 │       ├── application/
-
-│       │   ├── port/in/                 # CU-16 y CU-17
-
-│       │   ├── port/out/                # Repositorio y outbox (CU-18)
-
-│       │   └── service/                 # Lógica de crear disputa, registrar reclamo y resolver
-
+│       │   ├── port/in/         # Implementa shared.contracts.dispute.OpenDisputeUseCase; NewClaimUseCase; UpdateDisputeStatusUseCase
+│       │   ├── port/out/        # DisputaRepository, outbox, publicación (CU-18)
+│       │   ├── dto/
+│       │   └── service/
 │       └── infrastructure/
-
-│           ├── adapter/in/
-
-│           │   ├── web/                 # Endpoint del reclamo (Propietario) y de la decisión (Admin)
-
-│           │   └── scheduler/           # Job que cierra la disputa a las 24 h si no hubo reclamo
-
-│           └── adapter/out/
-
-│               ├── persistence/         # Guardar disputas y reclamos
-
-│               └── messaging/           # Publicar a M3 el estado final de la disputa (CU-18)
-
+│           ├── adapter/in/web/        # Controller de reclamo y de decisión Admin
+│           ├── adapter/in/scheduler/  # Job de cierre automático de la ventana de 24 h
+│           ├── adapter/out/messaging/ # Publicador AMQP de la disputa  (CU-18)
+│           └── adapter/out/persistence/ # Repositorio de disputas
 │
-
 ├── src/main/resources/
-
-│   ├── application.yml                  # Configuración base (puertos, timeouts, TTL)
-
-│   ├── application-dev.yml              # Ajustes para desarrollo local
-
-│   ├── application-test.yml             # Ajustes para pruebas
-
-│   └── db/migration/V\*.sql              # Cambios del esquema de la base de datos (Flyway)
-
+│   ├── application.yml
+│   ├── application-dev.yml
+│   ├── application-test.yml
+│   └── db/migration/            # Migraciones versionadas (Flyway / Liquibase)
 │
+└── src/test/java/com/seashare/m2/
+    ├── shared/                  # Fixtures, bases de pruebas, Testcontainers compartidas
+    ├── reservas/
+    │   ├── domain/              # Tests unitarios de la matriz de estados y de las políticas
+    │   ├── contract/            # Tests de contrato contra los dobles de Módulo 1 / Módulo 3
+    │   ├── integration/         # Tests de integración (persistencia + outbox + RabbitMQ)
+    │   └── web/                 # Tests de endpoint (MockMvc / WebTestClient)
+    └── disputa/                 # Mismo desglose que reservas/
+```
 
-├── src/test/java/com/seashare/m2/
+**Structure Decision**: proyecto único (opción por defecto, sin frontend), organizado en **dos contextos acotados** — `reservas` y `disputa` — porque cada uno posee su propia máquina de estados, sus entidades y sus invariantes, y comparten solo los contratos y tipos de dominio de `shared/`. Dentro de cada contexto se aplica *ports & adapters*: `domain/` sin dependencias de framework, `application/` con los puertos de entrada y salida, e `infrastructure/` con los adaptadores concretos (REST, HTTP saliente, RabbitMQ, JPA, schedulers). La frontera entre `domain` y el resto es lo que hace verificables por tests unitarios la regla "Sin dinero" y la matriz de transiciones de CU-08. El nombre del paquete raíz sigue el proyecto IntelliJ existente, `SeaShare-modulo-2`.
 
-│   ├── arch/                            # ArchUnit: verifica las capas y que no haya cálculos con dinero
+La carpeta `shared/` se limita a la comunicación entre contextos y a los tipos comunes; **no** es una bolsa plana ni contiene plomería técnica:
+- `shared/contracts/` define **únicamente** las fronteras entre los dos contextos (interfaces, comandos y DTOs). Aquí vive `dispute/OpenDisputeUseCase`, que `disputa` implementa y `reservas` consume: es el punto donde "se comunican los módulos internos", sin que ninguno dependa concretamente del otro.
+- `shared/domain/` contiene tipos compartidos puros (`DomainException`, `ClockPort`, `Money` opaco).
 
-│   ├── reservas/                        # Pruebas unitarias, de contrato (WireMock) e integración
+Los adaptadores de cada contexto se separan en `infrastructure/adapter/in` (entrada: web, scheduler) y `infrastructure/adapter/out` (salida: fleet, finance, messaging, persistence), lo que evita colisiones de nombres (p. ej. `web`) y deja explícita la dirección de cada adaptador para las reglas de ArchUnit.
 
-│   └── disputa/                         # Mismo esquema que reservas
+`shared/` debe permanecer **delgado y estable**: solo contratos y tipos de dominio, nunca lógica, framework ni acceso a datos. La plomería técnica (web, seguridad, mensajería, persistencia, observabilidad) **no se modela** como parte de `shared/`.
 
-│
+## Modelo de datos (PostgreSQL)
 
-├── Dockerfile                           # Empaqueta el servicio
+Convenciones: UUID v4; `timestamptz`; montos `NUMERIC(18,4)` (solo almacenados literalmente, nunca operados); migraciones Flyway; `version` para *optimistic locking*.
 
-├── docker-compose.yml                   # Levanta RabbitMQ y PostgreSQL 16 en local
-
-└── pom.xml                              # Dependencias y build (Maven)```
-
-
-
-**Qué hace cada capa** (igual en los dos contextos):
-
-|Capa|Contiene|No puede hacer|
-|-|-|-|
-|`domain`|Entidades, value objects, máquina de estados y políticas de tiempo|Depender de Spring, JPA, Jackson, AMQP ni de las otras capas|
-|`application`|Puertos de entrada (un caso de uso por interfaz), puertos de salida y los servicios que los implementan|Depender de algo fuera de `domain` (se permite `@Transactional`)|
-|`infrastructure/adapter/in`|Controllers REST y jobs programados|Llamar a algo distinto de un `port/in`|
-|`infrastructure/adapter/out`|JPA, clientes de Módulo 1 y Módulo 3, outbox y publicadores AMQP|Implementar algo que no sea un `port/out`|
-
-**Contenido de `adapter/in` y `adapter/out` en `reservas`:**
-
-|Carpeta|Contenido|CU|
-|-|-|-|
-|`adapter/in/web`|Controllers REST|CU-01 a 07, 19, 20, 21|
-|`adapter/in/scheduler`|`TtlExpiryJob`, `PaymentPollingJob`|CU-08, CU-13|
-|`adapter/out/persistence`|Entidades JPA, repositorios, mappers|Todos|
-|`adapter/out/fleet`|Cliente HTTP de Módulo 1|CU-09, 10 y el PUT de CU-08|
-|`adapter/out/finance`|Cliente HTTP de Módulo 3|CU-11, 12, 13|
-|`adapter/out/messaging`|Outbox, relay y publicadores AMQP|CU-14, 15|
-
-### 3.4 Reglas de dependencia (ArchUnit en CI)
-
-1. `..domain..` no depende de Spring, JPA, Jackson, AMQP ni de `..application..` / `..infrastructure..`.
-2. `..application..` solo depende de `..domain..` (se permite `@Transactional` como excepción pragmática documentada).
-3. `..infrastructure.adapter.in..` solo invoca `application.port.in`; `..infrastructure.adapter.out..` solo implementa `application.port.out`.
-4. Un caso de uso que use otro (CU-01→CU-09/CU-11, CU-03→CU-12, todos→CU-08) lo hace **solo por su `port.in`**, nunca por el servicio concreto.
-5. Ningún controller, listener o job accede a un repositorio.
-6. Las entidades JPA no salen de `infrastructure.adapter.out.persistence`.
-7. **Regla "Sin dinero"**: ninguna clase de `domain` ni `application` realiza operaciones aritméticas sobre tipos monetarios (`Money` no expone `add`, `subtract`, `multiply` ni `divide`; test ArchUnit que prohíbe esas llamadas sobre `BigDecimal` monetarios).
-8. Los DTOs HTTP/AMQP viven en `infrastructure.adapter`; `application` trabaja con `command`/`result`.
-9. El contexto `disputa` no depende de `reservas`; `reservas` solo conoce el `port/in` de `disputa`.
-
-### 3.5 Mapa CU → componentes (semilla de los planes por CU)
-
-|CU|Puertos de entrada|Puertos de salida|Persistencia|Invariantes clave|
-|-|-|-|-|-|
-|CU-01|`SearchBoatsUseCase`|`FleetCatalogPort`, `BatchQuotePort`|—|Paginación fija 20; sin filtro de fechas hacia M1; degradación si falla M3 (`cotizacion\\\_disponible=false`); fail-safe 503 si falla M1|
-|CU-02|`StartReservationUseCase`|`FleetBoatPort` (CU-09), `OperationalStatusPort` (CU-10), `ReservationRepository`, `UpdateReservationStatusUseCase`, `OutboxPort`|`reserva`|CU-10 y capacidad antes de persistir; nace Iniciada con TTL; publica CU-15 por outbox; no notifica a M1|
-|CU-03|`PreparePaymentUseCase`, `StartPaymentUseCase`|`TotalCalculationPort` (CU-12), `OperationalStatusPort`, `ReservationRepository` (lock pesimista), `UpdateReservationStatusUseCase`|`reserva`|Cálculo fuera del lock; política aceptada; lock + CU-10 + CU-08; TTL no se reinicia; token solo al outbox; 409 FCFS|
-|CU-04|`CancelReservationUseCase`|`FleetBoatPort` (CU-09), `UpdateReservationStatusUseCase`, `Clock`|`cancelacion\\\_evento`|Solo Reservada; límites inclusivos 72 h / 24 h; propietario sin franja; sin zona horaria no hay cálculo|
-|CU-05|`MarkNoShowUseCase`|`FleetBoatPort` (CU-09), `UpdateReservationStatusUseCase`|`noshow\\\_evento`|≥ 30 min exactos; solo Propietario; 503 sin zona horaria|
-|CU-06|`MarkDepartureUseCase`|`UpdateReservationStatusUseCase`|`checkin\\\_evento`|Desde la hora pactada; deshabilita cancelación e inasistencia|
-|CU-07|`MarkArrivalUseCase`|`UpdateReservationStatusUseCase`, `OpenDisputeUseCase` (CU-16)|`checkout\\\_evento`|Solo En Navegación; abre disputa; novedades solo informativas y locales|
-|CU-08|`UpdateReservationStatusUseCase`|`ReservationRepository`, `OutboxPort`, `AuditRepository`|`reserva`, `reserva\\\_estado\\\_auditoria`, `outbox\\\_message`|Matriz de transiciones; `@Version`; estados terminales; reglas de sincronización con M1 y M3|
-|CU-09|`ProvideBoatInfoUseCase`|`FleetBoatPort`|`consulta\\\_externa\\\_log`|1 reintento; nunca caché; `zona\\\_horaria` obligatoria|
-|CU-10|`GetOperationalStatusUseCase`|`OperationalStatusPort`|`consulta\\\_externa\\\_log`|Apto solo si `Disponible`; fail-safe = no apto|
-|CU-11|`QuoteBatchUseCase`, `QuoteSingleUseCase`|`BatchQuotePort`, `SingleQuotePort`|—|Dedup, sub-lotes ≤ 50, `unavailable` y omitidos = no disponible; parseo BigDecimal; COP por contrato|
-|CU-12|`GetTotalCalculationUseCase`|`TotalCalculationPort`|montos en `reserva` (al pasar a Pendiente de Pago)|Sin body; 404 → reintento acotado; persistencia literal|
-|CU-13|`ConfirmPaymentUseCase` (+ `PaymentPollingJob`)|`PaymentConfirmationPort`, `UpdateReservationStatusUseCase`|`pago\\\_intento`|Solo Pendiente de Pago con TTL vigente; idempotente; aprobado tardío = alerta, no confirma|
-|CU-14|(include de CU-08)|`OutboxPort`|`outbox\\\_message`|Mapeo de estados; token solo en outbox; sin montos; no se publica Iniciada|
-|CU-15|(include de CU-02)|`OutboxPort`|`outbox\\\_message`|`info.provided` con `owner\\\_id` y `max\\\_capacity` de CU-09; antes de CU-12|
-|CU-16|`OpenDisputeUseCase`, `RegisterClaimUseCase`|`DisputeRepository`, `UpdateDisputeStatusUseCase`|`disputa\\\_garantia`, `reclamo\\\_disputa`|Una por reserva Completada; ventana 24 h; reclamo no cambia estado; novedades del cierre no son reclamo|
-|CU-17|`UpdateDisputeStatusUseCase` (+ `DisputeWindowCloseJob`)|`DisputeRepository`, `OutboxPort`|`disputa\\\_garantia`, `revision\\\_admin`|Solo desde PENDING; finales inmutables; `@Version` contra carrera Admin/job|
-|CU-18|(include de CU-17)|`OutboxPort`|`outbox\\\_message`|Solo estados finales; `event\\\_key`; sin montos|
-|CU-19|`GetBoatDetailUseCase`, `GetBoatQuoteUseCase`|`FleetBoatPort`, `SingleQuotePort`|—|Capacidad revalidada en backend; sin tarifa por noche; sin persistencia|
-|CU-20|`ListReservationsUseCase`|`ReservationQueryPort`|lectura|Aislamiento por JWT; 10 por página; total congelado|
-|CU-21|`GetReservationDetailUseCase`|`ReservationQueryPort`, `FleetBoatPort` (ficha)|lectura|`acciones\\\_disponibles` calculadas por estado y rol; resumen de pago adaptativo|
-
-\---
-
-## 4\. Modelo de datos (PostgreSQL)
-
-Convenciones: UUID v4; `timestamptz`; montos `NUMERIC(18,4)` (solo almacenados literalmente); migraciones Flyway; `version` para *optimistic locking*.
-
-|Tabla|Tipo|Columnas relevantes|Restricciones|
-|-|-|-|-|
-|`reserva`|Entidad (CU-02/03/08)|`id`, `codigo\\\_reserva`, `arrendatario\\\_id`, `embarcacion\\\_id`, `propietario\\\_id`, `estado`, `sub\\\_estado`, `fecha\\\_inicio`, `fecha\\\_fin`, `hora\\\_inicio` \[NEEDS CLARIFICATION I1], `pasajeros`, `titular\\\_nombre`, `titular\\\_celular`, `titular\\\_email`, `estimado\\\_total` (referencia de CU-11), `monto\\\_alquiler`, `monto\\\_seguro`, `monto\\\_deposito`, `monto\\\_total` (de CU-12; nulos hasta Pendiente de Pago), `moneda` (COP), `ttl\\\_expira\\\_en`, `salida\\\_real`, `llegada\\\_real`, `novedades\\\_cierre`, `referencia\\\_externa\\\_pago`, `confirmado\\\_pago\\\_en`, `creado\\\_en`, `actualizado\\\_en`, `version`|`CHECK (fecha\\\_fin >= fecha\\\_inicio)`; `CHECK (pasajeros > 0)`; **sin** `UNIQUE(embarcacion\\\_id, fechas)` (varias Iniciada coexisten); índices `(arrendatario\\\_id, creado\\\_en DESC)`, `(propietario\\\_id, creado\\\_en DESC)`, `(estado, ttl\\\_expira\\\_en)`|
-|`reserva\\\_estado\\\_auditoria`|Inmutable|`id`, `reserva\\\_id`, `estado\\\_anterior`, `estado\\\_nuevo`, `sub\\\_estado`, `actor`, `motivo`, `ocurrido\\\_en`|`reserva\\\_id` FK; trigger anti-`UPDATE/DELETE`|
-|`pago\\\_intento`|Entidad (CU-13)|`id`, `reserva\\\_id`, `resultado` (estado devuelto por M3), `detalle`, `referencia\\\_externa`, `consultado\\\_en`|`reserva\\\_id` FK; índice `(reserva\\\_id, consultado\\\_en DESC)`|
-|`cancelacion\\\_evento`|Inmutable (CU-04)|`id`, `reserva\\\_id`, `actor`, `solicitado\\\_en`, `anticipacion\\\_horas`, `sub\\\_estado`, `motivo`, `justificacion`|FK; unicidad por reserva|
-|`noshow\\\_evento`|Inmutable (CU-05)|`id`, `reserva\\\_id`, `propietario\\\_id`, `reportado\\\_en`, `minutos\\\_espera`, `observaciones`|FK; unicidad por reserva|
-|`checkin\\\_evento` / `checkout\\\_evento`|Inmutables (CU-06/07)|`id`, `reserva\\\_id`, `propietario\\\_id`, `hora\\\_real`, `notas` / `novedades`|FK; unicidad por reserva|
-|`consulta\\\_externa\\\_log`|Técnica (CU-09/10)|`id`, `tipo`, `embarcacion\\\_id`, `resultado`, `correlation\\\_id`, `consultado\\\_en`|Sin datos técnicos de la flota|
-|`disputa\\\_garantia`|Entidad (CU-16/17)|`id`, `reserva\\\_id`, `estado`, `ventana\\\_inicio`, `ventana\\\_fin`, `tiene\\\_reclamo`, `motivo`, `resuelto\\\_por`, `resuelto\\\_en`, `version`|`UNIQUE(reserva\\\_id)`; `CHECK` de estados; finales inmutables|
-|`reclamo\\\_disputa`|Entidad (CU-16)|`id`, `disputa\\\_id`, `propietario\\\_id`, `descripcion`, `categoria`, `evidencias\\\_urls`, `registrado\\\_en`|`UNIQUE(disputa\\\_id)` \[NEEDS CLARIFICATION D-01 CU-16: reclamo único o editable]|
-|`revision\\\_admin`|Entidad (CU-17)|`id`, `disputa\\\_id`, `admin\\\_id`, `decision`, `motivo`, `notas\\\_internas`, `revisado\\\_en`|FK|
-|`outbox\\\_message`|Técnica|`id`, `event\\\_id`, `destino` (`AMQP` \| `M1\\\_HTTP`), `exchange`, `routing\\\_key`, `payload`, `created\\\_at`, `published\\\_at`, `attempts`, `next\\\_attempt\\\_at`|Índice parcial `published\\\_at IS NULL`; el `payload` con token se purga al confirmar|
-|`operational\\\_failure`|Técnica|`use\\\_case`, `reserva\\\_id`, `reason`, `payload\\\_ref`, `created\\\_at`, `resolved`|Destino de aprobaciones tardías, DLQ agotada, inconsistencias|
-|`idempotency\\\_key`|Técnica|`key`, `endpoint`, `response\\\_ref`, `created\\\_at`|`UNIQUE(key, endpoint)`; ventana de 60 s|
-|`shedlock`|Técnica|Bloqueo de jobs|—|
+| Tabla | Tipo | Columnas relevantes | Restricciones |
+|---|---|---|---|
+| `reserva` | Entidad (CU-02/03/08) | `id`, `codigo_reserva`, `arrendatario_id`, `embarcacion_id`, `propietario_id`, `estado`, `sub_estado`, `fecha_inicio`, `fecha_fin`, `hora_inicio` [I1], `pasajeros`, `titular_nombre`, `titular_celular`, `titular_email`, `estimado_total`, `monto_alquiler`, `monto_seguro`, `monto_deposito`, `monto_total` (nulos hasta Pendiente de Pago), `moneda` (COP), `ttl_expira_en`, `salida_real`, `llegada_real`, `novedades_cierre`, `referencia_externa_pago`, `confirmado_pago_en`, `creado_en`, `actualizado_en`, `version` | `CHECK (fecha_fin >= fecha_inicio)`; `CHECK (pasajeros > 0)`; **sin** `UNIQUE(embarcacion_id, fechas)` (varias Iniciada coexisten); índices `(arrendatario_id, creado_en DESC)`, `(propietario_id, creado_en DESC)`, `(estado, ttl_expira_en)` |
+| `reserva_estado_auditoria` | Inmutable | `id`, `reserva_id`, `estado_anterior`, `estado_nuevo`, `sub_estado`, `actor`, `motivo`, `ocurrido_en` | FK; trigger anti-`UPDATE`/`DELETE` |
+| `pago_intento` | Entidad (CU-13) | `id`, `reserva_id`, `resultado`, `detalle`, `referencia_externa`, `consultado_en` | FK; índice `(reserva_id, consultado_en DESC)` |
+| `cancelacion_evento` | Inmutable (CU-04) | `id`, `reserva_id`, `actor`, `solicitado_en`, `anticipacion_horas`, `sub_estado`, `motivo`, `justificacion` | FK; unicidad por reserva |
+| `noshow_evento` | Inmutable (CU-05) | `id`, `reserva_id`, `propietario_id`, `reportado_en`, `minutos_espera`, `observaciones` | FK; unicidad por reserva |
+| `checkin_evento` / `checkout_evento` | Inmutables (CU-06/07) | `id`, `reserva_id`, `propietario_id`, `hora_real`, `notas`/`novedades` | FK; unicidad por reserva |
+| `consulta_externa_log` | Técnica (CU-09/10) | `id`, `tipo`, `embarcacion_id`, `resultado`, `correlation_id`, `consultado_en` | Sin datos técnicos de la flota |
+| `disputa_garantia` | Entidad (CU-16/17) | `id`, `reserva_id`, `estado`, `ventana_inicio`, `ventana_fin`, `tiene_reclamo`, `motivo`, `resuelto_por`, `resuelto_en`, `version` | `UNIQUE(reserva_id)`; `CHECK` de estados; finales inmutables |
+| `reclamo_disputa` | Entidad (CU-16) | `id`, `disputa_id`, `propietario_id`, `descripcion`, `categoria`, `evidencias_urls`, `registrado_en` | `UNIQUE(disputa_id)` [D-01 CU-16] |
+| `revision_admin` | Entidad (CU-17) | `id`, `disputa_id`, `admin_id`, `decision`, `motivo`, `notas_internas`, `revisado_en` | FK |
+| `outbox_message` | Técnica | `id`, `event_id`, `destino` (`AMQP` \| `M1_HTTP`), `exchange`, `routing_key`, `payload`, `created_at`, `published_at`, `attempts`, `next_attempt_at` | Índice parcial `published_at IS NULL`; el `payload` con token se purga al confirmar |
+| `operational_failure` | Técnica | `id`, `use_case`, `reserva_id`, `reason`, `payload_ref`, `created_at`, `resolved` | Aprobaciones tardías, DLQ agotada, inconsistencias |
+| `idempotency_key` | Técnica | `key`, `endpoint`, `response_ref`, `created_at` | `UNIQUE(key, endpoint)`; ventana de 60 s |
+| `shedlock` | Técnica | Bloqueo de jobs | — |
 
 **No existen en Módulo 2**: tablas de embarcaciones, tarifas, parámetros financieros, cobros, reembolsos ni liquidaciones.
 
-### 4.2 Diagrama Entidad-Relación
+### Diagrama Entidad-Relación
 
 ```mermaid
-%%{init: {"theme": "dark"}}%%
 erDiagram
-    reserva {
-        uuid id PK
-        string codigo\\\_reserva
-        uuid arrendatario\\\_id
-        uuid embarcacion\\\_id
-        uuid propietario\\\_id
-        string estado
-        string sub\\\_estado
-        date fecha\\\_inicio
-        date fecha\\\_fin
-        int pasajeros
-        numeric estimado\\\_total
-        numeric monto\\\_alquiler
-        numeric monto\\\_seguro
-        numeric monto\\\_deposito
-        numeric monto\\\_total
-        datetime ttl\\\_expira\\\_en
-        datetime salida\\\_real
-        datetime llegada\\\_real
-        int version
-    }
-    reserva\\\_estado\\\_auditoria {
-        uuid id PK
-        uuid reserva\\\_id FK
-        string estado\\\_anterior
-        string estado\\\_nuevo
-        string actor
-        datetime ocurrido\\\_en
-    }
-    pago\\\_intento {
-        uuid id PK
-        uuid reserva\\\_id FK
-        string resultado
-        string referencia\\\_externa
-        datetime consultado\\\_en
-    }
-    cancelacion\\\_evento {
-        uuid id PK
-        uuid reserva\\\_id FK
-        string actor
-        numeric anticipacion\\\_horas
-        string sub\\\_estado
-    }
-    noshow\\\_evento {
-        uuid id PK
-        uuid reserva\\\_id FK
-        int minutos\\\_espera
-    }
-    checkin\\\_evento {
-        uuid id PK
-        uuid reserva\\\_id FK
-        datetime hora\\\_real
-    }
-    checkout\\\_evento {
-        uuid id PK
-        uuid reserva\\\_id FK
-        datetime hora\\\_real
-        string novedades
-    }
-    disputa\\\_garantia {
-        uuid id PK
-        uuid reserva\\\_id FK
-        string estado
-        datetime ventana\\\_fin
-        boolean tiene\\\_reclamo
-        int version
-    }
-    reclamo\\\_disputa {
-        uuid id PK
-        uuid disputa\\\_id FK
-        string descripcion
-        datetime registrado\\\_en
-    }
-    revision\\\_admin {
-        uuid id PK
-        uuid disputa\\\_id FK
-        string decision
-        datetime revisado\\\_en
-    }
-    outbox\\\_message {
-        uuid id PK
-        uuid event\\\_id
-        string destino
-        string routing\\\_key
-        datetime published\\\_at
-        int attempts
-    }
-    operational\\\_failure {
-        uuid id PK
-        uuid reserva\\\_id
-        string use\\\_case
-        string reason
-    }
-
-    reserva ||--o{ reserva\\\_estado\\\_auditoria : audita
-    reserva ||--o{ pago\\\_intento : consulta
-    reserva ||--o| cancelacion\\\_evento : registra
-    reserva ||--o| noshow\\\_evento : registra
-    reserva ||--o| checkin\\\_evento : registra
-    reserva ||--o| checkout\\\_evento : registra
-    reserva ||--o| disputa\\\_garantia : origina
-    disputa\\\_garantia ||--o| reclamo\\\_disputa : contiene
-    disputa\\\_garantia ||--o{ revision\\\_admin : revisa
+    reserva ||--o{ reserva_estado_auditoria : audita
+    reserva ||--o{ pago_intento : consulta
+    reserva ||--o| cancelacion_evento : registra
+    reserva ||--o| noshow_evento : registra
+    reserva ||--o| checkin_evento : registra
+    reserva ||--o| checkout_evento : registra
+    reserva ||--o| disputa_garantia : origina
+    disputa_garantia ||--o| reclamo_disputa : contiene
+    disputa_garantia ||--o{ revision_admin : revisa
 ```
 
-\---
+---
 
-## 5\. Conexiones con otros módulos y mensajería (RabbitMQ)
+## Conexiones con otros módulos y mensajería (RabbitMQ)
 
-### 5.1 Matriz de conexiones
+Exchange común hacia Módulo 3: `seashare.reservations` (topic, durable); topología y nombres adoptados de Módulo 3 (D-17).
 
-|#|Origen → Destino|CU|Estilo|Transporte|¿Cola?|Contrato|
-|-|-|-|-|-|-|-|
-|C1|M2 → M1|CU-01, CU-19|Request/response|`GET /api/v1/embarcaciones\\\[/{id}]`|No|m1-consultar-informacion-embarcacion|
-|C2|M2 → M1|CU-02, CU-03|Request/response|`GET /api/v1/embarcaciones/{id}/estado-operativo`|No|m1-consultar-estado-operativo|
-|C3|M2 → M1|CU-08|Comando idempotente|Outbox → relay → `PUT …/estado-operativo`|Sí (outbox)|m1-asignar-estado-operativo|
-|C4|M2 → M3|CU-11|Request/response|`POST /api/v1/estimates/batch` y `/individual`|No|m3-estimacion-lote / individual|
-|C5|M2 → M3|CU-12|Request/response|`POST /api/v1/reservations/{id}/calculated-value`|No|m3-valor-calculado-reserva|
-|C6|M2 → M3|CU-13|Consulta|`GET /api/v1/reservations/{id}/payment-confirmation`|No|m3-confirmacion-pago|
-|C7|M2 → M3|CU-15|Notificación unidireccional|RabbitMQ `reservation.info.provided` → `finance.reservation-info.v1`|**Sí**|CU-15|
-|C8|M2 → M3|CU-14|Notificación unidireccional|RabbitMQ `reservation.status.changed` → `finance.reservation-status.v1`|**Sí**|CU-14|
-|C9|M2 → M3|CU-18|Notificación unidireccional|RabbitMQ `reservation.dispute.updated` → `finance.guarantee-dispute.v1`|**Sí**|CU-18|
-|C10|Usuarios → M2|CU-01…07, 16, 17, 19…21|Request/response|REST|No|`contracts/rest/`|
-|C11|M2 → M2|CU-08, CU-13, CU-16/17|Eventos por tiempo|Schedulers|No|§5.2|
+| # | Origen → Destino | CU | Estilo | Transporte | Contrato |
+|---|---|---|---|---|---|
+| C1 | M2 → M1 | CU-01, CU-19 | Request/response | `GET /api/v1/embarcaciones[/{id}]` | m1-consultar-informacion-embarcacion |
+| C2 | M2 → M1 | CU-02, CU-03 | Request/response | `GET …/estado-operativo` | m1-consultar-estado-operativo |
+| C3 | M2 → M1 | CU-08 | Comando idempotente | Outbox → `PUT …/estado-operativo` | m1-asignar-estado-operativo |
+| C4 | M2 → M3 | CU-11 | Request/response | `POST /api/v1/estimates/batch` y `/individual` | m3-estimacion-lote / individual |
+| C5 | M2 → M3 | CU-12 | Request/response | `POST …/calculated-value` | m3-calculo-total |
+| C6 | **M3 → M2** | CU-13 | Endpoint expuesto (webhook) | `POST /reservas/{id}/pago/confirmacion` | rest/CU-13-confirmar-pago |
+| C7 | **M3 → M2** | CU-15 | Endpoint expuesto (lectura) | `GET /api/v1/internal/reservas/{id}` | rest/CU-15-solicitar-informacion-reserva |
+| C8 | M2 → M3 | CU-14 | Evento AMQP | `reservation.status.changed` → `finance.reservation-status.v1` | event/CU-14 |
+| C9 | M2 → M3 | CU-18 | Evento AMQP | `reservation.dispute.updated` → `finance.guarantee-dispute.v1` | event/CU-18 |
+| C10 | Usuarios → M2 | CU-01…07, 16, 17, 19…21 | Request/response (REST) | — | rest/ |
+| C11 | M2 → M2 | CU-08, TTL, disputa | Jobs programados | ShedLock | §Jobs |
 
-Exchange común hacia Módulo 3: `seashare.reservations` (topic, durable). Topología y nombres adoptados de Módulo 3 (OQ-09 de su plan).
+**Jobs internos** (con ShedLock en multi-réplica): `TtlExpiryJob` (CU-08), `DisputeWindowCloseJob` (CU-16/17), `OutboxRelayJob` (infra; AMQP con publisher confirms y `PUT` a M1; backoff 1/5/25/125 s; 5 intentos → DLQ + alerta). Módulo 2 es dueño de **todos** sus temporizadores de negocio (TTL, ventana de 24 h, tolerancia de 30 min), modelados como columnas de vencimiento durables, no como `ScheduledExecutorService`.
 
-### 5.2 Jobs internos programados (con ShedLock en despliegues multi-réplica)
+> **Dirección CU-13 / CU-15 (decisión de revisión)**: se **mantiene lo que dicen los `spec.md` vigentes** — Módulo 3 **llama** a Módulo 2 para confirmar pago (CU-13, FR-001) y para consultar la información de reserva (CU-15, FR-001). No se invierte a la dirección M2 → M3 propuesta en la revisión del 2026-10-10; ese cambio queda como punto abierto (§ Riesgos).
 
-|Job|Origen|Regla|
-|-|-|-|
-|`TtlExpiryJob`|CU-08|Reservas en Iniciada o Pendiente de Pago con `ttl\\\_expira\\\_en` vencido → Expirada vía CU-08. Corte exacto a 900 s, sin gracia. Desde Iniciada no notifica a M1 ni a M3; desde Pendiente de Pago notifica a ambos|
-|`PaymentPollingJob`|CU-13|Consulta a M3 el cobro de cada reserva en Pendiente de Pago; frecuencia \[NEEDS CLARIFICATION I3: propuesta 5 s]. Verifica el TTL antes de confirmar|
-|`DisputeWindowCloseJob`|CU-16/17|Disputas PENDING con ventana vencida y sin reclamo → REJECTED vía CU-17 (actor Sistema, motivo "sin reclamo en ventana")|
-|`OutboxRelayJob`|Infra|Publica `outbox\\\_message` pendientes (AMQP con publisher confirms y PUT a M1), backoff 1 s, 5 s, 25 s, 125 s; 5 intentos; luego DLQ y alerta|
+---
 
-A diferencia de Módulo 3, **Módulo 2 sí es dueño de todos los temporizadores de negocio** (TTL, ventana de 24 h, tolerancia de 30 min).
+## Contratos
 
-### 5.3 Flujo de referencia: búsqueda → reserva confirmada
+Cada contrato vive en su archivo en [`contracts/`](contracts/), con leyenda `[SPEC]/[CONV]/[PEND]`, sobre de error común y tabla de decisión de errores adaptada de Módulo 3.
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant U as Arrendatario
-  participant M2 as Módulo 2
-  participant M1 as Módulo 1
-  participant MQ as RabbitMQ
-  participant M3 as Módulo 3
-  U->>M2: GET /embarcaciones (CU-01)
-  M2->>M1: catálogo (lote de 20)
-  M2->>M3: estimates/batch (CU-11)
-  M2-->>U: tarjetas con tarifa estimada
-  U->>M2: GET /embarcaciones/{id} y /cotizacion (CU-19)
-  U->>M2: POST /reservas (CU-02)
-  M2->>M1: estado operativo (CU-10) y ficha (CU-09: owner\\\_id, max\\\_capacity)
-  M2->>M2: persiste Iniciada + TTL 15 min (CU-08)
-  M2->>MQ: reservation.info.provided (CU-15, outbox)
-  U->>M2: GET /reservas/{id}/pago/resumen (CU-03 paso 1)
-  M2->>M3: calculated-value (CU-12)
-  M2-->>U: desglose oficial + política de cancelación
-  U->>M2: POST /reservas/{id}/pago {token, política aceptada} (CU-03 paso 2)
-  M2->>M3: calculated-value (idempotente)
-  M2->>M2: lock + CU-10 + CU-08 → Pendiente de Pago
-  M2->>M1: PUT Reservado (outbox)
-  M2->>MQ: reservation.status.changed PENDING + payment\\\_token\\\_ref (CU-14)
-  MQ->>M3: consumo y cobro
-  loop PaymentPollingJob / bajo demanda
-    M2->>M3: GET payment-confirmation (CU-13)
-  end
-  M2->>M2: APPROVED con TTL vigente → Reservada (CU-08)
-  M2->>MQ: reservation.status.changed (Reservada)
-```
+| Tipo | Contratos | Quién → quién |
+|---|---|---|
+| REST expuesto | CU-01…07, **13**, **15**, 16, 17, 19, 20, 21 | Usuarios / Módulo 3 → M2 |
+| Evento publicado | CU-14, CU-18 | M2 → M3 (unidireccional) |
+| Externo consumido (M1) | información de embarcación, estado operativo, asignar estado operativo | M2 → M1 |
+| Externo consumido (M3) | estimación lote, estimación individual, cálculo total | M2 → M3 |
+| Interno | CU-08 | Casos de uso → CU-08 |
+| Interno entre contextos | `shared/contracts/dispute/OpenDisputeUseCase` | reservas → disputa |
 
-\---
-
-## 6\. Contratos
-
-Cada contrato vive en su archivo en [`contracts/`](contracts/README.md), con leyenda `\\\[SPEC]/\\\[CONV]/\\\[PEND]`, formato de error común y tabla de decisión de errores adaptada de Módulo 3.
-
-|Tipo|Contratos|Quién → quién|
-|-|-|-|
-|REST expuesto|CU-01, 02, 03 (×2), 04, 05, 06, 07, 16, 17, 19 (×2), 20, 21|Usuarios → M2|
-|Cola publicada|CU-14, CU-15, CU-18|M2 → M3 (unidireccional)|
-|Externo consumido (M1)|información de embarcación, estado operativo, asignar estado operativo|M2 → M1|
-|Externo consumido (M3)|estimación lote, estimación individual, valor calculado, confirmación de pago|M2 → M3|
-|Interno|CU-08|Casos de uso → CU-08|
+**Códigos de error**: se adopta la tabla de decisión E1–E10 de Módulo 3 (Problem Details RFC 9457 con `code` y `retryable`; 4xx = el llamador puede corregir; 5xx = falla propia o de dependencia). Especificidades de Módulo 2: `409` para conflictos de estado y concurrencia (`INVALID_RESERVATION_STATE`, `CONCURRENT_STATE_CHANGE`, `RESERVA_EXPIRADA`, `EMBARCACION_NO_APTA`); `503` para M1/M3 caídos.
 
 **Entrega y verificación**: tests de contrato con los ejemplos de cada `.md` (MockMvc para REST; cuerpo AMQP contra el esquema; WireMock para M1 y M3) y verificación cruzada con los contratos de Módulo 3 antes de cada hito.
 
-**Códigos de error**: se adopta la tabla de decisión E1–E10 de Módulo 3 (Problem Details RFC 9457 con `code` y `retryable`; 4xx = el llamador puede corregir; 5xx = falla propia o de dependencia). Especificidades de Módulo 2: `409` se usa para conflictos de estado y concurrencia (`INVALID\\\_RESERVATION\\\_STATE`, `CONCURRENT\\\_STATE\\\_CHANGE`, `CONFLICTO\\\_CONCURRENCIA`, `RESERVA\\\_EXPIRADA`, `EMBARCACION\\\_NO\\\_APTA`); `503` para M1 o M3 caídos.
+---
 
-\---
+## Resiliencia (valores iniciales a calibrar)
 
-## 7\. Aspectos transversales
+| Dependencia | Timeout | Reintentos | Otros |
+|---|---|---|---|
+| Módulo 1 (lecturas) | connect 100 ms / read 300 ms | 1 rápido, nunca ante 4xx | Fail-safe: no apto / 503 |
+| Módulo 1 (PUT estado) | connect 100 ms / read 300 ms | Outbox, 5 intentos con backoff | DLQ + alerta |
+| Módulo 3 (estimación lote) | read 1000 ms | 0 | Degradación del catálogo |
+| Módulo 3 (individual, cálculo total) | read 1000 ms | 0–1 si cabe en el presupuesto | Aborta sin transicionar |
+| RabbitMQ (publicación) | publisher confirm | 5 intentos, 1/5/25/125 s con jitter | DLQ + alerta |
 
-### 7.1 Seguridad
+---
 
-* Roles: Arrendatario, Propietario (debe ser el propietario registrado de la embarcación de la reserva), Admin (solo CU-17). El `sub` y el rol salen del JWT; nunca del cuerpo ni de la URL.
-* Módulo 2 **no expone endpoints para Módulo 3** (consulta y publicación son salientes). Sí necesita credenciales de servicio para llamar a M1 y M3.
-* Token de pago: no persistir, no loguear, purgar del outbox al confirmar.
-* Mecanismo de autenticación y JWT de servicio: \[NEEDS CLARIFICATION] OQ-01 (bloqueante de la Fase 2). Propuesta por defecto: OAuth2 Resource Server (JWT).
+## Decisiones de diseño y justificación
 
-### 7.2 Resiliencia (valores iniciales a calibrar)
+| ID | Decisión | Alternativas descartadas | Justificación | CU |
+|---|---|---|---|---|
+| D-01 | **Un solo servicio desplegable** con dos contextos internos | Microservicio por contexto | Un único escritor de estado y outbox transaccional comparten BD | Todos |
+| D-02 | **Dos contextos (`reservas`, `disputa`)** con hexagonal y ArchUnit en CI | Un solo dominio | Dos máquinas de estado independientes sin transiciones cruzadas | Todos |
+| D-03 | **Comunicación interna vía `shared/contracts`** (inversión de dependencia) | `reservas` importando `disputa.application.port.in` | Ninguno de los dos contextos conoce la estructura interna del otro | 07, 16 |
+| D-04 | **`shared` solo con contratos y tipos de dominio** | Un `shared` que incluye la plomería técnica (web, seguridad, mensajería, persistencia, observabilidad) | Se mantiene delgada la frontera entre contextos y se evita el cajón de sastre | Todos |
+| D-05 | **Módulo 3 llama a Módulo 2** para CU-13 (webhook) y CU-15 (GET) | Invertir a M2 → M3 | Es lo que fijan los specs vigentes | 13, 15 |
+| D-06 | **CU-08 único escritor de estado** | Cada CU transiciona su estado | Concurrencia y auditoría centralizadas | 01–08, 13 |
+| D-07 | **Outbox transaccional + relay** para AMQP y para PUT a M1 | Fire-and-forget; llamada síncrona en la transacción | M1 no participa de la transacción local | 08, 14, 18 |
+| D-08 | **Idempotencia de entrada** por clave `(id_transaccion_externo, resultado)` y dedup saliente por `event_id` | Confiar en *at-least-once* | FR-007 de CU-13 y FR-011 de CU-08 | 08, 13 |
+| D-09 | **Token de pago efímero**: se recibe en CU-03, viaja y se purga del outbox | Persistirlo en `reserva` | Minimización de datos sensibles | 03, 14 |
+| D-10 | **CU-03 en dos pasos** (resumen, luego pago) | Una sola llamada que calcula y transiciona | El Arrendatario ve y acepta el desglose antes del bloqueo | 03, 12 |
+| D-11 | **Cálculo de CU-12 y M3 fuera del lock**; lock solo para CU-10 + transición | Llamar a M3 con lock de fila | No retener locks durante una llamada externa lenta | 03 |
+| D-12 | **Importes como `BigDecimal` desde *string*, sin aritmética** (ArchUnit lo verifica) | `double`; cálculos "de presentación" | Regla "Sin dinero" verificable | Todos |
+| D-13 | **Moneda COP fijada por contrato** hasta que M3 devuelva `currency` | Asumir por usuario | M3 no la envía en lote ni en cálculo | 01, 11, 12 |
+| D-14 | **Cero caché y cero copia** de datos de Módulo 1 | Caché con TTL de fichas | Consistencia con CU-09/CU-10 | 01, 09, 10, 19 |
+| D-15 | **Temporizadores durables en BD** con jobs + ShedLock | `ScheduledExecutorService` | Sobreviven a reinicios y a varias réplicas | 08, 16, 17 |
+| D-16 | **`Clock` inyectable y zona del puerto** | Hora de servidor | Bordes exactos verificables (72 h, 24 h, 30 min, 900 s) | 04, 05, 06 |
+| D-17 | **Topología y nombres de colas adoptados de Módulo 3** (`seashare.reservations`) | Topología propia | El consumidor ya la definió | 14, 18 |
+| D-18 | **Lock pesimista en CU-03** + `@Version` en CU-08 y disputa | Solo optimista; serializable | FCFS atómico; sin sobreventa | 03, 08, 17 |
+| D-19 | **Estados terminales inmutables** (triggers anti-mutación) | Convención en código | Trazabilidad | 04–08, 17 |
+| D-20 | **Códigos de error E1–E10 de Módulo 3** | Catálogo propio | Respuestas coherentes en todo SEA-SHARE | Todos |
+| D-21 | **Resilience4j** (timeout, reintento, circuit breaker) configurable | Reintentos manuales | Evita cargas infinitas | 01, 09–12 |
+| D-22 | **JWT con roles; `sub` desde la identidad** | IDs en el cuerpo | Aislamiento de datos | 04–07, 16, 17, 20, 21 |
+| D-23 | **Código y API en inglés**; documentación en español | Identificadores en español | Alinea con Módulo 3 | Todos |
+| D-24 | **Estructura `adapter/in` y `adapter/out`** dentro de `infrastructure` | Carpetas `web`, `client`, `persistence` sueltas | Dirección explícita de cada adaptador; facilita ArchUnit y elimina colisiones de nombre | Todos |
 
-|Dependencia|Timeout|Reintentos|Otros|
-|-|-|-|-|
-|Módulo 1 (lecturas)|connect 100 ms / read 300 ms|1 rápido, nunca ante 4xx|Fail-safe: no apto / 503|
-|Módulo 1 (PUT estado)|connect 100 ms / read 300 ms|Outbox, 5 intentos con backoff|DLQ + alerta|
-|Módulo 3 (estimación lote)|read 1000 ms|0|Degradación del catálogo|
-|Módulo 3 (individual, cálculo total)|read 1000 ms|0–1 si cabe en el presupuesto|Aborta sin transicionar|
-|Módulo 3 (confirmación de pago)|read 1000 ms|0 (reintenta el siguiente ciclo)|Nunca asume estado|
-|RabbitMQ (publicación)|publisher confirm|5 intentos, 1/5/25/125 s con jitter|DLQ + alerta|
+---
 
-### 7.3 Observabilidad
+## Lenguaje ubicuo (spec → código)
 
-Actuator, Micrometer + Prometheus, logs JSON con `reserva\\\_id` y `correlation\\\_id` (HTTP y AMQP). Métricas: profundidad de DLQ, `outbox` pendiente más antiguo, reservas por estado, expiraciones por TTL, aprobaciones tardías, latencia de M1 y M3, fallos de sondeo. Alertas: DLQ > 0, aprobación tardía, outbox atascado, M3 caído durante pagos pendientes.
+| Término del spec | Identificador en código |
+|---|---|
+| Reserva / Iniciada, Pendiente de Pago, Reservada, En Navegación, Completada, Cancelada, Expirada, Pago Fallido | `Reservation` / `INITIATED`, `PENDING_PAYMENT`, `RESERVED`, `IN_NAVIGATION`, `COMPLETED`, `CANCELLED`, `EXPIRED`, `PAYMENT_FAILED` |
+| Sub-estados: Flexible, Moderado, Tardío, Por Propietario, Por Inasistencia | `FLEXIBLE`, `MODERATE`, `LATE`, `BY_OWNER`, `NO_SHOW` |
+| Disputa de garantía / PENDIENTE, RECHAZADA, ACEPTADA | `GuaranteeDispute` / `PENDING`, `REJECTED`, `ACCEPTED` |
+| Arrendatario / Propietario / Admin | `Renter` / `Owner` / `Admin` |
+| Notificación de estado / estado de reserva | `ReservationStatusEvent` |
+| Embarcación (de Módulo 1) | `Boat` (solo `boatId` persistido) |
+| Puerto / zona horaria | `Harbor` / `ZoneId` (nunca persistido) |
+| Contrato interno de apertura de disputa | `shared.contracts.dispute.OpenDisputeUseCase` |
 
-### 7.4 Configuración
+---
 
-`seashare.m1.\\\*`, `seashare.m3.\\\*`, `seashare.ttl.minutes=15`, `seashare.noshow.tolerance.minutes=30`, `seashare.dispute.window.hours=24`, `seashare.catalog.page-size=20`, `seashare.payment.poll.interval.seconds`, `seashare.currency=COP`.
+## Phase 1: Setup (Shared Infrastructure)
 
-\---
+**Purpose**: Inicialización del repositorio Spring Boot y de la estructura base del proyecto.
 
-## 8\. Máquina de estados de la reserva y mapeo hacia Módulo 3
+- [ ] T001 Inicializar el repositorio Maven con `spring-boot-starter-parent` 3.5.x y `java.version` 21
+- [ ] T002 Declarar en `pom.xml` las dependencias base: `spring-boot-starter-web`, `-validation`, `-data-jpa`, `-security`, `-amqp`, `-actuator`, `springdoc-openapi`, `resilience4j-spring-boot3` y el driver `postgresql`
+- [ ] T003 Configurar el build: `maven-compiler-plugin` (release 21), `maven-surefire-plugin` (tests unitarios), `maven-failsafe-plugin` (tests de integración) y `spring-boot-maven-plugin`
+- [ ] T004 Crear la clase principal `M2Application` con *component scanning* de `com.seashare.m2`
+- [ ] T005 Crear el árbol de paquetes de _Project Structure_ (`shared/`, `reservas/`, `disputa/`) y los `package-info.java` que documentan la regla "Sin dinero"
+- [ ] T006 Externalizar la configuración en `application.yml` y perfiles `dev` / `test` / `prod` (host, puerto y credenciales de RabbitMQ; *datasource*; timeouts), sin secretos en el repositorio
+- [ ] T007 Definir `docker-compose.yml` con RabbitMQ (management habilitado) y `postgres:16`
+- [ ] T008 Crear el `Dockerfile` multi-stage para empaquetar el servicio
+- [ ] T009 Configurar verificación de estilo y formato (Checkstyle o Spotless) integrada al build
+- [ ] T010 Completar `.gitignore` y el `README.md` con la guía de arranque local
 
-|Transición|Disparador|M1 (estado operativo)|Evento a M3 (CU-14)|
-|-|-|-|-|
-|Creación → Iniciada|CU-02|Nada|No (solo CU-15)|
-|Iniciada → Pendiente de Pago|CU-03|Reservado|`PENDING` + `payment\\\_token\\\_ref`|
-|Iniciada → Expirada|TTL|Nada|No|
-|Pendiente de Pago → Reservada|CU-13|Sin cambio|Reservada|
-|Pendiente de Pago → Expirada|TTL|Disponible|Expirada \[Q-M3-01]|
-|Pendiente de Pago → Pago Fallido|CU-13 (rechazo definitivo)|Disponible|Pago Fallido \[Q-M3-01]|
-|Reservada → En Navegación|CU-06|En Navegación|En Navegación|
-|Reservada → Cancelada (Flexible/Moderado/Tardío/Por Propietario)|CU-04|Disponible, o En Mantenimiento/Limpieza por avería|Cancelado + sub-estado|
-|Reservada → Cancelada (Por Inasistencia)|CU-05|Disponible|Inasistencia \[Q-M3-01; temporal: Tardío]|
-|En Navegación → Completada|CU-07|Disponible|`COMPLETED`|
+---
 
-Estados terminales: Completada, Cancelada, Expirada, Pago Fallido. Los **nombres exactos** de los valores del evento los fija Módulo 3: su plan del 2026-10-08 adopta enumeraciones **en inglés** (`PENDING`, `COMPLETED`, …) con Módulo 2 como "fuente canónica"; la lista completa de los 10 estados debe confirmarse (Q-M3-13).
+## Phase 2: Foundational (Blocking Prerequisites)
 
-**Estados de la consulta de pago (CU-13) devueltos por Módulo 3**: `IN\\\_PROCESS`, `APPROVED`, `REJECTED`, `CANCELLED`, `EXPIRED` (autorización de la pasarela, **no** la reserva), `UNKNOWN`.
+**Purpose**: Infraestructura crítica que debe existir **antes** de implementar cualquier caso de uso. Los 21 CUs dependen de estos elementos: todos los que cambian estado pasan por la persistencia transaccional y el outbox, todos los que validan ventanas dependen del reloj y de la zona horaria por puerto, y todos los que notifican a Módulo 3 dependen de la topología RabbitMQ.
 
-\---
+- [ ] T011 **Manejo global de errores**: jerarquía de excepciones de dominio mapeada a código HTTP y cuerpo de error uniforme; validar que ninguna respuesta de error expone datos sensibles ni *stack traces*
+- [ ] T012 **Seguridad**: autenticación y autorización por rol (**Arrendatario**, **Propietario**, **Admin**) más identidad de servicio para Módulo 3 (CU-13 y CU-15); endpoints protegidos por defecto; CORS y TLS. **NEEDS CLARIFICATION**: el mecanismo de autenticación no está definido en los specs
+- [ ] T013 **Persistencia**: framework de migraciones versionadas y esquema base; entidad base con *auditing* (`creadoEn`, `actualizadoEn`), clave `UUID` y columna de *optimistic locking* para satisfacer FR-004 y FR-006 de CU-08
+- [ ] T014 **Persistencia**: repositorios de `Reservation` y `GuaranteeDispute` con soporte transaccional y de bloqueo pesimista donde la atomicidad lo requiera (adquisición del bloqueo de inventario en CU-03)
+- [ ] T015 **RabbitMQ — topología**: exchange de tipo `topic`, colas de integración con Módulo 3, *bindings* por tipo de evento, colas de *dead letter* y política de retención
+- [ ] T016 **RabbitMQ — entrega garantizada**: *publisher confirms*, *manual ack* en consumidores, reintentos con *backoff* exponencial con jitter (5 intentos: 1 s, 5 s, 25 s, 125 s; solo ante 5xx/timeout) y derivación a DLQ con alerta tras el quinto fallo
+- [ ] T017 **Outbox transaccional**: tabla de salida, escritura conjunta con la transición de estado, *relay* scheduler con confirmación del broker y marcado del evento como entregado
+- [ ] T018 **Reloj y zona horaria**: bean `Clock` inyectable y resolución de `ZoneId` a partir del puerto de atraque devuelto por Módulo 1, con *fail-safe* explícito (sin zona horaria por defecto)
+- [ ] T019 **Clientes HTTP salientes**: cliente base para Módulo 1 y Módulo 3 con timeouts, un (1) reintento rápido máximo hacia Módulo 1 antes del *fail-safe* y reintentos de cola (según T016) hacia Módulo 3, *circuit breaker*, política *fail-safe* uniforme y propagación de *correlation id*
+- [ ] T020 **Contratos de API**: versionado, DTOs de entrada y salida separados del dominio, convención de nombres JSON, `BigDecimal` para importes **opacos sin aritmética**, y especificación OpenAPI
+- [ ] T021 **Observabilidad**: *correlation id* en HTTP y AMQP, logging estructurado con MDC, métricas Actuator y *health checks* de RabbitMQ y de la base de datos
+- [ ] T022 **Infraestructura de testing**: contenedores Testcontainers para RabbitMQ y base de datos; servidor WireMock con los dobles de Módulo 1 y Módulo 3; base de pruebas reutilizable
+- [ ] T023 **Idempotencia**: mecanismo transversal de claves idempotentes de entrada y de deduplicación de eventos salientes (satisface FR-007 de CU-13 y FR-004 de CU-18)
+- [ ] T024 **ArchUnit**: reglas de capas y de la regla "Sin dinero": `domain` sin Spring/JPA/AMQP; `application` solo depende de `domain`; `adapter/in` solo invoca `port/in`; `adapter/out` solo implementa `port/out`; `shared/contracts` solo interfaces/DTOs; `reservas` no depende de `disputa` salvo por el contrato de `shared/contracts`
 
-## 9\. Decisiones de diseño y justificación
+**Checkpoint**: la Fundación está lista — la implementación de los casos de uso puede comenzar en paralelo.
 
-|ID|Decisión|Alternativas descartadas|Justificación|CU|
-|-|-|-|-|-|
-|D-01|**Un solo servicio desplegable** con dos contextos internos|Microservicio por contexto|Un único escritor de estado y outbox transaccional comparten BD; la disputa solo nace de CU-07|Todos|
-|D-02|**Dos contextos (reservas, disputa)** con hexagonal y ArchUnit en CI|Un solo dominio como Módulo 3|Dos máquinas de estado independientes sin transiciones cruzadas|Todos|
-|D-03|**CU-08 único escritor de estado**|Cada CU transiciona su estado|Concurrencia y auditoría centralizadas|01–08, 13|
-|D-04|**Outbox transaccional + relay** para AMQP y para PUT a Módulo 1|Fire-and-forget; llamada síncrona dentro de la transacción|Módulo 1 no participa de la transacción local; el outbox vuelve reintentable la divergencia|08, 14, 15, 18|
-|D-05|**Módulo 3 no llama a Módulo 2**: confirmación de pago por consulta (CU-13)|Webhook de M3 hacia M2|Es el modelo que M3 implementó (UC06) y su consistencia §5 define; elimina un endpoint entrante|13|
-|D-06|**Polling durable con job + consulta bajo demanda**|Esperar callback; polling solo en el cliente|Cubre el TTL aunque el usuario cierre la app|13|
-|D-07|**Token de pago efímero**: se recibe en CU-03, viaja en `PENDING` y se purga del outbox|Persistirlo en `reserva`|Minimización de datos sensibles|03, 14|
-|D-08|**CU-03 en dos pasos** (resumen, luego pago) y CU-12 se invoca en ambos|Una sola llamada que calcula y transiciona|El Arrendatario debe ver y aceptar el desglose antes del bloqueo; M3 es idempotente|03, 12|
-|D-09|**CU-12 y M3 fuera del lock**; lock solo para CU-10 + transición|Llamar a M3 con lock de fila|No retener locks durante una llamada externa lenta|03|
-|D-10|**Publicar CU-15 al crear la reserva** (excepción a "Iniciada no publica")|Publicar al iniciar el pago|M3 necesita la información para calcular (CU-12) antes de `PENDING`|02, 12, 15|
-|D-11|**Importes como `BigDecimal` desde *string*, sin aritmética** (ArchUnit lo verifica)|`double`; cálculos "solo de presentación"|Regla "Sin dinero" verificable|Todos|
-|D-12|**Moneda COP fijada por contrato** hasta que M3 devuelva `currency`|Asumir por usuario|M3 no la envía en lote ni en cálculo|01, 11, 12|
-|D-13|**Cero caché y cero copia** de datos de Módulo 1|Caché con TTL de fichas|Consistencia con CU-09/CU-10|01, 09, 10, 19|
-|D-14|**Temporizadores durables en BD** (`ttl\\\_expira\\\_en`, `ventana\\\_fin`) con jobs + ShedLock|`ScheduledExecutorService`; colas con TTL|Sobreviven a reinicios y a varias réplicas|08, 16, 17|
-|D-15|**`Clock` inyectable y zona del puerto**|Hora de servidor|Bordes exactos verificables|04, 05, 06|
-|D-16|**Lock pesimista en CU-03** + `@Version` en CU-08 y disputa|Solo optimista; serializable|FCFS atómico; sin sobreventa|03, 08, 17|
-|D-17|**Estados terminales inmutables** (tablas de evento y auditoría con trigger anti-mutación)|Convención en código|Trazabilidad|04–08, 17|
-|D-18|**Topología y nombres de colas adoptados de Módulo 3** (`seashare.reservations`)|Topología propia (`seashare.reservas`)|El consumidor ya la definió|14, 15, 18|
-|D-19|**Códigos de error E1–E10 de Módulo 3**|Catálogo propio|Respuestas coherentes en todo SEA-SHARE|Todos|
-|D-20|**Resilience4j** (timeout, reintento, circuit breaker) configurable|Reintentos manuales|Evita cargas infinitas|01, 09–13|
-|D-21|**JWT con roles; `sub` desde la identidad** (OQ-01)|IDs en el cuerpo|Aislamiento de datos|04–07, 16, 17, 20, 21|
-|D-22|Código y API en **inglés**; documentación en español (tabla §11)|Identificadores en español|Alinea con Módulo 3 (D-18/D-23 de su plan)|Todos|
-|D-23|**Disputa sin transiciones sobre la reserva**|Estado de reserva ligado a la disputa|Contextos desacoplados|16–18|
-|D-24|**Estructura `adapter/in` y `adapter/out`** dentro de `infrastructure`|Carpetas `web`, `client`, `persistence` sueltas|Hace explícita la dirección de cada adaptador y facilita las reglas de ArchUnit|Todos|
+---
 
-\---
+## Phase 3: Adaptadores de integración de solo lectura (P1)
 
-## 10\. Fases y orden de ejecución
+**Qué CUs agrupa**: **CU-09** (Proveer información de embarcación), **CU-10** (Brindar información de estado operativo), **CU-11** (Proveer información cotización de reserva), **CU-12** (Brindar cálculo total de la reserva)
 
-### Fase 1 — Setup
+**Justificación**: los cuatro son adaptadores **sin máquina de estados, sin persistencia de dominio y sin efectos secundarios**: solo consultan Módulo 1 o Módulo 3 y devuelven el resultado sin transformarlo. Esto los convierte en el punto de entrada natural del proyecto: son verificables de forma aislada contra dobles de prueba, sin depender de ningún otro CU ni de la base de datos, y filtran y condicionan la frontera más delicada del sistema — el límite "sin dinero" y el comportamiento *fail-safe* ante fallos de Módulo 1. Además son **desbloqueantes**: CU-02 y CU-04 dependen de la zona horaria del puerto que entrega CU-09, CU-01 depende del modo lote de CU-11, y CU-03 depende de la liquidación final de CU-12. Empezar por ellos permite avanzar en paralelo con el núcleo de dominio y fija los contratos de integración con Módulo 1 y Módulo 3 antes de construir lógica de negocio encima.
 
-T001 Maven + Spring Boot 3.5 / Java 21 · T002 dependencias · T003 build (surefire/failsafe) · T004 `M2Application` · T005 árbol de paquetes con `package-info` de la regla "Sin dinero" · T006 configuración por perfiles · T007 Docker Compose (RabbitMQ + PostgreSQL 16) · T008 Dockerfile · T009 formato (Spotless/Checkstyle) · T010 README.
+> Las tareas técnicas detalladas de cada CU se definirán en su propio plan específico más adelante.
 
-### Fase 2 — Fundación (bloquea todo)
+---
 
-T011 manejo de errores (Problem Details, catálogo E1–E10) · T012 seguridad (OQ-01) · T013 persistencia y migraciones base · T014 repositorios con lock pesimista · T015 topología RabbitMQ (`seashare.reservations`, colas y DLQ) · T016 entrega garantizada · T017 **outbox** (AMQP y M1\_HTTP) · T018 `Clock` y resolución de zona del puerto · T019 clientes HTTP base (M1, M3) · T020 contratos y OpenAPI · T021 observabilidad · T022 Testcontainers y WireMock · T023 idempotencia · T024 **ArchUnit** (reglas de §3.4, incluida "Sin dinero").
+## Phase 4: Núcleo de dominio — máquina de estados de la reserva (P1)
 
-### Fases por CU
+**Qué CUs agrupa**: **CU-08** (Actualizar estado de reserva)
 
-|Fase|CU|Depende de|
-|-|-|-|
-|3. Adaptadores de lectura|CU-09, CU-10, CU-11, CU-12, CU-13 (cliente de consulta)|2|
-|4. Núcleo de dominio|CU-08 (máquina de estados, auditoría, outbox, sincronización M1)|2|
-|5. Publicaciones hacia M3|CU-14, CU-15|2, 4|
-|6. Vistas de consulta|CU-19, CU-20, CU-21|2, 3, 4|
-|7. Embudo de conversión|CU-01, CU-02, CU-03, CU-13 (job y bajo demanda), `TtlExpiryJob`|3, 4, 5, 6|
-|8. Operaciones en muelle|CU-06, CU-07, CU-05, CU-04|3, 4, 5, 6|
-|9. Disputa de garantía|CU-16, CU-17, CU-18, `DisputeWindowCloseJob`|2 (dominio en paralelo), 8 para el disparo desde CU-07|
-|10. Polish|Cierre de \[NEEDS CLARIFICATION], seguridad, carga, resiliencia, alertas, documentación|las deseadas|
+**Justificación**: es la pieza de mayor riesgo técnico y el **cuello de botella de todo el módulo**. FR-001 lo convierte en el único escritor de estado, y ocho componentes dependen de él (`Iniciar reserva`, `Iniciar pago`, `Confirmar pago`, `Marcar inicio de navegación`, `Marcar fin de navegación`, `Solicitar cancelación`, `Marcar inasistencia` y el temporizador del TTL). Concentra los requisitos más exigentes del módulo: matriz de transiciones validada estrictamente, atomicidad de guardado, control de concurrencia, inmutabilidad de los estados terminales, tabla de sincronización con Módulo 1 y con Módulo 3, y el barrido de expiración del TTL de 15 minutos. Debe resolverse antes que cualquier caso de uso que mute estado, porque de lo contrario cada CU construiría su propia lógica de transición y se perdería la garantía de consistencia que el propio spec declara como su propósito. Al ser lógica pura de dominio, se implementa y se verifica sin RabbitMQ ni base de datos.
+
+> Las tareas técnicas detalladas de cada CU se definirán en su propio plan específico más adelante.
+
+---
+
+## Phase 5: Superficie de integración expuesta a Módulo 3 (P1)
+
+**Qué CUs agrupa**: **CU-14** (Recibir estado de reserva), **CU-15** (Solicitar información de la reserva)
+
+**Justificación**: son los dos puntos de contacto que la tabla §5 de `consistencia-m2-m3.md` define desde el lado de Módulo 2, y ambos dependen de la Fase 4 (CU-14 se dispara desde la máquina de estados; CU-15 consulta reservas ya persistidas). Se agrupan porque **comparten la verificación de una misma garantía**: que el módulo expone información operativa exacta, sin montos, sin cálculos y con idempotencia. CU-14 es además la **primera prueba real de la infraestructura de RabbitMQ construida en la Fase 2** (outbox, reintentos, DLQ), de modo que implementarlo aquí valida la Fase 2 antes de que el volumen de mensajes crezca con el resto de casos de uso. Cerrar esta fase completa el contrato de integración con Módulo 3 para el ciclo de la reserva.
+
+> Las tareas técnicas detalladas de cada CU se definirán en su propio plan específico más adelante.
+
+---
+
+## Phase 6: Vistas de consulta — CU-19, CU-20, CU-21 (P1)
+
+**Qué CUs agrupa**: **CU-19** (Ver detalle de embarcación), **CU-20** (Ver mis reservas), **CU-21** (Ver detalle de reserva)
+
+**Justificación**: son los tres casos base de las relaciones `<<extend>>` del conjunto — CU-02 (`Iniciar reserva`) se ancla a CU-19, CU-01 extiende hacia CU-19, CU-04 (`Solicitar cancelación`) y CU-03 (`Iniciar pago`) se anclan a CU-21 (caso base de CU-03 resuelto el 2026-10-07). Los tres son de **solo lectura, sin máquina de estados ni efectos secundarios**: CU-19 consulta Módulo 1 (vía CU-09) y la cotización individual (vía CU-11); CU-20 y CU-21 leen reservas ya persistidas y exponen el detalle sin escrituras, en línea con las restricciones monetarias de CU-15 (exponen el total oficial, cero montos derivados). Se colocan como fase propia **antes del embudo** para que los casos base existan antes que sus extenders y para desbloquear la verificación de las extensiones que comparten los recorridos de las Fases 7 y 8. Dependen de la Fase 2 (persistencia de CU-20/CU-21) y de la Fase 3 (CU-19 requiere la cotización individual y los datos de Módulo 1).
+
+> Las tareas técnicas detalladas de cada CU se definirán en su propio plan específico más adelante.
+
+---
+
+## Phase 7: Embudo de conversión — de la búsqueda al pago confirmado (P1)
+
+**Qué CUs agrupa**: **CU-01** (Buscar embarcaciones disponibles), **CU-02** (Iniciar reserva), **CU-03** (Iniciar pago), **CU-13** (Confirmar pago)
+
+**Justificación**: es la **vertical de mayor valor de negocio** del marketplace (sin ella el producto no genera ingresos) y forma un único recorrido de principio a fin: búsqueda con cotización por lote → creación de la reserva en `Iniciada` con el TTL en curso → adquisición del bloqueo de inventario y paso a `Pendiente de Pago` → confirmación del pago reportada por Módulo 3 y paso a `Reservada`. Se agrupan porque comparten la misma presión de concurrencia y el mismo indicador de negocio: dos Arrendatarios compiten por el mismo barco y las mismas fechas, y el spec exige cero sobreventa y respuesta atómica. Contiene la condición de no-bloqueo en `Iniciada` (varias reservas concurrentes para el mismo barco) y la carrera de sobreventa en `Pendiente de Pago`. Requiere las Fases 3 (contratos de cotización y liquidación), 4 (máquina de estados), 5 (notificación a Módulo 3) y 6 (vistas base de las extensiones CU-02 y CU-03) completas.
+
+> Las tareas técnicas detalladas de cada CU se definirán en su propio plan específico más adelante.
+
+---
+
+## Phase 8: Operaciones en muelle — check-in, check-out, inasistencia y cancelación (P2)
+
+**Qué CUs agrupa**: **CU-06** (Marcar inicio de navegación), **CU-07** (Marcar fin de navegación), **CU-05** (Marcar inasistencia), **CU-04** (Solicitar cancelación)
+
+**Justificación**: los cuatro comparten **actor (Propietario), contexto físico (operación en el muelle) y punto de entrada** sobre una reserva que ya está `Reservada` o `En Navegación`. Dependen de la Fase 4, de la zona horaria del puerto entregada por CU-09 en la Fase 3 y de la Fase 6 (CU-21 es el caso base de `Solicitar cancelación`). Se agrupan y no se distribuyen porque comparten la misma familia de reglas de **ventana temporal y clasificación** (margen de salida, 30 minutos de tolerancia, 72 h y 24 h de cancelación) y porque las transiciones que producen convergen en las mismas ramifications de la máquina de estados. Dentro de la fase el orden sugerido es **check-in → check-out → cancelación → inasistencia**: los dos primeros son el camino feliz y los mejor especificados, mientras que los dos últimos concentran los `[NEEDS CLARIFICATION]` que siguen abiertos (clasificación del motivo del propietario en CU-04) y conviene abordarlos cuando la máquina de estados ya esté probada. El valor de negocio es completar el ciclo operativo del alquiler.
+
+> Las tareas técnicas detalladas de cada CU se definirán en su propio plan específico más adelante.
+
+---
+
+## Phase 9: Disputa de garantía (P2)
+
+**Qué CUs agrupa**: **CU-16** (Generar disputa de garantía), **CU-17** (Actualizar estado de disputa de garantía), **CU-18** (Recibir información de disputa de garantía)
+
+**Justificación**: constituye un **contexto acotado independiente**, con su propia máquina de estados (`PENDIENTE` / `RECHAZADA` / `ACEPTADA`), sus propias entidades y sus propias invariantes, sin ninguna transición sobre la reserva. Solo es alcanzable a través de CU-07 (`Completada`) y puede desarrollarse **en paralelo con la Fase 8** una vez que exista la infraestructura de mensajería de la Fase 2. Se mantiene como fase aparte precisamente para permitir ese paralelismo y para no mezclar dos máquinas de estado en los mismos archivos. Concentra el requisito asíncrono más estricto del módulo: CU-18 publica **solo** en estados finales, **cero mensajes en `PENDIENTE`**, con identificador único para deduplicación, sin ningún monto ni instrucción de pago, y con reintento hasta confirmación del broker. Cierra el ciclo financiero del depósito de garantía.
+
+> Las tareas técnicas detalladas de cada CU se definirán en su propio plan específico más adelante.
+
+---
+
+## Phase 10: Polish & Cross-Cutting Concerns
+
+**Purpose**: Mejoras que afectan a múltiples casos de uso.
+
+- [ ] TXXX Cierre de los `[NEEDS CLARIFICATION]` heredados de los specs y actualización de los planes por CU
+- [ ] TXXX Endurecimiento de seguridad: _rate limiting_, protección del log de auditoría, validación de PII
+- [ ] TXXX Pruebas de carga y verificación de los objetivos de latencia de la tabla de _Performance Goals_
+- [ ] TXXX Observabilidad operativa: alertas por acumulación de mensajes en DLQ, por etapas de reintentos agotados y por fallos de notificación a Módulo 3
+- [ ] TXXX Pruebas de resiliencia: caída de Módulo 1, caída de Módulo 3, reinicio del servicio con TTL y ventanas de disputa en curso, y reinicio del broker
+- [ ] TXXX Documentación de la API y guía de arranque local
+- [ ] TXXX Limpieza de código y refactorización final
+
+---
+
+## Dependencies & Execution Order
+
+### Phase Dependencies
+
+- **Setup (Fase 1)**: sin dependencias — puede comenzar de inmediato
+- **Foundational (Fase 2)**: depende de la Fase 1 — **bloquea a todos los CUs**
+- **Fase 3 — Adaptadores de lectura**: depende de la Fase 2 (clientes HTTP, manejo de errores). No depende de ninguna otra fase de CU
+- **Fase 4 — Máquina de estados**: depende de la Fase 2 (persistencia, outbox, reloj). No depende de la Fase 3
+- **Fase 5 — Superficie Módulo 3**: depende de las Fases 2 y 4
+- **Fase 6 — Vistas de consulta**: depende de las Fases 2 (persistencia de CU-20/CU-21) y 3 (CU-19: cotización individual y datos de Módulo 1); CU-20 y CU-21 leen reservas gestionadas desde la Fase 4
+- **Fase 7 — Embudo de conversión**: depende de las Fases 3, 4, 5 y 6
+- **Fase 8 — Operaciones en muelle**: depende de las Fases 3, 4, 5 y 6
+- **Fase 9 — Disputa de garantía**: depende de la Fase 2 y del disparo de CU-07 (Fase 8), aunque su núcleo de dominio puede desarrollarse en paralelo con la Fase 8
+- **Polish (Fase 10)**: depende de las fases de CU deseadas
+
+### Orden y paralelismo
 
 ```text
-1 Setup → 2 Fundación ─┬→ 3 Lectura ──────┬→ 7 Embudo
-                       ├→ 4 Núcleo (CU-08)┼→ 5 Publicaciones M3 ─┬→ 8 Muelle ─→ 9 Disputa
-                       └→ 6 Vistas ───────┘                      └→ 7
+Fase 1 ──▶ Fase 2 ──┬──▶ Fase 3 (lectura) ──┬──▶ Fase 7 (conversión)
+                    │                       │
+                    ├──▶ Fase 4 (núcleo) ───┼──▶ Fase 8 (muelle) ──┬──▶ Fase 9 (disputa)
+                    │         │             │                      │          ▲
+                    │         └──▶ Fase 5 ───┘                      └──────────┘
+                    │            (Módulo 3)
+                    ├──▶ Fase 6 (vistas) ──▶ Fase 7 / Fase 8
+                    └──▶ Fase 9 (dominio, en paralelo)
 ```
 
-Orden dentro de la Fase 7: CU-15 (publicación) antes de CU-12 en la práctica, porque Módulo 3 necesita la información registrada para calcular.
-Orden dentro de la Fase 8: check-in → check-out → cancelación → inasistencia.
+- **Fases 3 y 4** pueden ejecutarse simultáneamente tras completar la Fase 2: no comparten código de dominio.
+- **Fase 6 (vistas)** puede ejecutarse en paralelo con las Fases 4 y 5 una vez cerradas las Fases 2 y 3.
+- **Fases 7 y 8** pueden ejecutarse en paralelo una vez cerradas las Fases 3, 4, 5 y 6.
+- **Fase 9** puede avanzar en paralelo con la Fase 8 si se acuerda el contrato de integración del disparo desde `Completada`.
 
-**Qué debe contener cada plan por CU** (`features/CU-nn-\\\*/plan.md`): trazabilidad a FR/SC; clases concretas con rutas bajo `com.seashare.m2`; migración SQL; ejemplos numéricos y manejo de errores por escenario; una prueba por cada SC; tareas con dependencias y los puntos abiertos que lo afecten.
+### Dentro de cada CU
 
-\---
+- Modelo de dominio antes que casos de uso; casos de uso antes que adaptadores
+- Contrato de Módulo 1 / Módulo 3 definido antes de su adaptador
+- Núcleo antes que integración
+- Pruebas de la máquina de estados antes de exponer el endpoint
+- Las tareas marcadas con `[P]` pueden ser paralelas entre sí dentro de una fase
 
-## 11\. Lenguaje ubicuo (spec → código)
+---
 
-|Término del spec|Identificador en código|
-|-|-|
-|Reserva / Iniciada, Pendiente de Pago, Reservada, En Navegación, Completada, Cancelada, Expirada, Pago Fallido|`Reservation` / `INITIATED`, `PENDING\\\_PAYMENT`, `RESERVED`, `IN\\\_NAVIGATION`, `COMPLETED`, `CANCELLED`, `EXPIRED`, `PAYMENT\\\_FAILED`|
-|Sub-estados: Flexible, Moderado, Tardío, Por Propietario, Por Inasistencia|`FLEXIBLE`, `MODERATE`, `LATE`, `BY\\\_OWNER`, `NO\\\_SHOW`|
-|Disputa de garantía / PENDIENTE, RECHAZADA, ACEPTADA|`GuaranteeDispute` / `PENDING`, `REJECTED`, `ACCEPTED` (en el evento a M3 se mapean a los valores de su UC08, Q-M3-13)|
-|Arrendatario / Propietario / Admin|`Renter` / `Owner` / `Admin`|
-|Desglose de reserva|`ReservationBreakdown`|
-|Resultado de cobro|`PaymentConfirmationResult`|
-|Notificación de estado / información / disputa|`ReservationStatusEvent` / `ReservationInfoEvent` / `DisputeEvent`|
-|Embarcación (de Módulo 1)|`Boat` (solo `boatId` persistido)|
-|Puerto / zona horaria|`Harbor` / `ZoneId` (nunca persistido)|
+## Riesgos y contradicciones detectadas en los specs
 
-## 
+Esta sección **no resuelve** las inconsistencias: las señala para que se cierren antes de escribir el plan técnico del CU afectado.
+
+### B. Vacíos que bloquean la redacción de un plan de CU
+
+1. **Seguridad subespecificada en todo el conjunto de specs**: solo hay chequeos de rol; no existe mecanismo de autenticación, modelo de tokens, TLS, manejo de PII, _rate limiting_ ni protección del log de auditoría. Bloqueante para la Fase 2. *(Decisión diferida por negocio el 2026-10-07; el mecanismo se definirá en la decisión transversal 6 y en T012 antes de la Fase 2.)*
+2. CU-11: siguen abiertos el límite de lote de Módulo 3 (50 o 100, repetido en varios FR) y su SLA (placeholder). CU-12: siguen abiertos el nombre formal del endpoint (dos candidatos) y su SLA. Nota: CU-01 FR-008 y CU-11 FR-003 fijaron el tamaño de página de la vista en 20 embarcaciones, que no coincide con el límite por solicitud que impone Módulo 3.
+3. CU-16, CU-17 y CU-18: cerrada la duda de la ventana de 24 h (es **fija**; se añadió como SLA en CU-16 FR-005, CU-17 FR-013 y CU-18 FR-007). Siguen abiertos: reclamo múltiple o editable dentro de la ventana (CU-16 D-01), política de reintento del job diferido (CU-16 D-03, ahora con `[NEEDS CLARIFICATION]` en el spec), si el Admin puede resolver una disputa `PENDIENTE` sin reclamo registrado (CU-17 D-01), longitud máxima del motivo (CU-17), y garantías de orden y versionado de `eventId` + detalles de la cola (CU-18 D-01/D-02, diferidos al contrato de integración). *(Dependen del contrato de integración con Módulo 3; sin resolver hasta entonces.)*
+
+### C. Reauditoría 2026-10-08
+
+> **Reauditoría 2026-10-08** contra el conjunto completo de especificaciones (`CU-01` a `CU-21`) y documentos de contexto (`sea-share.md`, `consistencia-m2-m3.md`). Se consolidaron 23 hallazgos: las correcciones mecánicas y decididas fueron aplicadas directamente en los `spec.md` y documentos afectados, mientras que los temas de arquitectura/negocio pendientes de alineación externa se registran como abiertos.
+
+| # | Hallazgo | Alcance / Descripción | Estado |
+| :--- | :--- | :--- | :--- |
+| **H1** | Chequeo instantáneo vs rango de fechas en catálogo y reserva | Catálogo no valida rango de fechas (fuera de alcance; exclusividad FCFS en pago). CU-02 y CU-03 validan estado operativo instantáneo `Disponible` vía CU-10 bajo lock atómico. | `✅ aplicado` (`CU-01`, `CU-02`, `CU-03`) |
+| **H2** | Notificación de desbloqueo a Módulo 1 según origen de `Expirada` | Expiración desde `Pendiente de Pago` notifica `Disponible` a Módulo 1. Expiración desde `Iniciada` NO notifica a Módulo 1 (nunca hubo bloqueo; notificar liberaría erróneamente otra reserva). | `✅ aplicado` (`CU-08`) |
+| **H3** | Alcance del respaldo de bloqueo operativo en Módulo 1 | Respaldo del bloqueo de inventario ampliado a `Pendiente de Pago`, `Reservada` o `En Navegación`. | `✅ aplicado` (`CU-08`) |
+| **H4** | Retención de garantía tras finalización de viaje | Al transicionar a `Completada`, Módulo 3 libera el pago al Propietario pero la garantía permanece retenida hasta la resolución de la disputa (ventana de 24 h). | `✅ aplicado` (`CU-07`, `CU-14`) |
+| **H5** | Consistencia de estados de disputa y motivo opcional | Estados de disputa alineados a `RECHAZADA` / `ACEPTADA` (se descarta `PENDIENTE` en mensajes salientes). Motivo opcional añadido a evento en CU-18. | `✅ aplicado` (`consistencia-m2-m3.md`, `CU-18`) |
+| **H6** | Campos y dirección de `CU-15` vs §5 de consistencia | Posible discrepancia de campos informativos y sentido de llamada en la interacción de consulta de reserva. | `⏳ abierto` *(decisión pendiente: acordar contrato formal de consulta con Módulo 3)* |
+| **H7** | Residuos de la resolución A.1 en CU-11 | La reserva nace en `Iniciada` (creada por `Iniciar reserva` con TTL) y transiciona a `Pendiente de Pago` en `Iniciar pago`; fallas de cotización abortan sin persistir ninguna reserva. | `✅ aplicado` (`CU-11`) |
+| **H8** | Relación de invocación formal de CU-11 en modo individual | CU-19 es el caso invocador formal (`<<include>>`); CU-02 recibe los montos como caso extendido. | `✅ aplicado` (`CU-11`) |
+| **H9** | Interfaz CU-09/CU-01 (modo lote y parámetros) | Modo lote entre catálogo y Módulo 1, campos requeridos vs opcionales y consistencia de filtros. | `⏳ abierto` *(decisión pendiente: definir contrato de búsqueda en lote con Módulo 1)* |
+| **H10** | Política de reintentos en CU-14 US2 | Reintentos alineados con FR-005: máximo 5 reintentos con backoff exponencial progresivo y derivación a DLQ ante agotamiento. | `✅ aplicado` (`CU-14`) |
+| **H11** | Acotación de SLA de notificación al primer intento | Umbrales de SLA (< 500 ms, < 1 s) en criterios de éxito acotados a la emisión del primer intento de notificación. | `✅ aplicado` (`CU-04`, `CU-05`, `CU-06`, `CU-07`, `CU-08`) |
+| **H12** | Confirmación de pago sobre reserva no pendiente | Generalización ante confirmaciones recibidas sobre reservas que ya no están en `Pendiente de Pago` (ej. `Expirada`): rechazo y solicitud de reversión en M3. | `✅ aplicado` (`CU-13`) |
+| **H13** | Semántica del snapshot de "Total" con/sin depósito | Definir si el total persistido y expuesto en vistas incluye o excluye el depósito de garantía reembolsable. | `⏳ abierto` *(decisión pendiente: alinear definición contable y visual con Módulo 3)* |
+| **H14** | Presentación literal de desglose financiero en CU-02 | Los valores de tarifa y noches se muestran literalmente desde Módulo 3; si la cotización en lote carece de subtotal, se muestra solo la tarifa base sin aritmética local. | `✅ aplicado` (`CU-02`) |
+| **H15** | Reglas temporales de cancelación (frontera 72 h) y 3 SLAs de 24 h | Frontera exacta de franjas de cancelación y unificación semántica de las tres ventanas de 24 h del ciclo de vida. | `⏳ abierto` *(decisión pendiente: ratificar definiciones de política y SLAs con producto)* |
+| **H16** | Precedencia y circularidad entre CU-16 y CU-17 | Orden de transiciones y causalidad entre la generación de disputa (`CU-16`) y su resolución/actualización (`CU-17`). | `⏳ abierto` *(decisión pendiente: formalizar el flujo de estados de disputa en el contrato con M3)* |
+| **H17** | Estandarización de lectura hacia Módulo 1 en CU-04 y CU-05 | Reemplazo de la ruta de lectura externa por invocación a `Proveer información de embarcación` (`CU-09 <<include>>`), y CU-09 actualizado. | `✅ aplicado` (`CU-04`, `CU-05`, `CU-09`) |
+| **H18** | Cobertura de estados inválidos en CU-05 | Inclusión explícita de `Iniciada` y `Pago Fallido` en las validaciones de incompatibilidad para marcar inasistencia. | `✅ aplicado` (`CU-05`) |
+| **H19** | Corrección de referencia de no-aritmética en plan.md | Corrección de referencia bibliográfica interna en el plan general: SC-004 pasa a SC-003 de CU-02. | `✅ aplicado` (`plan.md`) |
+| **H20** | Temporizador regresivo en UI vs vencimiento de TTL | Manejo de sincronización del reloj en frontend versus verificación estricta de expiración en backend. | `⏳ abierto` *(decisión pendiente: definir estrategia de temporizador y sincronización cliente/servidor)* |
+| **H21** | Ventana máxima para check-in y no-show tras zarpe pactado | Definición del momento límite en que expira la potestad del propietario para marcar check-in o inasistencia. | `⏳ abierto` *(decisión pendiente: definir regla de corte post-zarpe con negocio)* |
+| **H22** | Clarificación de caché e identificadores de Módulo 1 en plan.md | Módulo 2 no cachea datos técnicos de la flota; persiste únicamente identificadores como referencia foránea. | `✅ aplicado` (`plan.md`) |
+| **H23** | Supuestos de cotización implícitos en catálogo (1 día / 1 pasajero) | Explicitar en CU-01 los parámetros por defecto asumidos por Módulo 3 en la cotización previa. | `⏳ abierto` *(decisión pendiente: coordinar con diseño y producto la visibilidad de los supuestos tarifarios)* |
+| **H24** | Dirección de las integraciones CU-13 y CU-15 | Los `spec.md` vigentes definen M3 → M2 (webhook de confirmación y GET de información). Una revisión propuesta el 2026-10-10 planteó invertirlas a M2 → M3 (consulta/polling y evento AMQP). | `⏳ abierto` *(se mantiene lo que dicen los specs; la inversión queda como decisión pendiente que requeriría reescribir CU-13 y CU-15)* |
+
+---
 
 ## Notes
 
-* `context/`, `features/`, `diagrams/` y `templates/` son de solo lectura salvo autorización explícita de negocio; las reescrituras de CU-12, CU-13, CU-14, CU-15 y los ajustes de CU-01…04, 11, 18, 19, 21 derivan de la alineación con Módulo 3 de 2026-10-09/10.
-* Detener la implementación ante cualquier `\\\[NEEDS CLARIFICATION]` abierto del spec correspondiente.
-* Cada fase debe validarse de forma independiente antes de pasar a la siguiente; commit por tarea o grupo lógico.
-* Los valores numéricos de los ejemplos en los contratos son ilustrativos.
-
+- La etiqueta `[CU-nn]` en los planes por CU mantendrá la trazabilidad hasta el spec de origen.
+- Los planes por CU se redactarán **después** de la aprobación de este plan general, en archivos `features/CU-nn-*/plan.md`, sin modificar los `spec.md` existentes.
+- `context/`, `features/`, `diagrams/` y `templates/` se tratan como **solo lectura**. **Excepción aplicada (2026-10-06)**: higiene documental sobre `features/` (salto de línea final, renumeración de `FR-007-bis` en CU-04 y marcado `[NEEDS CLARIFICATION]` en CU-11), autorizada explícitamente y sin cambios de contenido semántico. **Excepción adicional (2026-10-07)**: resolución de los vacíos de la sección B sobre `features/` (reescritura de marcadores `[NEEDS CLARIFICATION]`/`[PENDIENTE DE DEFINICIÓN]` y de los textos de resolución en CU-01, CU-02, CU-03, CU-05, CU-06, CU-07, CU-08, CU-09, CU-10, CU-12, CU-13, CU-14 y CU-21), autorizada explícitamente por negocio. **Excepción adicional (2026-10-07, secciones A y C)**: resolución de contradicciones sobre `features/` (CU-02, CU-03, CU-04, CU-05, CU-06, CU-11, CU-12, CU-14, CU-21) y sobre `context/consistencia-m2-m3.md` (§2), autorizada explícitamente por negocio. **Excepción adicional (2026-10-08)**: aplicación de la reauditoría 2026-10-08 sobre `features/` (CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, CU-07, CU-08, CU-09, CU-11, CU-13, CU-14, CU-18) y sobre `context/consistencia-m2-m3.md` (§3, §4, §5) (correcciones mecánicas H5, H7, H8, H10-H12, H14, H17-H19, H22 y correcciones decididas H1, H2/H3, H4), autorizada explícitamente por negocio.
+- Este plan describe **qué fases existen y en qué orden**; no prescribe tareas de implementación de ningún CU.
+- Cada CU debe ser verificable de forma independiente; un plan específico que no pueda demostrarlo debe revisarse antes de implementarse.
+- El caso base de CU-03 se resolvió el 2026-10-07: **`Ver detalle de reserva` (CU-21)**. La Fase 7 programa CU-03 después de las tres vistas de consulta.
+- Detener la implementación ante cualquier `[NEEDS CLARIFICATION]` abierto del spec correspondiente: la guía SDD lo establece como regla de oro.
+- Commit por tarea o por grupo lógico; detenerse en cada checkpoint de fase para validar.
+- **Revisión 2026-10-10**: se añadieron las secciones de *Modelo de datos*, *Conexiones*, *Contratos*, *Resiliencia*, *Decisiones* y *Lenguaje ubicuo*; se reestructuró `shared` en `contracts/` (comunicación **interna** entre los dos contextos) + `domain/` (tipos compartidos), excluyendo la plomería técnica (web, seguridad, mensajería, persistencia, observabilidad) que no se modela en `shared`; se adoptaron identificadores en inglés y la topología de colas de Módulo 3. La **dirección de CU-13/CU-15 se mantiene según los `spec.md` vigentes** (M3 → M2); la inversión a M2 → M3 queda registrada como punto abierto (§ H24).
