@@ -1,52 +1,62 @@
 # Contrato de Integración Externa: Estimación Individual (M3)
 
-**Módulo Proveedor**: Módulo 3 – Liquidación, Seguros y Dispersión de Fondos ("el sistema")  
+**Módulo proveedor**: Módulo 3 – Finanzas y Pasarela de Pagos  
 **Responsable de implementarlo**: Equipo de Módulo 3  
-**Módulo Consumidor**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones ("Sistema de Reservas y Operaciones")  
-**CUs de Módulo 2 que lo consumen**: 
-- Invocador principal: `CU-11 Proveer información cotización de reserva` (Modo Individual, `features/CU-11-proveer-informacion-cotizacion-reserva/spec.md`).
-- Consumidor directo en UI: `CU-19 Ver detalle de embarcación` (Endpoint 2: cotización individual para el detalle, FR-005).
-- Receptor para persistencia: `CU-02 Iniciar reserva` (adopta el valor tarifario oficial para crear la reserva en estado `Iniciada`, FR-012, FR-013).
-**Fecha**: 2026-10-09  
+**Módulo consumidor**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
+**Casos de uso consumidores**:
+- **Invocador principal**: `CU-11 Proveer información cotización de reserva` (modo individual, `features/CU-11-proveer-informacion-cotizacion-reserva/spec.md`).
+- **Consumidor directo en UI**: `CU-19 Ver detalle de embarcación`.
+- **Receptor para persistencia**: `CU-02 Iniciar reserva`.
+
+**Fecha**: 2026-10-09
 
 ---
 
-## 1. Resumen y Propósito de la Integración
+## 1. Resumen y propósito de la integración
 
-Este contrato formaliza el servicio síncrono de cálculo tarifario oficial que Módulo 3 ofrece a Módulo 2 para un viaje náutico determinado. Módulo 3 aplica su fórmula interna:
-$$\text{Costo Total} = (\text{tarifa base} \times \text{duración}) + (\text{tarifa de seguro} \times \text{pasajeros})$$
-y emite el monto consolidado junto con la **bandera de advertencia legal inmutable** (FR-012).
+Este contrato formaliza el servicio síncrono que Módulo 3 ofrece a Módulo 2 para obtener la estimación tarifaria de un viaje náutico con embarcación, fechas y cantidad de pasajeros específicos.
 
-**Principios de Diseño e Invariantes**:
-- **Regla Estricta "Sin Dinero"**: Módulo 2 jamás calcula, suma ni altera montos. Recibe `estimated_total` como `BigDecimal` literal (FR-002 de CU-11, SC-001).
-- **Operación de Solo Lectura**: la cotización individual no reserva inventario en el calendario náutico ni efectúa cargos en pasarela; la exclusividad de inventario se adquiere en `Iniciar pago` (CU-03) mediante bloqueo transaccional (FR-017, SC-002 de CU-03).
-- **Inmutabilidad de Advertencia**: Módulo 2 debe preservar y exponer al Arrendatario la advertencia legal textualmente: `"Valor estimado. No incluye cargos adicionales ni depósito de seguridad"` (FR-012, SC-002).
+Módulo 3 aplica su fórmula interna:
+
+\[
+\text{Costo Total} = (\text{tarifa base} \times \text{duración}) + (\text{tarifa de seguro} \times \text{pasajeros})
+\]
+
+y devuelve el monto consolidado junto con una advertencia legal que debe conservarse y mostrarse literalmente.
+
+### Principios de diseño e invariantes
+
+- **Regla estricta «sin dinero»**: Módulo 2 no calcula, suma ni altera montos. Consume `estimated_total` como `BigDecimal`, sin realizar redondeos aritméticos.
+- **Operación de solo lectura**: la estimación no reserva inventario en el calendario náutico ni efectúa cargos en la pasarela de pagos. La exclusividad del inventario se adquiere en `CU-03 Iniciar pago`, mediante bloqueo transaccional.
+- **Inmutabilidad de la advertencia**: Módulo 2 debe preservar y exponer al arrendatario el siguiente texto exactamente como lo recibe:
+
+  `Valor estimado. El valor incluye el seguro náutico, pero no incluye el depósito de garantía ni penalidades o ajustes derivados de cambios posteriores de la reserva`
 
 ---
 
-## 2. Definición del Endpoint
+## 2. Definición del endpoint
 
 ### Método HTTP y URL
 
 ```http
-POST /api/v1/estimates/individual
+POST /api/v1/finance/estimates/individual
 ```
 
-### Elementos de la Petición (Request)
+### Elementos de la petición (request)
 
-**Headers**:
+**Headers**
 
 | Nombre | Obligatorio | Descripción |
 |---|---|---|
-| `Authorization` | Sí | `Bearer <token>` — JWT de identidad de servicio expedido para Módulo 2 |
+| `Authorization` | Sí | `Bearer <token_servicio_m2>` — token de identidad de servicio de Módulo 2 |
 | `Content-Type` | Sí | `application/json` |
 | `Accept` | No | `application/json` |
 
-**Path Parameters**: No tiene.
+**Path parameters**: no tiene.
 
-**Query Parameters**: No tiene.
+**Query parameters**: no tiene.
 
-**Body (JSON)** *(convención snake_case requerida por Módulo 3)*:
+**Body (JSON)**
 
 ```json
 {
@@ -57,113 +67,119 @@ POST /api/v1/estimates/individual
 }
 ```
 
-*(Nota: Módulo 3 no recibe `arrendatarioId` ni datos de usuario en esta operación de cálculo tarifario).*
+Módulo 3 no recibe `arrendatarioId` ni datos de usuario en esta operación de cálculo tarifario.
 
----
+### Elementos de la respuesta esperada (response)
 
-### Elementos de la Respuesta Esperada (Response)
+**Código HTTP de éxito**: `200 OK`
 
-**Código de estado HTTP (éxito)**: `200 OK`
-
-**Contrato de respuesta tipado (plano y en snake_case)**:
+**Contrato de respuesta**
 
 ```json
 {
   "boat_id": "string (UUID)",
   "start_date": "string (ISO 8601, YYYY-MM-DD)",
   "end_date": "string (ISO 8601, YYYY-MM-DD)",
-  "duration_days": "number (entero)",
-  "passengers": "number (entero)",
-  "estimated_total": "number (monto monetario consolidado)",
-  "warning": "string (texto obligatorio: 'Valor estimado. No incluye cargos adicionales ni depósito de seguridad')"
+  "duration_days": "number (entero, días inclusivos)",
+  "passengers": "number (entero positivo)",
+  "estimated_total": "string (decimal, ej. '9720000.00')",
+  "warning": "string (texto de advertencia literal)"
 }
 ```
 
----
+**Tipo de dato monetario**: `estimated_total` se representa como una cadena decimal. Módulo 2 lo parsea como `BigDecimal` sin realizar redondeo aritmético.
 
-### Ejemplo de Petición y Respuesta Exitosa
+### Ejemplo de petición y respuesta exitosa
 
-**Petición `curl`**:
+**Petición `curl`**
 
 ```bash
-curl -X POST "https://finanzas.seashare.internal/api/v1/estimates/individual" \
-  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.serviceTokenM2" \
+curl -X POST "https://finanzas.seashare.internal/api/v1/finance/estimates/individual" \
+  -H "Authorization: Bearer <token_servicio_m2>" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{
     "boat_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
     "start_date": "2026-11-15",
-    "end_date": "2026-11-18",
+    "end_date": "2026-11-17",
     "passengers": 8
   }'
 ```
 
-**Respuesta (`200 OK`)**:
+**Respuesta (`200 OK`)**
 
 ```json
 {
   "boat_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
   "start_date": "2026-11-15",
-  "end_date": "2026-11-18",
+  "end_date": "2026-11-17",
   "duration_days": 3,
   "passengers": 8,
-  "estimated_total": 9600000.00,
-  "warning": "Valor estimado. No incluye cargos adicionales ni depósito de seguridad"
+  "estimated_total": "9720000.00",
+  "warning": "Valor estimado. El valor incluye el seguro náutico, pero no incluye el depósito de garantía ni penalidades o ajustes derivados de cambios posteriores de la reserva"
 }
 ```
 
 ---
 
-## 3. Matriz de Errores y Reacción de Módulo 2
+## 3. Matriz de errores y reacción de Módulo 2
 
-| Código HTTP M3 | Causa en Módulo 3 | Reacción Arquitectónica de Módulo 2 | Mapeo al Endpoint de M2 |
+Los errores de Módulo 3 se devuelven bajo el estándar `application/problem+json` e incluyen un campo `code`. Módulo 2 los mapea de la siguiente manera:
+
+| HTTP M3 | `code` en M3 | Reacción de M2 | Mapeo en respuesta REST de M2 |
 |---|---|---|---|
-| `400 Bad Request` | Fechas en el pasado, fin anterior o igual a inicio, duración de cero días o pasajeros inválidos (FR-010) | Módulo 2 captura el detalle del error y aborta el flujo sin crear ninguna reserva en BD (FR-011, SC-005) | `400 Bad Request` (`PARAMETROS_INVALIDOS`) |
-| `401 Unauthorized` / `403 Forbidden` | Token de servicio inválido o permisos insuficientes | Alerta crítica de infraestructura; corte preventivo de ejecución | `500 Internal Server Error` (`ERROR_INTERNO`) |
-| `404 Not Found` | Embarcación no registrada en tarifas de M3 o sin esquema activo (FR-015) | Bloquea inmediatamente el avance a reserva notificando inconsistencia tarifaria | `503 Service Unavailable` (`COTIZACION_NO_DISPONIBLE`) |
-| `422 Unprocessable Entity` | Valor total devuelto menor o igual a cero sin promoción autorizada (FR-015, SC-006) | Rechaza la cotización por anomalía financiera preventiva | `503 Service Unavailable` (`COTIZACION_NO_DISPONIBLE`) |
-| `500 Internal Server Error` / `503 Service Unavailable` | Falla del motor de liquidación | Activa *fail-safe* preventivo (FR-016): no genera reservas con precio en cero ni aproximado | `503 Service Unavailable` (`COTIZACION_NO_DISPONIBLE`) |
-| `Timeout` (> 1000 ms) | Latencia excedida en Módulo 3 | Corta la conexión inmediatamente y cancela la cotización | `503 Service Unavailable` (`COTIZACION_NO_DISPONIBLE`) |
+| `400` | `INVALID_DATE_RANGE` | Aborta sin crear reserva | `400 PARAMETROS_INVALIDOS` |
+| `400` | `VALIDATION_ERROR` | Aborta y genera alerta de integración | `400 PARAMETROS_INVALIDOS` |
+| `401 / 403` | `UNAUTHENTICATED` / `FORBIDDEN` | Alerta crítica de infraestructura | `500 ERROR_INTERNO` |
+| `422` | `BASE_RATE_NOT_AVAILABLE` | Bloquea el avance | `503 COTIZACION_NO_DISPONIBLE` |
+| `503` | `FLEET_UNAVAILABLE` | Activa *fail-safe* | `503 COTIZACION_NO_DISPONIBLE` |
+| `503` | `FINANCIAL_PARAMETERS_NOT_CONFIGURED` | Activa *fail-safe* | `503 COTIZACION_NO_DISPONIBLE` |
+| `500` / timeout | `INTERNAL_ERROR` | Activa *fail-safe* | `503 COTIZACION_NO_DISPONIBLE` |
+
+Módulo 2 no debe crear una reserva con un precio nulo, cero, aproximado o no confirmado por Módulo 3.
 
 ---
 
-## 4. Parámetros de Resiliencia, Timeouts y Reintentos
+## 4. Parámetros de resiliencia, timeouts y reintentos
 
-- **SLA de Respuesta**: `800 ms` [NEEDS CLARIFICATION: PROPUESTA SLA 800 ms pendiente de ratificación formal por Módulo 3].
-- **Read Timeout**: `1000 ms` [NEEDS CLARIFICATION: PROPUESTA Timeout 1000 ms].
-- **Connect Timeout**: `100 ms`.
-- **Política de Reintentos**:
-  - En modo individual no se realizan reintentos automáticos si el fallo es 4xx o si el timeout compromete la experiencia interactiva del usuario (FR-016).
-  - Un (1) reintento rápido opcional ante caída transitoria de socket si el presupuesto de tiempo lo permite.
-- **Invalidez de Cotizaciones Obsoletas**: si el Arrendatario cambia fechas o pasajeros antes de formalizar la reserva, la cotización previa queda automáticamente descartada en memoria y se dispara una nueva llamada hacia este endpoint (FR-014, SC-007).
-
----
-
-## 5. Puntos Abiertos y Aclaraciones Necesarias
-
-- `[NEEDS CLARIFICATION: SLA y Timeout de Módulo 3 en Individual]`: Módulo 3 omite los tiempos de respuesta exigidos en sus especificaciones hacia Módulo 2. Se registra formalmente la propuesta técnica de **SLA de 800 ms** y **Timeout de 1000 ms** para revisión y ratificación entre ambos equipos.
-- `[NEEDS CLARIFICATION: Identificador de Cotización en Respuesta Plana]`: el contrato plano acordado con Módulo 3 devuelve `boat_id`, fechas, duración, pasajeros, total y advertencia. Para trazabilidad y auditoría de creación de reserva en CU-02, Módulo 2 asocia internamente una referencia temporal de cotización mientras se acuerda si Módulo 3 agregará un `quote_id` formal en revisiones futuras.
+- **SLA de respuesta**: `800 ms` — propuesta pendiente de ratificación formal por Módulo 3.
+- **Read timeout**: `1000 ms` — propuesta pendiente de ratificación.
+- **Connect timeout**: `100 ms`.
+- **Política de reintentos**:
+  - No se realizan reintentos automáticos ante errores `4xx`.
+  - En modo individual, no se reintenta automáticamente si el timeout compromete la experiencia interactiva.
+  - Se permite un (1) reintento rápido opcional ante una caída transitoria de socket, si el presupuesto de tiempo lo permite.
+- **Invalidez de estimaciones obsoletas**: si el arrendatario cambia las fechas o la cantidad de pasajeros antes de formalizar la reserva, la estimación anterior se descarta y se realiza una nueva llamada al endpoint.
 
 ---
 
-## 6. Trazabilidad FR/SC → Elemento del Contrato
+## 5. Notas transversales de integración
 
-| Requisito / Criterio | Descripción en Spec CU-11 | Elemento de este Contrato |
+- **Identificador y vigencia de la cotización**: Módulo 3 no devuelve `quote_id` ni fechas de expiración. Módulo 2 genera su propia referencia interna (`cotizacion_id`) y define operativamente la vigencia, según CU-19.
+- **Moneda**: Módulo 3 no devuelve un campo `currency`; Módulo 2 asume la constante de plataforma `COP`.
+- **Advertencia legal**: el campo `warning` debe transportarse y mostrarse sin cambios, respetando exactamente el texto definido en la sección 1.
+- **Solo estados de lectura**: la estimación no bloquea inventario ni produce cargos.
+
+---
+
+## 6. Trazabilidad FR/SC → elemento del contrato
+
+| Requisito / criterio | Descripción | Elemento de este contrato |
 |---|---|---|
-| **FR-001** | Modo Individual para cotización exacta previa a reserva | Endpoint `POST /api/v1/estimates/individual` |
-| **FR-002** | Cero cálculos de dinero en Módulo 2 | Inmutabilidad del campo `estimated_total` |
-| **FR-009** | Invocación desde `CU-19 Ver detalle de embarcación` | Parámetros del request: `boat_id`, fechas y pasajeros |
-| **FR-010** | Validación temporal de fechas delegada a Módulo 3 | Matriz de errores (Sección 3) ante códigos `400` de M3 |
-| **FR-011** | Error de fechas de M3 traslada sin persistir reserva | Comportamiento fail-safe documentado en la Sección 3 |
-| **FR-012** | Recepción de monto total y advertencia obligatoria literal | Campos devueltos `estimated_total` y `warning` |
-| **FR-013** | Transferencia íntegra a `Iniciar reserva` | Traspaso al payload de creación de reserva en estado `Iniciada` |
-| **FR-014** | Recotización ante cambio de fechas o pasajeros | Regla de descarte de cotizaciones obsoletas (Sección 4) |
-| **FR-015** | Bloqueo preventivo ante activo sin tarifas o total $\le 0$ | Respuestas `404` y `422` mapeadas a `503 COTIZACION_NO_DISPONIBLE` |
-| **FR-016** | Falla o timeout de M3 cancela creación de reserva | Fail-safe documentado en la Sección 3 y 4 |
-| **FR-017** | Operación de solo lectura sin compromisos contables | Especificación stateless en la Sección 1 |
-| **SC-001** | 100% de montos provistos directamente por M3 | Uso literal de `estimated_total` |
-| **SC-002** | Advertencia obligatoria exacta sin modificaciones | Validación de la cadena literal del campo `warning` |
-| **SC-005** | Rechazo por fechas inválidas impide crear reserva | Manejo de error 400 |
-| **SC-006** | 0% de reservas con montos nulos o negativos | Bloqueo ante valores anómalos de M3 |
-| **SC-007** | Modificación de itinerario invalida cotización previa | Invalidez en memoria descrita en la Sección 4 |
-| **SC-008** | Latencia objetivo de Módulo 3 en individual | Propuesta SLA 800 ms / Timeout 1000 ms (Sección 4 y 5) |
+| **FR-001** | Modo individual para obtener una estimación previa a la reserva | Endpoint `POST /api/v1/finance/estimates/individual` |
+| **FR-002** | Módulo 2 no realiza cálculos monetarios | Uso literal de `estimated_total`, parseado como `BigDecimal` |
+| **FR-009** | Invocación desde `CU-19 Ver detalle de embarcación` | Parámetros `boat_id`, fechas y pasajeros |
+| **FR-010** | Validación de fechas y parámetros | Matriz de errores de la sección 3 |
+| **FR-011** | Fechas inválidas impiden crear la reserva | Mapeo de `INVALID_DATE_RANGE` a `400 PARAMETROS_INVALIDOS` |
+| **FR-012** | Recepción del monto y de la advertencia obligatoria literal | Campos `estimated_total` y `warning` |
+| **FR-013** | Transferencia del valor a `CU-02 Iniciar reserva` | Uso del monto recibido en el flujo de creación de reserva |
+| **FR-014** | Recotización al cambiar fechas o pasajeros | Descarte de estimaciones obsoletas, sección 4 |
+| **FR-015** | Bloqueo si no existe tarifa base disponible | Mapeo de `BASE_RATE_NOT_AVAILABLE` a `503 COTIZACION_NO_DISPONIBLE` |
+| **FR-016** | Una falla o timeout no debe producir una reserva con precio inválido | Política *fail-safe*, secciones 3 y 4 |
+| **FR-017** | Operación de solo lectura, sin compromisos contables | Principios de diseño, sección 1 |
+| **SC-001** | El monto procede directamente de Módulo 3 | Uso literal de `estimated_total` |
+| **SC-002** | Advertencia exacta, sin modificaciones | Conservación literal de `warning` |
+| **SC-005** | Fechas inválidas impiden crear una reserva | Manejo de error `400` |
+| **SC-006** | No crear reservas con montos nulos o negativos | Bloqueo preventivo ante errores o montos inválidos |
+| **SC-007** | Cambios de itinerario invalidan la estimación previa | Regla de invalidez de la sección 4 |
+| **SC-008** | Latencia objetivo para estimaciones individuales | Propuesta de SLA `800 ms` y read timeout `1000 ms`, pendiente de ratificación |

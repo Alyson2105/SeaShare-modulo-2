@@ -47,13 +47,25 @@ POST /api/v1/reservas/{reservaId}/pago
 
 ```json
 {
-  "acepta_politica_cancelacion": true
+  "acepta_politica_cancelacion": true,
+  "pago": {
+    "payment_token_ref": "string (token de un solo uso generado en el frontend por el SDK de Mercado Pago)",
+    "payment_method_type": "string (ej. CREDIT_CARD)",
+    "payment_metadata": {
+      "payer_email": "string (email del pagador, obligatorio)",
+      "payment_method_id": "string (ej. visa, master)",
+      "installments": 1,
+      "last_four": "string (opcional, solo informativo)"
+    }
+  }
 }
 ```
 
 *Validaciones de entrada (FR-013, FR-014)*:
 - `acepta_politica_cancelacion`: booleano obligatorio. Debe ser estrictamente `true`. Si es `false` o no se envía, el backend bloquea el avance retornando `400 Bad Request`.
-
+- `pago.payment_token_ref`: obligatorio, no vacío. Módulo 2 nunca recibe ni almacena número de tarjeta ni CVV.
+- `pago.payment_metadata.payer_email`: obligatorio y con formato email válido (M3 lo exige para cobrar). El frontend lo toma de titular.email o lo solicita en el formulario de pago.
+- `pago.payment_metadata.payment_method_id e installments`: obligatorios.
 ---
 
 ### Elementos de la Respuesta (Response)
@@ -68,22 +80,22 @@ POST /api/v1/reservas/{reservaId}/pago
   "estado": "string (valor literal: 'Pendiente de Pago')",
   "embarcacion_id": "string (UUID)",
   "calculo_total": {
-    "calculo_id": "string (UUID emitido por Módulo 3)",
-    "monto_total": "number (BigDecimal literal entregado por Módulo 3)",
-    "moneda": "string (ej. COP)",
+    "moneda": "string (constante de plataforma: COP)",
+    "monto_total": "string decimal (literal de M3)",
     "desglose": {
-      "alquiler_base": "number (BigDecimal literal)",
-      "seguro_nautico": "number (BigDecimal literal)",
-      "deposito_garantia": "number (BigDecimal literal)"
+      "alquiler_base": "string decimal (literal de M3: rental_amount)",
+      "seguro_nautico": "string decimal (literal de M3: insurance_amount)",
+      "deposito_garantia": "string decimal (literal de M3: guarantee_deposit_amount)"
     },
-    "mensaje_garantia": "string (texto aclaratorio de M3)"
+    "mensaje_garantia": "string (texto constante de M2)"
   },
-  "ttl_segundos_restantes": "number (entero con el tiempo remanente del TTL)",
-  "expira_en": "string (ISO 8601 timestamp con vencimiento original)",
-  "pasarela": {
-    "url_redireccion": "string (URL de cobro oficial de Módulo 3)",
-    "token_cobro": "string (token o referencia segura de la transacción)"
-  }
+  "pago": {
+    "estado_cobro": "string (EN_PROCESO)",
+    "intento": "number (entero, 1 en el primer pago)",
+    "modo_confirmacion": "CONSULTA"
+  },
+  "ttl_segundos_restantes": "number (entero)",
+  "expira_en": "string (ISO 8601 con vencimiento original)"
 }
 ```
 
@@ -104,11 +116,20 @@ POST /api/v1/reservas/{reservaId}/pago
 
 ```bash
 curl -X POST "https://api.seashare.com/api/v1/reservas/e4f81c92-7a20-4215-9c5e-8812c3f1a001/pago" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTIyMzMzNC00NDU1LTY2NzctODg5OS1hYWJiY2NkZGVlZmYiLCJyb2wiOiJBcnJlbmRhdGFyaW8iLCJpYXQiOjE3OTE1NDAwMDB9.sampleToken" \
+  -H "Authorization: Bearer <jwt_arrendatario>" \
   -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
   -d '{
-    "acepta_politica_cancelacion": true
+    "acepta_politica_cancelacion": true,
+    "pago": {
+      "payment_token_ref": "tok_12345abcdef",
+      "payment_method_type": "CREDIT_CARD",
+      "payment_metadata": {
+        "payer_email": "carlos.mendoza@example.com",
+        "payment_method_id": "visa",
+        "installments": 1,
+        "last_four": "4242"
+      }
+    }
   }'
 ```
 
@@ -120,22 +141,18 @@ curl -X POST "https://api.seashare.com/api/v1/reservas/e4f81c92-7a20-4215-9c5e-8
   "estado": "Pendiente de Pago",
   "embarcacion_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
   "calculo_total": {
-    "calculo_id": "f8a912bc-81d3-41bb-92cc-77aa12dd34ee",
-    "monto_total": 10560000.00,
     "moneda": "COP",
+    "monto_total": "10040000.00",
     "desglose": {
-      "alquiler_base": 9600000.00,
-      "seguro_nautico": 160000.00,
-      "deposito_garantia": 800000.00
+      "alquiler_base": "9600000.00",
+      "seguro_nautico": "120000.00",
+      "deposito_garantia": "320000.00"
     },
     "mensaje_garantia": "El depósito se reembolsa completo si el barco se devuelve sin daños"
   },
+  "pago": { "estado_cobro": "EN_PROCESO", "intento": 1, "modo_confirmacion": "CONSULTA" },
   "ttl_segundos_restantes": 645,
-  "expira_en": "2026-10-09T12:20:00-05:00",
-  "pasarela": {
-    "url_redireccion": "https://pagos.seashare.internal/checkout/session/f8a912bc-81d3-41bb-92cc-77aa12dd34ee",
-    "token_cobro": "chk_live_9a8b7c6d5e4f3a2b1c"
-  }
+  "expira_en": "2026-10-09T12:20:00-05:00"
 }
 ```
 
@@ -146,12 +163,14 @@ curl -X POST "https://api.seashare.com/api/v1/reservas/e4f81c92-7a20-4215-9c5e-8
 | Código | Caso | Cuerpo de respuesta (ejemplo) |
 |---|---|---|
 | `400 Bad Request` | No se aceptó la política de cancelación (`acepta_politica_cancelacion: false`) o `reservaId` no es UUID (FR-014) | `{ "codigo": "POLITICA_NO_ACEPTADA", "mensaje": "Se requiere tu consentimiento explícito para las políticas de cancelación para iniciar el pago" }` |
+| `400	Bad Request` |Falta pago.payment_token_ref, payer_email, payment_method_id o installments |  `{ "codigo": "DATOS_PAGO_INCOMPLETOS", "mensaje": "Faltan los datos del medio de pago para iniciar el cobro" }` |
 | `401 Unauthorized` | Token ausente, inválido o expirado | `{ "codigo": "NO_AUTENTICADO", "mensaje": "Token de autenticación ausente o inválido" }` |
 | `403 Forbidden` | El usuario autenticado no es el Arrendatario titular de la reserva | `{ "codigo": "RESERVA_NO_PERTENECE", "mensaje": "No tienes autorización para iniciar el pago de esta reserva" }` |
 | `404 Not Found` | La reserva no existe en el sistema | `{ "codigo": "RESERVA_NO_ENCONTRADA", "mensaje": "La reserva especificada no existe" }` |
 | `409 Conflict` (Estado Inválido) | La reserva no se encuentra en estado `Iniciada` (ej. ya está `Pendiente de Pago`, `Reservada`, `Cancelada`) (FR-002) | `{ "codigo": "ESTADO_INVALIDO", "mensaje": "Solo se puede iniciar el pago de reservas en estado Iniciada (estado actual: Pendiente de Pago)" }` |
 | `409 Conflict` (TTL Expirado) | El temporizador TTL de 15 minutos venció antes de iniciar el pago (Edge Case TTL) | `{ "codigo": "RESERVA_EXPIRADA", "mensaje": "El tiempo límite de 15 minutos para iniciar el pago de esta reserva ha expirado" }` |
 | `409 Conflict` (Carrera Concurrente FCFS) | Las fechas acaban de ser bloqueadas por otro usuario que pagó primero (FR-008, SC-002) | `{ "codigo": "CONFLICTO_CONCURRENCIA", "mensaje": "La embarcación ya no se encuentra disponible para las fechas seleccionadas debido a un pago concurrente" }` |
+| `409 Conflict` | Reintento no permitido: la reserva está en Pendiente de Pago y el último cobro de M3 no figura como RECHAZADO | `{ "codigo": "REINTENTO_NO_PERMITIDO", "mensaje": "Ya hay un cobro en proceso para esta reserva" }` |
 | `503 Service Unavailable` | Módulo 3 no responde o falla al entregar el cálculo definitivo (*fail-safe*, FR-003, FR-008) | `{ "codigo": "CALCULO_NO_DISPONIBLE", "mensaje": "No se pudo obtener el cálculo total de la reserva desde el servicio de liquidación" }` |
 | `503 Service Unavailable` | Módulo 1 no responde al chequeo de disponibilidad bajo lock | `{ "codigo": "SERVICIO_FLOTA_NO_DISPONIBLE", "mensaje": "No se pudo verificar el estado de la flota en este momento" }` |
 | `500 Internal Server Error` | Falla interna no controlada | `{ "codigo": "ERROR_INTERNO", "mensaje": "Ocurrió un error inesperado al iniciar el pago" }` |
@@ -176,7 +195,8 @@ No aplica. Operación transaccional sobre un agregado de reserva individual.
 
 - **Concurrencia Atómica y Cero Sobreventa**: para satisfacer SC-002 y la regla First-Come First-Served (FCFS), la consulta de cálculo y la verificación en M1 se protegen mediante bloqueo transaccional (`SELECT ... FOR UPDATE` en PostgreSQL). Si la verificación detecta que la embarcación pasó a `Reservado`, la transacción aborta, la reserva permanece en `Iniciada` y se retorna `409 CONFLICTO_CONCURRENCIA`.
 - **Inmutabilidad del Temporizador TTL**: el TTL de 15 minutos nació en `CU-02 Iniciar reserva`. Al transicionar a `Pendiente de Pago`, el backend **no reinicia** el contador (FR-007, SC-001); calcula los segundos remanentes (`ttl_segundos_restantes`) respecto al timestamp original `expira_en`.
-- **Integración con Pasarela de Pagos**: Módulo 2 transfiere el control a Módulo 3 entregando `pasarela.url_redireccion` y `token_cobro`. El cobro se ejecuta de forma asíncrona en la pasarela, y la confirmación final ingresará posteriormente a Módulo 2 mediante el webhook/endpoint de `CU-13 Confirmar pago`.
+- **Cobro por token (Mercado Pago)**: El frontend genera el `payment_token_ref` con el SDK de Mercado Pago y lo envía a este endpoint. Módulo 2 lo transporta sin interpretarlo en el evento `reservation.status.changed` con `status: PENDIENTE` (ver CU-14). Un worker de Módulo 3 ejecuta el cobro de forma asíncrona. Módulo 2 conoce el resultado consultando periódicamente a Módulo 3 (CU-13). No existe webhook de M3 hacia M2.
+- **Reintento de pago con otra tarjeta**: Si el cobro fue `RECHAZADO` y el TTL sigue vigente, este mismo endpoint se puede invocar de nuevo sobre la reserva en Pendiente de Pago con un `payment_token_ref` nuevo. No se reinicia el TTL ni se vuelve a consultar el cálculo total (se reutiliza el ya asociado). M2 incrementa `intento` y publica de nuevo el evento `PENDIENTE` con un `Message-Id` nuevo. `[PEDIR A M3: idempotency key de cobro con número de intento]`.
 
 ---
 
@@ -192,8 +212,8 @@ No aplica. Operación transaccional sobre un agregado de reserva individual.
 | **FR-006** | Transición de `Iniciada` a `Pendiente de Pago` vía CU-08 | Respuesta `200 OK` con `estado: "Pendiente de Pago"` |
 | **FR-007** | Prohibición de reiniciar el TTL de 15 minutos | Campo `ttl_segundos_restantes` calculado desde `expira_en` |
 | **FR-008** | Rechazo por conflicto concurrente sin mutar reserva | Error `409 CONFLICTO_CONCURRENCIA` |
-| **FR-009** | Transferencia hacia interfaz de cobro de M3 | Objeto `pasarela` con `url_redireccion` y `token_cobro` |
-| **FR-012** | Desglose oficial de M3 (alquiler, seguro, depósito, mensaje) | Objeto `calculo_total.desglose` y `mensaje_garantia` |
+| **FR-009** |  Transferencia hacia el cobro de M3 | Objeto `pasarela` con `url_redireccion` y `token_cobro` |
+| **FR-012** | Desglose oficial de M3 (alquiler, seguro, depósito, mensaje) | Objeto pago y evento PENDIENTE con payment_token_ref (CU-14) |
 | **FR-013 / FR-014** | Obligatoriedad de aceptar política de cancelación | Campo de request `acepta_politica_cancelacion: true` y error `400` |
 | **SC-001** | 100% de transiciones exitosas sin reiniciar el TTL | Verificado en contrato de respuesta |
 | **SC-002** | 0% sobreventas ante competencia concurrente | Garantizado por lock transaccional y FCFS |
