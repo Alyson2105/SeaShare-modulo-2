@@ -31,8 +31,8 @@ El Admin revisa el reclamo presentado por el Propietario sobre una disputa en PE
 2. **Scenario**: Reclamo improcedente → RECHAZADA con motivo opcional
    - **Given** una disputa en estado PENDIENTE con reclamo registrado por el Propietario
    - **When** el Admin revisa el reclamo y lo encuentra improcedente
-   - **Then** el sistema actualiza la disputa a RECHAZADA, guardando el motivo si el Admin lo proveyó (campo opcional, solo informativo y de trazabilidad, sin efecto financiero)
-
+   - **Then** el sistema actualiza la disputa a RECHAZADA, guardando el motivo en la base de datos local si el Admin lo proveyó (campo opcional, solo informativo y de trazabilidad, sin efecto financiero y que no se transmite a Módulo 3).
+   
 ### User Story 2 - El Admin mantiene la disputa en revisión (Priority: P2)
 
 Si la revisión todavía no terminó, el Admin puede dejar constancia de que la disputa sigue en PENDIENTE (la revisión continúa), sin resolverla aún.
@@ -67,14 +67,14 @@ Si la revisión todavía no terminó, el Admin puede dejar constancia de que la 
 - **FR-001**: El sistema DEBE permitir al Admin actualizar el estado de una disputa si y solo si la disputa existe y se encuentra en estado PENDIENTE.
 - **FR-002**: Desde PENDIENTE, los únicos estados destino permitidos son PENDIENTE (la revisión todavía no terminó), RECHAZADA (el reclamo no procede o no fue presentado dentro del plazo) o ACEPTADA (el reclamo procede y el depósito debe entregarse al Propietario).
 - **FR-003**: Si la disputa ya está en RECHAZADA o ACEPTADA, el sistema DEBE rechazar cualquier intento de cambio de estado. Ambos son estados finales sin reapertura.
-- **FR-004**: El motivo del rechazo DEBE ser un campo opcional. NO debe ser obligatorio ni utilizarse para determinar ninguna operación financiera; su único propósito es informativo y de trazabilidad.
+- **FR-004**: El motivo del rechazo DEBE ser un campo opcional. NO debe ser obligatorio ni utilizarse para determinar ninguna operación financiera; su único propósito es informativo local y de auditoría en Módulo 2. El sistema NO DEBE incluir este motivo en el evento publicado a Módulo 3.
 - **FR-005**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El Admin y el sistema **NO DEBEN introducir montos, ni ejecutar operaciones de pasarela ni de pago** en este caso de uso. La decisión es únicamente administrativa y operativa; el destino del dinero lo resuelve Módulo 3 a partir del estado final.
 - **FR-006**: El cierre automático por vencimiento del Caso de uso 1 (`Generar disputa de garantía`) DEBE ejecutarse a través de esta misma operación de cambio de estado (PENDIENTE → RECHAZADA, actor Sistema, motivo de sistema), para mantener una sola fuente de verdad sobre las transiciones.
-- **FR-007**: Cada cambio de estado a RECHAZADA o ACEPTADA DEBE publicarse a Módulo 3 a través de `Recibir información de disputa de garantía` (`CU-18`). El registro inicial en PENDIENTE es interno y NO se publica.
+- **FR-007**: Cada cambio de estado a RECHAZADA o ACEPTADA DEBE publicarse a Módulo 3 a través del evento de CU-18. El sistema DEBE aplicar la siguiente traducción de nomenclatura en el payload del evento: Si el estado en M2 es ACEPTADA, emite COMPLETADO; si es RECHAZADA, emite RECHAZADO. El registro inicial en PENDIENTE es interno y NO se publica.
 - **FR-008**: El sistema DEBE proveer una vista de administración titulada "Resolución de disputas", que incluya un menú de navegación lateral izquierdo con la opción activa "Resolución de disputas" y el botón inferior "Cerrar sesión", además de un contador resumen superior de la bandeja (ej. "Bandeja: 2 abiertas · 1 en revisión · 9 resueltas").
 - **FR-009**: El sistema DEBE mostrar un bloque superior con el identificador de la disputa (ej. "Disputa D-2014"), el nombre de la embarcación, la referencia de la reserva, los nombres del Arrendatario y del Propietario, acompañado a la derecha por una etiqueta de estado (ej. "PENDIENTE · 14h restantes").
 - **FR-010**: El sistema DEBE presentar un panel central dividido en dos columnas: la tarjeta izquierda "Reclamo del Propietario" (con el nombre del propietario y la descripción textual del daño reportado) y la tarjeta derecha "Novedades registradas al cierre" (con un texto informativo aclarando que el check-out de CU-07 no constituye un reclamo formal).
-- **FR-011**: El sistema DEBE proveer un campo de texto libre titulado "Motivo de la resolución (opcional, solo informativo)" con un placeholder descriptivo (ej. "Ej: El desgaste reportado es normal por uso, no corresponde a un daño"), permitiendo al administrador registrar observaciones de trazabilidad que no afectan ni condicionan las operaciones financieras de los fondos.
+- **FR-011**: El sistema DEBE proveer un campo de texto libre titulado "Motivo de la resolución (opcional, solo interno)" con un placeholder descriptivo (ej. "Ej: El desgaste reportado es normal por uso, no corresponde a un daño"), permitiendo al administrador registrar observaciones de trazabilidad que quedan registradas únicamente en Módulo 2 y que no afectan ni condicionan las operaciones financieras de los fondos.
 - **FR-012**: El sistema DEBE mostrar en la esquina inferior derecha dos botones de acción principal para que el administrador resuelva el caso: "Rechazar reclamo" (secundario con borde rojo, asociado a la transición hacia RECHAZADA) y "Aceptar reclamo" (primario con fondo verde, asociado a la transición hacia ACEPTADA).
 - **FR-013**: El **SLA límite de respuesta a disputas de garantía** (resolución por parte del Admin) está fijado en **24 horas**.
 - 
