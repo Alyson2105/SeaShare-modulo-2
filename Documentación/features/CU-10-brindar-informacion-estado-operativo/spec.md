@@ -2,7 +2,7 @@
 
 **Módulo**: Módulo 2 (Operación de Reservas, Tiempos y Cancelaciones)  
 **Created**: 2026-09-06  
-**Primary Actor / Disparador**: Módulo 1 (Gestión de Flota) / Invocación interna durante las validaciones de disponibilidad de la embarcación.  
+**Primary Actor / Disparador**: Módulo 1 (Gestión de Flota y Activos P2P) / Invocación interna durante las validaciones de disponibilidad de la embarcación por parte de los casos de uso `Iniciar reserva` (CU-02) e `Iniciar pago` (CU-03).  
 **External Dependencies (APIs)**:
 - **Módulo 1 (Gestión de Flota y Activos P2P)**: API externa de inventario náutico que provee el estado operativo real de la embarcación (`Disponible`, `Reservado`, `En Navegación`, `En Mantenimiento/Limpieza`).
 
@@ -97,7 +97,7 @@ Si la consulta se realiza enviando un identificador de embarcación inválido, m
     - `En Mantenimiento/Limpieza`: Inhabilitado por reparación, revisión o aseo.
 - **FR-004**: El sistema DEBE confirmar que el barco es **Apto para Reserva** si y solo si Módulo 1 devuelve el estado `Disponible`.
 - **FR-005**: Si Módulo 1 devuelve `Reservado`, `En Navegación` o `En Mantenimiento/Limpieza`, el sistema DEBE marcar la embarcación como **No Apta para Reserva** y comunicar el motivo correspondiente.
-- **FR-006**: Si la consulta a Módulo 1 falla por desconexión o demora, el sistema DEBE aplicar un bloqueo preventivo (*fail-safe*), declarando el barco como **No Apto para Reserva** y cancelando el proceso.
+- **FR-006**: Si la consulta a Módulo 1 falla por desconexión o demora, el sistema DEBE aplicar un bloqueo preventivo (*fail-safe*), declarando el barco como **No Apto para Reserva** y cancelando el proceso. Política de reintentos: se admite como máximo un (1) reintento rápido ante timeout o desconexión transitoria, dentro del presupuesto de latencia; si el reintento también falla, se aplica el fail-safe de inmediato. Nunca se reintenta ante un error 4xx.
 - **FR-007**: El sistema DEBE comunicarse con Módulo 1 exclusivamente a través de su API externa, sin conectarse jamás a la base de datos de dicho módulo.
 - **FR-008**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE consultar precios, calcular tarifas ni manejar cobros**. Su función es únicamente verificar la disponibilidad física del barco.
 - **FR-009**: El sistema DEBE guardar un registro simple de cada consulta realizada durante una reserva, guardando el código del barco, el estado devuelto por Módulo 1 y la hora exacta de la consulta.

@@ -3,15 +3,16 @@
 **Módulo**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
 **Fecha de Creación**: 2026-09-06 (Actualizado a arquitectura dual lote/individual: 2026-09-08)  
 **Actores Primarios / Disparadores**:
-- **Arrendatario / Pantalla de Listado y Búsqueda de Embarcaciones**: Disparador del **Modo Lote** (*Previsualización en Pantalla de Carga/Catálogo*), cuando el usuario explora múltiples opciones antes de seleccionar fechas y pasajeros específicos.
-- **Caso de Uso Interno `CU-01 Buscar embarcaciones disponibles` (`<<include>>`)**: Disparador del **Modo Individual** (*Cotización Exacta*), invocado de forma obligatoria cuando el Arrendatario ya definió fechas y pasajeros, antes de presentar los resultados de la búsqueda.
+- **Caso de Uso Interno `CU-01 Buscar embarcaciones disponibles` (`<<include>>`)** / **Arrendatario en Catálogo**: Disparador del **Modo Lote** (*Previsualización en Catálogo/Resultados de Búsqueda*), invocado de forma obligatoria para cotizar en lote la colección de embarcaciones recuperadas.
+- **Caso de Uso Interno `Ver detalle de embarcación` (`CU-19`) (`<<include>>`)**: Disparador del **Modo Individual** (*Cotización Exacta*), invocado cuando el Arrendatario selecciona una embarcación específica con fechas y cantidad de pasajeros definidas (`CU-02 Iniciar reserva` solo recibe los montos como caso extendido).
 
 **Dependencias Externas (APIs)**:
-- **Módulo 3 – Liquidación, Seguros y Dispersión de Fondos**: API externa de tarifas y liquidación (`Proveer cotización de reserva` / `Solicitar cotización de reserva` - Contrato UC01 de Módulo 3). Constituye el único motor financiero y tarifario de la plataforma. Ofrece dos modalidades operativas:
+- **Módulo 3 – Liquidación, Seguros y Dispersión de Fondos**: API externa de tarifas y liquidación (`Proveer cotización de reserva` / `Solicitar cotización de reserva` - Contrato UC01 de Módulo 3 [NEEDS CLARIFICATION: el contrato UC01 de Módulo 3 no está incluido en este repositorio; pendiente de entrega por el equipo de Módulo 3]). Constituye el único motor financiero y tarifario de la plataforma. Ofrece dos modalidades operativas:
   1. *Modo en Lote (`batch`)*: Recibe una colección de identificadores de embarcaciones (`boat_ids`), asume valores por defecto de 1 día de duración y 1 pasajero, y devuelve cotizaciones estimadas para múltiples activos en una sola consulta.
-  2. *Modo Individual (`single`)*: Recibe un `boat_id`, fecha/hora de inicio, fecha/hora de fin y cantidad de pasajeros; valida las fechas de servicio, calcula el costo total exacto según la fórmula contractual `(tarifa base × duración) + (tarifa de seguro × pasajeros)` y devuelve el precio junto con una bandera de advertencia obligatoria inmutable.
+  2. *Modo Individual (`single`)*: Recibe un `boat_id`, fecha/hora de inicio, fecha/hora de fin y cantidad de pasajeros; valida las fechas de servicio, calcula el costo total exacto según su fórmula tarifaria interna `(tarifa base × duración) + (tarifa de seguro × pasajeros)` [fuente: fórmula declarada por Módulo 3, contrato UC01 no incluido en este repositorio] y devuelve el precio junto con una bandera de advertencia obligatoria inmutable.
 - **Casos de Uso Internos de Módulo 2**:
-  - `CU-01 Buscar embarcaciones disponibles` (`<<include>>`): Consume de forma sincrónica la cotización individual para asociar el precio estimado a los resultados de búsqueda.
+  - `CU-01 Buscar embarcaciones disponibles` (`<<include>>`): Consume de forma sincrónica la cotización en lote para asociar el precio estimado a los resultados de búsqueda.
+  - `CU-19 Ver detalle de embarcación` (`<<include>>`): Consume la cotización individual para obtener el desglose exacto del viaje; `CU-02 Iniciar reserva` solo recibe los montos como caso extendido.
 
 ---
 
@@ -53,9 +54,9 @@ El sistema recopila los identificadores de las embarcaciones visibles (`boat_ids
 
 ### User Story 2 - Obtener cotización exacta e individual con advertencia obligatoria para iniciar reserva (Priority: P1)
 
-Como Arrendatario que ha seleccionado una embarcación específica, un rango de fechas (días de inicio y fin) y una cantidad de pasajeros, quiero que el sistema obtenga la cotización exacta calculada oficialmente por Módulo 3 junto con las advertencias contractuales aplicables, para que el caso de uso `Iniciar reserva` cree mi reserva en estado "Pendiente de Pago" con el costo oficial definitivo.
+Como Arrendatario que ha seleccionado una embarcación específica, un rango de fechas (días de inicio y fin) y una cantidad de pasajeros, quiero que el sistema obtenga la cotización exacta calculada oficialmente por Módulo 3 junto con las advertencias contractuales aplicables, para que el caso de uso `Iniciar reserva` cree mi reserva en estado "Iniciada" con el costo oficial definitivo.
 
-El caso de uso `Iniciar reserva` invoca este caso de uso (`<<include>>`) en modo individual enviando el `boat_id`, la fecha/hora de check-in, la fecha/hora de check-out y el número de pasajeros. Módulo 3 valida las fechas (comprobando que no estén en el pasado, que el fin sea posterior al inicio, formato válido y duración mayor a 0 días) y calcula el precio exacto aplicando su fórmula contractual `(tarifa base × duración) + (tarifa de seguro × pasajeros)`. Módulo 3 retorna el precio consolidado con su desglose y una **bandera de advertencia obligatoria** cuyo texto exacto es: `"Valor estimado. No incluye cargos adicionales ni depósito de seguridad"`. Módulo 2 recibe estos datos, preserva la advertencia al pie de la letra y los transfiere a `Iniciar pago`, quien crea la reserva en "Pendiente de Pago" y activa el temporizador de 15 minutos (TTL).
+El caso de uso `Iniciar reserva` invoca este caso de uso (`<<include>>`) en modo individual enviando el `boat_id`, la fecha/hora de check-in, la fecha/hora de check-out y el número de pasajeros. Módulo 3 valida las fechas (comprobando que no estén en el pasado, que el fin sea posterior al inicio, formato válido y duración mayor a 0 días) y calcula el precio exacto aplicando su fórmula contractual `(tarifa base × duración) + (tarifa de seguro × pasajeros)` [fuente: fórmula declarada por Módulo 3, contrato UC01 no incluido en este repositorio]. Módulo 3 retorna el precio consolidado con su desglose y una **bandera de advertencia obligatoria** cuyo texto exacto es: `"Valor estimado. No incluye cargos adicionales ni depósito de seguridad"`. Módulo 2 recibe estos datos, preserva la advertencia al pie de la letra y los transfiere a `Iniciar reserva`, quien crea la reserva en "Iniciada" y activa el temporizador de 15 minutos (TTL), para luego transicionar a "Pendiente de Pago" mediante `Iniciar pago`.
 
 ***Why this priority***: Es el componente de integración indispensable para el flujo de contratación del MVP. Garantiza la validez legal y financiera de la reserva, impidiendo que Módulo 2 cree reservas con precios arbitrarios o sin la advertencia contractual preceptiva.
 
@@ -66,7 +67,7 @@ El caso de uso `Iniciar reserva` invoca este caso de uso (`<<include>>`) en modo
 1. **Scenario**: Obtención exitosa de cotización exacta con advertencia obligatoria
    - **Given** un Arrendatario que seleccionó una embarcación disponible, 3 días de duración y 4 pasajeros
    - **When** `Iniciar reserva` invoca la cotización individual a Módulo 3
-   - **Then** el sistema recibe de Módulo 3 el precio exacto desglosado (alquiler base + seguro por 4 pasajeros), la moneda y la advertencia obligatoria `"Valor estimado. No incluye cargos adicionales ni depósito de seguridad"`, transfiriéndolos intactos a `Iniciar reserva` para persistir la reserva en "Pendiente de Pago"
+   - **Then** el sistema recibe de Módulo 3 el precio exacto desglosado (alquiler base + seguro por 4 pasajeros), la moneda y la advertencia obligatoria `"Valor estimado. No incluye cargos adicionales ni depósito de seguridad"`, transfiriéndolos intactos a `Iniciar reserva` para persistir la reserva en "Iniciada"
 
 2. **Scenario**: Rechazo por fechas inválidas validado por Módulo 3
    - **Given** una solicitud con fecha de inicio en el pasado, o fecha de fin anterior a la de inicio, o duración efectiva de 0 días
@@ -115,7 +116,7 @@ En ningún caso Módulo 2 asume precios por defecto, ni completa valores faltant
 
 ***Why this priority***: Protege la integridad del modelo de negocio de SEA-SHARE y previene la suscripción de contratos de alquiler vinculantes con tarifas erróneas o gratuitas debidas a contingencias técnicas externas.
 
-***Independent Test***: Se prueba simulando desconexión de red o demora superior al límite de tiempo en Módulo 3 para ambos modos. Se comprueba que en lote el catálogo sigue navegable con etiquetas informativas, y que en individual se detiene el caso de uso `Iniciar reserva` sin persistir nada en "Pendiente de Pago".
+***Independent Test***: Se prueba simulando desconexión de red o demora superior al límite de tiempo en Módulo 3 para ambos modos. Se comprueba que en lote el catálogo sigue navegable con etiquetas informativas, y que en individual se detiene el caso de uso `Iniciar reserva` sin persistir ninguna reserva.
 
 ***Acceptance Scenarios***:
 
@@ -127,7 +128,7 @@ En ningún caso Módulo 2 asume precios por defecto, ni completa valores faltant
 2. **Scenario**: Falla o timeout de Módulo 3 en modo individual aborta la creación de reserva
    - **Given** una solicitud de cotización individual emitida desde `Iniciar reserva`
    - **When** se agota el tiempo de espera hacia Módulo 3 o la conexión falla
-   - **Then** el sistema cancela la operación de forma segura, no genera reservas en estado "Pendiente de Pago", no inventa valores monetarios e informa al Arrendatario que el servicio de cotización no se encuentra disponible momentáneamente
+   - **Then** el sistema cancela la operación de forma segura, no persiste ninguna reserva, no inventa valores monetarios e informa al Arrendatario que el servicio de cotización no se encuentra disponible momentáneamente
 
 ---
 
@@ -137,7 +138,7 @@ En ningún caso Módulo 2 asume precios por defecto, ni completa valores faltant
   - Módulo 2 **JAMÁS calcula, suma, resta, redondea, aplica comisiones ni deduce seguros o garantías**. Todo valor monetario proviene exclusivamente de Módulo 3 y se presenta/almacena de forma literal.
 - **Diferencia de alcance tarifario entre modo lote y modo individual**:
   - En **Modo Lote (Previsualización)**: Se expone exclusivamente la tarifa base estimada entregada por Módulo 3. No incluye ni seguro náutico ni depósito de garantía, reflejando el costo referencial base de la embarcación (calculado bajo el estándar de 1 día y 1 pasajero por defecto en Módulo 3).
-  - En **Modo Individual (Cotización Exacta)**: Incluye la totalidad de los conceptos calculados por Módulo 3 para el viaje específico (tarifa base × duración + seguro náutico × pasajeros), junto con la bandera de advertencia obligatoria.
+  - En **Modo Individual (Cotización Exacta)**: Incluye la totalidad de los conceptos calculados por Módulo 3 para el viaje específico (tarifa base × duración + seguro náutico × pasajeros; fórmula declarada por Módulo 3, contrato UC01 no incluido en este repositorio), junto con la bandera de advertencia obligatoria.
 - **Inmutabilidad de la bandera de advertencia obligatoria**:
   - El texto recibido de Módulo 3: `"Valor estimado. No incluye cargos adicionales ni depósito de seguridad"` DEBE presentarse exactamente tal cual, sin alterar mayúsculas, signos de puntuación, ni omitir palabras, tanto en la interfaz de visualización previa como en el traspaso a `Iniciar reserva`.
 - **Embarcación sin tarifa configurada**:
@@ -159,7 +160,7 @@ En ningún caso Módulo 2 asume precios por defecto, ni completa valores faltant
 - **Naturaleza de solo lectura de la cotización (sin retención de fondos ni compromisos contables)**:
   - La cotización en ambos modos es una operación de consulta de solo lectura, idempotente y sin efectos secundarios contables en Módulo 3. No retiene cupos, no realiza cargos en pasarelas ni compromete fondos. Si el Arrendatario abandona el proceso o la reserva no se confirma, no existe ningún proceso de compensación ni reversión (*rollback*) en Módulo 3.
 - **Concurrencia sobre inventario**:
-  - Obtener una cotización exitosa no reserva ni garantiza la disponibilidad del activo en el calendario. La reserva del activo y la resolución de concurrencia entre usuarios que compiten por las mismas fechas se ejecutan de manera atómica al persistir la reserva en el caso de uso `Iniciar reserva`.
+  - Obtener una cotización exitosa no reserva ni garantiza la disponibilidad del activo en el calendario. La reserva del activo y la resolución de concurrencia entre usuarios que compiten por las mismas fechas se ejecutan de manera atómica al formalizar el cobro: la transición a `Pendiente de Pago` en el caso de uso `Iniciar pago`.
 
 ---
 
@@ -171,13 +172,13 @@ En ningún caso Módulo 2 asume precios por defecto, ni completa valores faltant
   1. **Modo Lote**: Previsualización masiva de estimaciones para el catálogo y pantalla de carga de embarcaciones.
   2. **Modo Individual**: Cotización formal y exacta para la creación de una reserva dentro del caso de uso `Iniciar reserva`.
 - **FR-002**: **REGLA ESTRICTA (Sin cálculos de dinero en Módulo 2):** El sistema **NO DEBE en ningún caso calcular, sumar, restar, multiplicar por duración, aplicar porcentajes ni redondear importes monetarios**. Toda cifra de tarifa base, seguro náutico, cargos o totales DEBE ser generada y liquidada exclusivamente por Módulo 3.
-- **FR-003**: En **Modo Lote**, el sistema DEBE recibir una lista de identificadores de embarcaciones (`boat_ids`) desde la pantalla de listado/catálogo y solicitar a la API en lote de Módulo 3 (`Solicitar cotización de reserva`) las estimaciones correspondientes.
+- **FR-003**: En **Modo Lote**, el sistema DEBE recibir una lista de identificadores de embarcaciones (`boat_ids`) desde el caso de uso `CU-01 Buscar embarcaciones disponibles` (`<<include>>`) o la pantalla de listado/catálogo y solicitar a la API en lote de Módulo 3 (`Solicitar cotización de reserva`) las estimaciones correspondientes. El tamaño de lote (*batch*) fijado por consulta es de **20 embarcaciones por página**.
 - **FR-004**: En **Modo Lote**, el sistema DEBE deduplicar los identificadores de embarcaciones antes de emitir la consulta a Módulo 3. Si la lista resultante se encuentra vacía, el sistema DEBE retornar una respuesta vacía inmediatamente sin realizar invocaciones remotas.
 - **FR-005**: En **Modo Lote**, si la cantidad de identificadores de embarcaciones a cotizar excede el límite máximo por solicitud fijado por Módulo 3 (fijado en 50 embarcaciones [NEEDS CLARIFICATION: confirmar si el umbral máximo de lote de Módulo 3 es de 50 o 100 embarcaciones]), el sistema DEBE segmentar la petición en múltiples sub-lotes que no superen dicho umbral, consultar a Módulo 3 y consolidar las respuestas en un único resultado.
 - **FR-006**: En **Modo Lote**, el sistema DEBE entregar a la pantalla de catálogo/listado únicamente la tarifa base estimada devuelta por Módulo 3 (calculada bajo los supuestos por defecto de Módulo 3 de 1 día de duración y 1 pasajero), excluyendo estrictamente de la previsualización los conceptos de seguro náutico y depósito de garantía.
 - **FR-007**: En **Modo Lote**, si una o más embarcaciones carecen de tarifas configuradas en Módulo 3 o no son cotizables, el sistema DEBE procesar y retornar las tarifas de las demás embarcaciones válidas sin abortar la operación masiva, etiquetando las embarcaciones sin precio como "Cotización no disponible".
 - **FR-008**: En **Modo Lote**, si la llamada a Módulo 3 falla por desconexión o timeout, el sistema DEBE capturar la excepción y retornar un estado de "Tarifas no disponibles temporalmente", permitiendo que el catálogo permanezca navegable sin interrumpir la plataforma.
-- **FR-009**: En **Modo Individual**, el sistema DEBE ser invocado obligatoriamente por el caso de uso `CU-01 Buscar embarcaciones disponibles` (`<<include>>`), recibiendo el identificador de la embarcación (`boat_id`), fecha/hora de inicio, fecha/hora de fin y número de pasajeros.
+- **FR-009**: En **Modo Individual**, el sistema DEBE ser invocado por el caso de uso `Ver detalle de embarcación` (`CU-19`) (`<<include>>`), recibiendo el identificador de la embarcación (`boat_id`), fecha/hora de inicio, fecha/hora de fin y número de pasajeros (`CU-02 Iniciar reserva` solo recibe los montos como caso extendido).
 - **FR-010**: En **Modo Individual**, el sistema DEBE enviar los parámetros a la API de cotización individual de Módulo 3, delegando en Módulo 3 la validación temporal de las fechas (fechas en el pasado, fin anterior a inicio, duración de cero días o formato inválido) y la liquidación de la fórmula tarifaria integral.
 - **FR-011**: En **Modo Individual**, si Módulo 3 rechaza la solicitud debido a fechas inválidas o parámetros no conformes, el sistema DEBE capturar la respuesta estructurada de error de Módulo 3 y trasladarla de inmediato a `Iniciar reserva` para informar al Arrendatario la razón del rechazo, sin persistir ninguna reserva provisional.
 - **FR-012**: En **Modo Individual**, el sistema DEBE recibir de Módulo 3 y entregar al caso de uso `Iniciar reserva`:
@@ -187,7 +188,7 @@ En ningún caso Módulo 2 asume precios por defecto, ni completa valores faltant
   - Identificador o referencia única de la cotización emitida por Módulo 3.
   - **Bandera de advertencia obligatoria**, preservando de manera literal e inalterada el texto exacto:
     `"Valor estimado. No incluye cargos adicionales ni depósito de seguridad"`.
-- **FR-013**: En **Modo Individual**, el sistema DEBE obligar a que `Iniciar reserva` presente la advertencia obligatoria al Arrendatario antes de formalizar el pago, y DEBE registrar los montos monetarios recibidos de Módulo 3 en la reserva creada en estado "Pendiente de Pago".
+- **FR-013**: En **Modo Individual**, el sistema DEBE obligar a que `Iniciar reserva` presente la advertencia obligatoria al Arrendatario antes de formalizar el pago, y DEBE registrar los montos monetarios recibidos de Módulo 3 en la reserva recién creada en estado `Iniciada`.
 - **FR-014**: En **Modo Individual**, si el Arrendatario modifica las fechas, horarios, la embarcación o la cantidad de pasajeros antes de que la reserva se persista formalmente, el sistema DEBE descartar la cotización previa y solicitar una nueva cotización individual a Módulo 3 con los datos actualizados.
 - **FR-015**: En **Modo Individual**, si la embarcación no posee tarifas activas en Módulo 3, o si el monto total devuelto es menor o igual a cero sin autorización expresa, el sistema DEBE abortar la creación de la reserva y notificar la inconsistencia tarifaria.
 - **FR-016**: En **Modo Individual**, si Módulo 3 no responde dentro del tiempo de espera fijado o se produce un fallo de red, el sistema DEBE aplicar un bloqueo de seguridad (*fail-safe*), cancelando el proceso en `Iniciar reserva` e impidiendo que se generen reservas sin precio oficial asociado.
@@ -201,7 +202,7 @@ En ningún caso Módulo 2 asume precios por defecto, ni completa valores faltant
 - **Respuesta de Cotización en Lote (`BatchQuoteResponse`)**: Conjunto consolidado de tarifas base estimadas por embarcación devueltas por Módulo 3. Contiene pares de `boat_id` y monto de tarifa base, código de moneda y lista de identificadores no cotizables.
 - **Solicitud de Cotización Individual (`SingleQuoteRequest`)**: Conjunto de parámetros requeridos para la cotización de un viaje específico. Atributos: identificador de la embarcación (`boat_id`), fecha y hora de inicio (`start_time`), fecha y hora de fin (`end_time`), cantidad de pasajeros (`passenger_count`) e identificador del arrendatario (`renter_id`).
 - **Respuesta de Cotización Individual (`SingleQuoteResponse`)**: Resultado financiero emitido por Módulo 3 para un viaje. Atributos: identificador de cotización (`quote_id`), monto total (`total_amount`), desglose de conceptos (`base_rental_amount`, `insurance_amount`), moneda (`currency`), bandera de advertencia obligatoria (`warning_banner`: `"Valor estimado. No incluye cargos adicionales ni depósito de seguridad"`) y marca temporal de cálculo.
-- **Reserva (`Reservation`)**: Entidad de Módulo 2 creada en estado "Pendiente de Pago" por el caso de uso `Iniciar reserva`, la cual adopta los valores monetarios exactos de la cotización individual sin alteraciones.
+- **Reserva (`Reservation`)**: Entidad de Módulo 2 creada en estado `Iniciada` por el caso de uso `Iniciar reserva` y transicionada a `Pendiente de Pago` por `Iniciar pago`, la cual adopta los valores monetarios exactos de la cotización individual sin alteraciones.
 
 ---
 
@@ -214,6 +215,6 @@ En ningún caso Módulo 2 asume precios por defecto, ni completa valores faltant
 - **SC-003**: En modo lote, el 100% de las listas de embarcaciones que superen el límite máximo de Módulo 3 (50 embarcaciones [NEEDS CLARIFICATION: confirmar si el umbral máximo de lote de Módulo 3 es de 50 o 100 embarcaciones]) son fragmentadas y consolidadas sin pérdida de datos ni fallos en la consulta.
 - **SC-004**: En modo lote, la existencia de embarcaciones sin tarifas configuradas en Módulo 3 genera un cero por ciento (0%) de interrupciones o caídas en la visualización de las embarcaciones válidas del catálogo.
 - **SC-005**: El 100% de los rechazos de Módulo 3 por fechas inválidas (pasadas, fin menor a inicio, duración 0) impiden de forma controlada la creación de la reserva en Módulo 2, informando el motivo exacto al Arrendatario.
-- **SC-006**: Cero por ciento (0%) de reservas creadas en estado "Pendiente de Pago" con montos nulos, negativos o sin cotización válida confirmada previamente por Módulo 3.
+- **SC-006**: Cero por ciento (0%) de reservas que alcanzan el estado `Pendiente de Pago` con montos nulos, negativos o sin cotización válida confirmada previamente por Módulo 3.
 - **SC-007**: El 100% de las modificaciones de parámetros del viaje (fechas o cantidad de pasajeros) previas a la confirmación de la reserva invalidan la cotización previa y generan una nueva solicitud a Módulo 3.
 - **SC-008**: El tiempo de entrega de la cotización individual desde la selección de datos hasta su presentación en `Iniciar reserva` no excede [NEEDS CLARIFICATION: definir SLA objetivo de latencia de Módulo 3, p. ej. 800 ms], y para la previsualización en lote no excede [NEEDS CLARIFICATION: definir SLA objetivo de latencia de Módulo 3, p. ej. 1500 ms].

@@ -2,7 +2,7 @@
 
 **Módulo**: Módulo 2 (Operación de Reservas, Tiempos y Cancelaciones)  
 **Created**: 2026-09-06 (Actualizado: 2026-09-28 por cambios de arquitectura)  
-**Primary Actor / Disparador**: Invocación interna desde los casos de uso `Buscar embarcaciones disponibles` (`<<include>>`) y `Ver detalle de embarcación` (`<<include>>`) / Interfaz de integración con Módulo 1  
+**Primary Actor / Disparador**: Invocación interna desde los casos de uso `Buscar embarcaciones disponibles` (`<<include>>`), `Ver detalle de embarcación` (`<<include>>`), `Solicitar cancelación` (`CU-04`, `<<include>>`) y `Marcar inasistencia` (`CU-05`, `<<include>>`) / Interfaz de integración con Módulo 1  
 **External Dependencies (APIs)**:
 - **Módulo 1 (Gestión de Flota y Activos P2P)**: API externa de catálogo de barcos (fuente única de verdad para conocer los datos del barco: código UUID, nombre, matrícula, tipo, número máximo de pasajeros, puerto de origen con GPS, servicios incluidos y dueño).
 
@@ -100,7 +100,7 @@ Si al consultar el Módulo 1 el servicio no responde, falla o tarda demasiado ti
 - **FR-005**: El sistema DEBE verificar de forma estricta que la cantidad de pasajeros sea menor o igual a la capacidad máxima permitida por el barco.
 - **FR-006**: Si la cantidad de pasajeros supera el límite del barco, el sistema DEBE rechazar la solicitud, mostrar un aviso de exceso de personas y detener el flujo actual.
 - **FR-007**: Si el barco no existe en Módulo 1, el sistema DEBE rechazar la solicitud e informar que el barco no fue encontrado.
-- **FR-008**: Si la consulta a Módulo 1 falla por desconexión o tiempo de espera agotado, el sistema DEBE aplicar un bloqueo preventivo (*fail-safe*), cancelando el proceso e informando la falla de conexión.
+- **FR-008**: Si la consulta a Módulo 1 falla por desconexión o tiempo de espera agotado, el sistema DEBE aplicar un bloqueo preventivo (*fail-safe*), cancelando el proceso e informando la falla de conexión. Política de reintentos: se admite como máximo un (1) reintento rápido ante timeout o desconexión transitoria, dentro del presupuesto de latencia; si el reintento también falla, se aplica el fail-safe de inmediato. Nunca se reintenta ante un error 4xx.
 - **FR-009**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE manejar precios, ni calcular cotizaciones, comisiones o garantías**. Su función es únicamente descriptiva y de control de capacidad física.
 - **FR-010**: El sistema DEBE guardar un registro simple de la consulta realizada para mantener la trazabilidad operativa.
 
