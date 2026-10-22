@@ -12,8 +12,8 @@ Al ejecutarse exitosamente:
 3. Permite al Propietario capturar un texto opcional de novedades con la descripción de posibles daños, faltantes o incumplimientos detectados al regreso (FR-003).
 4. Invoca a `Actualizar estado reserva` (CU-08) transicionando la reserva al estado terminal **`COMPLETED`** y guardando la hora real de llegada (FR-004, FR-005).
 5. Dispara internamente la apertura del ciclo de disputa invocando a `Generar disputa de garantía` (`CU-16`, `<<include>>`, FR-010): crea la entidad de disputa en estado `PENDING` y activa la **ventana fija de 24 horas** para que el Propietario pueda formalizar reclamos de daños si fuera necesario.
-6. Sincroniza las dependencias externas a través de CU-08:
-   - Notifica a Módulo 1 ([`m1-asignar-estado-operativo.md`](../external/m1-asignar-estado-operativo.md)) actualizando la embarcación al estado **`AVAILABLE`** (FR-006, SC-002).
+6. Notifica de forma asíncrona a las dependencias externas a través de CU-08:
+   - Encola en la cola de notificación a Módulo 1 definida en CU-22 (`Recibir información estado operativo`, invocado vía `<<include>>`) la señal de la embarcación al estado **`MAINTENANCE_CLEANING`** (FR-006, SC-002). El flujo no espera respuesta de Módulo 1 ni depende de ella: la entrega se garantiza con reintentos y backoff, DLQ e idempotencia por identificador único de evento (CU-22 FR-006). El retorno posterior a `AVAILABLE` es una transición interna de Módulo 1 (ver CU-22 FR-002).
    - Publica el evento asíncrono en RabbitMQ ([`CU-14-estado-reserva.md`](../event/CU-14-estado-reserva.md)) hacia Módulo 3 informando el estado **`COMPLETED`** y adjuntando el texto de novedades si fue provisto (FR-007). En consecuencia, **Módulo 3 libera de inmediato el pago del alquiler al Propietario, pero la garantía permanece retenida hasta la resolución de la disputa (ventana de 24 h)** (decisión arquitectónica H4 de plan.md).
 7. **Regla estricta "Sin dinero"**: Módulo 2 no valora económicamente reparaciones, no cobra cargos por desembarque tardío ni descuenta fondos de la garantía (FR-008, SC-003).
 
@@ -72,7 +72,7 @@ POST /api/v1/reservations/{reservation_id}/navigation-end
   "status": "string (valor literal: 'COMPLETED')",
   "actual_arrival_at": "string (ISO 8601 timestamp con zona horaria del puerto)",
   "vessel_id": "string (UUID)",
-  "vessel_operational_status": "string (valor literal: 'AVAILABLE')",
+  "vessel_operational_status": "string (valor literal: 'MAINTENANCE_CLEANING')",
   "dispute_id": "string (UUID generado por CU-16)",
   "dispute_window_expires_at": "string (ISO 8601 timestamp exactamente a las 24 horas del cierre)",
   "message": "string (confirmación operativa del cierre y apertura de la ventana de disputa)"
@@ -111,10 +111,10 @@ curl -X POST "https://api.seashare.com/api/v1/reservations/e4f81c92-7a20-4215-9c
   "status": "COMPLETED",
   "actual_arrival_at": "2026-11-18T18:00:00-05:00",
   "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-  "vessel_operational_status": "AVAILABLE",
+  "vessel_operational_status": "MAINTENANCE_CLEANING",
   "dispute_id": "c1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
   "dispute_window_expires_at": "2026-11-19T18:00:00-05:00",
-  "message": "Fin de navegación registrado exitosamente. La reserva ha pasado a Completada, la embarcación quedó Disponible y se abrió la ventana de 24 horas para revisión de garantía."
+  "message": "Fin de navegación registrado exitosamente. La reserva ha pasado a Completada, se encoló la señal para que Módulo 1 pase la embarcación a En Mantenimiento/Limpieza y se abrió la ventana de 24 horas para revisión de garantía."
 }
 ```
 
@@ -143,7 +143,7 @@ curl -X POST "https://api.seashare.com/api/v1/reservations/e4f81c92-7a20-4215-9c
   "status": "COMPLETED",
   "actual_arrival_at": "2026-11-18T18:35:00-05:00",
   "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-  "vessel_operational_status": "AVAILABLE",
+  "vessel_operational_status": "MAINTENANCE_CLEANING",
   "dispute_id": "c1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c",
   "dispute_window_expires_at": "2026-11-19T18:35:00-05:00",
   "message": "Fin de navegación registrado con novedades. Las incidencias han sido notificadas a Finanzas y se habilitó la ventana de 24 horas para formalizar el reclamo de depósito de garantía."
@@ -196,13 +196,13 @@ No aplica. Operación puntual sobre una reserva individual.
 | **FR-003** | Campo de texto opcional para reporte de novedades | Campo `remarks` en request body |
 | **FR-004** | Transición a `COMPLETED` mediante CU-08 | Respuesta `200 OK` con `status: "COMPLETED"` |
 | **FR-005** | Registro de auditoría (hora real de entrega y novedades) | Campos `actual_arrival_at` y log del evento de entrega |
-| **FR-006** | Liberación de la embarcación a `AVAILABLE` en M1 | Notificación respaldada por [`m1-asignar-estado-operativo.md`](../external/m1-asignar-estado-operativo.md) |
+| **FR-006** | Señal de la embarcación hacia `MAINTENANCE_CLEANING` en M1 (el retorno a `AVAILABLE` es interno de M1; ver CU-22 FR-002) | Notificación asíncrona respaldada por [`m1-asignar-estado-operativo.md`](../external/m1-asignar-estado-operativo.md) y por la cola de notificación definida en CU-22 |
 | **FR-007** | Notificación de `COMPLETED` a M3 (pago libre, garantía retenida) | Evento AMQP respaldado por [`CU-14-estado-reserva.md`](../event/CU-14-estado-reserva.md) |
 | **FR-008** | Regla estricta "Sin dinero" (cero cálculo de daños o demoras) | Cero campos monetarios en la interfaz |
 | **FR-009** | Rechazo sobre reservas que no estén `IN_NAVIGATION` | Matriz de errores tipados de la Sección 3 |
 | **FR-010** | Apertura de ventana de disputa de 24 horas vía CU-16 | Campos devueltos `dispute_id` y `dispute_window_expires_at` |
 | **SC-001** | Cero cierres permitidos fuera de `IN_NAVIGATION` | Validación estricta de máquina de estados |
-| **SC-002** | Notificación a M1 para liberar barco en < 1 segundo | Outbox transaccional y SLA operativo |
+| **SC-002** | Notificación a M1 para liberar barco encolada en < 1 segundo | Outbox transaccional, cola de notificación de CU-22 y SLA operativo |
 | **SC-003** | Cero evaluaciones de daños o cobros ejecutados en M2 | Neutralidad financiera garantizada |
 | **SC-004** | 100% de entregas registradas con hora real | Campo `actual_arrival_at` auditado |
 | **SC-005** | Cero cierres autorizados a no-propietarios | Control estricto de legitimación por JWT |

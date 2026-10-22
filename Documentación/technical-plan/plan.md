@@ -1,7 +1,7 @@
 # Implementation Plan: Módulo 2 — Operación de Reservas, Tiempos y Cancelaciones (SEA-SHARE)
 
 **Date**: 2026-09-27 · **Revisión**: 2026-10-10
-**Spec**: [`features/CU-01..CU-21/spec.md`](features/) — **única fuente de verdad**. [`context/sea-share.md`](../context/sea-share.md) y [`context/consistencia-m2-m3.md`](../context/consistencia-m2-m3.md) son referencia secundaria; ante discrepancia prevalece el spec.
+**Spec**: [`features/CU-01..CU-22/spec.md`](features/) — **única fuente de verdad**. [`context/sea-share.md`](../context/sea-share.md) y [`context/consistencia-m2-m3.md`](../context/consistencia-m2-m3.md) son referencia secundaria; ante discrepancia prevalece el spec.
 **Contratos**: [`contracts/`](contracts/README.md) — un archivo `.md` por contrato (REST expuesto, eventos publicados e integraciones externas consumidas).
 **Alcance**: Plan **general** del módulo backend. Los planes técnicos detallados de cada caso de uso se redactarán en una tarea posterior, uno por CU.
 
@@ -9,7 +9,7 @@
 
 Este plan define la estrategia de construcción del **Módulo 2** de SEA-SHARE: un servicio backend en **Java 21 + Spring Boot 3.5**, empaquetado con **Maven**, que usa **RabbitMQ** como broker de mensajería para la integración asíncrona y la entrega garantizada de eventos hacia el Módulo 3 ("el sistema").
 
-El módulo es dueño del **ciclo de vida de la reserva** (21 casos de uso: CU-01 a CU-18 operativos y CU-19 a CU-21 de vista de consulta) y se integra con dos sistemas externos mediante contratos de API: **Módulo 1** (Gestión de Flota y Activos P2P) como fuente de verdad de la flota y **Módulo 3** (Liquidación, Seguros y Dispersión de Fondos) como autoridad única en todo cálculo monetario.
+El módulo es dueño del **ciclo de vida de la reserva** (22 casos de uso: CU-01 a CU-18 operativos y CU-19 a CU-21 de vista de consulta) y se integra con dos sistemas externos mediante contratos de API: **Módulo 1** (Gestión de Flota y Activos P2P) como fuente de verdad de la flota y **Módulo 3** (Liquidación, Seguros y Dispersión de Fondos) como autoridad única en todo cálculo monetario.
 
 Dos restricciones del contexto gobiernan toda la arquitectura:
 
@@ -56,7 +56,7 @@ El código se organiza en **dos contextos acotados** (`reservas` y `disputa`) m�
 - **La integración con Módulo 1 es exclusivamente por API** (FR-007 de CU-10). Módulo 2 no implementa el inventario físico.
 - **Atribución de términos** según `consistencia-m2-m3.md` §1: se usa **Arrendatario** y **Propietario** (nunca "turista" ni "anfitrión"), **"el sistema"** para Módulo 3 (nunca "Módulo 3" dentro del vocabulario de SPEC/Finanzas) y **"Sistema de Reservas y Operaciones"** para Módulo 2 en las interacciones con Finanzas.
 
-**Scale/Scope**: 1 servicio · 21 casos de uso · 2 contextos acotados (Reservas, Disputa de Garantía) · 2 sistemas externos · 7 interacciones formalizadas (tabla §5 de `consistencia-m2-m3.md`) · Volumen de diseño asumido por el equipo *(a validar con negocio)*: **5.000 usuarios activos/mes · 200 reservas/día · 50 reservas concurrentes en pico · 20 RPS en el pico**.
+**Scale/Scope**: 1 servicio · 22 casos de uso · 2 contextos acotados (Reservas, Disputa de Garantía) · 2 sistemas externos · 7 interacciones formalizadas (tabla §5 de `consistencia-m2-m3.md`) · Volumen de diseño asumido por el equipo *(a validar con negocio)*: **5.000 usuarios activos/mes · 200 reservas/día · 50 reservas concurrentes en pico · 20 RPS en el pico**.
 
 ### Decisiones arquitectónicas transversales
 
@@ -87,7 +87,7 @@ Documentación/
 │   ├── sea-share.md
 │   └── consistencia-m2-m3.md
 ├── features/                  # Solo lectura en esta tarea — planes por CU luego
-│   └── CU-01..CU-21/
+│   └── CU-01..CU-22/
 │       ├── spec.md            # (existente)
 │       └── plan.md            # (se creará en la tarea posterior, un archivo por CU)
 ├── diagrams/                  # Solo lectura
@@ -226,7 +226,7 @@ Exchange común hacia Módulo 3: `seashare.reservations` (topic, durable); topol
 |---|---|---|---|---|---|
 | C1 | M2 → M1 | CU-01, CU-19 | Request/response | `GET /api/v1/embarcaciones[/{id}]` | m1-consultar-informacion-embarcacion |
 | C2 | M2 → M1 | CU-02, CU-03 | Request/response | `GET …/estado-operativo` | m1-consultar-estado-operativo |
-| C3 | M2 → M1 | CU-08 | Comando idempotente | Outbox → `PUT …/estado-operativo` | m1-asignar-estado-operativo |
+| C3 | M2 → M1 | CU-08 | Notificación asíncrona (cola de CU-22) | Outbox → `PUT …/estado-operativo` (señal encolada en la cola de notificación de CU-22; entrega sin espera de respuesta) | m1-asignar-estado-operativo |
 | C4 | M2 → M3 | CU-11 | Request/response | `POST /api/v1/estimates/batch` y `/individual` | m3-estimacion-lote / individual |
 | C5 | M2 → M3 | CU-12 | Request/response | `POST …/calculated-value` | m3-calculo-total |
 | C6 | **M3 → M2** | CU-13 | Endpoint expuesto (webhook) | `POST /reservas/{id}/pago/confirmacion` | rest/CU-13-confirmar-pago |
@@ -236,7 +236,7 @@ Exchange común hacia Módulo 3: `seashare.reservations` (topic, durable); topol
 | C10 | Usuarios → M2 | CU-01…07, 16, 17, 19…21 | Request/response (REST) | — | rest/ |
 | C11 | M2 → M2 | CU-08, TTL, disputa | Jobs programados | ShedLock | §Jobs |
 
-**Jobs internos** (con ShedLock en multi-réplica): `TtlExpiryJob` (CU-08), `DisputeWindowCloseJob` (CU-16/17), `OutboxRelayJob` (infra; AMQP con publisher confirms y `PUT` a M1; backoff 1/5/25/125 s; 5 intentos → DLQ + alerta). Módulo 2 es dueño de **todos** sus temporizadores de negocio (TTL, ventana de 24 h, tolerancia de 30 min), modelados como columnas de vencimiento durables, no como `ScheduledExecutorService`.
+**Jobs internos** (con ShedLock en multi-réplica): `TtlExpiryJob` (CU-08), `DisputeWindowCloseJob` (CU-16/17), `OutboxRelayJob` (infra; AMQP con publisher confirms y entrega a Módulo 1 conforme a la cola de notificación de CU-22; backoff 1/5/25/125 s; 5 intentos → DLQ + alerta). Módulo 2 es dueño de **todos** sus temporizadores de negocio (TTL, ventana de 24 h, tolerancia de 30 min), modelados como columnas de vencimiento durables, no como `ScheduledExecutorService`.
 
 > **Dirección CU-13 / CU-15 (decisión de revisión)**: se **mantiene lo que dicen los `spec.md` vigentes** — Módulo 3 **llama** a Módulo 2 para confirmar pago (CU-13, FR-001) y para consultar la información de reserva (CU-15, FR-001). No se invierte a la dirección M2 → M3 propuesta en la revisión del 2026-10-10; ese cambio queda como punto abierto (§ Riesgos).
 
@@ -266,7 +266,7 @@ Cada contrato vive en su archivo en [`contracts/`](contracts/), con leyenda `[SP
 | Dependencia | Timeout | Reintentos | Otros |
 |---|---|---|---|
 | Módulo 1 (lecturas) | connect 100 ms / read 300 ms | 1 rápido, nunca ante 4xx | Fail-safe: no apto / 503 |
-| Módulo 1 (PUT estado) | connect 100 ms / read 300 ms | Outbox, 5 intentos con backoff | DLQ + alerta |
+| Módulo 1 (notificación de estado operativo, asíncrona) | connect 100 ms / read 300 ms (solo worker de entrega) | Outbox + cola de CU-22, 5 intentos con backoff | DLQ + alerta |
 | Módulo 3 (estimación lote) | read 1000 ms | 0 | Degradación del catálogo |
 | Módulo 3 (individual, cálculo total) | read 1000 ms | 0–1 si cabe en el presupuesto | Aborta sin transicionar |
 | RabbitMQ (publicación) | publisher confirm | 5 intentos, 1/5/25/125 s con jitter | DLQ + alerta |
@@ -343,7 +343,7 @@ Cada contrato vive en su archivo en [`contracts/`](contracts/), con leyenda `[SP
 - [ ] T011 **Manejo global de errores**: jerarquía de excepciones de dominio mapeada a código HTTP y cuerpo de error uniforme; validar que ninguna respuesta de error expone datos sensibles ni *stack traces*
 - [ ] T012 **Seguridad**: autenticación y autorización por rol (**Arrendatario**, **Propietario**, **Admin**) más identidad de servicio para Módulo 3 (CU-13 y CU-15); endpoints protegidos por defecto; CORS y TLS. **NEEDS CLARIFICATION**: el mecanismo de autenticación no está definido en los specs
 - [ ] T013 **Persistencia**: framework de migraciones versionadas y esquema base; entidad base con *auditing* (`creadoEn`, `actualizadoEn`), clave `UUID` y columna de *optimistic locking* para satisfacer FR-004 y FR-006 de CU-08
-- [ ] T014 **Persistencia**: repositorios de `Reservation` y `GuaranteeDispute` con soporte transaccional y de bloqueo pesimista donde la atomicidad lo requiera (adquisición del bloqueo de inventario en CU-03)
+- [ ] T014 **Persistencia**: repositorios de `Reservation` y `GuaranteeDispute` con soporte transaccional y de bloqueo pesimista donde la atomicidad lo requiera (adquisición de la retención exclusiva de las fechas en CU-03; el bloqueo operativo en Módulo 1 se materializa al alcanzar `Reservada`)
 - [ ] T015 **RabbitMQ — topología**: exchange de tipo `topic`, colas de integración con Módulo 3, *bindings* por tipo de evento, colas de *dead letter* y política de retención
 - [ ] T016 **RabbitMQ — entrega garantizada**: *publisher confirms*, *manual ack* en consumidores, reintentos con *backoff* exponencial con jitter (5 intentos: 1 s, 5 s, 25 s, 125 s; solo ante 5xx/timeout) y derivación a DLQ con alerta tras el quinto fallo
 - [ ] T017 **Outbox transaccional**: tabla de salida, escritura conjunta con la transición de estado, *relay* scheduler con confirmación del broker y marcado del evento como entregado
@@ -403,7 +403,7 @@ Cada contrato vive en su archivo en [`contracts/`](contracts/), con leyenda `[SP
 
 **Qué CUs agrupa**: **CU-01** (Buscar embarcaciones disponibles), **CU-02** (Iniciar reserva), **CU-03** (Iniciar pago), **CU-13** (Confirmar pago)
 
-**Justificación**: es la **vertical de mayor valor de negocio** del marketplace (sin ella el producto no genera ingresos) y forma un único recorrido de principio a fin: búsqueda con cotización por lote → creación de la reserva en `Iniciada` con el TTL en curso → adquisición del bloqueo de inventario y paso a `Pendiente de Pago` → confirmación del pago reportada por Módulo 3 y paso a `Reservada`. Se agrupan porque comparten la misma presión de concurrencia y el mismo indicador de negocio: dos Arrendatarios compiten por el mismo barco y las mismas fechas, y el spec exige cero sobreventa y respuesta atómica. Contiene la condición de no-bloqueo en `Iniciada` (varias reservas concurrentes para el mismo barco) y la carrera de sobreventa en `Pendiente de Pago`. Requiere las Fases 3 (contratos de cotización y liquidación), 4 (máquina de estados), 5 (notificación a Módulo 3) y 6 (vistas base de las extensiones CU-02 y CU-03) completas.
+**Justificación**: es la **vertical de mayor valor de negocio** del marketplace (sin ella el producto no genera ingresos) y forma un único recorrido de principio a fin: búsqueda con cotización por lote → creación de la reserva en `Iniciada` con el TTL en curso → adquisición de la retención exclusiva de las fechas y paso a `Pendiente de Pago` (gestionada íntegramente dentro de Módulo 2; el bloqueo operativo en Módulo 1 se materializa al pasar a `Reservada`, ver `CU-22` FR-002) → confirmación del pago reportada por Módulo 3 y paso a `Reservada`. Se agrupan porque comparten la misma presión de concurrencia y el mismo indicador de negocio: dos Arrendatarios compiten por el mismo barco y las mismas fechas, y el spec exige cero sobreventa y respuesta atómica. Contiene la condición de no-bloqueo en `Iniciada` (varias reservas concurrentes para el mismo barco) y la carrera de sobreventa en `Pendiente de Pago`. Requiere las Fases 3 (contratos de cotización y liquidación), 4 (máquina de estados), 5 (notificación a Módulo 3) y 6 (vistas base de las extensiones CU-02 y CU-03) completas.
 
 > Las tareas técnicas detalladas de cada CU se definirán en su propio plan específico más adelante.
 
@@ -509,3 +509,5 @@ Esta sección **no resuelve** las inconsistencias: las señala para que se cierr
 - Detener la implementación ante cualquier `[NEEDS CLARIFICATION]` abierto del spec correspondiente: la guía SDD lo establece como regla de oro.
 - Commit por tarea o por grupo lógico; detenerse en cada checkpoint de fase para validar.
 - **Revisión 2026-10-10**: se añadieron las secciones de *Modelo de datos*, *Conexiones*, *Contratos*, *Resiliencia*, *Decisiones* y *Lenguaje ubicuo*; se reestructuró `shared` en `contracts/` (comunicación **interna** entre los dos contextos) + `domain/` (tipos compartidos), excluyendo la plomería técnica (web, seguridad, mensajería, persistencia, observabilidad) que no se modela en `shared`; se adoptaron identificadores en inglés y la topología de colas de Módulo 3. La **dirección de CU-13/CU-15 se mantiene según los `spec.md` vigentes** (M3 → M2); la inversión a M2 → M3 queda registrada como punto abierto (§ H24).
+
+

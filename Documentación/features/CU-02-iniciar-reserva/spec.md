@@ -4,7 +4,7 @@
 **Fecha de Creación**: 2026-09-08 (Actualizado: 2026-09-28 por corrección UML de dependencias extend)  
 **Actores Primarios**: Arrendatario (Turista / Cliente)  
 **Dependencias Externas (APIs)**:
-- **Módulo 1 (Gestión de Flota y Activos P2P)**: API externa `Consultar información de embarcación` para validación. En estado `Iniciada` NO se notifica bloqueo de inventario a Módulo 1; el bloqueo operativo se aplica únicamente al transicionar a `Pendiente de Pago` (vía `Iniciar pago`).
+- **Módulo 1 (Gestión de Flota y Activos P2P)**: API externa `Consultar información de embarcación` para validación. En estado `Iniciada` NO se notifica bloqueo de inventario a Módulo 1; el bloqueo operativo se aplica únicamente al transicionar a `Reservada` (vía `Confirmar pago`), conforme al mapeo de CU-22 FR-002.
 - **Casos de uso internos de Módulo 2**:
     - `Ver detalle de embarcación` (`<<extend>>`): Este caso de uso (`Iniciar reserva`) **es la extensión** que se ancla a `Ver detalle de embarcación`. Se activa cuando el Arrendatario decide iniciar el proceso de reserva.
     - `Buscar embarcaciones disponibles` (`<<extend>>`): Este caso de uso (`Iniciar reserva`) **es la extensión** que se ancla a `Buscar embarcaciones disponibles`. Se activa cuando el Arrendatario inicia la reserva directamente desde la tarjeta del catálogo.
@@ -19,7 +19,7 @@
 
 Como Arrendatario, una vez validados los detalles de mi viaje, quiero **llenar mis datos personales obligatorios (nombre completo del titular y celular)** para que la reserva quede registrada y persistida en base de datos en estado `Iniciada`, encendiendo su ventana de 15 minutos. En este estado NO se bloquea el inventario en Módulo 1.
 
-***Why this priority***: Es el punto de entrada principal a la persistencia del marketplace. La reserva nace en `Iniciada` con su TTL en curso; el bloqueo de inventario se aplica recién al iniciar el pago.
+***Why this priority***: Es el punto de entrada principal a la persistencia del marketplace. La reserva nace en `Iniciada` con su TTL en curso; el bloqueo de inventario se aplica recién al confirmar el pago (estado `Reservada`).
 
 ***Independent Test***: Se prueba accediendo desde el catálogo o desde el detalle de la embarcación. Se ingresan los datos y se verifica que el sistema llame a `Actualizar estado reserva`, creando la reserva persistida en estado `Iniciada`, iniciando el TTL, y que NO se bloquee el inventario en Módulo 1 en este estado.
 
@@ -33,7 +33,7 @@ Como Arrendatario, una vez validados los detalles de mi viaje, quiero **llenar m
 2. **Scenario**: Dos reservas en `Iniciada` compiten por las mismas fechas y la carrera se resuelve al pagar (First-Come First-Served → HTTP 409)
     - **Given** dos Arrendatarios con reservas en estado `Iniciada` para el mismo barco y las mismas fechas (ambas coexisten; en `Iniciada` no hay retención de inventario en Módulo 1)
     - **When** ambos ejecutan `Iniciar pago` para la misma embarcación y fechas
-    - **Then** el sistema aplica control de concurrencia atómico bajo criterio First-Come First-Served (FCFS) al transicionar a `Pendiente de Pago`: solo la primera transacción confirmada gana el bloqueo en Módulo 1 y retorna **HTTP 409 Conflict** al segundo usuario indicando que las fechas acaban de ser reservadas.
+    - **Then** el sistema aplica control de concurrencia atómico bajo criterio First-Come First-Served (FCFS) al transicionar a `Pendiente de Pago`: solo la primera transacción confirmada gana la exclusividad (bloqueo interno de Módulo 2) y retorna **HTTP 409 Conflict** al segundo usuario indicando que las fechas acaban de ser reservadas.
 
 3. **Scenario**: Abandono de la intención de reserva por falta de datos
     - **Given** un Arrendatario configurando su reserva
@@ -63,16 +63,16 @@ Como Arrendatario, una vez validados los detalles de mi viaje, quiero **llenar m
 - **FR-007**: El sistema DEBE proveer en el mismo formulario un campo de texto opcional para capturar el "Correo electrónico" del titular.
 - **FR-008**: El sistema DEBE validar visualmente el formulario en caso de datos faltantes o incorrectos, mostrando un banner de error general (ej. "Completa el nombre del titular y el celular de contacto para continuar."), marcando los bordes de los campos afectados en rojo y desplegando mensajes de ayuda específicos debajo de cada input (ej. "Ingresa el nombre del titular de la reserva.").
 - **FR-009**: El sistema DEBE incluir un botón de acción principal en la parte inferior del modal con el texto "Continuar a pagar", el cual debe estar deshabilitado visualmente si existen errores de validación en el formulario.
-- **FR-010**: El sistema DEBE validar que la embarcación figure Disponible en el chequeo instantáneo de estado operativo (CU-10) antes de proceder con la creación al presionar el botón de continuar, mediante la invocación `(<<include>>)` a `Brindar información de estado operativo`. Este chequeo es previo y no bloquea inventario: la garantía de exclusividad (FCFS) se resuelve de forma atómica en `Iniciar pago` al transicionar a `Pendiente de Pago`.
+- **FR-010**: El sistema DEBE validar que la embarcación figure Disponible en el chequeo instantáneo de estado operativo (CU-10) antes de proceder con la creación al presionar el botón de continuar, mediante la invocación `(<<include>>)` a `Brindar información de estado operativo`. Este chequeo es previo y no bloquea inventario: la garantía de exclusividad (FCFS) se resuelve de forma atómica en `Iniciar pago` al transicionar a `Pendiente de Pago`, mediante los registros de disponibilidad de Módulo 2 y el bloqueo pesimista de fila (el estado operativo en Módulo 1 se actualiza recién al alcanzar `Reservada`, ver CU-22 FR-002).
 - **FR-011**: Si los datos son válidos y hay disponibilidad, el sistema DEBE invocar a `Actualizar estado reserva` (`<<include>>`) para persistir la reserva en base de datos en estado `Iniciada`.
 - **FR-012**: Al asentar la reserva en `Iniciada`, el sistema DEBE iniciar el temporizador TTL de 15 minutos asociado a esa transacción.
-- **FR-013**: En estado `Iniciada`, el sistema NO DEBE notificar bloqueo de inventario a Módulo 1. El aviso a Módulo 1 (`Asignar estado operativo` → `Reservado`) ocurre exclusivamente al transicionar la reserva a `Pendiente de Pago` mediante `Iniciar pago`.
-- **FR-014**: Varias reservas en `Iniciada` pueden coexistir para la misma embarcación y fechas (sin retención en Módulo 1 durante `Iniciada`). Ante colisión concurrente de `Iniciar pago`, el sistema DEBE resolver por First-Come First-Served (FCFS) al transicionar a `Pendiente de Pago`, validando de forma atómica la disponibilidad en Módulo 1 y con bloqueo pesimista de fila: solo la primera transacción confirmada gana el bloqueo (`Reservado` en Módulo 1); al competidor perdedor se le retorna **HTTP 409 Conflict** indicando que las fechas acaban de ser tomadas por otro usuario.
+- **FR-013**: En estado `Iniciada`, el sistema NO DEBE notificar bloqueo de inventario a Módulo 1. El aviso a Módulo 1 (`Asignar estado operativo` → `Reservado`) ocurre exclusivamente al transicionar la reserva a `Reservada` mediante `Confirmar pago` (ver CU-22 FR-002); en `Pendiente de Pago` tampoco se notifica nada a Módulo 1.
+- **FR-014**: Varias reservas en `Iniciada` pueden coexistir para la misma embarcación y fechas (sin retención en Módulo 1 durante `Iniciada`). Ante colisión concurrente de `Iniciar pago`, el sistema DEBE resolver por First-Come First-Served (FCFS) al transicionar a `Pendiente de Pago`, validando de forma atómica la disponibilidad con bloqueo pesimista de fila sobre los registros de disponibilidad de Módulo 2: solo la primera transacción confirmada gana la exclusividad (el bloqueo `Reservado` en Módulo 1 se materializa más adelante, al alcanzar `Reservada`); al competidor perdedor se le retorna **HTTP 409 Conflict** indicando que las fechas acaban de ser tomadas por otro usuario.
 ---
 
 ### Key Entities
 
-- **Reserva (`Reservation`)**: Entidad de Módulo 2 que se crea y persiste por primera vez en estado `Iniciada`, vinculada al nombre y celular capturados. Su creación detona el temporizador TTL de 15 minutos. En este estado NO se bloquea el inventario en Módulo 1; el bloqueo operativo se aplica al transicionar a `Pendiente de Pago`.
+- **Reserva (`Reservation`)**: Entidad de Módulo 2 que se crea y persiste por primera vez en estado `Iniciada`, vinculada al nombre y celular capturados. Su creación detona el temporizador TTL de 15 minutos. En este estado NO se bloquea el inventario en Módulo 1; el bloqueo operativo se aplica al transicionar a `Reservada`.
 
 ---
 

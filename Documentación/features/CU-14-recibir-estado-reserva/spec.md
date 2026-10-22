@@ -6,6 +6,8 @@
 **Dependencias Externas (APIs)**:
 - **Módulo 3 – Liquidación, Seguros y Dispersión de Fondos**: API externa receptora (`Recibir estado de reserva`), encargada de procesar las transiciones operativas para detonar la lógica financiera (activación de seguros, retenciones, cobros, dispersiones y reembolsos).
 
+> **Nota**: Existen dos casos de uso hermanos de notificación hacia módulos externos desde `Actualizar estado reserva` (`CU-08`): este caso (`CU-14`, **Módulo 2 → Módulo 3**) notifica el **estado de la reserva** tal cual; `Recibir información de estado operativo` (`CU-22`, **Módulo 2 → Módulo 1**) notifica el **estado operativo de la embarcación ya mapeado**. Son contratos distintos, con tablas de mapeo independientes.
+
 ---
 
 ## User Scenarios & Testing

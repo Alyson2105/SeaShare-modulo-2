@@ -20,7 +20,7 @@ Canales de entrada del resultado de pago: la lógica de negocio de este caso de 
 **Si el resultado es Rechazado o Fallido:**
 - Registra el motivo del fallo en el historial de la reserva (FR-005).
 - Si el rechazo admite reintento (resultado Rechazado) y resta tiempo en el TTL, mantiene la reserva en Pendiente de Pago permitiendo reintentos hasta el vencimiento estricto del TTL (FR-005).
-- Ante un resultado definitivo sin reintento (resultado Fallido) invoca a CU-08 transicionando a Pago Fallido y liberando la embarcación en Módulo 1; al vencer el TTL sin aprobación la reserva transiciona a Expirada (FR-005).
+- Ante un resultado definitivo sin reintento (resultado Fallido) invoca a CU-08 transicionando a Pago Fallido; por CU-22 FR-002 esta transición no genera ninguna notificación a Módulo 1 (cero avisos). Al vencer el TTL sin aprobación la reserva transiciona a Expirada (FR-005), igualmente sin notificación a Módulo 1.
 - **Control de Idempotencia Estricto**: utiliza la clave única (external_transaction_id, result) por reserva para responder afirmativamente (HTTP 200 en el Canal A; sin efectos en el Canal B) ante reintentos sin duplicar transiciones ni efectos colaterales (FR-007, SC-004).
 - **Condición de Carrera en el Límite del TTL**: si la confirmación de pago aprobada se recibe cuando el TTL ya expiró y la reserva se encuentra en Expirada, el sistema rechaza la confirmación e instruye mandatoriamente a Módulo 3 la reversión automática de los fondos en la pasarela (FR-006, SC-002, SC-003): en el Canal A mediante la respuesta 409 con reversal_required: true; en el Canal B mediante la publicación del estado EXPIRADA en el evento de estado de reserva (CU-14), que Módulo 3 debe reconocer para reembolsar [NEEDS CLARIFICATION: M3 debe agregar EXPIRADA a su enum reservation.status.changed].
 
@@ -241,7 +241,7 @@ GET /api/v1/reservations/{reservation_id}/payment-confirmation (ver m3-confirmac
 | status de M3 | result traducido | Tratamiento |
 | APROBADO | Aprobado | Se entrega a la lógica de FR-004 (TTL vigente) o FR-006 (TTL expirado) |
 | RECHAZADO | Rechazado | FR-005: la reserva continúa en Pendiente de Pago permitiendo reintento con otro token (CU-03) hasta el fin del TTL |
-| CANCELADO / EXPIRADO | Fallido | FR-005: resultado definitivo; transición a Pago Fallido y liberación de la embarcación en M1 |
+| CANCELADO / EXPIRADO | Fallido | FR-005: resultado definitivo; transición a Pago Fallido; por CU-22 FR-002 no se genera notificación a Módulo 1 (cero avisos) |
 | EN_PROCESO / DESCONOCIDO | (no se entrega) | No se invoca la lógica: la reserva permanece sin cambios y se vuelve a consultar en el siguiente ciclo; nunca se asume un resultado |
 
 #### Reacción ante errores de Módulo 3 (Canal B)
@@ -290,7 +290,7 @@ Regla estricta "Sin dinero": Módulo 2 no calcula montos, no procesa reembolsos 
 ### Notas Transversales
 
 Idempotencia Garantizada (FR-007): la clave compuesta (external_transaction_id, result) se registra en la tabla de auditoría de pagos de la reserva bajo restricción de unicidad. Ante recepciones duplicadas por reintentos de red de Módulo 3 (Canal A) o por ciclos repetidos del adaptador (Canal B), se responde 200 OK / no se genera ningún efecto sin reejecutar la máquina de estados. Los dos canales comparten esta restricción, por lo que no pueden procesar dos veces el mismo resultado.
-Transición Atómica y Evento Saliente: al consolidarse el paso a Reservada, CU-08 dispara automáticamente el evento asíncrono CU-14-estado-reserva.md hacia Módulo 3 vía RabbitMQ (status RESERVADO) y notifica a Módulo 1 si correspondiera.
+Transición Atómica y Evento Saliente: al consolidarse el paso a Reservada, CU-08 dispara automáticamente el evento asíncrono CU-14-estado-reserva.md hacia Módulo 3 vía RabbitMQ (status RESERVADO) y encola en la cola de notificación a Módulo 1 definida en CU-22 la señal asíncrona del estado `RESERVED` (única transición que notifica a Módulo 1; ver CU-22 FR-002), sin esperar confirmación de Módulo 1.
 Reversión Obligatoria ante Carrera Expirada (SC-002, SC-003): el corte del TTL es riguroso a los 15 minutos exactos (segundo 900). Si la confirmación aprobada ingresa en el segundo 901 con la reserva ya expirada, el activo ya pudo haber sido alquilado por otro usuario; por tanto, M2 protege la integridad rechazando la consolidación y ordenando la reversión en M3. El bloqueo pesimista de fila decide cuál transacción gana: la expiración o la confirmación.
 Convivencia de los canales: si Módulo 3 llega a invocar el Canal A mientras el adaptador (Canal B) también está activo, ambos entregan el mismo resultado a la misma lógica y la restricción de idempotencia evita efectos duplicados.
 

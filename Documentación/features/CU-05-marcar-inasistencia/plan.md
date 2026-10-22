@@ -12,8 +12,8 @@ Al ejecutarse exitosamente:
 3. Obtiene la zona horaria oficial del puerto de atraque invocando internamente a `Proveer información de embarcación` (CU-09, `<<include>>`, FR-004). Si la consulta falla, el sistema aplica *fail-safe* retornando `503 Service Unavailable` sin asumir zona horaria por defecto (FR-012).
 4. Verifica que hayan transcurrido al menos **30 minutos continuos** desde la hora pactada de inicio de la reserva (`tiempo_actual >= fecha_hora_inicio + 30 minutos`, FR-003). Si el tiempo no se ha cumplido, rechaza con `409 Conflict` informando el tiempo exacto faltante (FR-005, SC-001, SC-003).
 5. Invoca a `Actualizar estado reserva` (CU-08) transicionando la reserva al estado terminal **`CANCELLED`** con sub-estado **`NO_SHOW`** (FR-007).
-6. Sincroniza las dependencias externas a través de CU-08:
-   - Notifica a Módulo 1 ([`m1-asignar-estado-operativo.md`](../external/m1-asignar-estado-operativo.md)) para liberar la embarcación al estado **`AVAILABLE`** (FR-010).
+6. Notifica de forma asíncrona a las dependencias externas a través de CU-08:
+   - Encola en la cola de notificación a Módulo 1 definida en CU-22 (`Recibir información estado operativo`, invocado vía `<<include>>`) la señal de liberación de la embarcación al estado **`AVAILABLE`** (FR-010). El flujo no espera respuesta de Módulo 1 ni depende de ella: la entrega se garantiza con reintentos y backoff, DLQ e idempotencia por identificador único de evento (CU-22 FR-006), y un fallo de entrega no revierte la transición local de Módulo 2.
    - Publica el evento asíncrono en RabbitMQ ([`CU-14-estado-reserva.md`](../event/CU-14-estado-reserva.md)) hacia Módulo 3 informando el estado `CANCELLED` y sub-estado `NO_SHOW` para que Finanzas ejecute la compensación económica al Propietario (FR-011).
 7. **Regla estricta "Sin dinero"**: Módulo 2 no calcula compensaciones, retenciones ni dispersiones monetarias (FR-009, SC-005).
 
@@ -180,7 +180,7 @@ No aplica. Operación puntual sobre una reserva individual.
 
 - **Disyuntiva del Propietario post-tolerancia**: cumplidos los 30 minutos de cortesía, si el cliente arriba tardíamente (ej. al minuto 35), el Propietario tiene potestad discrecional:
   - Puede optar por admitirlo ejecutando [`CU-06-marcar-inicio-navegacion.md`](CU-06-marcar-inicio-navegacion.md) $\rightarrow$ la reserva pasa a `IN_NAVIGATION` e inhabilita definitivamente el No-Show (FR-009 de CU-06).
-  - Puede ejecutar este endpoint $\rightarrow$ la reserva transiciona a `CANCELLED` (`NO_SHOW`), liberando el barco a `AVAILABLE` de forma irreversible.
+  - Puede ejecutar este endpoint $\rightarrow$ la reserva transiciona a `CANCELLED` (`NO_SHOW`), y encolando la liberación asíncrona del barco a `AVAILABLE` de forma irreversible (vía CU-22).
 - **Reloj y Zona Horaria Deterministas**: la ventana de 30 minutos se calcula obligatoriamente contra el huso horario oficial del puerto obtenido de Módulo 1 (CU-09), garantizando consistencia si el dispositivo del propietario se encuentra desfasado (FR-004).
 
 ---
@@ -198,12 +198,12 @@ No aplica. Operación puntual sobre una reserva individual.
 | **FR-007** | Transición a `CANCELLED` con sub-estado `NO_SHOW` | Respuesta `200 OK` con `status: CANCELLED` y `sub_status` |
 | **FR-008** | Registro de auditoría (evento No-Show) | Almacenamiento de fecha, minutos de espera y `observations` |
 | **FR-009** | Regla estricta "Sin dinero" (cero cálculos monetarios) | Payload de respuesta sin campos monetarios |
-| **FR-010** | Liberación de la embarcación a `AVAILABLE` en M1 | Notificación respaldada por [`m1-asignar-estado-operativo.md`](../external/m1-asignar-estado-operativo.md) |
+| **FR-010** | Liberación de la embarcación a `AVAILABLE` en M1 | Notificación asíncrona respaldada por [`m1-asignar-estado-operativo.md`](../external/m1-asignar-estado-operativo.md) y por la cola de notificación definida en CU-22 |
 | **FR-011** | Notificación de `NO_SHOW` a Módulo 3 | Publicación respaldada por [`CU-14-estado-reserva.md`](../event/CU-14-estado-reserva.md) |
 | **FR-012** | Fail-safe si no se resuelve la zona horaria del puerto | Error `503 FLEET_SERVICE_UNAVAILABLE` |
 | **SC-001** | 0% reportes aceptados antes de los 30 minutos | Validación cronológica estricta |
 | **SC-002** | 0% reportes sobre estados inválidos | Matriz de validación de máquina de estados |
 | **SC-003** | 100% de intentos anticipados informan tiempo restante | Campos `minutes_remaining` y `seconds_remaining` en error 409 |
-| **SC-004** | Notificación externa emitida en < 1 segundo | Outbox transaccional y SLA de actualización |
+| **SC-004** | Notificación externa encolada en < 1 segundo | Outbox transaccional, cola de notificación de CU-22 y SLA de actualización |
 | **SC-005** | Cero operaciones de cálculo monetario en M2 | Neutralidad financiera del endpoint |
 | **SC-006** | Cero reportes autorizados a no-propietarios | Control de claim de rol y pertenencia |

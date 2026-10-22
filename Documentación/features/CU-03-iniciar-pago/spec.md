@@ -9,8 +9,8 @@
 - **Casos de uso internos de Módulo 2**:
     - `Ver detalle de reserva` (`<<extend>>`): Este caso de uso (`Iniciar pago`) **es la extensión** que se ancla a `Ver detalle de reserva` (la flecha del diagrama apunta al caso base). Se activa cuando el Arrendatario decide proceder al pago de una reserva en estado `Iniciada`.
     - `Brindar cálculo total de la reserva` `(<<include>>)`: Para obtener el monto final, exacto y desglosado (con seguro y garantía) antes de cobrar.
-    - `Actualizar estado reserva` `(<<include>>)`: Para transicionar la reserva de `Iniciada` a `Pendiente de Pago` y activar el bloqueo de la embarcación (el TTL ya viene corriendo desde `Iniciada`).
-    - `Brindar información de estado operativo` `(<<include>>)`: Para verificar, vía la API de Módulo 1, que la embarcación figura como `Disponible` en la validación atómica previa al bloqueo.
+    - `Actualizar estado reserva` `(<<include>>)`: Para transicionar la reserva de `Iniciada` a `Pendiente de Pago` (el TTL ya viene corriendo desde `Iniciada`). Esta transición **no** notifica nada a Módulo 1: el bloqueo operativo en Módulo 1 se materializa al alcanzar `Reservada` (ver CU-22 FR-002).
+    - `Brindar información de estado operativo` `(<<include>>)`: Para verificar, vía la API de Módulo 1, que la embarcación figura como `Disponible` en la validación atómica previa al bloqueo (guarda frente a activos ya bloqueados en otros estados; el bloqueo efectivo en Módulo 1 se produce al alcanzar `Reservada`, ver CU-22 FR-002).
 
 > [!NOTE] Resolución (2026-10-07): el caso base de `Iniciar pago` es `Ver detalle de reserva` (CU-21), donde se muestra el resumen de pago. `Ver mis reservas` (CU-20) solo habilita la navegación hacia el detalle.
 
@@ -18,20 +18,20 @@
 
 ## User Scenarios & Testing
 
-### User Story 1 - Obtener cálculo exacto, bloquear inventario e iniciar el pago (Priority: P1)
+### User Story 1 - Obtener cálculo exacto, iniciar el pago y asegurar las fechas (Priority: P1)
 
-Como Arrendatario con una reserva en estado `Iniciada` (con su TTL ya en curso desde que se creó), quiero proceder al pago obteniendo el cálculo total exacto (incluyendo seguro y garantía) y asegurando el bloqueo de la embarcación para poder completar mi transacción sin que otro usuario me gane las fechas.
+Como Arrendatario con una reserva en estado `Iniciada` (con su TTL ya en curso desde que se creó), quiero proceder al pago obteniendo el cálculo total exacto (incluyendo seguro y garantía) y asegurando la retención exclusiva de las fechas dentro de Módulo 2 (sin bloquear aún el inventario en Módulo 1) para poder completar mi transacción sin que otro usuario me gane las fechas.
 
 ***Why this priority***: Es el embudo transaccional crítico. Garantiza que el usuario pague exactamente lo que dictamina Finanzas y que la plataforma proteja la disponibilidad del barco exclusivamente para él mientras introduce su método de pago.
 
-***Independent Test***: Se prueba con una reserva en estado `Iniciada` con su TTL en curso (accesible desde `Ver detalle de reserva`). Se ejecuta la acción de pagar y se verifica que el sistema llame a `Brindar cálculo total de la reserva`, transicione la reserva a estado `Pendiente de Pago` (llamando a `Actualizar estado reserva`, sin reiniciar el TTL que sigue corriendo desde `Iniciada`) y entregue los datos correctos para redirigir a la pasarela de Módulo 3.
+***Independent Test***: Se prueba con una reserva en estado `Iniciada` con su TTL en curso (accesible desde `Ver detalle de reserva`). Se ejecuta la acción de pagar y se verifica que el sistema llame a `Brindar cálculo total de la reserva`, transicione la reserva a estado `Pendiente de Pago` (llamando a `Actualizar estado reserva`, sin reiniciar el TTL que sigue corriendo desde `Iniciada`, sin generar ninguna notificación a Módulo 1) y entregue los datos correctos para redirigir a la pasarela de Módulo 3.
 
 ***Acceptance Scenarios***:
 
 1. **Scenario**: Transición exitosa a Pendiente de Pago e inicio de pasarela
     - **Given** un Arrendatario con una reserva en estado `Iniciada` con su TTL en curso, para fechas disponibles
     - **When** el usuario decide proceder con el pago (extendiendo desde `Ver detalle de reserva`)
-    - **Then** el sistema invoca `(<<include>>)` a "Brindar cálculo total de la reserva" para obtener el valor final, luego invoca `(<<include>>)` a "Actualizar estado reserva" transicionando la reserva de `Iniciada` a `Pendiente de Pago` (el TTL sigue corriendo desde `Iniciada`, no se reinicia) y redirige al motor de Módulo 3.
+    - **Then** el sistema invoca `(<<include>>)` a "Brindar cálculo total de la reserva" para obtener el valor final, luego invoca `(<<include>>)` a "Actualizar estado reserva" transicionando la reserva de `Iniciada` a `Pendiente de Pago` (el TTL sigue corriendo desde `Iniciada`, no se reinicia; esta transición no notifica nada a Módulo 1) y redirige al motor de Módulo 3.
 
 2. **Scenario**: Falla al obtener el cálculo total desde Módulo 3
     - **Given** un Arrendatario intentando pagar una reserva en estado `Iniciada`
@@ -47,24 +47,24 @@ Como Arrendatario con una reserva en estado `Iniciada` (con su TTL ya en curso d
 
 ### User Story 2 - Resolución de colisiones por concurrencia en la intención de pago (Priority: P1)
 
-Como sistema, quiero evitar que dos usuarios bloqueen la misma embarcación para las mismas fechas, validando la disponibilidad justo antes de transicionar a Pendiente de Pago, para garantizar que solo el primero en intentar pagar obtenga el bloqueo del inventario.
+Como sistema, quiero evitar que dos usuarios retengan las mismas fechas para la misma embarcación, validando la disponibilidad justo antes de transicionar a Pendiente de Pago, para garantizar que solo el primero en intentar pagar obtenga la retención exclusiva de las fechas.
 
-***Why this priority***: Evita la sobreventa. Como antes del pago no existe ningún bloqueo sobre el barco, la validación final y atómica debe ocurrir en este instante preciso.
+***Why this priority***: Evita la sobreventa. Como antes del pago no existe ninguna retención sobre el barco (ni en Módulo 2 ni en Módulo 1), la validación final y atómica debe ocurrir en este instante preciso.
 
-***Independent Test***: Se preparan dos reservas en estado `Iniciada` para el mismo barco y las mismas fechas desde dos cuentas distintas. Se disparan ambas peticiones de pago en el mismo segundo. Se verifica que el sistema bloquee el barco para la primera petición (transicionando a `Pendiente de Pago`) y rechace la segunda transacción informando que las fechas ya no están disponibles.
+***Independent Test***: Se preparan dos reservas en estado `Iniciada` para el mismo barco y las mismas fechas desde dos cuentas distintas. Se disparan ambas peticiones de pago en el mismo segundo. Se verifica que el sistema retenga las fechas para la primera petición (transicionando a `Pendiente de Pago`) y rechace la segunda transacción informando que las fechas ya no están disponibles.
 
 ***Acceptance Scenarios***:
 
 1. **Scenario**: Colisión de dos pagos simultáneos sobre reservas en Iniciada
     - **Given** dos reservas en estado `Iniciada` compitiendo por la misma embarcación en fechas superpuestas
     - **When** ambos Arrendatarios intentan iniciar el pago simultáneamente
-    - **Then** el sistema aplica control de concurrencia, permite que solo la primera transacción transicione a `Pendiente de Pago` (ganando el bloqueo) y rechaza la segunda solicitud indicando que el activo acaba de ser reservado por otro usuario.
+    - **Then** el sistema aplica control de concurrencia, permite que solo la primera transacción transicione a `Pendiente de Pago` (ganando la retención exclusiva) y rechaza la segunda solicitud indicando que el activo acaba de ser reservado por otro usuario.
 
 ---
 
 ## Edge Cases
 
-- **Inicio de pago sin disponibilidad**: Si al validar de forma atómica bajo lock la embarcación ya no figura Disponible en el chequeo instantáneo de estado operativo (CU-10) (bloqueada por otra reserva en `Pendiente de Pago` o `Reservada`), el sistema DEBE denegar inmediatamente el inicio del flujo sin transicionar la reserva (permanece en `Iniciada`).
+- **Inicio de pago sin disponibilidad**: Si al validar de forma atómica bajo lock la embarcación ya no figura Disponible en el chequeo instantáneo de estado operativo (CU-10) (bloqueada en Módulo 1 por otra reserva que alcanzó `Reservada`, o retenida internamente por otra reserva en `Pendiente de Pago`), el sistema DEBE denegar inmediatamente el inicio del flujo sin transicionar la reserva (permanece en `Iniciada`).
 - **Temporizador TTL de 15 minutos en curso**: El temporizador corre desde que la reserva entró a `Iniciada` y sigue consumiéndose al entrar a `Pendiente de Pago`. Si el usuario abandona la pasarela y vuelve a entrar, el temporizador NO se reinicia.
 - **Expiración del temporizador TTL en pantalla (00:00)**: El corte en el backend es estricto a los 15 minutos exactos sin ventana de gracia. Al llegar el contador a 00:00 en pantalla, el sistema DEBE deshabilitar los botones de inmediato, mostrar un modal de expiración, redirigir a CU-01 y el backend debe liberar el inventario.
 
@@ -78,7 +78,7 @@ Como sistema, quiero evitar que dos usuarios bloqueen la misma embarcación para
 - **FR-002**: El sistema DEBE permitir iniciar el proceso de pago única y exclusivamente si la reserva se encuentra en estado `Iniciada`.
 - **FR-003**: El sistema DEBE invocar obligatoriamente al caso de uso subordinado `Brindar cálculo total de la reserva` (`<<include>>`) para solicitar a Módulo 3 el monto final vinculante, incluyendo el desglose de tarifa base, seguro náutico y depósito de garantía.
 - **FR-004**: **REGLA DE NEGOCIO ESTRICTA**: El sistema **NO DEBE** manipular, sumar ni recalcular el valor devuelto por el cálculo total. Debe utilizar la estructura financiera entregada por Módulo 3 de manera intacta.
-- **FR-005**: Si el cálculo total es devuelto con éxito, el sistema DEBE validar de forma atómica bajo lock que la embarcación figure Disponible en el chequeo instantáneo de estado operativo mediante la invocación `(<<include>>)` a `Brindar información de estado operativo` (CU-10) (verificando que no haya sido bloqueada por otra reserva que haya entrado a `Pendiente de Pago` o `Reservada` instantes antes).
+- **FR-005**: Si el cálculo total es devuelto con éxito, el sistema DEBE validar de forma atómica bajo lock que la embarcación figure Disponible en el chequeo instantáneo de estado operativo mediante la invocación `(<<include>>)` a `Brindar información de estado operativo` (CU-10) (verificando que no haya sido bloqueada en Módulo 1 por otra reserva que haya alcanzado `Reservada`; las reservas que siguen en `Pendiente de Pago` se detectan mediante los registros de disponibilidad de Módulo 2).
 - **FR-006**: Si la disponibilidad es validada, el sistema DEBE invocar al orquestador `Actualizar estado reserva` (`<<include>>`) para transicionar la reserva de `Iniciada` a `Pendiente de Pago`.
 - **FR-007**: Al confirmarse la transición a `Pendiente de Pago`, el sistema NO DEBE reiniciar el temporizador TTL: el temporizador iniciado en `Iniciada` sigue corriendo y conserva su vencimiento original.
 - **FR-008**: Si el proceso de validación concurrente falla (las fechas acaban de ser ocupadas), el sistema DEBE rechazar el inicio del pago sin transicionar la reserva (permanece en `Iniciada`) y notificar al usuario.
@@ -94,7 +94,7 @@ Como sistema, quiero evitar que dos usuarios bloqueen la misma embarcación para
 
 ### Key Entities
 
-- **Reserva (`Reservation`)**: Entidad que transiciona de `Iniciada` a `Pendiente de Pago` en este flujo, adquiriendo el bloqueo de inventario temporal; la marca de tiempo de expiración del TTL proviene del estado `Iniciada` (el temporizador no se reinicia).
+- **Reserva (`Reservation`)**: Entidad que transiciona de `Iniciada` a `Pendiente de Pago` en este flujo, adquiriendo la retención exclusiva temporal de las fechas dentro de Módulo 2 (sin bloqueo de inventario en Módulo 1, que se materializa al alcanzar `Reservada`); la marca de tiempo de expiración del TTL proviene del estado `Iniciada` (el temporizador no se reinicia).
 
 ---
 

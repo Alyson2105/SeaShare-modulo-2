@@ -52,7 +52,7 @@ Módulo 3 notifica que la transacción de pago fue rechazada por la pasarela (fo
 2. **Scenario**: Rechazo definitivo que culmina la reserva
    - **Given** una reserva cuyo intento de pago fue rechazado y no admite más reintentos (o agotó su TTL)
    - **When** se procesa el cierre del intento de pago
-   - **Then** el sistema invoca "CU-08 Actualizar estado reserva" para transicionar la reserva a "Pago Fallido" o "Expirada" y liberar la embarcación en Módulo 1
+   - **Then** el sistema invoca "CU-08 Actualizar estado reserva" para transicionar la reserva a "Pago Fallido" o "Expirada" sin generar notificación a Módulo 1 (cero avisos, conforme a CU-22 FR-002)
 
 ---
 
@@ -69,13 +69,13 @@ Si Módulo 3 reintenta la entrega del mensaje de confirmación de pago (por rein
 1. **Scenario**: Recepción de confirmación duplicada para reserva ya en estado Reservada
    - **Given** una reserva que ya se encuentra en estado "Reservada" con una referencia de transacción T_123
    - **When** Módulo 3 reenvía la confirmación de pago con la misma referencia T_123
-   - **Then** el sistema responde con confirmación exitosa a Módulo 3, no dispara nuevas transiciones de estado ni invoca nuevamente a Módulo 1
+   - **Then** el sistema responde con confirmación exitosa a Módulo 3, no dispara nuevas transiciones de estado ni encola nuevas notificaciones a Módulo 1
 
 ---
 
 ### Edge Cases
 
-- **Confirmación de pago recibida tras la expiración del TTL (Race Condition)**: el temporizador de 15 minutos expira y "CU-08 Actualizar estado reserva" marca la reserva como "Expirada" liberando la embarcación. Milisegundos o segundos después, llega la confirmación de pago de Módulo 3 reportando "Aprobado". ¿Cómo procede el sistema?
+- **Confirmación de pago recibida tras la expiración del TTL (Race Condition)**: el temporizador de 15 minutos expira y "CU-08 Actualizar estado reserva" marca la reserva como "Expirada" (sin notificación a Módulo 1, conforme a CU-22 FR-002). Milisegundos o segundos después, llega la confirmación de pago de Módulo 3 reportando "Aprobado". ¿Cómo procede el sistema?
   - *Regla*: Módulo 2 NO PUEDE confirmar una reserva expirada cuyo inventario pudo haber sido tomado por otro usuario. El sistema DEBE rechazar la confirmación indicando "Reserva expirada por TTL" y notificar inmediatamente a Módulo 3 para que proceda con la reversión/reembolso automático del cobro en la pasarela de pagos.
   - *Ventana de gracia*: NO existe ventana de gracia técnica posterior al minuto 15; el corte del TTL es exacto a los 15 minutos, en el segundo 900.
 - **Confirmación sobre reserva que ya no está en Pendiente de Pago**: Si llega una confirmación de pago para una reserva que ya no se encuentra en estado `Pendiente de Pago` (ej. transicionó a `Expirada` por vencimiento del TTL; el estado `Cancelada` es inalcanzable en este punto dado que la cancelación solo se admite desde `Reservada`), el sistema DEBE rechazar la confirmación y requerir inmediatamente a Módulo 3 la reversión del importe.
@@ -98,8 +98,8 @@ Si Módulo 3 reintenta la entrega del mensaje de confirmación de pago (por rein
 - **FR-005**: Si el resultado de la transacción es **Rechazado** o **Fallido**:
   - El sistema DEBE registrar el resultado fallido y el motivo en el historial de la reserva.
   - Si el rechazo admite reintento y aún resta tiempo en el TTL, el sistema DEBE mantener la reserva en `Pendiente de Pago` y permitir al Arrendatario reintentar el cobro con otro medio hasta el vencimiento exacto del TTL de 15 minutos (sin ventana de gracia).
-  - Al vencer el TTL sin una confirmación aprobada, la reserva transiciona a `Expirada` (vía `CU-08 Actualizar estado reserva`) y se libera la embarcación en Módulo 1.
-  - Ante un rechazo definitivo que no admita reintentos, el sistema DEBE invocar "CU-08 Actualizar estado reserva" para transicionar a `Pago Fallido`, liberando la embarcación en Módulo 1.
+  - Al vencer el TTL sin una confirmación aprobada, la reserva transiciona a `Expirada` (vía `CU-08 Actualizar estado reserva`) y no se genera notificación a Módulo 1 (cero avisos, conforme a CU-22 FR-002).
+  - Ante un rechazo definitivo que no admita reintentos, el sistema DEBE invocar "CU-08 Actualizar estado reserva" para transicionar a `Pago Fallido`; por CU-22 FR-002 esta transición no genera notificación a Módulo 1 (cero avisos).
 - **FR-006**: Si el sistema recibe una notificación de pago **Aprobado** cuando el temporizador TTL ya expiró y la reserva se encuentra en estado "Expirada":
   - El sistema NO DEBE transicionar la reserva a "Reservada".
   - El sistema DEBE responder a Módulo 3 con un código/mensaje de rechazo indicando que la reserva expiró por tiempo límite.

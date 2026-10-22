@@ -11,7 +11,7 @@ Al ejecutarse exitosamente:
 1. Verifica de forma previa que la embarcación figure como `AVAILABLE` mediante el chequeo instantáneo a Módulo 1 (`<<include>>` Brindar información de estado operativo) (FR-010).
 2. Invoca internamente a `Actualizar estado reserva` (`<<include>>`) para persistir la reserva por primera vez en la base de datos con el estado inicial **`INITIATED`** (FR-011).
 3. Enciende el temporizador **TTL de 15 minutos** asociado a la transacción (FR-012).
-4. **No bloquea inventario en Módulo 1**: en estado `INITIATED` el activo permanece disponible en el catálogo de flota. La retención exclusiva se adquiere únicamente al transicionar a `PENDING_PAYMENT` en `Iniciar pago` (FR-013, FR-014).
+4. **No bloquea inventario en Módulo 1**: en estado `INITIATED` el activo permanece disponible en el catálogo de flota. La retención exclusiva en Módulo 1 se adquiere únicamente al transicionar a `RESERVED` (confirmación del pago) en `Confirmar pago` (FR-013, FR-014; ver CU-22 FR-002).
 
 ---
 

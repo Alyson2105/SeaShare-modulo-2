@@ -13,8 +13,8 @@ Al ejecutarse exitosamente:
 4. No existe límite posterior estricto: una vez alcanzada la hora de zarpe, permanece habilitado mientras la reserva siga en `RESERVED`. Si el cliente llegó tarde (superando los 30 min de tolerancia) y el Propietario decide admitirlo en lugar de marcar inasistencia, este registro consuma el inicio del viaje (FR-009).
 5. Invoca a `Actualizar estado reserva` (CU-08) transicionando el agregado al estado **`IN_NAVIGATION`** (FR-005).
 6. Desactiva de forma irreversible la potestad de ejecutar `CU-05 Marcar inasistencia` o `CU-04 Solicitar cancelación` (FR-009, SC-003).
-7. Sincroniza las dependencias externas a través de CU-08:
-   - Notifica a Módulo 1 ([`m1-asignar-estado-operativo.md`](../external/m1-asignar-estado-operativo.md)) actualizando la embarcación al estado **`IN_NAVIGATION`** (FR-007, SC-002).
+7. Notifica de forma asíncrona a las dependencias externas a través de CU-08:
+   - Encola en la cola de notificación a Módulo 1 definida en CU-22 (`Recibir información estado operativo`, invocado vía `<<include>>`) la señal de la embarcación al estado **`IN_NAVIGATION`** (FR-007, SC-002). El flujo no espera respuesta de Módulo 1 ni depende de ella: la entrega se garantiza con reintentos y backoff, DLQ e idempotencia por identificador único de evento (CU-22 FR-006), y un fallo de entrega no revierte la transición local de Módulo 2.
    - Publica el evento asíncrono en RabbitMQ ([`CU-14-estado-reserva.md`](../event/CU-14-estado-reserva.md)) hacia Módulo 3 informando el estado **`IN_NAVIGATION`** para la **activación formal de la cobertura del seguro náutico** (FR-008, SC-004).
 8. **Regla estricta "Sin dinero"**: Módulo 2 no gestiona cobros de combustible, retenciones de garantía ni importes adicionales en muelle (FR-010, SC-005).
 
@@ -195,12 +195,12 @@ No aplica. Operación puntual sobre una reserva individual.
 | **FR-004** | Incompatibilidad con estados no permitidos | Matriz de errores tipados en la Sección 3 |
 | **FR-005** | Transición a `IN_NAVIGATION` mediante CU-08 | Respuesta `200 OK` con `status: "IN_NAVIGATION"` |
 | **FR-006** | Registro de auditoría (hora real y notas de salida) | Campos `actual_departure_at` y `delivery_notes` del request |
-| **FR-007** | Notificación de `IN_NAVIGATION` a Módulo 1 | Integración respaldada por [`m1-asignar-estado-operativo.md`](../external/m1-asignar-estado-operativo.md) |
+| **FR-007** | Notificación de `IN_NAVIGATION` a Módulo 1 | Integración asíncrona respaldada por [`m1-asignar-estado-operativo.md`](../external/m1-asignar-estado-operativo.md) y por la cola de notificación definida en CU-22 |
 | **FR-008** | Notificación a Módulo 3 para activación de seguro | Evento AMQP respaldado por [`CU-14-estado-reserva.md`](../event/CU-14-estado-reserva.md) |
 | **FR-009** | Desactivación permanente de No-Show y cancelación | Invariante técnica garantizada en Notas Transversales |
 | **FR-010** | Regla "Sin dinero" (cero cobros en muelle) | Respuesta sin conceptos monetarios |
 | **SC-001** | Cero inicios permitidos fuera de estado `RESERVED` | Verificado en control previo de máquina de estados |
-| **SC-002** | Notificación a M1 emitida en < 1 segundo | Outbox transaccional y SLA operativo |
+| **SC-002** | Notificación a M1 encolada en < 1 segundo | Outbox transaccional, cola de notificación de CU-22 y SLA operativo |
 | **SC-003** | Cero posibilidad de cancelar o No-Show tras inicio | Bloqueo definitivo documentado |
 | **SC-004** | 100% de inicios notifican a M3 para activar póliza | Publicación garantizada en RabbitMQ |
 | **SC-005** | Cero cobros monetarios ejecutados en Módulo 2 | Neutralidad financiera de la interfaz |
