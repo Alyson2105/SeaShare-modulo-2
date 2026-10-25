@@ -15,10 +15,10 @@ Cuando una disputa sobre el depósito de garantía termina, M2 le avisa a M3 el 
 ## 2. Cuándo se publica
 
 Solo cuando la disputa llega a un estado final:
-- **Cierre automático (CU-16):** pasaron las 24 horas sin reclamo del propietario. La disputa se cierra como RECHAZADA.
-- **Resolución del Administrador (CU-17):** decide ACEPTADA o RECHAZADA.
+- **Cierre automático (CU-16):** pasaron las 24 horas sin reclamo del propietario. La disputa se cierra como REJECTED.
+- **Resolución del Administrador (CU-17):** decide ACCEPTED o REJECTED.
 
-Mientras la disputa está PENDIENTE no se publica nada. M3 acepta ese estado, pero M2 no lo necesita enviar.
+Mientras la disputa está PENDING no se publica nada. M3 acepta ese estado, pero M2 no lo necesita enviar.
 
 ## 3. Dónde se publica
 
@@ -51,15 +51,15 @@ Qué estado de la disputa en M2 se publica como qué `status`:
 
 | Estado en M2 | `status` que recibe M3 | Qué hace M3 |
 |---|---|---|
-| RECHAZADA | `REJECTED` | Reembolsa el 100 % del depósito al arrendatario |
-| ACEPTADA | `COMPLETED` | Liquida el 100 % del depósito al propietario |
-| PENDIENTE | No se publica | — |
+| REJECTED | `REJECTED` | Reembolsa el 100 % del depósito al arrendatario |
+| ACCEPTED | `COMPLETED` | Liquida el 100 % del depósito al propietario |
+| PENDING | No se publica | — |
 
-La API REST de M2 sigue usando ACEPTADA / RECHAZADA. La traducción a `COMPLETED` / `REJECTED` se hace solo al armar el mensaje para M3. El motivo que escribe el Administrador se guarda en M2 y no viaja a M3.
+La API REST de M2 sigue usando ACCEPTED / REJECTED. La traducción a `COMPLETED` / `REJECTED` se hace solo al armar el mensaje para M3. El motivo que escribe el Administrador se guarda en M2 y no viaja a M3.
 
 ## 5. Ejemplos
 
-Cierre automático por vencimiento (RECHAZADA → `REJECTED`):
+Cierre automático por vencimiento (REJECTED → `REJECTED`):
 
 ```json
 {
@@ -71,7 +71,7 @@ Cierre automático por vencimiento (RECHAZADA → `REJECTED`):
 }
 ```
 
-El Administrador acepta el reclamo (ACEPTADA → `COMPLETED`):
+El Administrador acepta el reclamo (ACCEPTED → `COMPLETED`):
 
 ```json
 {
@@ -85,8 +85,8 @@ El Administrador acepta el reclamo (ACEPTADA → `COMPLETED`):
 
 ## 6. Reglas de procesamiento
 
-1. **Solo estados finales**: se publica únicamente cuando la disputa llega a ACEPTADA o RECHAZADA (ver sección 2). Mientras está PENDIENTE no se publica nada.
-2. **Traducción de estados**: M2 usa ACEPTADA / RECHAZADA en su API REST y traduce a `COMPLETED` / `REJECTED` solo al armar el mensaje (tabla de la sección 4).
+1. **Solo estados finales**: se publica únicamente cuando la disputa llega a ACCEPTED o REJECTED (ver sección 2). Mientras está PENDING no se publica nada.
+2. **Traducción de estados**: M2 usa ACCEPTED / REJECTED en su API REST y traduce a `COMPLETED` / `REJECTED` solo al armar el mensaje (tabla de la sección 4).
 3. **Un solo evento final por disputa**: los estados finales son inmutables. Si el Administrador y el cierre automático coinciden, el control de concurrencia asegura que solo una transacción gane y emita el evento.
 4. **Motivo**: el motivo del Administrador se guarda en M2 y no viaja a M3.
 5. **Clave del evento**: `event_key` sigue el formato `disputa-<id>-<estado>`; es la misma en cualquier reenvío del mismo resultado. M3 descarta duplicados por `(reservation_id, dispute_id, event_key)`.

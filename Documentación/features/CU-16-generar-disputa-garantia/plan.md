@@ -23,7 +23,7 @@ Este endpoint permite al **Propietario registrado** radicar formalmente su recla
 1. **Verificación de Legitimidad y Estado Operativo (`FR-006`, `SC-005`)**:
    - Valida mediante el token JWT que el solicitante sea el propietario registrado de la embarcación vinculada a la reserva.
    - Valida que la disputa exista y se encuentre en estado `PENDING`.
-   - Valida que la ventana contractual de 24 horas contada desde la creación de la disputa aún permanezca abierta (`ahora < fecha_fin_ventana`). Si la ventana expiró, el reclamo se deniega con `409 Conflict` (`WINDOW_EXPIRED`), pues el sistema ya habrá cerrado la disputa automáticamente en `REJECTED`.
+    - Valida que la ventana contractual de 24 horas contada desde la creación de la disputa aún permanezca abierta (`now < window_end`). Si la ventana expiró, el reclamo se deniega con `409 Conflict` (`WINDOW_EXPIRED`), pues el sistema ya habrá cerrado la disputa automáticamente en `REJECTED`.
 2. **Registro Fáctico del Reclamo (`FR-006`, `FR-015`)**:
    - Almacena la descripción detallada del daño o problema reportado por el Propietario.
    - Registra la categoría opcional del daño (`structure`, `engine`, `equipment`, `cleaning`, `delay`) y URLs opcionales de evidencia fotográfica.
@@ -109,7 +109,7 @@ Este endpoint permite al **Propietario registrado** radicar formalmente su recla
     "end_at": "2026-10-10T10:00:00-05:00",
     "window_status": "CLOSED_BY_CLAIM_FILED"
   },
-  "message": "Tu reclamo ha quedado formalmente registrado y ha sido derivado a la bandeja de revisión administrativa. La disputa continuará en estado PENDIENTE hasta su resolución por un Administrador. No se ha aplicado ningún débito ni cálculo monetario."
+  "message": "Tu reclamo ha quedado formalmente registrado y ha sido derivado a la bandeja de revisión administrativa. La disputa continuará en estado PENDING hasta su resolución por un Administrador. No se ha aplicado ningún débito ni cálculo monetario."
 }
 ```
 
@@ -176,7 +176,7 @@ curl -X POST "https://api.seashare.com/api/v1/disputes/d1a2b3c4-e5f6-7a8b-9c0d-1
     "end_at": "2026-10-10T10:00:00-05:00",
     "window_status": "CLOSED_BY_CLAIM_FILED"
   },
-  "message": "Tu reclamo ha quedado formalmente registrado y ha sido derivado a la bandeja de revisión administrativa. La disputa continuará en estado PENDIENTE hasta su resolución por un Administrador. No se ha aplicado ningún débito ni cálculo monetario."
+  "message": "Tu reclamo ha quedado formalmente registrado y ha sido derivado a la bandeja de revisión administrativa. La disputa continuará en estado PENDING hasta su resolución por un Administrador. No se ha aplicado ningún débito ni cálculo monetario."
 }
 ```
 
@@ -200,7 +200,7 @@ Todos los errores retornan el sobre uniforme con `code` y `message`:
 | **`401 Unauthorized`** | `AUTH_TOKEN_MISSING_OR_INVALID` | El header `Authorization` no fue provisto o expiró. | `{"code": "AUTH_TOKEN_MISSING_OR_INVALID", "message": "Token de autenticación ausente o inválido."}` |
 | **`403 Forbidden`** | `FORBIDDEN_NOT_OWNER` | El usuario autenticado no es el Propietario registrado del barco asociado a la disputa. | `{"code": "FORBIDDEN_NOT_OWNER", "message": "Acceso denegado: solo el propietario registrado de la embarcación puede radicar un reclamo de garantía."}` |
 | **`404 Not Found`** | `DISPUTE_NOT_FOUND` | La disputa no existe en la base de datos de Módulo 2. | `{"code": "DISPUTE_NOT_FOUND", "message": "No se encontró ninguna disputa de garantía asociada al identificador provisto."}` |
-| **`409 Conflict`** | `WINDOW_EXPIRED` | La ventana de 24 horas ya venció y la disputa fue cerrada automáticamente en `REJECTED`. | `{"code": "WINDOW_EXPIRED", "message": "La ventana contractual de 24 horas ha expirado. La disputa fue cerrada automáticamente por el sistema como improcedente (RECHAZADA)."}` |
+| **`409 Conflict`** | `WINDOW_EXPIRED` | La ventana de 24 horas ya venció y la disputa fue cerrada automáticamente en `REJECTED`. | `{"code": "WINDOW_EXPIRED", "message": "La ventana contractual de 24 horas ha expirado. La disputa fue cerrada automáticamente por el sistema como improcedente (REJECTED)."}` |
 | **`409 Conflict`** | `CLAIM_ALREADY_EXISTS` | Ya se radicó previamente un reclamo para esta disputa. Solo se admite un único registro formal. | `{"code": "CLAIM_ALREADY_EXISTS", "message": "Ya existe un reclamo registrado en curso para esta disputa de garantía. No se admiten múltiples registros simultáneos."}` |
 | **`409 Conflict`** | `DISPUTE_ALREADY_RESOLVED` | La disputa ya no está en `PENDING` (se encuentra en `ACCEPTED` o `REJECTED`). | `{"code": "DISPUTE_ALREADY_RESOLVED", "message": "No es posible radicar reclamos sobre una disputa que ya ha alcanzado un estado final."}` |
 | **`500 Internal Server Error`** | `INTERNAL_SERVER_ERROR` | Fallo de base de datos al persistir el reclamo. | `{"code": "INTERNAL_SERVER_ERROR", "message": "Error interno del servidor al procesar el reclamo de garantía."}` |

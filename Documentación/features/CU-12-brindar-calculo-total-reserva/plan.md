@@ -3,13 +3,11 @@
 | Campo | Valor |
 |---|---|
 | Caso de uso de Módulo 2 | CU-12 Brindar cálculo total de la reserva (invocado por CU-03 Iniciar pago, `<<include>>`) |
-| Contraparte en Módulo 3 | `rest/UC04-valor-calculado-reserva.md` |
+| Contraparte en Módulo 3 | UC04 Valor calculado de la reserva (Módulo 3); el contrato de Módulo 2 es este `plan.md` |
 | Dirección | Sistema de Reservas y Operaciones (Módulo 2) → sistema (Módulo 3) |
 | ¿Responde? | Sí (síncrono) |
 | Efectos secundarios | En Módulo 3: actualiza la `InformaciónDeReserva` con los montos calculados (por eso es `POST`) |
 | Fecha | 2026-10-09 |
-
-Leyenda y convenciones comunes: [`../README.md`](../README.md).
 
 ## 1. Propósito
 
@@ -116,7 +114,7 @@ Módulo 2 llama con la identidad de servicio "Sistema de Reservas y Operaciones"
 1. **SLA y timeout**: ratificar con Módulo 3 SLA de 800 ms y timeout de 1000 ms. CU-12 SC-005 sigue con placeholder.
 2. **Moneda y `calculation_id`**: CU-12 FR-005 exige moneda e identificador de liquidación, y CU-11 prohíbe asumir una divisa por defecto. Módulo 3 no los envía, y Módulo 2 usaría COP fijo.
 3. **Incrementos de fin de semana y temporada**: confirmar si el UC04 de Módulo 3 los incluye, porque las estimaciones sí los aplican y hoy el total final podría salir menor que la estimación.
-4. **Evento `reservation.info.provided`**: ningún CU de Módulo 2 lo publica con claridad. Ver `events/reservation-info-provided.md`.
+4. **Evento `reservation.info.provided` [RESUELTO]**: resuelto. El evento lo define el [`plan.event.md` de CU-02](../CU-02-iniciar-reserva/plan.event.md) (quién lo publica: Módulo 2, CU-02; cuándo: al guardar la reserva en Iniciada, mediante outbox; campos: los de ese documento).
 5. **Nombres de campos**: CU-12 usa `base_rental_amount`, `insurance_total_amount` y `security_deposit_amount`. Módulo 3 usa `rental_amount`, `insurance_amount` y `guarantee_deposit_amount`.
 6. **Códigos de error de Módulo 2**: `INTERNAL_ERROR` y `CALCULATION_UNAVAILABLE` no siguen el formato `type/title/status/detail/code/retryable` del README.
 7. **Semántica del total (H13)**: Módulo 3 define `total_amount` con el depósito incluido. Confirmar que la vista y el snapshot de Módulo 2 adoptan esa definición.

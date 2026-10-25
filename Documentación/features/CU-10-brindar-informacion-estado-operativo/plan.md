@@ -71,7 +71,7 @@ GET /api/v1/vessels/{vessel_id}/operational-status
 | Valor de `operational_status` | Significado en Módulo 1 | Dictamen en Módulo 2 | Efecto en CU-02 / CU-03 |
 |---|---|---|---|
 | `AVAILABLE` | Activo náutico libre para alquiler comercial | **Apto para Reserva** | Permite continuar con la creación de reserva o inicio de pago |
-| `RESERVED` | Activo bloqueado temporalmente por pago en curso o reserva confirmada | **No Apto para Reserva** | Rechaza con `409 Conflict` (motivo: bloqueado por otro proceso) |
+| `RESERVED` | Activo bloqueado por una reserva ya confirmada | **No Apto para Reserva** | Rechaza con `409 Conflict` (motivo: bloqueado por otra reserva confirmada) |
 | `IN_NAVIGATION` | Embarcación en el mar cumpliendo un contrato de viaje | **No Apto para Reserva** | Rechaza con `409 Conflict` (motivo: embarcación en uso náutico) |
 | `MAINTENANCE_CLEANING` | Inhabilitada por reparaciones mecánicas, aseo o inspección | **No Apto para Reserva** | Rechaza con `409 Conflict` (motivo: activo inhabilitado) |
 
@@ -129,7 +129,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/vessels/8f4b2319-58b9-4c8d-b
 |---|---|---|---|
 | `400 Bad Request` | `vessel_id` con formato UUID corrupto | Módulo 2 aborta sin reintento | `400 Bad Request` (`INVALID_ID`) |
 | `401 Unauthorized` / `403 Forbidden` | Credencial de servicio de M2 rechazada | Alerta crítica de seguridad en observabilidad | `500 Internal Server Error` (`INTERNAL_ERROR`) |
-| `404 Not Found` | Embarcación no existe en los registros de flota | Declara activo inexistente sin reintento (SC-005) | `404 Not Found` (`VESSEL_UNAVAILABLE`) |
+ | `404 Not Found` | Embarcación no existe en los registros de flota | Declara activo inexistente sin reintento (SC-005) | `404 Not Found` (`VESSEL_NOT_FOUND`) |
 | `500 Internal Server Error` / `502 Bad Gateway` | Falla interna en los servidores de Módulo 1 | Aplica máximo 1 reintento rápido; si persiste, activa *fail-safe* preventivo | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |
 | `Timeout` (> 300 ms) | Latencia excedida en la red o base de datos de M1 | Ejecuta 1 reintento inmediato; si se agota, activa *fail-safe* preventivo | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |
 

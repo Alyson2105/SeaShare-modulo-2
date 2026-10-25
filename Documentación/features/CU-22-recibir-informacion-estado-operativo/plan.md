@@ -39,7 +39,7 @@ Esta interfaz asíncrona permite a Módulo 2 informar a Módulo 1 el **estado op
    - Módulo 2 no espera una respuesta de negocio de Módulo 1 ni altera la transición local según el resultado de la entrega; la consistencia es eventual y se alcanza por reintento.
 7. **Fuera de Alcance (FR-009)**:
    - No se valida ni resuelve doble reserva en el marco de esta notificación; esa prevención es responsabilidad interna de Módulo 2 y ocurre antes de confirmar la reserva.
-   - No se notifican las transiciones a `Iniciada`, `Pendiente de pago`, `Expirada` ni `Pago Fallido`.
+   - No se notifican las transiciones a `Iniciada`, `Pendiente de pago`, `Expirada` ni `Pago Fallido`; `Cancelada` solo se notifica si la reserva ya había alcanzado `Reservada`.
 
 ---
 
@@ -278,6 +278,5 @@ stateDiagram-v2
 - `[NEEDS CLARIFICATION: exchange, routing key y cola de Módulo 1]`: nombres pendientes; el contrato usa los placeholders `<exchange-pendiente-de-definir>`, `<routing-key-pendiente-de-definir>` y `<nombre-cola-pendiente-de-definir>`.
 - `[NEEDS CLARIFICATION: último salto a Módulo 1]`: consumo directo de la cola (AMQP) vs. relay HTTP (`M1_HTTP` en `technical-plan/plan.md`).
 - `[NEEDS CLARIFICATION: garantías de orden]`: el edge case "Entrega fuera de orden" de CU-22 sigue abierto.
-- `[NEEDS CLARIFICATION: contrato del receptor en CU-08]`: `CU-08/plan.md` describe `PATCH/PUT /api/v1/vessels/{vessel_id}/operational-status` con `reason` y `reservation_id`, sin `event_id`; diverge del payload de 4 campos de este contrato.
 - `[NEEDS CLARIFICATION: 4xx permanentes]`: acordar con Módulo 1 qué códigos se consideran permanentes.
 - **Inconsistencia detectada (no corregida)**: el enum de `destino` en `technical-plan/plan.md` es `AMQP | M1_HTTP` y la decisión D-07 menciona "PUT a M1". Este contrato asume publicación AMQP en la cola de CU-22; el valor `M1_HTTP` debe revisarse cuando se cierre el contrato con Módulo 1.

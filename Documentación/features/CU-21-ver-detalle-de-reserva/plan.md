@@ -76,7 +76,7 @@ Este endpoint de solo lectura expone la ficha técnica y contractual completa de
   "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
   "reservation_code": "#RS-4492",
   "status": "RESERVED",
-  "sub_status": null,
+  "cancellation_subtype": null,
   "status_badge": {
     "text": "Confirmada",
     "semantic_color": "verde",
@@ -156,7 +156,7 @@ Este endpoint de solo lectura expone la ficha técnica y contractual completa de
 | `reservation_id` | String (UUID) | No nulo | Identificador universal único de la reserva. |
 | `reservation_code` | String | No nulo | Código de referencia náutica (ej. `"#RS-4492"`). |
 | `status` | String (Enum) | No nulo | Estado operativo principal (`"INITIATED"`, `"PENDING_PAYMENT"`, `"RESERVED"`, `"IN_NAVIGATION"`, `"COMPLETED"`, `"CANCELLED"`, `"EXPIRED"`, `"PAYMENT_FAILED"`). |
-| `sub_status` | String (Enum) | Nulo condicional | Sub-clasificación contractual en reservas canceladas (`"FLEXIBLE"`, `"MODERATE"`, `"LATE"`, `"BY_OWNER"`, `"NO_SHOW"`). Nulo en otros estados. |
+| `cancellation_subtype` | String (Enum) | Nulo condicional | Sub-clasificación contractual en reservas canceladas (`"FLEXIBLE"`, `"MODERATE"`, `"LATE"`, `"BY_OWNER"`, `"NO_SHOW"`). Nulo en otros estados. |
 | `status_badge` | Objeto | No nulo | Datos semánticos de visualización (`text`, `semantic_color`, `description`). |
 | `vessel` | Objeto | No nulo | Ficha técnica resumida del activo y sus comodidades incluidas (`included_services[]`). |
 | `itinerary` | Objeto | No nulo | Detalle cronológico pactado y tiempos reales de navegación (`actual_departure_at`, `actual_arrival_at`, `departure_port`). |
@@ -192,7 +192,7 @@ curl -X GET "https://api.seashare.com/api/v1/reservations/c1f7a8b2-5e4d-4c3b-8a1
   "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
   "reservation_code": "#RS-4492",
   "status": "RESERVED",
-  "sub_status": null,
+  "cancellation_subtype": null,
   "status_badge": {
     "text": "Confirmada",
     "semantic_color": "verde",
@@ -281,7 +281,7 @@ curl -X GET "https://api.seashare.com/api/v1/reservations/a9b8c7d6-e5f4-3a2b-1c0
   "reservation_id": "a9b8c7d6-e5f4-3a2b-1c0d-9e8f7a6b5c4d",
   "reservation_code": "#RS-4480",
   "status": "IN_NAVIGATION",
-  "sub_status": null,
+  "cancellation_subtype": null,
   "status_badge": {
     "text": "En navegación",
     "semantic_color": "amarillo",
@@ -369,7 +369,7 @@ curl -X GET "https://api.seashare.com/api/v1/reservations/f5a6b7c8-9d0e-1f2a-3b4
   "reservation_id": "f5a6b7c8-9d0e-1f2a-3b4c-5d6e7f8a9b0c",
   "reservation_code": "#RS-2950",
   "status": "COMPLETED",
-  "sub_status": null,
+  "cancellation_subtype": null,
   "status_badge": {
     "text": "Completada",
     "semantic_color": "verde",
@@ -456,7 +456,7 @@ curl -X GET "https://api.seashare.com/api/v1/reservations/8b9c0d1e-2f3a-4b5c-6d7
   "reservation_id": "8b9c0d1e-2f3a-4b5c-6d7e-8f9a0b1c2d3e",
   "reservation_code": "#RS-1904",
   "status": "CANCELLED",
-  "sub_status": "NO_SHOW",
+  "cancellation_subtype": "NO_SHOW",
   "status_badge": {
     "text": "Cancelado por inasistencia",
     "semantic_color": "rojo",
@@ -573,7 +573,7 @@ El objeto `available_actions` abstrae la complejidad temporal y de roles:
 | **FR-003** | Exponer ID, fechas, horas, estado, sub-estado y breakdown monetario guardado. | Estructura JSON completa en sección 4.1. |
 | **FR-004** | Todos los valores financieros son de solo lectura y reflejan lo devuelto por Módulo 3. | Regla documentada en sección 2 y 7.1. Cero matemáticas locales. |
 | **FR-005** | En `RESERVED`, proveer punto de acceso para detonar `Solicitar cancelación`. | Flag `available_actions.can_cancel: true` en estado `RESERVED`. |
-| **FR-006** | En `CANCELLED`, mostrar sub-estado exacto junto con el monto total original. | Campos `sub_status` y `payment_summary.total_paid` persistido. |
+| **FR-006** | En `CANCELLED`, mostrar sub-estado exacto junto con el monto total original. | Campos `cancellation_subtype` y `payment_summary.total_paid` persistido. |
 | **FR-007** | Bloque de "Itinerario" con fechas pactadas, puerto y salidas/llegadas reales. | Objeto `itinerary` con `actual_departure_at` y `actual_arrival_at`. |
 | **FR-008** | Servicios que incluye su reserva en etiquetas para Arrendatario. | Arreglo `vessel.included_services[]`. |
 | **FR-009** | Datos del interlocutor (Propietario / Cliente con viajes previos). | Objetos `renter.previous_trips` y `owner.name`. |

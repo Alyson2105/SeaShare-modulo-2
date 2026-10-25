@@ -10,13 +10,14 @@ Al ejecutarse exitosamente:
 1. Valida que la reserva exista y se encuentre estrictamente en estado **`RESERVED`** (FR-001, FR-004).
 2. Valida la legitimación: el usuario autenticado debe ser unívocamente el **Propietario registrado** de la embarcación (FR-002, SC-006).
 3. Verifica la ventana de zarpe: la solicitud solo se habilita a partir de la **fecha y hora exacta de zarpe pactada** (sin antelación, FR-003). Si se intenta registrar anticipadamente, rechaza con `409 Conflict` indicando el tiempo faltante (FR-003, FR-011).
-4. No existe límite posterior estricto: una vez alcanzada la hora de zarpe, permanece habilitado mientras la reserva siga en `RESERVED`. Si el cliente llegó tarde (superando los 30 min de tolerancia) y el Propietario decide admitirlo en lugar de marcar inasistencia, este registro consuma el inicio del viaje (FR-009).
-5. Invoca a `Actualizar estado reserva` (CU-08) transicionando el agregado al estado **`IN_NAVIGATION`** (FR-005).
-6. Desactiva de forma irreversible la potestad de ejecutar `CU-05 Marcar inasistencia` o `CU-04 Solicitar cancelación` (FR-009, SC-003).
-7. Notifica de forma asíncrona a las dependencias externas a través de CU-08:
+4. Verifica que la embarcación no se encuentre en navegación activa por una travesía previa: comprueba que no exista otra reserva para el mismo `vessel_id` en estado **`IN_NAVIGATION`** que no haya realizado su check-out en muelle mediante `CU-07 Marcar fin de la navegación`. De existir, rechaza con HTTP `409 Conflict` (`VESSEL_CURRENTLY_IN_NAVIGATION`).
+5. No existe límite posterior estricto: una vez alcanzada la hora de zarpe, permanece habilitado mientras la reserva siga en `RESERVED`. Si el cliente llegó tarde (superando los 30 min de tolerancia) y el Propietario decide admitirlo en lugar de marcar inasistencia, este registro consuma el inicio del viaje (FR-009).
+6. Invoca a `Actualizar estado reserva` (CU-08) transicionando el agregado al estado **`IN_NAVIGATION`** (FR-005).
+7. Desactiva de forma irreversible la potestad de ejecutar `CU-05 Marcar inasistencia` o `CU-04 Solicitar cancelación` (FR-009, SC-003).
+8. Notifica de forma asíncrona a las dependencias externas a través de CU-08:
    - Encola en la cola de notificación a Módulo 1 definida en CU-22 (`Recibir información estado operativo`, invocado vía `<<include>>`) la señal de la embarcación al estado **`IN_NAVIGATION`** (FR-007, SC-002). El flujo no espera respuesta de Módulo 1 ni depende de ella: la entrega se garantiza con reintentos y backoff, DLQ e idempotencia por identificador único de evento (CU-22 FR-006), y un fallo de entrega no revierte la transición local de Módulo 2.
-   - Publica el evento asíncrono en RabbitMQ ([`CU-14-estado-reserva.md`](../event/CU-14-estado-reserva.md)) hacia Módulo 3 informando el estado **`IN_NAVIGATION`** para la **activación formal de la cobertura del seguro náutico** (FR-008, SC-004).
-8. **Regla estricta "Sin dinero"**: Módulo 2 no gestiona cobros de combustible, retenciones de garantía ni importes adicionales en muelle (FR-010, SC-005).
+   - Publica el evento asíncrono en RabbitMQ ([plan de CU-14](../CU-14-recibir-estado-reserva/plan.md)) hacia Módulo 3 informando el estado **`IN_NAVIGATION`** para la **activación formal de la cobertura del seguro náutico** (FR-008, SC-004).
+9. **Regla estricta "Sin dinero"**: Módulo 2 no gestiona cobros de combustible, retenciones de garantía ni importes adicionales en muelle (FR-010, SC-005).
 
 ---
 
@@ -158,8 +159,9 @@ curl -X POST "https://api.seashare.com/api/v1/reservations/e4f81c92-7a20-4215-9c
 | `403 Forbidden` | El usuario autenticado no es el Propietario registrado de la embarcación (FR-002, SC-006) | `{ "code": "PROFILE_NOT_AUTHORIZED", "message": "Solo el propietario registrado de la embarcación puede marcar el inicio de la navegación" }` |
 | `404 Not Found` | La reserva no existe en Módulo 2 | `{ "code": "RESERVATION_NOT_FOUND", "message": "La reserva especificada no existe" }` |
 | `409 Conflict` (Salida Anticipada) | Intento de registrar el zarpe antes de la fecha y hora pactada (FR-003, FR-011) | `{ "code": "EARLY_DEPARTURE", "message": "El registro de salida solo se habilita a partir de la fecha y hora exacta programada para el zarpe (2026-11-15T09:00:00-05:00)" }` |
-| `409 Conflict` (Estado Incompatible) | La reserva no está en estado `RESERVED` (ej. está `INITIATED`, `PENDING_PAYMENT`, `CANCELLED`, `EXPIRED`) (FR-004, SC-001) | `{ "code": "INCOMPATIBLE_STATE", "message": "No se puede iniciar navegación en una reserva con estado actual: Pendiente de Pago" }` |
+ | `409 Conflict` (Estado Incompatible) | La reserva no está en estado `RESERVED` (ej. está `INITIATED`, `PENDING_PAYMENT`, `CANCELLED`, `EXPIRED`) (FR-004, SC-001) | `{ "code": "INVALID_RESERVATION_STATE", "message": "No se puede iniciar navegación en una reserva con estado actual: Pendiente de Pago" }` |
 | `409 Conflict` (Viaje Ya Iniciado) | La reserva ya se encuentra en `IN_NAVIGATION` (reintento duplicado) | `{ "code": "TRIP_ALREADY_STARTED", "message": "La navegación ya ha sido registrada previamente para esta reserva" }` |
+| `409 Conflict` (Barco en Navegación Previa) | La travesía anterior de la misma embarcación no ha realizado el check-out en muelle (CU-07) | `{ "code": "VESSEL_CURRENTLY_IN_NAVIGATION", "message": "La embarcación se encuentra actualmente en navegación en otra reserva activa. Debe completarse el check-out en muelle de la travesía anterior antes de registrar un nuevo zarpe" }` |
 | `500 Internal Server Error` | Excepción interna no controlada durante la actualización | `{ "code": "INTERNAL_ERROR", "message": "Ocurrió un error inesperado al registrar el inicio de navegación" }` |
 
 ---
@@ -182,6 +184,7 @@ No aplica. Operación puntual sobre una reserva individual.
 
 - **Inhabilitación Irreversible de Inasistencia y Cancelación**: la consolidación del paso a `IN_NAVIGATION` es atómica. Una vez asentado el estado, el sistema inhabilita de forma definitiva cualquier solicitud posterior de `CU-05 Marcar inasistencia` o `CU-04 Solicitar cancelación` (FR-009, SC-003).
 - **Activación de Cobertura de Seguros en Módulo 3**: la emisión del evento a RabbitMQ garantiza que Módulo 3 active de inmediato la cobertura del seguro náutico por pasajero adquirido en la reserva (FR-008, SC-004).
+- **Control de Salida sin Check-out Previo (CU-07)**: Para proteger la integridad física y operativa del activo, el sistema valida que no coexistan dos reservas de la misma embarcación en estado `IN_NAVIGATION`. Si una travesía previa aún no ha completado el check-out en muelle a través de `CU-07 Marcar fin de la navegación`, el inicio de la nueva reserva queda bloqueado con el error `409 VESSEL_CURRENTLY_IN_NAVIGATION` hasta que la anterior sea formalmente cerrada.
 
 ---
 
@@ -189,14 +192,14 @@ No aplica. Operación puntual sobre una reserva individual.
 
 | Requisito / Criterio | Descripción en Spec | Elemento de este Contrato |
 |---|---|---|
-| **FR-001** | Inicio exclusivo sobre reservas en estado `RESERVED` | Validación de estado previo y error `409 INCOMPATIBLE_STATE` |
+| **FR-001** | Inicio exclusivo sobre reservas en estado `RESERVED` | Validación de estado previo y error `409 INVALID_RESERVATION_STATE` |
 | **FR-002** | Validación estricta de identidad del Propietario | Chequeo de pertenencia reflejado en `403 PROFILE_NOT_AUTHORIZED` |
 | **FR-003** | Habilitación estricta a partir de la hora pactada (sin antelación) | Error `409 EARLY_DEPARTURE` |
-| **FR-004** | Incompatibilidad con estados no permitidos | Matriz de errores tipados en la Sección 3 |
+| **FR-004** | Incompatibilidad con estados no permitidos y bloqueo si el activo sigue navegando en reserva previa (CU-07) | Matriz de errores (`409 INVALID_RESERVATION_STATE` y `409 VESSEL_CURRENTLY_IN_NAVIGATION`) |
 | **FR-005** | Transición a `IN_NAVIGATION` mediante CU-08 | Respuesta `200 OK` con `status: "IN_NAVIGATION"` |
 | **FR-006** | Registro de auditoría (hora real y notas de salida) | Campos `actual_departure_at` y `delivery_notes` del request |
-| **FR-007** | Notificación de `IN_NAVIGATION` a Módulo 1 | Integración asíncrona respaldada por [`m1-asignar-estado-operativo.md`](../external/m1-asignar-estado-operativo.md) y por la cola de notificación definida en CU-22 |
-| **FR-008** | Notificación a Módulo 3 para activación de seguro | Evento AMQP respaldado por [`CU-14-estado-reserva.md`](../event/CU-14-estado-reserva.md) |
+| **FR-007** | Notificación de `IN_NAVIGATION` a Módulo 1 | Integración asíncrona respaldada por el [plan de CU-22](../CU-22-recibir-informacion-estado-operativo/plan.md) y por la cola de notificación definida en CU-22 |
+| **FR-008** | Notificación a Módulo 3 para activación de seguro | Evento AMQP respaldado por el [plan de CU-14](../CU-14-recibir-estado-reserva/plan.md) |
 | **FR-009** | Desactivación permanente de No-Show y cancelación | Invariante técnica garantizada en Notas Transversales |
 | **FR-010** | Regla "Sin dinero" (cero cobros en muelle) | Respuesta sin conceptos monetarios |
 | **SC-001** | Cero inicios permitidos fuera de estado `RESERVED` | Verificado en control previo de máquina de estados |

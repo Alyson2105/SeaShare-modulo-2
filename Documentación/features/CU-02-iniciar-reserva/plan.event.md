@@ -41,8 +41,8 @@ Payload:
 |---|---|---|---|
 | `reservation_id` | UUID | Sí | La reserva recién creada |
 | `vessel_id` | UUID | Sí | `vessel_id` de la reserva |
-| `start_date` | date (YYYY-MM-DD) | Sí | `start_at` |
-| `end_date` | date (YYYY-MM-DD) | Sí | `end_at` |
+| `start_date` | date (YYYY-MM-DD) | Sí | `start_date` |
+| `end_date` | date (YYYY-MM-DD) | Sí | `end_date` |
 | `passengers` | integer | Sí | `passengers` |
 | `owner_id` | UUID | Sí | `owner.owner_id` de M1 (CU-09) |
 | `max_capacity` | integer | Sí | `max_capacity` de M1 (CU-09) |
@@ -66,7 +66,7 @@ Payload:
 3. **Validaciones previas**: `end_date >= start_date` y `1 <= passengers <= max_capacity`. Si no se cumplen, CU-02 responde 400 y no se crea la reserva ni se publica nada.
 4. **Sin dinero**: el mensaje no lleva montos ni tarifas. M3 busca la tarifa base por su cuenta.
 5. **Reemisión**: si la reserva se vuelve a registrar, se publica de nuevo con la información más reciente. M3 la sobrescribe (upsert) y descarta los montos calculados antes.
-6. **Orden**: este mensaje se publica antes del primer cambio de estado (`PENDING`). M3 solo puede calcular (CU-12) cuando ya lo procesó; si M3 responde que no encuentra la información, M2 reintenta unos instantes antes de devolver 503 `CALCULATION_UNAVAILABLE`.
+6. **Orden**: este mensaje se publica antes del primer cambio de estado (`PENDING_PAYMENT`). M3 solo puede calcular (CU-12) cuando ya lo procesó; si M3 responde que no encuentra la información, M2 reintenta unos instantes antes de devolver 503 `CALCULATION_UNAVAILABLE`.
 7. **Idempotencia**: cada mensaje lleva un `Message-Id` único; si se entrega más de una vez, M3 lo descarta por ese identificador.
 8. **Respuesta**: no aplica (unidireccional). Para M2 el mensaje se considera entregado cuando el broker confirma la recepción (publisher confirm); recién entonces se marca como publicado en el outbox.
 9. **Si algo falla**:

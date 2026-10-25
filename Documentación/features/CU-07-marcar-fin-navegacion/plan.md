@@ -14,7 +14,7 @@ Al ejecutarse exitosamente:
 5. Dispara internamente la apertura del ciclo de disputa invocando a `Generar disputa de garantía` (`CU-16`, `<<include>>`, FR-010): crea la entidad de disputa en estado `PENDING` y activa la **ventana fija de 24 horas** para que el Propietario pueda formalizar reclamos de daños si fuera necesario.
 6. Notifica de forma asíncrona a las dependencias externas a través de CU-08:
    - Encola en la cola de notificación a Módulo 1 definida en CU-22 (`Recibir información estado operativo`, invocado vía `<<include>>`) la señal de la embarcación al estado **`MAINTENANCE_CLEANING`** (FR-006, SC-002). El flujo no espera respuesta de Módulo 1 ni depende de ella: la entrega se garantiza con reintentos y backoff, DLQ e idempotencia por identificador único de evento (CU-22 FR-006). El retorno posterior a `AVAILABLE` es una transición interna de Módulo 1 (ver CU-22 FR-002).
-   - Publica el evento asíncrono en RabbitMQ ([`CU-14-estado-reserva.md`](../event/CU-14-estado-reserva.md)) hacia Módulo 3 informando el estado **`COMPLETED`** y adjuntando el texto de novedades si fue provisto (FR-007). En consecuencia, **Módulo 3 libera de inmediato el pago del alquiler al Propietario, pero la garantía permanece retenida hasta la resolución de la disputa (ventana de 24 h)** (decisión arquitectónica H4 de plan.md).
+   - Publica el evento asíncrono en RabbitMQ ([plan de CU-14](../CU-14-recibir-estado-reserva/plan.md)) hacia Módulo 3 informando el estado **`COMPLETED`** y adjuntando el texto de novedades si fue provisto (FR-007). En consecuencia, **Módulo 3 libera de inmediato el pago del alquiler al Propietario, pero la garantía permanece retenida hasta la resolución de la disputa (ventana de 24 h)** (decisión arquitectónica H4 de plan.md).
 7. **Regla estricta "Sin dinero"**: Módulo 2 no valora económicamente reparaciones, no cobra cargos por desembarque tardío ni descuenta fondos de la garantía (FR-008, SC-003).
 
 ---
@@ -160,7 +160,7 @@ curl -X POST "https://api.seashare.com/api/v1/reservations/e4f81c92-7a20-4215-9c
 | `401 Unauthorized` | Token ausente, inválido o expirado | `{ "code": "UNAUTHENTICATED", "message": "Token de autenticación ausente o inválido" }` |
 | `403 Forbidden` | El usuario autenticado no es el Propietario registrado de la embarcación (FR-002, SC-005) | `{ "code": "PROFILE_NOT_AUTHORIZED", "message": "Solo el propietario registrado de la embarcación puede marcar el fin de la navegación" }` |
 | `404 Not Found` | La reserva no existe en Módulo 2 | `{ "code": "RESERVATION_NOT_FOUND", "message": "La reserva especificada no existe" }` |
-| `409 Conflict` (Estado Incompatible) | La reserva no se encuentra en estado `IN_NAVIGATION` (ej. está `RESERVED`, `COMPLETED`, `CANCELLED`) (FR-009, SC-001) | `{ "code": "INCOMPATIBLE_STATE", "message": "No se puede finalizar la navegación en una reserva con estado actual: Reservada" }` |
+ | `409 Conflict` (Estado Incompatible) | La reserva no se encuentra en estado `IN_NAVIGATION` (ej. está `RESERVED`, `COMPLETED`, `CANCELLED`) (FR-009, SC-001) | `{ "code": "INVALID_RESERVATION_STATE", "message": "No se puede finalizar la navegación en una reserva con estado actual: Reservada" }` |
 | `409 Conflict` (Viaje Ya Cerrado) | La reserva ya fue cerrada previamente (operación terminal inmutable) | `{ "code": "TRIP_ALREADY_COMPLETED", "message": "La reserva ya se encuentra Completada y no admite nuevas modificaciones" }` |
 | `500 Internal Server Error` | Error no controlado durante la consolidación del cierre | `{ "code": "INTERNAL_ERROR", "message": "Ocurrió un error inesperado al marcar el fin de navegación" }` |
 
@@ -191,13 +191,13 @@ No aplica. Operación puntual sobre una reserva individual.
 
 | Requisito / Criterio | Descripción en Spec | Elemento de este Contrato |
 |---|---|---|
-| **FR-001** | Cierre exclusivo sobre reservas en estado `IN_NAVIGATION` | Validación de estado previo y error `409 INCOMPATIBLE_STATE` |
+| **FR-001** | Cierre exclusivo sobre reservas en estado `IN_NAVIGATION` | Validación de estado previo y error `409 INVALID_RESERVATION_STATE` |
 | **FR-002** | Validación estricta de identidad del Propietario | Chequeo de pertenencia reflejado en `403 PROFILE_NOT_AUTHORIZED` |
 | **FR-003** | Campo de texto opcional para reporte de novedades | Campo `remarks` en request body |
 | **FR-004** | Transición a `COMPLETED` mediante CU-08 | Respuesta `200 OK` con `status: "COMPLETED"` |
 | **FR-005** | Registro de auditoría (hora real de entrega y novedades) | Campos `actual_arrival_at` y log del evento de entrega |
-| **FR-006** | Señal de la embarcación hacia `MAINTENANCE_CLEANING` en M1 (el retorno a `AVAILABLE` es interno de M1; ver CU-22 FR-002) | Notificación asíncrona respaldada por [`m1-asignar-estado-operativo.md`](../external/m1-asignar-estado-operativo.md) y por la cola de notificación definida en CU-22 |
-| **FR-007** | Notificación de `COMPLETED` a M3 (pago libre, garantía retenida) | Evento AMQP respaldado por [`CU-14-estado-reserva.md`](../event/CU-14-estado-reserva.md) |
+| **FR-006** | Señal de la embarcación hacia `MAINTENANCE_CLEANING` en M1 (el retorno a `AVAILABLE` es interno de M1; ver CU-22 FR-002) | Notificación asíncrona respaldada por el [plan de CU-22](../CU-22-recibir-informacion-estado-operativo/plan.md) y por la cola de notificación definida en CU-22 |
+| **FR-007** | Notificación de `COMPLETED` a M3 (pago libre, garantía retenida) | Evento AMQP respaldado por el [plan de CU-14](../CU-14-recibir-estado-reserva/plan.md) |
 | **FR-008** | Regla estricta "Sin dinero" (cero cálculo de daños o demoras) | Cero campos monetarios en la interfaz |
 | **FR-009** | Rechazo sobre reservas que no estén `IN_NAVIGATION` | Matriz de errores tipados de la Sección 3 |
 | **FR-010** | Apertura de ventana de disputa de 24 horas vía CU-16 | Campos devueltos `dispute_id` y `dispute_window_expires_at` |

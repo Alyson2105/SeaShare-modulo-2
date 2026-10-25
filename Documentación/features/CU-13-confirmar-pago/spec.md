@@ -14,7 +14,7 @@
 
 ### User Story 1 - [Confirmar reserva tras aprobación exitosa del pago dentro del TTL] (Priority: P1)
 
-Módulo 3 notifica a Módulo 2 que la transacción de pago para una reserva pendiente ha sido aprobada exitosamente dentro de los 15 minutos de Time-To-Live (TTL). El sistema cancela el temporizador de expiración, registra la constancia de pago e invoca "CU-08 Actualizar estado reserva" para formalizar la reserva en estado "Reservada", asegurando que el activo quede debidamente bloqueado.
+Módulo 3 notifica a Módulo 2 que la transacción de pago para una reserva pendiente ha sido aprobada exitosamente dentro de los 15 minutos de Time-To-Live (TTL). El sistema cancela el temporizador de expiración, registra la constancia de pago e invoca "CU-08 Actualizar estado reserva" para formalizar la reserva en estado "RESERVED", asegurando que el activo quede debidamente bloqueado.
 
 **Why this priority**: Es la transición crítica que convierte una solicitud temporal de reserva en un contrato formal y confirmado. Sin la confirmación de pago, ninguna reserva puede consolidarse en la plataforma.
 
@@ -23,9 +23,9 @@ Módulo 3 notifica a Módulo 2 que la transacción de pago para una reserva pend
 **Acceptance Scenarios**:
 
 1. **Scenario**: Aprobación de pago dentro de la ventana de 15 minutos
-   - **Given** una reserva existente en estado "Pendiente de Pago" con un temporizador TTL de 15 minutos activo (tiempo restante > 0)
+   - **Given** una reserva existente en estado "PENDING_PAYMENT" con un temporizador TTL de 15 minutos activo (tiempo restante > 0)
    - **When** Módulo 3 invoca "CU-13 Confirmar pago" indicando resultado "Aprobado" y un identificador de transacción válido
-   - **Then** el sistema cancela inmediatamente el temporizador TTL de 15 minutos, invoca "CU-08 Actualizar estado reserva" para transicionar la reserva a "Reservada" y almacena el identificador de transacción y fecha de confirmación
+   - **Then** el sistema cancela inmediatamente el temporizador TTL de 15 minutos, invoca "CU-08 Actualizar estado reserva" para transicionar la reserva a "RESERVED" y almacena el identificador de transacción y fecha de confirmación
 
 2. **Scenario**: Persistencia de trazabilidad de la transacción
    - **Given** una confirmación de pago exitosa recibida desde Módulo 3
@@ -38,7 +38,7 @@ Módulo 3 notifica a Módulo 2 que la transacción de pago para una reserva pend
 
 Módulo 3 notifica que la transacción de pago fue rechazada por la pasarela (fondos insuficientes, tarjeta declinada, fallo de autenticación 3DS). El sistema registra el intento fallido y gestiona el ciclo de vida de la reserva según la política de reintentos definida.
 
-**Why this priority**: Garantiza que los intentos de pago fallidos sean manejados de manera controlada, evitando que una reserva quede congelada en limbo y permitiendo al Arrendatario conocer el estado de su intento o liberar el inventario.
+**Why this priority**: Garantiza que los intentos de pago fallidos sean manejados de manera controlada, evitando que una reserva quede congelada en limbo y permitiendo al Arrendatario conocer el estado de su intento o liberar la retención interna de Módulo 2; `Pago Fallido` no notifica a Módulo 1.
 
 **Independent Test**: Se puede probar enviando una notificación de pago con resultado "Rechazado" para una reserva en estado "Pendiente de Pago" y verificando que el sistema actualiza el registro con el motivo devuelto por Módulo 3 sin llevar la reserva al estado Reservada.
 
@@ -67,7 +67,7 @@ Si Módulo 3 reintenta la entrega del mensaje de confirmación de pago (por rein
 **Acceptance Scenarios**:
 
 1. **Scenario**: Recepción de confirmación duplicada para reserva ya en estado Reservada
-   - **Given** una reserva que ya se encuentra en estado "Reservada" con una referencia de transacción T_123
+   - **Given** una reserva que ya se encuentra en estado "RESERVED" con una referencia de transacción T_123
    - **When** Módulo 3 reenvía la confirmación de pago con la misma referencia T_123
    - **Then** el sistema responde con confirmación exitosa a Módulo 3, no dispara nuevas transiciones de estado ni encola nuevas notificaciones a Módulo 1
 
@@ -104,13 +104,13 @@ Si Módulo 3 reintenta la entrega del mensaje de confirmación de pago (por rein
   - El sistema NO DEBE transicionar la reserva a "Reservada".
   - El sistema DEBE responder a Módulo 3 con un código/mensaje de rechazo indicando que la reserva expiró por tiempo límite.
   - El sistema DEBE solicitar/instruir a Módulo 3 la reversión automática de los fondos cobrados al Arrendatario en la pasarela.
-- **FR-007**: El sistema DEBE ser estrictamente idempotente: si recibe una notificación con un identificador de transacción y estado idénticos a una confirmación previamente procesada para la misma reserva, DEBE responder afirmativamente sin repetir transiciones de estado ni generar nuevas llamadas colaterales. La estrategia de idempotencia se basa en la clave única `(id_transaccion_externo, resultado)` por reserva: la primera notificación procesada persiste esa clave en el historial de la reserva; cualquier notificación duplicada con la misma clave responde afirmativamente (HTTP 200) sin reejecutar transiciones ni llamadas colaterales.
+- **FR-007**: El sistema DEBE ser estrictamente idempotente: si recibe una notificación con un identificador de transacción y estado idénticos a una confirmación previamente procesada para la misma reserva, DEBE responder afirmativamente sin repetir transiciones de estado ni generar nuevas llamadas colaterales. La estrategia de idempotencia se basa en la clave única `(external_transaction_id, result)` por reserva: la primera notificación procesada persiste esa clave en el historial de la reserva; cualquier notificación duplicada con la misma clave responde afirmativamente (HTTP 200) sin reejecutar transiciones ni llamadas colaterales.
 - **FR-008**: El sistema **NO DEBE realizar cálculos de montos, cobros directos, retenciones de depósitos de garantía ni comunicarse directamente con pasarelas de pago**; toda esa operación es de exclusiva competencia de Módulo 3.
 
 ### Key Entities
 
-- **Reserva (`Reservation`)**: Entidad central de Módulo 2. Campos afectados: estado, ttl_expira_en, id_transaccion_pago, fecha_confirmacion_pago.
-- **Notificación de Confirmación de Pago (`PaymentConfirmationPayload`)**: Objeto de integración provisto por Módulo 3. Atributos: reserva_id, resultado (Aprobado / Rechazado / Fallido), id_transaccion_externo, timestamp_procesamiento, codigo_respuesta_pasarela, motivo_rechazo (opcional).
+- **Reserva (`Reservation`)**: Entidad central de Módulo 2. Campos afectados: estado, ttl_expires_at, payment_reference, payment_confirmed_at.
+- **Notificación de Confirmación de Pago (`PaymentConfirmationPayload`)**: Objeto de integración provisto por Módulo 3. Atributos: reservation_id, result (APPROVED / REJECTED / FAILED), external_transaction_id, processed_at, gateway_response_code, rejection_reason (opcional).
 
 ---
 

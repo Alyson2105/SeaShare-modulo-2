@@ -84,11 +84,11 @@ Este endpoint de solo lectura permite a los usuarios autenticados consultar el l
   "view_title": "Mis reservas | Reservas recibidas",
   "reservations": [
     {
-      "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
-      "reservation_code": "#RS-4492",
-      "status": "RESERVED",
-      "sub_status": null,
-      "status_badge": {
+  "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
+"reservation_code": "#RS-4492",
+"status": "RESERVED",
+"cancellation_subtype": null,
+"status_badge": {
         "text": "Confirmada",
         "semantic_color": "verde",
         "description": "Pago confirmado y lista para zarpe"
@@ -139,7 +139,7 @@ Este endpoint de solo lectura permite a los usuarios autenticados consultar el l
 | `reservations[].reservation_id` | String (UUID) | No nulo | Identificador universal único de la reserva. |
 | `reservations[].reservation_code` | String | No nulo | Código amigable de referencia náutica (ej. `"#RS-4492"`). |
 | `reservations[].status` | String (Enum) | No nulo | Estado operativo principal (`"INITIATED"`, `"PENDING_PAYMENT"`, `"RESERVED"`, `"IN_NAVIGATION"`, `"COMPLETED"`, `"CANCELLED"`, `"EXPIRED"`, `"PAYMENT_FAILED"`). |
-| `reservations[].sub_status` | String (Enum) | Nulo condicional | Sub-clasificación contractual en reservas canceladas (`"FLEXIBLE"`, `"MODERATE"`, `"LATE"`, `"BY_OWNER"`, `"NO_SHOW"`). Nulo en otros estados. |
+| `reservations[].cancellation_subtype` | String (Enum) | Nulo condicional | Sub-clasificación contractual en reservas canceladas (`"FLEXIBLE"`, `"MODERATE"`, `"LATE"`, `"BY_OWNER"`, `"NO_SHOW"`). Nulo en otros estados. |
 | `reservations[].status_badge` | Objeto | No nulo | Metadatos visuales para badges (texto legible y color semántico: `verde`, `amarillo`, `gris`, `rojo`). |
 | `reservations[].vessel` | Objeto | No nulo | Datos referenciales mínimos de la embarcación (ID, nombre, imagen y puerto). |
 | `reservations[].dates` | Objeto | No nulo | Rango temporal pactado, días y noches de navegación. |
@@ -181,7 +181,7 @@ curl -X GET "https://api.seashare.com/api/v1/reservations?page=1&limit=10&filter
       "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
       "reservation_code": "#RS-4492",
       "status": "RESERVED",
-      "sub_status": null,
+      "cancellation_subtype": null,
       "status_badge": {
         "text": "Confirmada",
         "semantic_color": "verde",
@@ -221,7 +221,7 @@ curl -X GET "https://api.seashare.com/api/v1/reservations?page=1&limit=10&filter
       "reservation_id": "d2e3f4a5-6b7c-8d9e-0f1a-2b3c4d5e6f7a",
       "reservation_code": "#RS-3810",
       "status": "CANCELLED",
-      "sub_status": "FLEXIBLE",
+      "cancellation_subtype": "FLEXIBLE",
       "status_badge": {
         "text": "Cancelada",
         "semantic_color": "rojo",
@@ -257,12 +257,12 @@ curl -X GET "https://api.seashare.com/api/v1/reservations?page=1&limit=10&filter
       "detail_url": "/api/v1/reservations/d2e3f4a5-6b7c-8d9e-0f1a-2b3c4d5e6f7a",
       "created_at": "2026-10-01T14:20:00-05:00"
     },
-    {
-      "reservation_id": "f5a6b7c8-9d0e-1f2a-3b4c-5d6e7f8a9b0c",
-      "reservation_code": "#RS-2950",
-      "status": "COMPLETED",
-      "sub_status": null,
-      "status_badge": {
+  {
+    "reservation_id": "f5a6b7c8-9d0e-1f2a-3b4c-5d6e7f8a9b0c",
+    "reservation_code": "#RS-2950",
+    "status": "COMPLETED",
+    "cancellation_subtype": null,
+    "status_badge": {
         "text": "Completada",
         "semantic_color": "verde",
         "description": "Viaje finalizado exitosamente"
@@ -329,7 +329,7 @@ curl -X GET "https://api.seashare.com/api/v1/reservations?page=1&limit=10&filter
       "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
       "reservation_code": "#RS-4492",
       "status": "RESERVED",
-      "sub_status": null,
+      "cancellation_subtype": null,
       "status_badge": {
         "text": "Confirmada",
         "semantic_color": "verde",
@@ -365,12 +365,12 @@ curl -X GET "https://api.seashare.com/api/v1/reservations?page=1&limit=10&filter
       "detail_url": "/api/v1/reservations/c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
       "created_at": "2026-10-09T10:00:00-05:00"
     },
-    {
-      "reservation_id": "a9b8c7d6-e5f4-3a2b-1c0d-9e8f7a6b5c4d",
-      "reservation_code": "#RS-4480",
-      "status": "IN_NAVIGATION",
-      "sub_status": null,
-      "status_badge": {
+  {
+    "reservation_id": "a9b8c7d6-e5f4-3a2b-1c0d-9e8f7a6b5c4d",
+    "reservation_code": "#RS-4480",
+    "status": "IN_NAVIGATION",
+    "cancellation_subtype": null,
+    "status_badge": {
         "text": "En navegación",
         "semantic_color": "amarillo",
         "description": "Viaje náutico en curso"
@@ -482,7 +482,7 @@ Las consultas se ejecutan con índices compuestos en base de datos (`renter_id, 
 | **FR-002** | Filtrar registros en BD según `renter_id` o `owner_id`. | Garantizado en lógica de backend descrita en sección 2 y 7.2. |
 | **FR-003** | Presentar embarcación, rango de fechas, estado vigente y precio total. | Presente en cada elemento del arreglo `reservations[]`. |
 | **FR-004** | Precio total expuesto debe ser el monto original congelado; cero cálculos en canceladas. | Objeto `total_price` con `is_frozen: true`. Cero cálculos de penalidad o deducción. |
-| **FR-005** | Mostrar sub-estados en reservas canceladas (`BY_OWNER`, `NO_SHOW`, etc.). | Campo `sub_status` e `status_badge` contextual. |
+| **FR-005** | Mostrar sub-estados en reservas canceladas (`BY_OWNER`, `NO_SHOW`, etc.). | Campo `cancellation_subtype` e `status_badge` contextual. |
 | **FR-006** | Enlace para invocar la vista profunda (`Ver detalle de reserva`). | Atributo `detail_url` que apunta a `/api/v1/reservations/{reservation_id}`. |
 | **FR-007** | Encabezados diferenciados ("Mis reservas" / "Reservas recibidas") y filtros de pestañas. | Campos `view_title` y parámetro `filter` (`all`, `history`, `cancelled`). |
 | **FR-008** | Badges de estado con colores semánticos (`verde`, `amarillo`, `gris`, `rojo`). | Objeto `status_badge` con `semantic_color`. |

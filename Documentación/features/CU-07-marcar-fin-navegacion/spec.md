@@ -6,7 +6,7 @@
 **External Dependencies (APIs)**:
 - **Módulo 1 (Gestión de Flota y Activos P2P)**: API externa `Asignar estado operativo` (cambio del estado del barco a `En Mantenimiento/Limpieza` al cerrar la navegación; el retorno a `Disponible` es una transición interna de Módulo 1, ver CU-22 FR-002).
 - **Módulo 3 (Liquidación, Seguros y Dispersión de Fondos)**: API externa `Recibir estado de reserva` (notificación del estado `Completada` para que Módulo 3 libera el pago al Propietario; la garantía permanece retenida hasta la resolución de la disputa (ventana de 24 h), adjuntando el texto de novedades si existe).
-- **Casos de uso internos de Módulo 2**: `Actualizar estado reserva` (`<<include>>`), `Generar disputa de garantía` (`CU-16`, `<<include>>`: al confirmar el cierre se crea la disputa en PENDIENTE con ventana de 24 horas).
+- **Casos de uso internos de Módulo 2**: `Actualizar estado reserva` (`<<include>>`), `Generar disputa de garantía` (`CU-16`, `<<include>>`: al confirmar el cierre se crea la disputa en PENDING con ventana de 24 horas).
 
 ---
 
@@ -88,7 +88,7 @@ Si alguien intenta registrar el fin de la navegación sobre una reserva que no e
 - **FR-007**:  El sistema DEBE indicar a "CU-08 Actualizar estado reserva" que llame a la API de Módulo 3 (`Recibir estado de reserva`) para notificar el cierre del viaje, de modo que Módulo 3 libera el pago al Propietario; la garantía permanece retenida hasta la resolución de la disputa (ventana de 24 h), adjuntando el texto de novedades si fue provisto.
 - **FR-008**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE calcular costos de reparación, cobros por demora ni realizar devoluciones o retenciones de dinero**. La evaluación financiera le corresponde exclusivamente al Módulo 3.
 - **FR-009**: Si la reserva se encuentra en cualquier estado diferente a "En Navegación", el sistema DEBE rechazar la solicitud e informar que el estado no es compatible.
-- **FR-010**: Al confirmar el cierre (reserva a `Completada`), el sistema DEBE invocar `Generar disputa de garantía` (`CU-16`, `<<include>>`) para crear la disputa asociada en estado PENDIENTE y abrir la ventana de 24 horas para el reclamo del Propietario. El plazo de reporte y novedades post-viaje está fijado en **24 horas**.
+- **FR-010**: Al confirmar el cierre (reserva a `Completada`), el sistema DEBE invocar `Generar disputa de garantía` (`CU-16`, `<<include>>`) para crear la disputa asociada en estado PENDING y abrir la ventana de 24 horas para el reclamo del Propietario. El plazo de reporte y novedades post-viaje está fijado en **24 horas**.
 - **FR-011**: El sistema DEBE permitir disparar el proceso de finalización del viaje directamente desde el botón "Marcar fin de la navegación" ubicado en el banner verde de viaje en curso dentro de la pantalla de detalles de la reserva del Propietario.
 - **FR-012**: Al hacer clic en "Marcar fin de la navegación", el sistema DEBE desplegar una ventana emergente de confirmación que incluya:
     - El identificador de la reserva y nombre del Arrendatario.

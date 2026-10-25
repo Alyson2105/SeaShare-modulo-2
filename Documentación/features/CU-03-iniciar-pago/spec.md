@@ -66,7 +66,7 @@ Como sistema, quiero evitar que dos usuarios retengan las mismas fechas para la 
 
 - **Inicio de pago sin disponibilidad**: Si al validar de forma atómica bajo lock la embarcación ya no figura Disponible en el chequeo instantáneo de estado operativo (CU-10) (bloqueada en Módulo 1 por otra reserva que alcanzó `Reservada`, o retenida internamente por otra reserva en `Pendiente de Pago`), el sistema DEBE denegar inmediatamente el inicio del flujo sin transicionar la reserva (permanece en `Iniciada`).
 - **Temporizador TTL de 15 minutos en curso**: El temporizador corre desde que la reserva entró a `Iniciada` y sigue consumiéndose al entrar a `Pendiente de Pago`. Si el usuario abandona la pasarela y vuelve a entrar, el temporizador NO se reinicia.
-- **Expiración del temporizador TTL en pantalla (00:00)**: El corte en el backend es estricto a los 15 minutos exactos sin ventana de gracia. Al llegar el contador a 00:00 en pantalla, el sistema DEBE deshabilitar los botones de inmediato, mostrar un modal de expiración, redirigir a CU-01 y el backend debe liberar el inventario.
+- **Expiración del temporizador TTL en pantalla (00:00)**: El corte en el backend es estricto a los 15 minutos exactos sin ventana de gracia. Al llegar el contador a 00:00 en pantalla, el sistema DEBE deshabilitar los botones de inmediato, mostrar un modal de expiración, redirigir a CU-01 y el backend debe liberar la retención de fechas de Módulo 2; Módulo 1 nunca recibió bloqueo en `Iniciada` ni en `Pendiente de pago`.
 
 ---
 

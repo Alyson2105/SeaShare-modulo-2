@@ -102,27 +102,27 @@ En los momentos clave del ciclo de vida de la reserva (desde que el pago se conf
 1. **Scenario**: Al confirmar el pago, la embarcación queda bloqueada como "Reservado"
     - **Given** una reserva que pasa de "Pendiente de Pago" a "Reservada" (al confirmarse el pago)
     - **When** se procesa la actualización de estado en este motor
-    - **Then** el sistema llama a la API `Asignar estado operativo` de Módulo 1 enviando el estado "Reservado" para esa embarcación
+    - **Then** el sistema notifica a la API `Asignar estado operativo` de Módulo 1, mediante outbox, enviando el estado "Reservado" para esa embarcación
 
 2. **Scenario**: Al iniciar la navegación, la embarcación pasa a "En Navegación"
     - **Given** una reserva que pasa al estado principal "En Navegación"
     - **When** se guarda ese cambio
-    - **Then** el sistema llama a la API `Asignar estado operativo` de Módulo 1 enviando el estado operativo "En Navegación"
+    - **Then** el sistema notifica a la API `Asignar estado operativo` de Módulo 1, mediante outbox, enviando el estado operativo "En Navegación"
 
 3. **Scenario**: El cierre normal libera hacia Mantenimiento/Limpieza, la cancelación ordinaria libera a "Disponible" y la expiración o el pago fallido no notifican nada
     - **Given** una reserva que pasa a "Completada", a "Cancelada" (sin avería), a "Pago Fallido" o a "Expirada" desde "Pendiente de Pago"
     - **When** se procesa el cambio de estado
-    - **Then** para "Completada" el sistema llama a la API `Asignar estado operativo` de Módulo 1 con la señal que lleva la embarcación a "En Mantenimiento/Limpieza" (la transición final a "Disponible" la gestiona Módulo 1 internamente), y para "Cancelada" sin avería la llama con la señal de liberación a "Disponible"; en cambio, para "Pago Fallido" y para "Expirada" desde "Pendiente de Pago" el sistema NO llama a Módulo 1, porque la reserva nunca alcanzó "Reservada" y por tanto nunca tuvo bloqueado el inventario en Módulo 1 (ver CU-22 FR-002)
+    - **Then** para "Completada" el sistema notifica a la API `Asignar estado operativo` de Módulo 1, mediante outbox, con la señal que lleva la embarcación a "En Mantenimiento/Limpieza" (la transición final a "Disponible" la gestiona Módulo 1 internamente), y para "Cancelada" sin avería la notifica con la señal de liberación a "Disponible"; en cambio, para "Pago Fallido" y para "Expirada" desde "Pendiente de Pago" el sistema NO notifica a Módulo 1, porque la reserva nunca alcanzó "Reservada" y por tanto nunca tuvo bloqueado el inventario en Módulo 1 (ver CU-22 FR-002)
 
 4. **Scenario**: Expiración desde Iniciada no notifica a Módulo 1
     - **Given** una reserva en estado "Iniciada" que expira por vencimiento del TTL pasando a "Expirada"
     - **When** se procesa el cambio de estado
-    - **Then** el sistema NO llama a la API `Asignar estado operativo` de Módulo 1 (nunca hubo bloqueo previo en Módulo 1; notificarlo liberaría indebidamente el bloqueo de otra reserva vigente)
+    - **Then** el sistema NO notifica a la API `Asignar estado operativo` de Módulo 1 (nunca hubo bloqueo previo en Módulo 1; notificarlo liberaría indebidamente el bloqueo de otra reserva vigente)
 
 5. **Scenario**: Cancelación por avería reportada por el Propietario pasa la embarcación a "En Mantenimiento/Limpieza"
     - **Given** una reserva en estado "Reservada" cancelada por el Propietario reportando avería o desperfecto mecánico
     - **When** se procesa la transición a "Cancelada" con sub-estado "Por Propietario"
-    - **Then** el sistema llama a la API `Asignar estado operativo` de Módulo 1 enviando el estado operativo "En Mantenimiento/Limpieza"
+    - **Then** el sistema notifica a la API `Asignar estado operativo` de Módulo 1, mediante outbox, enviando el estado operativo "En Mantenimiento/Limpieza"
 
 ---
 

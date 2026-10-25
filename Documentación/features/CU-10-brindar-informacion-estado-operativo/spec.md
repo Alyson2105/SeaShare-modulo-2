@@ -30,10 +30,10 @@ Cuando el sistema necesita saber si un barco se puede alquilar, consulta a la AP
     - **When** se consulta su estado operativo
     - **Then** el sistema informa que el barco no se puede alquilar y muestra el motivo exacto de su indisponibilidad
 
-3. **Scenario**: Embarcación apartada por otro pago en curso
-    - **Given** una embarcación que figura en estado "Reservado" en Módulo 1
+3. **Scenario**: Embarcación apartada por otra reserva confirmada
+    - **Given** una embarcación que figura en estado "Reservado" en Módulo 1 porque otra reserva ya alcanzó el estado "Reservada"
     - **When** se consulta su estado operativo
-    - **Then** el sistema indica que el barco está bloqueado temporalmente por otro proceso y detiene la nueva solicitud
+    - **Then** el sistema indica que el barco está bloqueado por otra reserva confirmada y detiene la nueva solicitud
 
 ---
 
@@ -92,7 +92,7 @@ Si la consulta se realiza enviando un identificador de embarcación inválido, m
 - **FR-002**: El sistema DEBE consultar directamente la API externa de Módulo 1 para conocer el estado operativo en tiempo real.
 - **FR-003**: El sistema DEBE reconocer los cuatro estados operativos oficiales que maneja Módulo 1:
     - `Disponible`: Libre para ser alquilado.
-    - `Reservado`: Bloqueado por un proceso de pago o reserva previa.
+    - `Reservado`: Bloqueado por una reserva ya confirmada.
     - `En Navegación`: En el agua ejecutando un viaje.
     - `En Mantenimiento/Limpieza`: Inhabilitado por reparación, revisión o aseo.
 - **FR-004**: El sistema DEBE confirmar que el barco es **Apto para Reserva** si y solo si Módulo 1 devuelve el estado `Disponible`.

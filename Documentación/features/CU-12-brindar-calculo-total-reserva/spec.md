@@ -89,7 +89,7 @@ Todos los conceptos entregados por Módulo 3 (tarifa base, seguro de accidentes,
 - **Discrepancia entre la cotización estimada previa y el cálculo total**:
   - El monto del cálculo final en este caso de uso puede ser mayor que la cotización estimada previa debido a la adición obligatoria del depósito de garantía y posibles actualizaciones de tarifas dinámicas o de temporada aplicadas por Módulo 3. Módulo 2 expone el nuevo total oficial desglosado con claridad antes de la redirección a la pasarela.
 - **Solicitud de cálculo con embarcación no disponible en Módulo 1**:
-  - Si al momento de solicitar el cálculo total se detecta que la embarcación ya no está disponible en Módulo 1 (por ejemplo, porque otro Arrendatario inició el pago previamente y la pasó a `Reservado`), el sistema cancela el proceso y notifica que el horario ha sido tomado por otro usuario.
+  - Si al momento de solicitar el cálculo total se detecta que la embarcación ya no está disponible en Módulo 1 (por ejemplo, porque otro Arrendatario confirmó el pago previamente y la llevó a `Reservada`), el sistema cancela el proceso y notifica que el horario ha sido tomado por otro usuario.
 - **Moneda del cobro**:
   - Módulo 2 adopta y presenta la moneda (ej. COP, USD) devuelta por Módulo 3 sin realizar conversiones de cambio. La moneda (`currency`) se persiste literalmente junto con los montos en la reserva y es la moneda oficial de esa reserva: no se convierte localmente ni se admite mezclar monedas dentro de una misma reserva.
 - **TTL del snapshot de cotización**:
