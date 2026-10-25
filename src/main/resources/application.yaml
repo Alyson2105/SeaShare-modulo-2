@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: seashare-modulo-2                  # Nombre del servicio (aparece en logs y metricas)
+
+  datasource:                                # Conexion a PostgreSQL (la levanta docker-compose)
+    url: jdbc:postgresql://localhost:5433/seashare_m2   # 5433: debe coincidir con docker-compose.yml
+    username: seashare                       # Solo desarrollo local; en produccion va por variable de entorno
+    password: seashare
+
+  jpa:
+    open-in-view: false                      # Evita consultas a BD fuera de la capa de servicio
+    hibernate:
+      ddl-auto: validate                     # Hibernate NO crea tablas: solo verifica que coincidan con Flyway
+
+  flyway:
+    enabled: true                            # Ejecuta las migraciones al arrancar
+    locations: classpath:db/migration        # Carpeta de los scripts V1__*.sql, V2__*.sql, ...
+
+  rabbitmq:                                  # Broker de mensajeria (eventos hacia Modulo 3)
+    host: localhost
+    port: 5672                               # Puerto AMQP
+    username: seashare                       # Solo desarrollo local
+    password: seashare
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info                 # Solo se exponen estos endpoints de Actuator

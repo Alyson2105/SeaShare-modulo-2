@@ -1,0 +1,30 @@
+# Entorno LOCAL del Modulo 2: PostgreSQL + RabbitMQ
+# Uso: docker compose up -d | ps | logs -f | down | down -v (borra datos)
+# Credenciales solo para desarrollo; deben coincidir con application.yml
+
+services:
+
+  postgres:                               # Base de datos del Modulo 2
+    image: postgres:16-alpine
+    container_name: seashare-m2-postgres
+    environment:
+      POSTGRES_DB: seashare_m2
+      POSTGRES_USER: seashare
+      POSTGRES_PASSWORD: seashare
+    ports:
+      - "5433:5432"                       # 5433 en tu PC (el 5432 lo ocupan otros procesos) -> 5432 del contenedor
+    volumes:
+      - pgdata:/var/lib/postgresql/data   # Conserva los datos al apagar
+
+  rabbitmq:                               # Broker de mensajeria (eventos hacia el Modulo 3)
+    image: rabbitmq:3-management
+    container_name: seashare-m2-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: seashare
+      RABBITMQ_DEFAULT_PASS: seashare
+    ports:
+      - "5672:5672"                       # AMQP: por aqui se conecta la app
+      - "15672:15672"                     # Panel web: http://localhost:15672
+
+volumes:
+  pgdata:                                 # Datos de PostgreSQL
