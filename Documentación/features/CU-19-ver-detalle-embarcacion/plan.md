@@ -244,7 +244,7 @@ GET /api/v1/vessels/{vessel_id}/quotations
   "passengers": 8,
   "total_amount": 9600000.00,
   "currency": "COP",
-  "warning": "Valor estimado. No incluye cargos adicionales ni depósito de seguridad",
+  "warning": "Valor estimado. El valor incluye el seguro náutico, pero no incluye el depósito de garantía ni penalidades o ajustes derivados de cambios posteriores de la reserva",
   "quotation_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
   "quotation_expires_at": "2026-10-09T12:15:00Z"
 }

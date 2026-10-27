@@ -16,18 +16,18 @@
 
 Como Arrendatario titular cuya reserva ya se encuentra persistida en estado `Iniciada` (con su TTL de 15 minutos en curso), quiero que el sistema solicite a Módulo 3 el cálculo financiero final, vinculante y completo (incluyendo alquiler, seguro náutico y depósito de garantía), para conocer exactamente el monto total que se cobrará en la pasarela dentro de la ventana de pago de 15 minutos (TTL) ya en curso desde el estado `Iniciada`.
 
-A diferencia de la cotización preliminar provista por `Proveer información cotización de reserva` (que era una estimación de vista previa sin depósito de garantía y con bandera de advertencia), este caso de uso se ejecuta en el instante exacto en que el Arrendatario pulsa "CU-03 Iniciar pago". El sistema recopila los datos consolidados del viaje (`reservation_id`, `boat_id`, fecha/hora exacta de check-in, fecha/hora exacta de check-out y cantidad de pasajeros) y consulta la API de liquidación de Módulo 3. Módulo 3 calcula el importe oficial completo: `(tarifa base × duración) + (tarifa de seguro × pasajeros) + depósito de garantía`. Módulo 2 recibe el total y su desglose oficial y los entrega al caso de uso `Iniciar pago` sin realizar ninguna operación aritmética, para que sean asociados a la reserva ya persistida al transicionarla a `Pendiente de Pago`.
+A diferencia de la cotización preliminar provista por `Proveer información cotización de reserva` (que era una estimación de vista previa sin depósito de garantía y con bandera de advertencia), este caso de uso se ejecuta en el instante exacto en que el Arrendatario pulsa "CU-03 Iniciar pago". El sistema identifica la reserva ya registrada (solo envía su `reservation_id` en la URL, porque Módulo 3 ya recibió los datos del viaje por el evento `reservation.info.provided` de CU-02) y consulta la API de liquidación de Módulo 3. Módulo 3 calcula el importe oficial completo: `(tarifa base × duración) + (tarifa de seguro × pasajeros) + depósito de garantía`. Módulo 2 recibe el total y su desglose oficial y los entrega al caso de uso `Iniciar pago` sin realizar ninguna operación aritmética, para que sean asociados a la reserva ya persistida al transicionarla a `Pendiente de Pago`.
 
 ***Why this priority***: Constituye la base financiera vinculante de la contratación. Sin este cálculo final de Módulo 3, no es posible determinar el monto exacto a cobrar en la pasarela ni asociar una cifra definitiva a la reserva al transicionarla a estado `Pendiente de Pago`.
 
-***Independent Test***: Se prueba invocando este caso de uso con parámetros de viaje validados sobre una reserva ya persistida en estado `Iniciada` contra un simulador de Módulo 3. Se comprueba que Módulo 2: (a) envía los parámetros consolidados del viaje a Módulo 3, (b) recibe de Módulo 3 el monto total y su desglose completo incluyendo tarifa base, seguro y depósito de garantía, (c) no ejecuta redondeos ni sumas aritméticas locales, y (d) entrega la liquidación oficial al flujo de `Iniciar pago`.
+***Independent Test***: Se prueba invocando este caso de uso con parámetros de viaje validados sobre una reserva ya persistida en estado `Iniciada` contra un simulador de Módulo 3. Se comprueba que Módulo 2: (a) envía solo el `reservation_id` a Módulo 3, (b) recibe de Módulo 3 el monto total y su desglose completo incluyendo tarifa base, seguro y depósito de garantía, (c) no ejecuta redondeos ni sumas aritméticas locales, y (d) entrega la liquidación oficial al flujo de `Iniciar pago`.
 
 ***Acceptance Scenarios***:
 
 1. **Scenario**: Obtención exitosa del cálculo total definitivo con desglose integral
    - **Given** parámetros de viaje validados (embarcación, fechas definidas, 3 pasajeros y Arrendatario titular autenticado) sobre una reserva ya persistida en estado `Iniciada`
    - **When** el Arrendatario pulsa "CU-03 Iniciar pago" y el sistema invoca "Brindar cálculo total de la reserva"
-   - **Then** el sistema consulta a Módulo 3 y recibe el monto total definitivo, la moneda y el desglose oficial compuesto por: alquiler base, seguro náutico obligatorio por los 3 pasajeros y depósito de garantía, entregando el resultado a `Iniciar pago` sin alterar ningún valor
+   - **Then** el sistema consulta a Módulo 3 y recibe el monto total definitivo y el desglose oficial compuesto por: alquiler base, seguro náutico obligatorio por los 3 pasajeros y depósito de garantía, entregando el resultado a `Iniciar pago` sin alterar ningún valor
 
 2. **Scenario**: Asociación del cálculo definitivo a la reserva existente al transicionar a Pendiente de Pago
    - **Given** parámetros de viaje validados que reciben satisfactoriamente el cálculo final desde Módulo 3 sobre una reserva en estado `Iniciada`
@@ -82,18 +82,18 @@ Todos los conceptos entregados por Módulo 3 (tarifa base, seguro de accidentes,
 ### Edge Cases
 
 - **Diferenciación estricta entre Cotización Preliminar y Cálculo Total**:
-  - `Proveer información cotización de reserva`: Genera una estimación de vista previa (en catálogo por lote o individual en selección de fechas). No incluye depósito de garantía y lleva la advertencia obligatoria `"Valor estimado. No incluye cargos adicionales ni depósito de seguridad"`.
+  - `Proveer información cotización de reserva`: Genera una estimación de vista previa (en catálogo por lote o individual en selección de fechas). No incluye depósito de garantía y lleva la advertencia obligatoria `"Valor estimado. El valor incluye el seguro náutico, pero no incluye el depósito de garantía ni penalidades o ajustes derivados de cambios posteriores de la reserva"`.
   - `Brindar cálculo total de la reserva`: Genera el valor final, completo y vinculante que se cobra en la pasarela. **SÍ incluye obligatoriamente la tarifa base, el seguro náutico y el depósito de garantía**.
 - **Prohibición absoluta de cálculos en Módulo 2**:
   - Módulo 2 **JAMÁS calcula montos, porcentajes, deducciones de comisiones ni seguros**. Módulo 3 es el único responsable matemático y contable.
 - **Discrepancia entre la cotización estimada previa y el cálculo total**:
-  - El monto del cálculo final en este caso de uso puede ser mayor que la cotización estimada previa debido a la adición obligatoria del depósito de garantía y posibles actualizaciones de tarifas dinámicas o de temporada aplicadas por Módulo 3. Módulo 2 expone el nuevo total oficial desglosado con claridad antes de la redirección a la pasarela.
+  - El monto del cálculo final en este caso de uso puede ser mayor que la cotización estimada previa debido a la adición obligatoria del depósito de garantía y posibles actualizaciones de tarifas dinámicas o de temporada aplicadas por Módulo 3. Módulo 2 expone el nuevo total oficial desglosado con claridad antes de confirmar el pago.
 - **Solicitud de cálculo con embarcación no disponible en Módulo 1**:
   - Si al momento de solicitar el cálculo total se detecta que la embarcación ya no está disponible en Módulo 1 (por ejemplo, porque otro Arrendatario confirmó el pago previamente y la llevó a `Reservada`), el sistema cancela el proceso y notifica que el horario ha sido tomado por otro usuario.
 - **Moneda del cobro**:
-  - Módulo 2 adopta y presenta la moneda (ej. COP, USD) devuelta por Módulo 3 sin realizar conversiones de cambio. La moneda (`currency`) se persiste literalmente junto con los montos en la reserva y es la moneda oficial de esa reserva: no se convierte localmente ni se admite mezclar monedas dentro de una misma reserva.
+  - Módulo 2 usa COP como moneda constante de la plataforma (Módulo 3 no devuelve moneda), sin realizar conversiones de cambio. La moneda (`currency`, COP) se guarda junto con los montos en la reserva y es la moneda oficial de esa reserva: no se convierte localmente ni se admite mezclar monedas dentro de una misma reserva.
 - **TTL del snapshot de cotización**:
-  - El snapshot de cotización generado por Módulo 3 vence de manera idéntica y sincronizada a los 15 minutos del TTL de la reserva. Si el TTL de la reserva (iniciado en estado `Iniciada`) vence, el snapshot de cotización asociado también caduca y no puede utilizarse para iniciar el pago.
+  - El cálculo de Módulo 3 no trae vencimiento propio: su vigencia es el TTL de 15 minutos de la reserva en Módulo 2. Si el TTL de la reserva (iniciado en estado `Iniciada`) vence, el cálculo asociado también caduca y no puede utilizarse para iniciar el pago.
 - **Idempotencia ante múltiples pulsaciones de "CU-03 Iniciar pago"**:
   - Si el Arrendatario presiona repetidamente el botón de pago, el sistema canaliza una única petición activa a Módulo 3 para evitar liquidaciones simultáneas redundantes.
 
@@ -105,25 +105,25 @@ Todos los conceptos entregados por Módulo 3 (tarifa base, seguro de accidentes,
 
 - **FR-001**: El sistema DEBE proveer un caso de uso interno (`Brindar cálculo total de la reserva`) invocado de forma obligatoria por `Iniciar pago` (`<<include>>`) al momento de formalizar el cobro de una reserva ya persistida en estado `Iniciada`.
 - **FR-002**: **REGLA ESTRICTA (Sin cálculos de dinero en Módulo 2):** El sistema **NO DEBE en ningún caso calcular, sumar, restar, retener ni redondear importes monetarios**. El cálculo del monto total final, del seguro náutico y del depósito de garantía DEBE ser realizado exclusivamente por Módulo 3.
-- **FR-003**: El sistema DEBE recibir los parámetros consolidados del viaje sobre una reserva ya persistida en estado `Iniciada`: identificador de la reserva (`reservation_id`), identificador de la embarcación (`boat_id`), fecha/hora de inicio, fecha/hora de fin, cantidad de pasajeros e identificador del Arrendatario.
-- **FR-004**: El sistema DEBE consultar la API de liquidación final de Módulo 3 enviando los parámetros consolidados del viaje [NEEDS CLARIFICATION: confirmar el nombre formal del endpoint en el contrato de API de Módulo 3].
+- **FR-003**: El sistema DEBE recibir el identificador de una reserva ya persistida en estado `Iniciada` (`reservation_id`); Módulo 3 ya tiene los datos del viaje por el evento `reservation.info.provided` de CU-02.
+- **FR-004**: El sistema DEBE consultar la API de liquidación final de Módulo 3 mediante `POST /api/v1/reservations/{reservation_id}/calculated-value` (sin cuerpo; idempotente).
 - **FR-005**: El sistema DEBE recibir de Módulo 3 la liquidación definitiva y completa, que contenga obligatoriamente:
   - Identificador único de liquidación o cálculo emitido por Módulo 3.
   - Importe total final vinculante a cobrar al Arrendatario.
   - Desglose oficial de rubros: tarifa base de alquiler por la duración total, tarifa de seguro náutico acumulada por la totalidad de los pasajeros, y valor del depósito de garantía retenido temporalmente.
-  - Código de moneda oficial.
+  - Moneda COP (constante de Módulo 2; Módulo 3 no la envía).
 - **FR-006**: El sistema DEBE entregar la liquidación completa al caso de uso `Iniciar pago` y asociar los montos oficiales a la entidad `Reserva` ya persistida sin ninguna modificación aritmética.
 - **FR-007**: Si Módulo 3 devuelve una respuesta de error (embarcación sin tarifas o depósito no configurado), el sistema DEBE interrumpir el flujo de pago sin transicionar la reserva (permanece en `Iniciada`) y notificar el error al Arrendatario.
 - **FR-008**: Si la comunicación con Módulo 3 agota el tiempo de espera (*timeout*) o se interrumpe por fallo de red, el sistema DEBE aplicar un bloqueo de seguridad (*fail-safe*), abortar la operación sin transicionar la reserva (permanece en `Iniciada`) y notificar la indisponibilidad temporal del servicio financiero.
 - **FR-009**: El sistema DEBE tratar el cálculo final como la cifra oficial que Módulo 3 procesará posteriormente en la pasarela de pagos al confirmarse el cobro.
-- **FR-010**: El sistema DEBE registrar un asiento auditable de la solicitud de cálculo total y de la respuesta recibida de Módulo 3, capturando identificador de liquidación, monto total, moneda y marca temporal.
+- **FR-010**: El sistema DEBE registrar un asiento auditable de la solicitud de cálculo total y de la respuesta recibida de Módulo 3, capturando el `reservation_id`, los montos recibidos y la marca temporal.
 
 ---
 
 ### Key Entities
 
-- **Solicitud de Cálculo Total (`TotalCalculationRequest`)**: Parámetros enviados a Módulo 3: `reservation_id`, `boat_id`, `start_time`, `end_time`, `passenger_count`, `renter_id` (la reserva ya está persistida en estado `Iniciada`).
-- **Respuesta de Cálculo Total (`TotalCalculationResponse`)**: Liquidación emitida por Módulo 3. Atributos: `calculation_id`, `total_amount`, desglose (`base_rental_amount`, `insurance_total_amount`, `security_deposit_amount`), `currency`, `created_at`.
+- **Solicitud de Cálculo Total (`TotalCalculationRequest`)**: Dato enviado a Módulo 3: solo el `reservation_id`, que va en la URL (sin cuerpo; la reserva ya está persistida en estado `Iniciada`).
+- **Respuesta de Cálculo Total (`TotalCalculationResponse`)**: Liquidación emitida por Módulo 3. Atributos (cadenas decimales): `reservation_id`, `rental_amount`, `insurance_amount`, `guarantee_deposit_amount` y `total_amount` (incluye el depósito). Módulo 3 no envía `calculation_id`, `currency` ni `created_at`.
 - **Reserva (`Reservation`)**: Entidad de dominio de Módulo 2 ya persistida en estado `Iniciada` al invocarse este caso de uso; los montos del cálculo total definitivo se entregan a `Iniciar pago` para asociarlos al transicionar la reserva a `Pendiente de Pago`.
 
 ---

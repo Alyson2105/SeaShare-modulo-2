@@ -7,8 +7,8 @@ Este caso de uso expone el punto de entrada REST mediante el cual Módulo 3 (Fin
 
 Canales de entrada del resultado de pago: la lógica de negocio de este caso de uso es única y recibe un mismo objeto de confirmación (`PaymentConfirmationPayload`) por dos canales:
 
-- Canal A — Endpoint REST (FR-001): `POST /api/v1/reservations/{reservation_id}/payment-confirmation`, definido en este contrato para el consumo de Módulo 3.
-- Canal B — Adaptador de consulta a Módulo 3 (vigente hoy): Módulo 3 no cuenta actualmente con ningún contrato que invoque a Módulo 2; su contrato UC06 «Solicitar confirmación de pago» (`GET /api/v1/reservations/{reservation_id}/payment-confirmation`, ver `plan.external.md`) es de consulta. Por eso un adaptador interno de Módulo 2 consulta periódicamente a Módulo 3 el estado del cobro de las reservas en Pendiente de Pago, traduce la respuesta al mismo `PaymentConfirmationPayload` y la entrega a la misma lógica que el Canal A. [NEEDS CLARIFICATION: acordar con Módulo 3 si mantendrá solo la consulta (Canal B) o si construirá además un cliente que invoque el Canal A. Mientras no lo haga, el Canal B es el único activo.]
+- Canal A — Endpoint REST (FR-001; disponible, inactivo hoy): `POST /api/v1/reservations/{reservation_id}/payment-confirmation`, definido en este contrato para el consumo de Módulo 3.
+- Canal B — Adaptador de consulta a Módulo 3 (vigente hoy): Módulo 3 no cuenta actualmente con ningún contrato que invoque a Módulo 2; su contrato UC06 «Solicitar confirmación de pago» (`GET /api/v1/reservations/{reservation_id}/payment-confirmation`, ver `plan.external.md`) es de consulta. Por eso un adaptador interno de Módulo 2 consulta periódicamente a Módulo 3 el estado del cobro de las reservas en Pendiente de Pago, traduce la respuesta al mismo `PaymentConfirmationPayload` y la entrega a la misma lógica que el Canal A. Ambos canales quedan documentados: el Canal B es el único activo mientras Módulo 3 no construya un cliente que invoque el Canal A, que queda disponible. Se confirma con Módulo 3 sin bloquear nada.
 
 **Al procesar la confirmación (por cualquiera de los dos canales):**
 
@@ -22,7 +22,7 @@ Canales de entrada del resultado de pago: la lógica de negocio de este caso de 
 - Si el rechazo admite reintento (resultado Rechazado) y resta tiempo en el TTL, mantiene la reserva en Pendiente de Pago permitiendo reintentos hasta el vencimiento estricto del TTL (FR-005).
 - Ante un resultado definitivo sin reintento (resultado Fallido) invoca a CU-08 transicionando a Pago Fallido; por CU-22 FR-002 esta transición no genera ninguna notificación a Módulo 1 (cero avisos). Al vencer el TTL sin aprobación la reserva transiciona a Expirada (FR-005), igualmente sin notificación a Módulo 1.
 - **Control de Idempotencia Estricto**: utiliza la clave única (external_transaction_id, result) por reserva para responder afirmativamente (HTTP 200 en el Canal A; sin efectos en el Canal B) ante reintentos sin duplicar transiciones ni efectos colaterales (FR-007, SC-004).
-- **Condición de Carrera en el Límite del TTL**: si la confirmación de pago aprobada se recibe cuando el TTL ya expiró y la reserva se encuentra en Expirada, el sistema rechaza la confirmación e instruye mandatoriamente a Módulo 3 la reversión automática de los fondos en la pasarela (FR-006, SC-002, SC-003): en el Canal A mediante la respuesta 409 con reversal_required: true; en el Canal B mediante la publicación del estado EXPIRED en el evento de estado de reserva (CU-14), que Módulo 3 debe reconocer para reembolsar [NEEDS CLARIFICATION: M3 debe agregar EXPIRED a su enum reservation.status.changed].
+- **Condición de Carrera en el Límite del TTL**: si la confirmación de pago aprobada se recibe cuando el TTL ya expiró y la reserva se encuentra en Expirada, el sistema rechaza la confirmación e instruye mandatoriamente a Módulo 3 la reversión automática de los fondos en la pasarela (FR-006, SC-002, SC-003): en el Canal A mediante la respuesta 409 con reversal_required: true; en el Canal B mediante la publicación del estado CANCELLED_FLEXIBLE en el evento de estado de reserva (CU-14), que Módulo 3 ya reconoce y trata con reembolso del 100 % (mapeo por tratamiento financiero; la reserva en M2 permanece Expirada).
 
 ## Endpoint — Notificación de Resultado de Pago
 
@@ -223,26 +223,28 @@ Este canal es un proceso interno de Módulo 2 (no expone endpoint) que alimenta 
 
 #### Disparador
 
-Ejecución periódica cada 5 segundos (configurable) sobre las reservas en estado Pendiente de Pago con TTL vigente. Si no existen reservas en ese estado, no consulta.
+Ejecución periódica cada 5 segundos (configurable) sobre las reservas en estado Pendiente de Pago con TTL vigente. Si no existen reservas en ese estado, no consulta. Consulta final: un instante antes del corte del TTL (margen configurable, propuesta: 1 segundo) el adaptador consulta a Módulo 3 una última vez; si el resultado es APPROVED y el TTL sigue vigente, lo entrega a la lógica de FR-004 y la reserva pasa a Reservada en vez de expirar. Si la consulta falla, la reserva expira en el corte exacto y el cobro tardío se cubre con CANCELLED_FLEXIBLE. No hay ventana de gracia. Prioridad baja: se implementa en la fase 7.
 
 #### Consulta a Módulo 3
 
-GET /api/v1/reservations/{reservation_id}/payment-confirmation (ver plan.external.md). Headers: Authorization (JWT de servicio de Módulo 2 [NEEDS CLARIFICATION]), Accept: application/json. Connect Timeout 100 ms, Read Timeout 500 ms, sin reintentos dentro del mismo ciclo.
+GET /api/v1/reservations/{reservation_id}/payment-confirmation (ver plan.external.md). Headers: Accept: application/json (sin Authorization: Módulo 3 no valida al llamador). Connect Timeout 100 ms, Read Timeout 500 ms, sin reintentos dentro del mismo ciclo.
 
 #### Traducción de la respuesta de M3 al `PaymentConfirmationPayload`
 
-| Campo del payload (Canal A) | Origen en la respuesta de M3 (Canal B) |  |
-| --- | --- | --- |
-| external_transaction_id | external_reference. Si es null (por ejemplo, rechazo sin referencia), el adaptador genera una referencia sintética estable m3-<reservation_id>-<status>-<intento> |  |
-| result | Según la tabla de traducción siguiente |  |
-| processed_at | Instante de la consulta que obtuvo el resultado (M3 no entrega marca temporal de procesamiento) |  |
-| gateway_response_code | detail (opcional) |  |
-| rejection_reason | detail (opcional, si el result no es Aprobado) |  |
+| Campo del payload (Canal A) | Origen en la respuesta de M3 (Canal B) |
+| --- | --- |
+| external_transaction_id | external_reference. Si es null (por ejemplo, rechazo sin referencia), el adaptador genera una referencia sintética estable m3-<reservation_id>-<status>-<intento> |
+| result | Según la tabla de traducción siguiente |
+| processed_at | Instante de la consulta que obtuvo el resultado (M3 no entrega marca temporal de procesamiento) |
+| gateway_response_code | detail (opcional) |
+| rejection_reason | detail (opcional, si el result no es Aprobado) |
+
 | status de M3 | result traducido | Tratamiento |
+| --- | --- | --- |
 | APPROVED | APPROVED | Se entrega a la lógica de FR-004 (TTL vigente) o FR-006 (TTL expirado) |
 | REJECTED | REJECTED | FR-005: la reserva continúa en Pendiente de Pago permitiendo reintento con otro token (CU-03) hasta el fin del TTL |
 | CANCELLED / EXPIRED | FAILED | FR-005: resultado definitivo; transición a Pago Fallido; por CU-22 FR-002 no se genera notificación a Módulo 1 (cero avisos) |
-| IN_PROGRESS / UNKNOWN | (no se entrega) | No se invoca la lógica: la reserva permanece sin cambios y se vuelve a consultar en el siguiente ciclo; nunca se asume un resultado |
+| IN_PROCESS / UNKNOWN | (no se entrega) | No se invoca la lógica: la reserva permanece sin cambios y se vuelve a consultar en el siguiente ciclo; nunca se asume un resultado |
 
 #### Reacción ante errores de Módulo 3 (Canal B)
 
@@ -255,7 +257,7 @@ GET /api/v1/reservations/{reservation_id}/payment-confirmation (ver plan.externa
 
 #### Respuesta de la lógica en el Canal B
 
-La lógica de negocio es la misma que en el Canal A, pero no existe un llamador HTTP al cual responder. Los resultados se reflejan así: el estado de la reserva queda consultable en CU-21 (el frontend consulta hasta ver Reservada, Pago Fallido o Expirada), y la instrucción de reversión de FR-006 se envía a Módulo 3 como el estado EXPIRED del evento CU-14 más una alerta crítica de observabilidad.
+La lógica de negocio es la misma que en el Canal A, pero no existe un llamador HTTP al cual responder. Los resultados se reflejan así: el estado de la reserva queda consultable en CU-21 (el frontend consulta hasta ver Reservada, Pago Fallido o Expirada), y la instrucción de reversión de FR-006 se envía a Módulo 3 como el estado CANCELLED_FLEXIBLE del evento CU-14 más una alerta crítica de observabilidad.
 
 #### Ejemplo 5 — Pago Aprobado detectado por consulta (Canal B)
 
@@ -284,7 +286,7 @@ No aplica. Operación puntual sobre una transacción de reserva.
 
 Autenticación Servicio a Servicio (Canal A): este endpoint está protegido estrictamente para ser invocado por el servicio backend de Módulo 3 mediante JWT de servicio (sub: "seashare-modulo-3" o similar).
 No admite llamadas directas de usuarios ni del rol Arrendatario/Propietario.
-Autenticación Servicio a Servicio (Canal B): la consulta hacia Módulo 3 usa el JWT de servicio de Módulo 2 (sub: "seashare-modulo-2" o similar).
+Autenticación Servicio a Servicio (Canal B): la consulta hacia Módulo 3 no envía credenciales, porque los contratos de Módulo 3 dejan la seguridad fuera de alcance; si Módulo 3 la incorpora, se agregará el header Authorization.
 Regla estricta "Sin dinero": Módulo 2 no calcula montos, no procesa reembolsos directamente ni interactúa con la pasarela bancaria. Módulo 3 es el único autor y operador financiero (FR-008, SC-005).
 
 ### Notas Transversales
@@ -303,11 +305,11 @@ Convivencia de los canales: si Módulo 3 llega a invocar el Canal A mientras el 
 | FR-003 | Verificación de existencia y estado Pendiente de Pago | Validaciones de backend reflejadas en errores 404 y 409; el adaptador solo consulta reservas en Pendiente de Pago |
 | FR-004 | Aprobación dentro de TTL: cancelación de timer y paso a Reservada | Respuesta exitosa 200 OK con `estado: "RESERVED"` (Ejemplos 1 y 5) |
 | FR-005 | Manejo de rechazos/fallos y reintentos dentro del TTL | Respuesta 200 OK manteniendo Pendiente de Pago (Ejemplo 4) y tabla de traducción APPROVED / CANCELLED / EXPIRED |
-| FR-006 | Aprobación con TTL expirado instruye reversión automática | Error 409 Conflict con reversal_required: true (Ejemplo 3); en el Canal B, estado EXPIRED en CU-14 |
+| FR-006 | Aprobación con TTL expirado instruye reversión automática | Error 409 Conflict con reversal_required: true (Ejemplo 3); en el Canal B, estado CANCELLED_FLEXIBLE en CU-14 |
 | FR-007 | Idempotencia estricta por par (external_transaction_id, result) | Manejo de idempotencia documentado en Ejemplo 2 y Notas; compartida por ambos canales |
 | FR-008 | Prohibición de cálculo monetario o llamadas a pasarelas | Contrato sin aritmética monetaria ni dependencias de pasarela |
 | SC-001 | Transición a Reservada en < 1 segundo tras confirmación | Canal A: procesamiento síncrono. Canal B: hasta 5 segundos adicionales por el periodo del adaptador [NEEDS CLARIFICATION: la spec fija 1 segundo tras la recepción del resultado; en el Canal B la "recepción" ocurre en el ciclo de consulta, por lo que el criterio se cumple desde ese instante y no desde que M3 registra el resultado] |
 | SC-002 | Cero reservas pasadas a Reservada con TTL expirado | Bloqueo estricto reflejado en código RESERVATION_EXPIRED_REVERSION_REQUIRED y en la fila APPROVED con TTL vencido del Canal B |
-| SC-003 | Cero cobros huérfanos sin instrucción de reversión | Bandera reversal_required: true (Canal A) y estado EXPIRED en CU-14 (Canal B) |
+| SC-003 | Cero cobros huérfanos sin instrucción de reversión | Bandera reversal_required: true (Canal A) y estado CANCELLED_FLEXIBLE en CU-14 (Canal B) |
 | SC-004 | 100% de confirmaciones repetidas respondidas de forma idempotente | Garantizado por clave única de transacción en la Sección 2 y 3 |
 | SC-005 | Cero cálculos monetarios en Módulo 2 | Neutralidad financiera de la interfaz |

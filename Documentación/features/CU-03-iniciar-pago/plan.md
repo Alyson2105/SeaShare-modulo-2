@@ -13,11 +13,11 @@ Al ejecutarse exitosamente:
 4. Resuelve la contienda concurrente bajo la regla **First-Come First-Served (FCFS)**: si otra reserva ganó el activo para las mismas fechas, rechaza con `409 Conflict` (FR-008, SC-002). Como salvaguarda física infalible a nivel de base de datos, la restricción `EXCLUDE USING gist` en PostgreSQL aborta atómicamente cualquier carrera concurrente con violación de exclusión (`exclusion_violation` 23P01).
 5. Si resulta victorioso, invoca a `Actualizar estado reserva` (CU-08) transicionando a **`PENDING_PAYMENT`**. **Esta transición no dispara ninguna notificación a Módulo 1**: el bloqueo operativo en el inventario de Módulo 1 se materializa únicamente cuando la reserva alcanza `RESERVED` (tras la confirmación del pago). El TTL y el estado de pago pendiente se gestionan completamente dentro de Módulo 2 (ver CU-22 FR-002).
 6. **No reinicia el TTL**: el temporizador iniciado en `INITIATED` continúa consumiéndose con su marca de vencimiento original (FR-007, SC-001).
-7. Retorna los datos requeridos para redirigir al usuario hacia la pasarela o motor de pagos de Módulo 3 (FR-009).
+7. Retorna el objeto `payment` (estado del cobro, número de intento y modo de confirmación por consulta); el token de pago viaja a Módulo 3 en el evento de estado `PENDING` (FR-009).
 
 ---
 
-## Endpoint — Transición a Pendiente de Pago e Inicio de Pasarela
+## Endpoint — Transición a Pendiente de Pago e Inicio del Cobro
 
 ### Método HTTP y URL
 
@@ -90,7 +90,7 @@ POST /api/v1/reservations/{reservation_id}/payments
     "guarantee_message": "string (texto constante de M2)"
   },
   "payment": {
-    "charge_status": "string (IN_PROGRESS)",
+    "charge_status": "string (IN_PROCESS)",
     "attempt": "number (entero, 1 en el primer pago)",
     "confirmation_mode": "QUERY"
   },
@@ -150,7 +150,7 @@ curl -X POST "https://api.seashare.com/api/v1/reservations/e4f81c92-7a20-4215-9c
     },
     "guarantee_message": "El depósito se reembolsa completo si el barco se devuelve sin daños"
   },
-  "payment": { "charge_status": "IN_PROGRESS", "attempt": 1, "confirmation_mode": "QUERY" },
+  "payment": { "charge_status": "IN_PROCESS", "attempt": 1, "confirmation_mode": "QUERY" },
   "ttl_remaining_seconds": 645,
   "ttl_expires_at": "2026-10-09T12:20:00-05:00"
 }
@@ -162,8 +162,9 @@ curl -X POST "https://api.seashare.com/api/v1/reservations/e4f81c92-7a20-4215-9c
 
 | Código | Caso | Cuerpo de respuesta (ejemplo) |
 |---|---|---|
-| `400 Bad Request` | No se aceptó la política de cancelación (`accepts_cancellation_policy: false`) o `reservation_id` no es UUID (FR-014) | `{ "code": "POLICY_NOT_ACCEPTED", "message": "Se requiere tu consentimiento explícito para las políticas de cancelación para iniciar el pago" }` |
-| `400	Bad Request` |Falta payment.payment_token_ref, payer_email, payment_method_id o installments |  `{ "code": "PAYMENT_DATA_INCOMPLETE", "message": "Faltan los datos del medio de pago para iniciar el cobro" }` |
+| `400 Bad Request` | No se aceptó la política de cancelación (`accepts_cancellation_policy: false`) (FR-014) | `{ "code": "POLICY_NOT_ACCEPTED", "message": "Se requiere tu consentimiento explícito para las políticas de cancelación para iniciar el pago" }` |
+| `400 Bad Request` | `reservation_id` no es un UUID válido | `{ "code": "INVALID_UUID", "message": "El identificador de la reserva no es válido" }` |
+| `400 Bad Request` | Falta `payment.payment_token_ref`, `payer_email`, `payment_method_id` o `installments` | `{ "code": "PAYMENT_DATA_INCOMPLETE", "message": "Faltan los datos del medio de pago para iniciar el cobro" }` |
 | `401 Unauthorized` | Token ausente, inválido o expirado | `{ "code": "UNAUTHENTICATED", "message": "Token de autenticación ausente o inválido" }` |
 | `403 Forbidden` | El usuario autenticado no es el Arrendatario titular de la reserva | `{ "code": "RESERVATION_NOT_OWNED", "message": "No tienes autorización para iniciar el pago de esta reserva" }` |
 | `404 Not Found` | La reserva no existe en el sistema | `{ "code": "RESERVATION_NOT_FOUND", "message": "La reserva especificada no existe" }` |
@@ -198,7 +199,7 @@ No aplica. Operación transaccional sobre un agregado de reserva individual.
   2. *Capa de Base de Datos (Restricción GiST)*: al invocar a CU-08 para transicionar a `PENDING_PAYMENT`, PostgreSQL activa la restricción física `EXCLUDE USING gist (vessel_id WITH =, daterange(start_date, end_date, '[]') WITH &&) WHERE (status IN ('PENDING_PAYMENT', 'RESERVED', 'IN_NAVIGATION'))`. Si dos transacciones concurrentes intentasen transicionar simultáneamente superando la guarda en memoria, el motor de base de datos aborta la perdedora con error `exclusion_violation` (código SQLSTATE `23P01`). El backend captura esta excepción de integridad y responde con `409 Conflict` (`CONCURRENCY_CONFLICT`), manteniendo intacta la reserva perdedora en `INITIATED` con su TTL original.
 - **Sin notificación a Módulo 1 en `PENDING_PAYMENT`**: la transición a `PENDING_PAYMENT` no genera ninguna notificación a Módulo 1 (ver CU-22 FR-002): el TTL y la retención temporal de pago se gestionan exclusivamente dentro de Módulo 2 mediante la restricción GiST. En consecuencia, el estado operativo en Módulo 1 no refleja reservas en pago pendiente; la consulta a Módulo 1 actúa como salvaguarda frente a activos bloqueados globalmente en `RESERVED`, `IN_NAVIGATION` o `MAINTENANCE_CLEANING`.
 - **Inmutabilidad del Temporizador TTL**: el TTL de 15 minutos nació en `CU-02 Iniciar reserva`. Al transicionar a `PENDING_PAYMENT`, el backend **no reinicia** el contador (FR-007, SC-001); calcula los segundos remanentes (`ttl_remaining_seconds`) respecto al timestamp original `ttl_expires_at`.
-- **Cobro por token (Mercado Pago)**: El frontend genera el `payment_token_ref` con el SDK de Mercado Pago y lo envía a este endpoint. Módulo 2 lo transporta sin interpretarlo en el evento `reservation.status.changed` con `status: PENDING` (ver CU-14). Un worker de Módulo 3 ejecuta el cobro de forma asíncrona. Módulo 2 conoce el resultado consultando periódicamente a Módulo 3 (CU-13). No existe webhook de M3 hacia M2.
+- **Cobro por token (Mercado Pago)**: El frontend genera el `payment_token_ref` con el SDK de Mercado Pago y lo envía a este endpoint. Módulo 2 lo transporta sin interpretarlo en el evento `reservation.status.changed` con `status: PENDING` (ver CU-14). Un worker de Módulo 3 ejecuta el cobro de forma asíncrona. Módulo 2 conoce el resultado consultando periódicamente a Módulo 3 (CU-13, Canal B, activo). El Canal A (endpoint de M2 que M3 podría invocar) queda documentado en CU-13 pero apagado, porque M3 hoy no tiene ningún cliente que llame a M2.
 - **Reintento de pago con otra tarjeta**: Si el cobro fue `REJECTED` y el TTL sigue vigente, este mismo endpoint se puede invocar de nuevo sobre la reserva en Pendiente de Pago con un `payment_token_ref` nuevo. No se reinicia el TTL ni se vuelve a consultar el cálculo total (se reutiliza el ya asociado). M2 incrementa `attempt` y publica de nuevo el evento `PENDING` con un `Message-Id` nuevo. `[PEDIR A M3: idempotency key de cobro con número de attempt]`.
 
 ---
@@ -215,7 +216,7 @@ No aplica. Operación transaccional sobre un agregado de reserva individual.
 | **FR-006** | Transición de `INITIATED` a `PENDING_PAYMENT` vía CU-08 | Respuesta `200 OK` con `status: "PENDING_PAYMENT"` |
 | **FR-007** | Prohibición de reiniciar el TTL de 15 minutos | Campo `ttl_remaining_seconds` calculado desde `ttl_expires_at` |
 | **FR-008** | Rechazo por conflicto concurrente (bloqueo pesimista o restricción GiST) sin mutar reserva | Error `409 CONCURRENCY_CONFLICT` |
-| **FR-009** |  Transferencia hacia el cobro de M3 | Objeto `payment_gateway` con `redirect_url` y `charge_token` |
+| **FR-009** |  Transferencia hacia el cobro de M3 | Objeto `payment` (`charge_status`, `attempt`, `confirmation_mode: "QUERY"`) y evento `PENDING` con `payment_token_ref` (CU-14) |
 | **FR-012** | Desglose oficial de M3 (alquiler, seguro, depósito, mensaje) | Objeto pago y evento PENDING con payment_token_ref (CU-14) |
 | **FR-013 / FR-014** | Obligatoriedad de aceptar política de cancelación | Campo de request `accepts_cancellation_policy: true` y error `400` |
 | **SC-001** | 100% de transiciones exitosas sin reiniciar el TTL | Verificado en contrato de respuesta |

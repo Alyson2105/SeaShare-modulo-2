@@ -27,7 +27,7 @@ Como Arrendatario, quiero ver un listado de todas mis reservas (pasadas, vigente
     - **Then** el sistema presenta el listado ordenado cronológicamente, mostrando para cada una: nombre de la embarcación, rango de fechas, estado actual y el monto total guardado al momento de su creación.
 
 2. **Scenario**: Visualización de reservas canceladas con su total original congelado
-    - **Given** una reserva en estado `CANCELLED` (con sub-estado `CANCELLED_BY_OWNER` o `CANCELLED_NO_SHOW`)
+    - **Given** una reserva en estado `CANCELLED` (con `cancellation_subtype` `BY_OWNER` o `NO_SHOW`)
     - **When** el Arrendatario visualiza esa fila en su listado
     - **Then** el sistema presenta el estado "CANCELLED" y expone únicamente el total original que fue congelado al crear la reserva, sin mostrar cálculos, deducciones ni devoluciones, delegando esa liquidación a Módulo 3.
 
@@ -66,7 +66,7 @@ Como Propietario, quiero consultar el listado de las reservas asociadas exclusiv
 - **FR-002**: El sistema DEBE filtrar los registros en la base de datos para devolver únicamente las reservas donde el usuario en sesión coincida con el `renter_id` o el `owner_id`.
 - **FR-003**: El sistema DEBE presentar para cada reserva en el listado: Identificador/Nombre de la embarcación, rango de fechas del viaje, estado principal vigente y precio total.
 - **FR-004**: **REGLA DE NEGOCIO ESTRICTA**: El precio total expuesto DEBE ser el monto original congelado durante la creación de la reserva. El sistema NO DEBE calcular deducciones, aplicar reembolsos ni restar porcentajes en las reservas `CANCELLED`.
-- **FR-005**: El sistema DEBE mostrar claramente los sub-estados en las reservas canceladas (ej. `CANCELLED_BY_OWNER`, `CANCELLED_NO_SHOW`) para dar contexto al usuario sin comprometer lógica financiera.
+- **FR-005**: El sistema DEBE mostrar claramente los sub-estados en las reservas canceladas (ej. `BY_OWNER`, `NO_SHOW`) para dar contexto al usuario sin comprometer lógica financiera.
 - **FR-006**: El sistema DEBE permitir seleccionar una reserva específica del listado para invocar la vista profunda (extensión hacia `Ver detalle de reserva`).
 - **FR-007**: El sistema DEBE mostrar encabezados diferenciados según el rol del usuario en sesión: "Mis reservas" para el Arrendatario y "Reservas recibidas" para el Propietario, acompañados en ambos casos de un contador total de elementos (ej. "12 en total") y controles de navegación por pestañas para filtrar entre "Historial" y "Canceladas".
 - **FR-008**: El sistema DEBE renderizar el estado vigente de cada reserva mediante etiquetas visuales (badges) con colores semánticos que faciliten su identificación rápida (ej. "Confirmada" en verde, "En navegación" en amarillo, "Pendiente de pago" en gris, "Cancelada" en rojo).

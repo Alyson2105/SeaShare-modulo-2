@@ -523,4 +523,18 @@ Esta sección **no resuelve** las inconsistencias: las señala para que se cierr
 - Commit por tarea o por grupo lógico; detenerse en cada checkpoint de fase para validar.
 - **Revisión 2026-10-10**: se añadieron las secciones de *Modelo de datos*, *Conexiones*, *Contratos*, *Resiliencia*, *Decisiones* y *Lenguaje ubicuo*; se reestructuró `shared` en `contracts/` (comunicación **interna** entre los dos contextos) + `domain/` (tipos compartidos), excluyendo la plomería técnica (web, seguridad, mensajería, persistencia, observabilidad) que no se modela en `shared`; se adoptaron identificadores en inglés y la topología de colas de Módulo 3. La **dirección de CU-13/CU-15 se mantiene según los `spec.md` vigentes** (M3 → M2); la inversión a M2 → M3 queda registrada como punto abierto (§ H24).
 
-
+> **NOTA DE ACTUALIZACION (2026-10-25) - LEER ANTES DE IMPLEMENTAR**
+>
+> Este plan se redacto sobre Spring Boot 3.5.x. La implementacion real usa **Spring Boot 4.1.2, Java 21, Maven**.
+> Donde este documento contradiga lo siguiente, **manda esta nota**:
+>
+> 1. **Sin Spring Security** (decision del equipo). Ignorar `spring-boot-starter-security` y todo lo que dependa de el.
+     >    La identidad la resuelve un resolver temporal (headers `X-User-Id` / `X-User-Role`) detras de un puerto.
+> 2. **Jackson 3**: los paquetes de codigo son `tools.jackson.*`; solo las anotaciones siguen en `com.fasterxml.jackson.annotation`.
+> 3. **Flyway** requiere `spring-boot-starter-flyway` + `flyway-database-postgresql`; sin el starter las migraciones no corren y no avisa.
+> 4. **Versiones por confirmar** (no usar las de este plan sin verificar): ShedLock, Resilience4j, Testcontainers, WireMock, ArchUnit, Springdoc.
+> 5. **Migraciones aplicadas**: V1 y V2. Nunca se editan; todo cambio va en V3, V4...
+> 6. **Estado inicial de la reserva**: `INITIATED` (en el spec en espanol se llama "Borrador").
+> 7. **Idioma**: identificadores en ingles; prosa y documentacion en espanol.
+>
+> Pendiente: reescribir las secciones de este plan que mencionan Boot 3.5.x y Security (aprox. lineas 10 y 339).

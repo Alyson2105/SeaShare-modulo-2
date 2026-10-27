@@ -56,10 +56,10 @@ Qué estado de M2 se publica como qué `status`:
 | Completada | `COMPLETED` |
 | Cancelada · Flexible | `CANCELLED_FLEXIBLE` |
 | Cancelada · Moderado | `CANCELLED_MODERATE` |
-| Cancelada · Tardío | `CANCELLED_LATE` |
-| Cancelada · Por Propietario | `CANCELLED_BY_OWNER` |
-| Cancelada · Por Inasistencia | `CANCELLED_LATE` (provisional: mismo tratamiento financiero) |
-| Expirada con cobro aprobado tardío | `EXPIRED` (pendiente de M3, ver sección 6) |
+| Cancelada · Tardío | `CANCELLED_STRICT` |
+| Cancelada · Por Propietario | `CANCELLED_BY_HOST` |
+| Cancelada · Por Inasistencia | `CANCELLED_STRICT` (mismo tratamiento financiero: liquida 100 % del alquiler y devuelve el depósito) |
+| Expirada con cobro aprobado tardío | `CANCELLED_FLEXIBLE` (mapeo por tratamiento financiero: M3 reembolsa 100 %) |
 | Iniciada, Expirada sin cobro, Pago Fallido | No se publican |
 
 M3 solo reconoce los estados de su lista. Cualquier otro valor lo registra como inconsistencia y no hace nada, por eso M2 no publica nada fuera de esta tabla.
@@ -129,10 +129,9 @@ Completada:
    - M3 rechaza el mensaje por esquema inválido: no se reintenta. M3 lo maneja con su propia DLQ y M2 no se entera (no hay respuesta).
    - El outbox no se puede escribir: falla la transacción completa y el estado de la reserva no cambia.
 
-Pendientes con M3:
-1. Agregar el estado `EXPIRED`. Si M3 ya cobró y M2 expiró la reserva por carrera de TTL, M3 debe reembolsar el 100 %. Sin este estado no hay forma de pedir ese reembolso.
-2. Opcional: agregar `CANCELLED_BY_NO_SHOW`, con el mismo tratamiento que `CANCELLED_LATE`.
-3. Confirmar que M3 ignora campos que no están en su contrato.
+Pendientes con M3 (ninguno bloquea; M2 se adapta a los estados que M3 ya reconoce):
+1. Confirmar que M3 ignora campos que no están en su contrato.
+2. Informar, sin condicionar nada, que M2 publica `CANCELLED_STRICT` para inasistencia y `CANCELLED_FLEXIBLE` para un cobro aprobado tardío, por tratamiento financiero.
 
 ## 7. Trazabilidad
 
