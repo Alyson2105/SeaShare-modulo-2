@@ -5,9 +5,9 @@
 **Actores Primarios**: Admin (Administrador: revisa el reclamo presentado por el Propietario y actualiza el estado de la disputa; no introduce montos ni ejecuta operaciones de pasarela)  
 **Dependencias Externas (APIs)**: Ninguna directa.  
 **Casos de uso internos de Módulo 2**:
-- `Generar disputa de garantía` (`CU-16`, caso base): este caso de uso es el incluido (`<<include>>`). Tanto el registro inicial en PENDIENTE como el cierre automático por vencimiento en RECHAZADA (sin intervención del Admin) se ejecutan a través de la operación definida aquí, para mantener una sola fuente de verdad sobre cómo se transiciona el estado de la disputa.
+- `Generar disputa de garantía` (`CU-16`, caso base): este caso de uso es el incluido (`<<include>>`). Tanto el registro inicial en PENDING como el cierre automático por vencimiento en REJECTED (sin intervención del Admin) se ejecutan a través de la operación definida aquí, para mantener una sola fuente de verdad sobre cómo se transiciona el estado de la disputa.
 
-> **Nota de dominio**: los estados **PENDIENTE**, **RECHAZADA** y **ACEPTADA** (en mayúscula) pertenecen al objeto **Disputa de garantía**, que es distinto al estado de la reserva (`Completada`, `Reservada`, `Pendiente de Pago`, etc.). Ninguna regla de este spec modifica el estado de la reserva.
+> **Nota de dominio**: los estados **PENDING**, **REJECTED** y **ACCEPTED** (en mayúscula) pertenecen al objeto **Disputa de garantía**, que es distinto al estado de la reserva (`Completada`, `Reservada`, `Pendiente de Pago`, etc.). Ninguna regla de este spec modifica el estado de la reserva.
 
 ---
 
@@ -15,46 +15,46 @@
 
 ### User Story 1 - El Admin revisa el reclamo y resuelve la disputa (Priority: P1)
 
-El Admin revisa el reclamo presentado por el Propietario sobre una disputa en PENDIENTE y actualiza su estado a ACEPTADA (el reclamo procede y el depósito debe entregarse al Propietario) o a RECHAZADA (el reclamo no procede), pudiendo adjuntar un motivo opcional. La decisión es únicamente administrativa y operativa: el Admin no introduce montos ni ejecuta operaciones de pasarela ni de pago.
+El Admin revisa el reclamo presentado por el Propietario sobre una disputa en PENDING y actualiza su estado a ACCEPTED (el reclamo procede y el depósito debe entregarse al Propietario) o a REJECTED (el reclamo no procede), pudiendo adjuntar un motivo opcional. La decisión es únicamente administrativa y operativa: el Admin no introduce montos ni ejecuta operaciones de pasarela ni de pago.
 
 **Why this priority**: Es la resolución humana del flujo de disputa. Sin esta revisión, ningún reclamo llegaría a un estado final por vía administrativa y Módulo 3 no tendría un veredicto sobre el cual decidir el destino del depósito.
 
-**Independent Test**: Se prueba con disputas en PENDIENTE con reclamo registrado, ejecutando la actualización por el Admin a ACEPTADA y a RECHAZADA (con y sin motivo), y verificando que el estado cambia, que el motivo queda guardado como campo informativo y que no se produce ningún movimiento de dinero ni cálculo en Módulo 2.
+**Independent Test**: Se prueba con disputas en PENDING con reclamo registrado, ejecutando la actualización por el Admin a ACCEPTED y a REJECTED (con y sin motivo), y verificando que el estado cambia, que el motivo queda guardado como campo informativo y que no se produce ningún movimiento de dinero ni cálculo en Módulo 2.
 
 **Acceptance Scenarios**:
 
-1. **Scenario**: Reclamo procedente → ACEPTADA
-   - **Given** una disputa en estado PENDIENTE con reclamo registrado por el Propietario
+1. **Scenario**: Reclamo procedente → ACCEPTED
+   - **Given** una disputa en estado PENDING con reclamo registrado por el Propietario
    - **When** el Admin revisa el reclamo y lo encuentra procedente
-   - **Then** el sistema actualiza la disputa a ACEPTADA (el depósito debe entregarse al Propietario, decisión que ejecuta Módulo 3) sin introducir montos ni operar pasarelas
+   - **Then** el sistema actualiza la disputa a ACCEPTED (el depósito debe entregarse al Propietario, decisión que ejecuta Módulo 3) sin introducir montos ni operar pasarelas
 
-2. **Scenario**: Reclamo improcedente → RECHAZADA con motivo opcional
-   - **Given** una disputa en estado PENDIENTE con reclamo registrado por el Propietario
+2. **Scenario**: Reclamo improcedente → REJECTED con motivo opcional
+   - **Given** una disputa en estado PENDING con reclamo registrado por el Propietario
    - **When** el Admin revisa el reclamo y lo encuentra improcedente
-   - **Then** el sistema actualiza la disputa a RECHAZADA, guardando el motivo en la base de datos local si el Admin lo proveyó (campo opcional, solo informativo y de trazabilidad, sin efecto financiero y que no se transmite a Módulo 3).
+   - **Then** el sistema actualiza la disputa a REJECTED, guardando el motivo en la base de datos local si el Admin lo proveyó (campo opcional, solo informativo y de trazabilidad, sin efecto financiero y que no se transmite a Módulo 3).
    
 ### User Story 2 - El Admin mantiene la disputa en revisión (Priority: P2)
 
-Si la revisión todavía no terminó, el Admin puede dejar constancia de que la disputa sigue en PENDIENTE (la revisión continúa), sin resolverla aún.
+Si la revisión todavía no terminó, el Admin puede dejar constancia de que la disputa sigue en PENDING (la revisión continúa), sin resolverla aún.
 
-**Why this priority**: Permite trazabilidad del trabajo de revisión en curso, pero no es indispensable para el MVP: una disputa en PENDIENTE ya expresa por sí misma que la revisión no terminó.
+**Why this priority**: Permite trazabilidad del trabajo de revisión en curso, pero no es indispensable para el MVP: una disputa en PENDING ya expresa por sí misma que la revisión no terminó.
 
-**Independent Test**: Se prueba con una disputa en PENDIENTE ejecutando la actualización a PENDIENTE por el Admin, y verificando que el estado se mantiene, que queda registro de la revisión en curso y que no se notifica ningún cambio efectivo.
+**Independent Test**: Se prueba con una disputa en PENDING ejecutando la actualización a PENDING por el Admin, y verificando que el estado se mantiene, que queda registro de la revisión en curso y que no se notifica ningún cambio efectivo.
 
 **Acceptance Scenarios**:
 
-1. **Scenario**: Revisión en curso, sigue PENDIENTE
-   - **Given** una disputa en estado PENDIENTE cuya revisión aún no terminó
+1. **Scenario**: Revisión en curso, sigue PENDING
+   - **Given** una disputa en estado PENDING cuya revisión aún no terminó
    - **When** el Admin registra que la revisión continúa
-   - **Then** el sistema mantiene la disputa en PENDIENTE con registro de la revisión en curso, sin cambios efectivos de estado
+   - **Then** el sistema mantiene la disputa en PENDING con registro de la revisión en curso, sin cambios efectivos de estado
 
 ---
 
 ### Edge Cases
 
-- **Actualización sobre estado final**: si la disputa ya está en RECHAZADA o ACEPTADA (incluido el cierre automático por vencimiento), el sistema DEBE rechazar cualquier intento de cambio (ni el Admin ni ningún otro actor pueden reabrirla). RECHAZADA y ACEPTADA son estados finales.
+- **Actualización sobre estado final**: si la disputa ya está en REJECTED o ACCEPTED (incluido el cierre automático por vencimiento), el sistema DEBE rechazar cualquier intento de cambio (ni el Admin ni ningún otro actor pueden reabrirla). REJECTED y ACCEPTED son estados finales.
 - **Carrera entre resolución del Admin y cierre por vencimiento**: si el Admin resuelve en el mismo instante en que vence la ventana, el sistema DEBE garantizar atomicidad: solo una de las dos transiciones se aplica; la otra se rechaza (si ganó el vencimiento, la disputa ya está finalizada; si ganó el Admin, el vencimiento posterior no la altera).
-- **Actualización sin reclamo presentado**: la precondición de la revisión por el Admin es el estado PENDIENTE. [DUDA — ver lista de dudas al final del documento] no está definido si el Admin puede resolver una disputa PENDIENTE que aún no tiene reclamo registrado (antes del vencimiento).
+- **Actualización sin reclamo presentado**: la precondición de la revisión por el Admin es el estado PENDING. [DUDA — ver lista de dudas al final del documento] no está definido si el Admin puede resolver una disputa PENDING que aún no tiene reclamo registrado (antes del vencimiento).
 - **Motivo extenso o con formato**: el motivo es texto libre opcional; [NEEDS CLARIFICATION: longitud máxima y reglas de contenido del campo motivo — se define en diseño, no en este spec].
 - **Admin sin permisos**: solo el rol Admin puede ejecutar este caso de uso; cualquier otro actor DEBE ser rechazado.
 
@@ -64,18 +64,18 @@ Si la revisión todavía no terminó, el Admin puede dejar constancia de que la 
 
 ### Functional Requirements
 
-- **FR-001**: El sistema DEBE permitir al Admin actualizar el estado de una disputa si y solo si la disputa existe y se encuentra en estado PENDIENTE.
-- **FR-002**: Desde PENDIENTE, los únicos estados destino permitidos son PENDIENTE (la revisión todavía no terminó), RECHAZADA (el reclamo no procede o no fue presentado dentro del plazo) o ACEPTADA (el reclamo procede y el depósito debe entregarse al Propietario).
-- **FR-003**: Si la disputa ya está en RECHAZADA o ACEPTADA, el sistema DEBE rechazar cualquier intento de cambio de estado. Ambos son estados finales sin reapertura.
+- **FR-001**: El sistema DEBE permitir al Admin actualizar el estado de una disputa si y solo si la disputa existe y se encuentra en estado PENDING.
+- **FR-002**: Desde PENDING, los únicos estados destino permitidos son PENDING (la revisión todavía no terminó), REJECTED (el reclamo no procede o no fue presentado dentro del plazo) o ACCEPTED (el reclamo procede y el depósito debe entregarse al Propietario).
+- **FR-003**: Si la disputa ya está en REJECTED o ACCEPTED, el sistema DEBE rechazar cualquier intento de cambio de estado. Ambos son estados finales sin reapertura.
 - **FR-004**: El motivo del rechazo DEBE ser un campo opcional. NO debe ser obligatorio ni utilizarse para determinar ninguna operación financiera; su único propósito es informativo local y de auditoría en Módulo 2. El sistema NO DEBE incluir este motivo en el evento publicado a Módulo 3.
 - **FR-005**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El Admin y el sistema **NO DEBEN introducir montos, ni ejecutar operaciones de pasarela ni de pago** en este caso de uso. La decisión es únicamente administrativa y operativa; el destino del dinero lo resuelve Módulo 3 a partir del estado final.
-- **FR-006**: El cierre automático por vencimiento del Caso de uso 1 (`Generar disputa de garantía`) DEBE ejecutarse a través de esta misma operación de cambio de estado (PENDIENTE → RECHAZADA, actor Sistema, motivo de sistema), para mantener una sola fuente de verdad sobre las transiciones.
-- **FR-007**: Cada cambio de estado a RECHAZADA o ACEPTADA DEBE publicarse a Módulo 3 a través del evento de CU-18. El sistema DEBE aplicar la siguiente traducción de nomenclatura en el payload del evento: Si el estado en M2 es ACEPTADA, emite COMPLETADO; si es RECHAZADA, emite RECHAZADO. El registro inicial en PENDIENTE es interno y NO se publica.
+- **FR-006**: El cierre automático por vencimiento del Caso de uso 1 (`Generar disputa de garantía`) DEBE ejecutarse a través de esta misma operación de cambio de estado (PENDING → REJECTED, actor Sistema, motivo de sistema), para mantener una sola fuente de verdad sobre las transiciones.
+- **FR-007**: Cada cambio de estado a REJECTED o ACCEPTED DEBE publicarse a Módulo 3 a través del evento de CU-18. El sistema DEBE aplicar la siguiente traducción de nomenclatura en el payload del evento: Si el estado en M2 es ACCEPTED, emite COMPLETADO; si es REJECTED, emite APPROVED. El registro inicial en PENDING es interno y NO se publica.
 - **FR-008**: El sistema DEBE proveer una vista de administración titulada "Resolución de disputas", que incluya un menú de navegación lateral izquierdo con la opción activa "Resolución de disputas" y el botón inferior "Cerrar sesión", además de un contador resumen superior de la bandeja (ej. "Bandeja: 2 abiertas · 1 en revisión · 9 resueltas").
-- **FR-009**: El sistema DEBE mostrar un bloque superior con el identificador de la disputa (ej. "Disputa D-2014"), el nombre de la embarcación, la referencia de la reserva, los nombres del Arrendatario y del Propietario, acompañado a la derecha por una etiqueta de estado (ej. "PENDIENTE · 14h restantes").
+- **FR-009**: El sistema DEBE mostrar un bloque superior con el identificador de la disputa (ej. "Disputa D-2014"), el nombre de la embarcación, la referencia de la reserva, los nombres del Arrendatario y del Propietario, acompañado a la derecha por una etiqueta de estado (ej. "PENDING · 14h restantes").
 - **FR-010**: El sistema DEBE presentar un panel central dividido en dos columnas: la tarjeta izquierda "Reclamo del Propietario" (con el nombre del propietario y la descripción textual del daño reportado) y la tarjeta derecha "Novedades registradas al cierre" (con un texto informativo aclarando que el check-out de CU-07 no constituye un reclamo formal).
 - **FR-011**: El sistema DEBE proveer un campo de texto libre titulado "Motivo de la resolución (opcional, solo interno)" con un placeholder descriptivo (ej. "Ej: El desgaste reportado es normal por uso, no corresponde a un daño"), permitiendo al administrador registrar observaciones de trazabilidad que quedan registradas únicamente en Módulo 2 y que no afectan ni condicionan las operaciones financieras de los fondos.
-- **FR-012**: El sistema DEBE mostrar en la esquina inferior derecha dos botones de acción principal para que el administrador resuelva el caso: "Rechazar reclamo" (secundario con borde rojo, asociado a la transición hacia RECHAZADA) y "Aceptar reclamo" (primario con fondo verde, asociado a la transición hacia ACEPTADA).
+- **FR-012**: El sistema DEBE mostrar en la esquina inferior derecha dos botones de acción principal para que el administrador resuelva el caso: "Rechazar reclamo" (secundario con borde rojo, asociado a la transición hacia REJECTED) y "Aceptar reclamo" (primario con fondo verde, asociado a la transición hacia ACCEPTED).
 - **FR-013**: El **SLA límite de respuesta a disputas de garantía** (resolución por parte del Admin) está fijado en **24 horas**.
 - 
 
@@ -83,7 +83,7 @@ Si la revisión todavía no terminó, el Admin puede dejar constancia de que la 
 ### Key Entities
 
 - **Disputa de garantía**: objeto de dominio de Módulo 2, distinto de la Reserva y de su estado. Se referencia aquí para su actualización; su creación vive en `Generar disputa de garantía` (`CU-16`).
-- **Revisión administrativa**: actuación del Admin sobre una disputa en PENDIENTE. Atributos clave: identificador de la disputa, revisor (Admin), decisión (PENDIENTE / RECHAZADA / ACEPTADA), motivo opcional (texto libre, solo informativo), marca temporal de la revisión.
+- **Revisión administrativa**: actuación del Admin sobre una disputa en PENDING. Atributos clave: identificador de la disputa, revisor (Admin), decisión (PENDING / REJECTED / ACCEPTED), motivo opcional (texto libre, solo informativo), marca temporal de la revisión.
 
 ---
 
@@ -91,8 +91,8 @@ Si la revisión todavía no terminó, el Admin puede dejar constancia de que la 
 
 ### Measurable Outcomes
 
-- **SC-001**: El 100% de las actualizaciones del Admin se aplican solo sobre disputas en PENDIENTE, con destino PENDIENTE, RECHAZADA o ACEPTADA.
-- **SC-002**: Cero (0%) cambios de estado aplicados sobre disputas en RECHAZADA o ACEPTADA (estados finales inmutables).
+- **SC-001**: El 100% de las actualizaciones del Admin se aplican solo sobre disputas en PENDING, con destino PENDING, REJECTED o ACCEPTED.
+- **SC-002**: Cero (0%) cambios de estado aplicados sobre disputas en REJECTED o ACCEPTED (estados finales inmutables).
 - **SC-003**: Cero (0) montos introducidos y cero (0) operaciones de pasarela o pago ejecutadas en este flujo.
 - **SC-004**: El 100% de los rechazos con motivo lo guardan solo como campo informativo, sin condicionar ninguna operación financiera.
 
@@ -100,5 +100,5 @@ Si la revisión todavía no terminó, el Admin puede dejar constancia de que la 
 
 ## Dudas abiertas de este spec
 
-- **D-01**: ¿Puede el Admin resolver (ACEPTADA/RECHAZADA) una disputa PENDIENTE que aún no tiene reclamo registrado, antes de que venza la ventana?
+- **D-01**: ¿Puede el Admin resolver (ACCEPTED/REJECTED) una disputa PENDING que aún no tiene reclamo registrado, antes de que venza la ventana?
 - **D-02**: Longitud máxima y reglas de contenido del campo motivo — se define en diseño.

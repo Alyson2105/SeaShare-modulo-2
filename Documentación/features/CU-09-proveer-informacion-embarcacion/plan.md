@@ -247,7 +247,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones?page=1&size=20
 |---|---|---|---|
 | `400 Bad Request` | Parámetros o `vessel_id` con sintaxis inválida | Módulo 2 registra el error y aborta inmediatamente sin reintento | `400 Bad Request` (`INVALID_ID` / `INVALID_PARAMETERS`) |
 | `401 Unauthorized` / `403 Forbidden` | Token de servicio de M2 rechazado o sin permisos | Módulo 2 genera alerta crítica en observabilidad y corta la ejecución | `500 Internal Server Error` (`INTERNAL_ERROR`) |
-| `404 Not Found` | Embarcación no registrada en flota | En consulta individual, informa no disponibilidad del activo sin reintentos | `404 Not Found` (`VESSEL_UNAVAILABLE`) |
+ | `404 Not Found` | Embarcación no registrada en flota | En consulta individual, informa no disponibilidad del activo sin reintentos | `404 Not Found` (`VESSEL_NOT_FOUND`) |
 | `500 Internal Server Error` / `502 Bad Gateway` | Falla interna o caída en Módulo 1 | Módulo 2 ejecuta máximo un (1) reintento rápido; si persiste, activa *fail-safe* | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |
 | `Timeout` (sin respuesta) | Lectura supera los 300 ms | Dispara un (1) reintento inmediato; si se agota, aborta de forma segura | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |
 

@@ -74,7 +74,7 @@ Si al consultar el Módulo 1 el servicio no responde, falla o tarda demasiado ti
 ### Edge Cases
 
 - **Prohibición de duplicar datos de barcos en Módulo 2**:
-    - El Módulo 2 **NO guarda ni copia los detalles técnicos de los barcos en su base de datos**. Solo guarda los códigos de identificación (`embarcacion_id` y `propietario_id`), respetando que Módulo 1 es el único dueño de la información de la flota.
+    - El Módulo 2 **NO guarda ni copia los detalles técnicos de los barcos en su base de datos**. Solo guarda los códigos de identificación (`vessel_id` y `owner_id`), respetando que Módulo 1 es el único dueño de la información de la flota.
 - **Prohibición de calcular precios o dinero en Módulo 2**:
     - Este caso de uso solo entrega información física y descriptiva del barco (tamaño, motor, servicios incluidos, capacidad, capitán); **NO maneja tarifas, no calcula precios por hora ni cobra dinero**. Todos los temas de precios provienen del Módulo 3.
 - **Información siempre actualizada en tiempo real**:

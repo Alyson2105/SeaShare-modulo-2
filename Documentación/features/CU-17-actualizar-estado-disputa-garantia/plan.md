@@ -143,7 +143,7 @@ curl -X PUT "https://api.seashare.com/api/v1/disputes/d1a2b3c4-e5f6-7a8b-9c0d-1e
   "resolved_at": "2026-10-09T16:45:00-05:00",
   "reason": "Se verificó evidencia fotográfica de impacto en el timón incompatible con el desgaste normal de uso. Reclamo procedente.",
   "m3_event_published": true,
-  "message": "Disputa resuelta como ACEPTADA. Módulo 3 ha sido notificado para liquidar el 100% del depósito de garantía al Propietario."
+  "message": "Disputa resuelta como ACCEPTED. Módulo 3 ha sido notificado para liquidar el 100% del depósito de garantía al Propietario."
 }
 ```
 
@@ -174,7 +174,7 @@ curl -X PUT "https://api.seashare.com/api/v1/disputes/d1a2b3c4-e5f6-7a8b-9c0d-1e
   "resolved_at": "2026-10-09T17:10:00-05:00",
   "reason": "El desgaste reportado en los tapizados corresponde a fatiga normal de material y no a negligencia del arrendatario.",
   "m3_event_published": true,
-  "message": "Disputa resuelta como RECHAZADA. Módulo 3 ha sido notificado para reembolsar el 100% del depósito de garantía al Arrendatario."
+  "message": "Disputa resuelta como REJECTED. Módulo 3 ha sido notificado para reembolsar el 100% del depósito de garantía al Arrendatario."
 }
 ```
 
@@ -204,7 +204,7 @@ curl -X PUT "https://api.seashare.com/api/v1/disputes/d1a2b3c4-e5f6-7a8b-9c0d-1e
   "resolved_at": "2026-10-09T17:30:00-05:00",
   "reason": null,
   "m3_event_published": false,
-  "message": "Revisión en curso registrada. La disputa permanece en estado PENDIENTE. No se emitió ninguna notificación a Módulo 3."
+  "message": "Revisión en curso registrada. La disputa permanece en estado PENDING. No se emitió ninguna notificación a Módulo 3."
 }
 ```
 
@@ -224,7 +224,7 @@ Todos los errores retornan un sobre uniforme con `code` y `message`:
 | Código HTTP | Código Interno (`code`) | Causa / Condición de Disparo | Cuerpo de Respuesta de Ejemplo |
 | :--- | :--- | :--- | :--- |
 | **`400 Bad Request`** | `INVALID_UUID` | El parámetro `dispute_id` no es un UUIDv4 válido. | `{"code": "INVALID_UUID", "message": "El identificador de disputa proporcionado no es válido."}` |
-| **`400 Bad Request`** | `INVALID_STATE_TRANSITION` | El valor de `new_status` no es uno de `ACCEPTED`, `REJECTED` o `PENDING`. | `{"code": "INVALID_STATE_TRANSITION", "message": "Estado destino no permitido. Los únicos estados válidos son ACEPTADA, RECHAZADA o PENDIENTE."}` |
+| **`400 Bad Request`** | `INVALID_STATE_TRANSITION` | El valor de `new_status` no es uno de `ACCEPTED`, `REJECTED` o `PENDING`. | `{"code": "INVALID_STATE_TRANSITION", "message": "Estado destino no permitido. Los únicos estados válidos son ACCEPTED, REJECTED o PENDING."}` |
 | **`401 Unauthorized`** | `AUTH_TOKEN_MISSING_OR_INVALID` | El header `Authorization` no fue provisto o el token expiró. | `{"code": "AUTH_TOKEN_MISSING_OR_INVALID", "message": "Token de autenticación ausente o inválido."}` |
 | **`403 Forbidden`** | `FORBIDDEN_NOT_ADMIN` | El usuario autenticado no posee el rol `ADMIN` en su token JWT. | `{"code": "FORBIDDEN_NOT_ADMIN", "message": "Acceso denegado: solo el perfil Administrador tiene atribuciones para resolver disputas de garantía."}` |
 | **`404 Not Found`** | `DISPUTE_NOT_FOUND` | La disputa no existe en la base de datos de Módulo 2. | `{"code": "DISPUTE_NOT_FOUND", "message": "No se encontró ninguna disputa de garantía asociada al identificador provisto."}` |

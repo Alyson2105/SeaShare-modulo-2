@@ -6,10 +6,10 @@
 
 Este caso de uso expone dos operaciones REST independientes para satisfacer dos momentos diferenciados en el ciclo de interacción del usuario (FR-001 a FR-010):
 
-1. **Obtener la ficha técnica de la embarcación**: consulta estática hacia Módulo 1 (FR-002, FR-009, FR-010) respaldada por el contrato externo [`m1-consultar-informacion-embarcacion.md`](../external/m1-consultar-informacion-embarcacion.md).
-2. **Solicitar la cotización individual para el detalle**: consulta dinámica hacia Módulo 3 para un rango de fechas y cantidad de pasajeros específicos (FR-004, FR-005, FR-006) respaldada por el contrato externo [`m3-estimacion-individual.md`](../external/m3-estimacion-individual.md).
+1. **Obtener la ficha técnica de la embarcación**: consulta estática hacia Módulo 1 (FR-002, FR-009, FR-010) respaldada por el contrato de [`CU-09 Proveer información de embarcación`](../CU-09-proveer-informacion-embarcacion/plan.md).
+2. **Solicitar la cotización individual para el detalle**: consulta dinámica hacia Módulo 3 para un rango de fechas y cantidad de pasajeros específicos (FR-004, FR-005, FR-006) respaldada por el contrato de [`CU-11 Proveer información cotización de reserva`](../CU-11-proveer-informacion-cotizacion-reserva/plan.external.individual.md).
 
-Ambas operaciones se segregan debido a que poseen ciclos de vida desacoplados: la ficha técnica se consulta una sola vez al ingresar a la vista, mientras que la cotización se reejecuta ante cualquier cambio dinámico de fechas o pasajeros introducido por el Arrendatario (Edge Case "Cambio dinámico de parámetros"). Este caso de uso es extendido desde [`CU-01-buscar-embarcaciones-disponibles.md`](CU-01-buscar-embarcaciones-disponibles.md) (`<<extend>>`, FR-001) y constituye el punto previo que habilita la extensión hacia `Iniciar reserva` (`<<extend>>`, FR-007).
+Ambas operaciones se segregan debido a que poseen ciclos de vida desacoplados: la ficha técnica se consulta una sola vez al ingresar a la vista, mientras que la cotización se reejecuta ante cualquier cambio dinámico de fechas o pasajeros introducido por el Arrendatario (Edge Case "Cambio dinámico de parámetros"). Este caso de uso es extendido desde [`CU-01 Buscar embarcaciones disponibles`](../CU-01-buscar-embarcaciones-disponibles/plan.md) (`<<extend>>`, FR-001) y constituye el punto previo que habilita la extensión hacia `Iniciar reserva` (`<<extend>>`, FR-007).
 
 ---
 
@@ -135,7 +135,7 @@ curl -X GET "https://api.seashare.com/api/v1/vessels/d3b07384-d113-49cd-a5d6-812
 | `400 Bad Request` | `vessel_id` no tiene estructura de UUID válido | `{ "code": "INVALID_ID", "message": "El identificador de embarcación proporcionado no es un UUID válido" }` |
 | `401 Unauthorized` | Token de autorización ausente, corrupto o expirado | `{ "code": "UNAUTHENTICATED", "message": "Token de autenticación inválido o ausente" }` |
 | `403 Forbidden` | El claim de rol en el token no corresponde a Arrendatario | `{ "code": "PROFILE_NOT_AUTHORIZED", "message": "Este recurso requiere perfil Arrendatario" }` |
-| `404 Not Found` | La embarcación no existe en Módulo 1 o retorna capacidad inválida (capacidad = 0) (Edge Case "Inconsistencia de datos desde Módulo 1") | `{ "code": "VESSEL_NOT_AVAILABLE", "message": "La embarcación no está disponible para mostrar su detalle" }` |
+ | `404 Not Found` | La embarcación no existe en Módulo 1 o retorna capacidad inválida (capacidad = 0) (Edge Case "Inconsistencia de datos desde Módulo 1") | `{ "code": "VESSEL_NOT_FOUND", "message": "La embarcación no está disponible para mostrar su detalle" }` |
 | `503 Service Unavailable` | Módulo 1 no responde o agota el tiempo de espera (*fail-safe* preventivo) | `{ "code": "FLEET_SERVICE_UNAVAILABLE", "message": "No se pudo consultar la información técnica de la embarcación en este momento" }` |
 | `500 Internal Server Error` | Excepción interna no controlada | `{ "code": "INTERNAL_ERROR", "message": "Ocurrió un error inesperado al recuperar la embarcación" }` |
 
@@ -179,12 +179,12 @@ GET /api/v1/vessels/{vessel_id}/quotations
 |---|---|---|---|
 | `vessel_id` | string (UUID) | Sí | Identificador de la embarcación a cotizar (FR-001) |
 
-**Query Parameters**:
+ **Query Parameters**:
 
 | Nombre | Tipo | Obligatorio | Descripción |
 |---|---|---|---|
-| `start_at` | string (ISO 8601, `YYYY-MM-DD`) | Sí | Fecha de inicio seleccionada en el calendario (FR-003) |
-| `end_at` | string (ISO 8601, `YYYY-MM-DD`) | Sí | Fecha de finalización seleccionada en el calendario (FR-003) |
+| `start_date` | string (ISO 8601, `YYYY-MM-DD`) | Sí | Fecha de inicio seleccionada en el calendario (FR-003) |
+| `end_date` | string (ISO 8601, `YYYY-MM-DD`) | Sí | Fecha de finalización seleccionada en el calendario (FR-003) |
 | `passengers` | number (entero positivo) | Sí | Cantidad de personas ingresada en el selector (FR-003, FR-004) |
 
 **Body**: No tiene (operación `GET`).
@@ -200,8 +200,8 @@ GET /api/v1/vessels/{vessel_id}/quotations
 ```json
 {
   "vessel_id": "string (UUID)",
-  "start_at": "string (ISO 8601, YYYY-MM-DD)",
-  "end_at": "string (ISO 8601, YYYY-MM-DD)",
+   "start_date": "string (ISO 8601, YYYY-MM-DD)",
+   "end_date": "string (ISO 8601, YYYY-MM-DD)",
   "total_days": "number (entero)",
   "passengers": "number (entero)",
   "total_amount": "number (BigDecimal/string según convención, literal de M3)",
@@ -212,7 +212,7 @@ GET /api/v1/vessels/{vessel_id}/quotations
 }
 ```
 
-*(El valor `total_amount` proviene íntegro de Módulo 3 vía `m3-estimacion-individual` — Módulo 2 jamás calcula divisiones ni exhibe tarifas por noche, FR-006, SC-001. La propiedad `warning` preserva textualmente la bandera obligatoria de Módulo 3).*
+*(El valor `total_amount` proviene íntegro de Módulo 3 vía [CU-11 Proveer información cotización de reserva](../CU-11-proveer-informacion-cotizacion-reserva/plan.external.individual.md) — Módulo 2 jamás calcula divisiones ni exhibe tarifas por noche, FR-006, SC-001. La propiedad `warning` preserva textualmente la bandera obligatoria de Módulo 3).*
 
 **Headers de respuesta**:
 
@@ -228,7 +228,7 @@ GET /api/v1/vessels/{vessel_id}/quotations
 **Petición `curl`**:
 
 ```bash
-curl -X GET "https://api.seashare.com/api/v1/vessels/d3b07384-d113-49cd-a5d6-812e9bcfc101/quotations?start_at=2026-11-15&end_at=2026-11-18&passengers=8" \
+ curl -X GET "https://api.seashare.com/api/v1/vessels/d3b07384-d113-49cd-a5d6-812e9bcfc101/quotations?start_date=2026-11-15&end_date=2026-11-18&passengers=8" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTIyMzMzNC00NDU1LTY2NzctODg5OS1hYWJiY2NkZGVlZmYiLCJyb2wiOiJSZW50ZXIiLCJpYXQiOjE3OTE1NDAwMDB9.sampleToken" \
   -H "Accept: application/json"
 ```
@@ -238,13 +238,13 @@ curl -X GET "https://api.seashare.com/api/v1/vessels/d3b07384-d113-49cd-a5d6-812
 ```json
 {
   "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-  "start_at": "2026-11-15",
-  "end_at": "2026-11-18",
+   "start_date": "2026-11-15",
+   "end_date": "2026-11-18",
   "total_days": 3,
   "passengers": 8,
   "total_amount": 9600000.00,
   "currency": "COP",
-  "warning": "Valor estimado. No incluye cargos adicionales ni depósito de seguridad",
+  "warning": "Valor estimado. El valor incluye el seguro náutico, pero no incluye el depósito de garantía ni penalidades o ajustes derivados de cambios posteriores de la reserva",
   "quotation_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
   "quotation_expires_at": "2026-10-09T12:15:00Z"
 }
@@ -259,7 +259,7 @@ curl -X GET "https://api.seashare.com/api/v1/vessels/d3b07384-d113-49cd-a5d6-812
 | `400 Bad Request` | Parámetros con formato inválido, `end_at` menor o igual a `start_at`, fecha en el pasado o `passengers` no numérico | `{ "code": "INVALID_PARAMETERS", "message": "Las fechas ingresadas o la cantidad de pasajeros no son válidas" }` |
 | `401 Unauthorized` | Token de autenticación ausente o expirado | `{ "code": "UNAUTHENTICATED", "message": "Token de autenticación inválido o ausente" }` |
 | `403 Forbidden` | Perfil de usuario distinto de Arrendatario | `{ "code": "PROFILE_NOT_AUTHORIZED", "message": "Este recurso requiere perfil Arrendatario" }` |
-| `404 Not Found` | La embarcación indicada no existe en el catálogo | `{ "code": "VESSEL_NOT_AVAILABLE", "message": "La embarcación solicitada no se encuentra registrada" }` |
+ | `404 Not Found` | La embarcación indicada no existe en el catálogo | `{ "code": "VESSEL_NOT_FOUND", "message": "La embarcación solicitada no se encuentra registrada" }` |
 | `409 Conflict` | La cantidad de pasajeros ingresada supera la capacidad máxima del activo (revalidación mandatoria de backend, FR-004) | `{ "code": "CAPACITY_EXCEEDED", "message": "La cantidad de passengers (8) supera la capacidad máxima de la embarcación (6)" }` |
 | `503 Service Unavailable` | Módulo 3 no responde, tiempo agotado o activo sin esquema tarifario configurado (Edge Case "Falla en la obtención de la cotización") | `{ "code": "QUOTATION_UNAVAILABLE", "message": "Cotización temporalmente no disponible" }` |
 | `500 Internal Server Error` | Falla interna no controlada | `{ "code": "INTERNAL_ERROR", "message": "Ocurrió un error inesperado al procesar la cotización" }` |
@@ -293,10 +293,10 @@ No aplica. Retorna un único cálculo presupuestal consolidado para los parámet
 | Requisito / Criterio | Descripción en Spec | Elemento de este Contrato |
 |---|---|---|
 | **FR-001** | Recepción de identificador desde búsqueda | Path parameter `vessel_id` en ambos endpoints |
-| **FR-002** | Consulta de datos técnicos vía `Proveer información embarcación` | Endpoint 1 respaldado por [`m1-consultar-informacion-embarcacion.md`](../external/m1-consultar-informacion-embarcacion.md) |
-| **FR-003** | Selectores de fechas y pasajeros | Query parameters `start_at`, `end_at`, `passengers` del Endpoint 2 |
+| **FR-002** | Consulta de datos técnicos vía `Proveer información embarcación` | Endpoint 1 respaldado por el [plan de CU-09](../CU-09-proveer-informacion-embarcacion/plan.md) |
+ | **FR-003** | Selectores de fechas y pasajeros | Query parameters `start_date`, `end_date`, `passengers` del Endpoint 2 |
 | **FR-004** | Validación estricta de capacidad máxima | Manejo de error `409 Conflict` con código `CAPACITY_EXCEEDED` en Endpoint 2 |
-| **FR-005** | Cotización individual vía `Proveer información cotización de reserva` | Endpoint 2 respaldado por [`m3-estimacion-individual.md`](../external/m3-estimacion-individual.md) |
+| **FR-005** | Cotización individual vía `Proveer información cotización de reserva` | Endpoint 2 respaldado por el [plan de CU-11](../CU-11-proveer-informacion-cotizacion-reserva/plan.external.individual.md) |
 | **FR-006** | Regla estricta "Sin dinero" (cero divisiones por noche) | Campo `total_amount` literal en Endpoint 2; sin campos de breakdown de tarifa nocturna |
 | **FR-007** | Transición hacia `Iniciar reserva` solo con capacidad válida y cotización exitosa | Código `200 OK` en Endpoint 2 condiciona el avance a CU-02 |
 | **FR-008** | Navegación de retorno al catálogo | Metadatos de navegación preservados en el cliente |

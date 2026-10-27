@@ -5,9 +5,9 @@
 **Actores Primarios**: Módulo 3 (Liquidación, Seguros y Dispersión de Fondos), como receptor de la información publicada por Módulo 2.  
 **Dependencias Externas (APIs)**:
 - **Módulo 3 – Liquidación, Seguros y Dispersión de Fondos**: sistema cliente que consume los mensajes de la cola para decidir internamente el destino del depósito. No participa en la creación ni en la actualización del estado de la disputa.
-- **Casos de uso internos de Módulo 2**: invocado tras cada transición a estado final (RECHAZADA o ACEPTADA) gestionada por `Generar disputa de garantía` (`CU-16`, cierre automático) y `Actualizar estado de disputa de garantía` (`CU-17`, resolución del Admin).
+- **Casos de uso internos de Módulo 2**: invocado tras cada transición a estado final (REJECTED o ACCEPTED) gestionada por `Generar disputa de garantía` (`CU-16`, cierre automático) y `Actualizar estado de disputa de garantía` (`CU-17`, resolución del Admin).
 
-> **Nota de dominio**: los estados **PENDIENTE**, **RECHAZADA** y **ACEPTADA** (en mayúscula) pertenecen al objeto **Disputa de garantía**, que es distinto al estado de la reserva (`Completada`, `Reservada`, `Pendiente de Pago`, etc.).
+> **Nota de dominio**: los estados **PENDING**, **REJECTED** y **ACCEPTED** (en mayúscula) pertenecen al objeto **Disputa de garantía**, que es distinto al estado de la reserva (`Completada`, `Reservada`, `Pendiente de Pago`, etc.).
 
 ---
 
@@ -15,23 +15,23 @@
 
 ### User Story 1 - Publicar los estados finales de la disputa para Módulo 3 (Priority: P1)
 
-Cuando la disputa alcanza un estado final (RECHAZADA por vencimiento automático o por resolución del Admin, o ACEPTADA por resolución del Admin), Módulo 2 publica un mensaje en la cola con únicamente ese estado y los identificadores necesarios para relacionarlo con la reserva y con la disputa correspondiente. El estado PENDIENTE es interno de Módulo 2 y nunca genera mensaje hacia Módulo 3. Módulo 3 consume el mensaje y decide internamente, con sus propios registros, el destino del depósito.
+Cuando la disputa alcanza un estado final (REJECTED por vencimiento automático o por resolución del Admin, o ACCEPTED por resolución del Admin), Módulo 2 publica un mensaje en la cola con únicamente ese estado y los identificadores necesarios para relacionarlo con la reserva y con la disputa correspondiente. El estado PENDING es interno de Módulo 2 y nunca genera mensaje hacia Módulo 3. Módulo 3 consume el mensaje y decide internamente, con sus propios registros, el destino del depósito.
 
 **Why this priority**: Es el único puente por el cual Módulo 3 se entera del resultado de la disputa. Sin esta publicación, el depósito quedaría congelado indefinidamente del lado financiero.
 
-**Independent Test**: Se prueba provocando transiciones a estado final en disputas (cierre por vencimiento, resolución ACEPTADA y RECHAZADA) contra un consumidor simulado de la cola, y verificando que por cada estado final se publica exactamente un mensaje con el estado correcto y los identificadores, sin montos ni instrucciones de pago, y que la creación en PENDIENTE no genera ningún mensaje.
+**Independent Test**: Se prueba provocando transiciones a estado final en disputas (cierre por vencimiento, resolución ACCEPTED y REJECTED) contra un consumidor simulado de la cola, y verificando que por cada estado final se publica exactamente un mensaje con el estado correcto y los identificadores, sin montos ni instrucciones de pago, y que la creación en PENDING no genera ningún mensaje.
 
 **Acceptance Scenarios**:
 
-1. **Scenario**: Publicación al cerrar en RECHAZADA
-   - **Given** una disputa que transiciona a RECHAZADA (por vencimiento automático o por resolución del Admin)
+1. **Scenario**: Publicación al cerrar en REJECTED
+   - **Given** una disputa que transiciona a REJECTED (por vencimiento automático o por resolución del Admin)
    - **When** se consolida el cambio de estado
-   - **Then** Módulo 2 publica en la cola un mensaje con el estado RECHAZADA y los identificadores de la disputa y de la reserva, para que Módulo 3 solicite internamente el reembolso total del depósito al Arrendatario
+   - **Then** Módulo 2 publica en la cola un mensaje con el estado REJECTED y los identificadores de la disputa y de la reserva, para que Módulo 3 solicite internamente el reembolso total del depósito al Arrendatario
 
-2. **Scenario**: Publicación al resolver en ACEPTADA
-   - **Given** una disputa que transiciona a ACEPTADA por resolución del Admin
+2. **Scenario**: Publicación al resolver en ACCEPTED
+   - **Given** una disputa que transiciona a ACCEPTED por resolución del Admin
    - **When** se consolida el cambio de estado
-   - **Then** Módulo 2 publica en la cola un mensaje con el estado ACEPTADA y los identificadores, para que Módulo 3 solicite internamente la liquidación total del depósito al Propietario
+   - **Then** Módulo 2 publica en la cola un mensaje con el estado ACCEPTED y los identificadores, para que Módulo 3 solicite internamente la liquidación total del depósito al Propietario
 
 ### User Story 2 - Entrega garantizada e idempotente por cola de mensajes (Priority: P1)
 
@@ -60,7 +60,7 @@ El envío se realiza por cola de mensajes (Módulo 2 publica, Módulo 3 consume)
 - **Contenido prohibido en el mensaje**: el mensaje **NO DEBE contener** monto del depósito, monto a reembolsar, monto a liquidar, porcentaje, instrucción de pago, referencia de pasarela ni ninguna decisión técnica de transferencia. Todo lo resuelve Módulo 3 con sus propios registros internos.
 - **Orden de consumo**: si Módulo 3 consume mensajes desordenados, el identificador único de evento (que incluye número de versión incremental) le permite ordenar y aplicar solo el más reciente. [NEEDS CLARIFICATION: garantías de orden del broker y estrategia de versionado — se define en el contrato de integración, no en este spec]
 - **Detalles de infraestructura de la cola** (broker, tópicos, retención, DLQ, particionado): [NEEDS CLARIFICATION: se definen en el contrato de integración con Módulo 3, no en este spec].
-- **Consecuencias en Módulo 3** (a título informativo; la lógica vive en Módulo 3): RECHAZADA → solicita el reembolso total del depósito al Arrendatario; ACEPTADA → solicita la liquidación total del depósito al Propietario. (PENDIENTE es interno de Módulo 2 y nunca se envía a Módulo 3, por lo que no forma parte de este contrato.)
+- **Consecuencias en Módulo 3** (a título informativo; la lógica vive en Módulo 3): REJECTED → solicita el reembolso total del depósito al Arrendatario; ACCEPTED → solicita la liquidación total del depósito al Propietario. (PENDING es interno de Módulo 2 y nunca se envía a Módulo 3, por lo que no forma parte de este contrato.)
 
 ---
 
@@ -68,8 +68,8 @@ El envío se realiza por cola de mensajes (Módulo 2 publica, Módulo 3 consume)
 
 ### Functional Requirements
 
-- **FR-001**: El sistema DEBE publicar un mensaje en la cola únicamente cuando la disputa alcance un estado final (RECHAZADA o ACEPTADA), con Módulo 2 como publicador y Módulo 3 como consumidor. El estado PENDIENTE es interno de Módulo 2 y NO genera ningún mensaje. NO es una consulta síncrona de solicitud/respuesta.
-- **FR-002**: El mensaje DEBE contener únicamente: el estado de la disputa (uno de RECHAZADA, ACEPTADA), los identificadores necesarios para relacionarlo con la reserva (identificador de reserva) y con la disputa correspondiente (identificador de disputa), y un motivo opcional si el estado es RECHAZADA.
+- **FR-001**: El sistema DEBE publicar un mensaje en la cola únicamente cuando la disputa alcance un estado final (REJECTED o ACCEPTED), con Módulo 2 como publicador y Módulo 3 como consumidor. El estado PENDING es interno de Módulo 2 y NO genera ningún mensaje. NO es una consulta síncrona de solicitud/respuesta.
+- **FR-002**: El mensaje DEBE contener únicamente: el estado de la disputa (uno de REJECTED, ACCEPTED), los identificadores necesarios para relacionarlo con la reserva (identificador de reserva) y con la disputa correspondiente (identificador de disputa), y un motivo opcional si el estado es REJECTED.
 - **FR-003**: El mensaje NO DEBE contener: monto del depósito, monto a reembolsar, monto a liquidar, porcentaje, instrucción de pago, referencia de pasarela ni ninguna decisión técnica de transferencia.
 - **FR-004**: Cada mensaje DEBE incluir un identificador único de evento (identificador de disputa + estado + eventId o número de versión incremental), de forma que Módulo 3 pueda descartar duplicados o reenvíos sin reconsultar el estado completo.
 - **FR-005**: Si la publicación en el broker falla, el sistema DEBE reintentarla hasta confirmarla, sin perder el evento.
@@ -78,7 +78,7 @@ El envío se realiza por cola de mensajes (Módulo 2 publica, Módulo 3 consume)
 
 ### Key Entities
 
-- **Evento de disputa de garantía**: mensaje publicado en la cola por cada transición a estado final. Atributos clave: identificador único del evento (disputa + estado + eventId/versión), identificador de la disputa, identificador de la reserva, estado (RECHAZADA / ACEPTADA), motivo opcional (si aplica en RECHAZADA), marca temporal del cambio.
+- **Evento de disputa de garantía**: mensaje publicado en la cola por cada transición a estado final. Atributos clave: identificador único del evento (disputa + estado + eventId/versión), identificador de la disputa, identificador de la reserva, estado (REJECTED / ACCEPTED), motivo opcional (si aplica en REJECTED), marca temporal del cambio.
 - **Disputa de garantía** *(objeto de dominio referenciado; vive en `CU-16`/`CU-17`)*: se referencia por sus identificadores para relacionar cada mensaje con la disputa y la reserva correspondientes.
 
 ---
@@ -87,7 +87,7 @@ El envío se realiza por cola de mensajes (Módulo 2 publica, Módulo 3 consume)
 
 ### Measurable Outcomes
 
-- **SC-001**: El 100% de las transiciones a RECHAZADA o ACEPTADA generan exactamente un (1) mensaje publicado con el estado correcto y los identificadores correspondientes, y cero (0%) creaciones en PENDIENTE generan mensajes.
+- **SC-001**: El 100% de las transiciones a REJECTED o ACCEPTED generan exactamente un (1) mensaje publicado con el estado correcto y los identificadores correspondientes, y cero (0%) creaciones en PENDING generan mensajes.
 - **SC-002**: Cero (0) mensajes con montos, instrucciones de pago o referencias de pasarela emitidos por Módulo 2.
 - **SC-003**: El 100% de los mensajes publicados incluyen identificador único de evento apto para deduplicación por Módulo 3.
 - **SC-004**: Cero (0%) eventos de cambio de estado perdidos por fallos de publicación (reintento hasta confirmación en el broker).
