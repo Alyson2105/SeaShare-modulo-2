@@ -7,7 +7,7 @@
 
 ## Summary
 
-Este plan define la estrategia de construcción del **Módulo 2** de SEA-SHARE: un servicio backend en **Java 21 + Spring Boot 3.5**, empaquetado con **Maven**, que usa **RabbitMQ** como broker de mensajería para la integración asíncrona y la entrega garantizada de eventos hacia el Módulo 3 ("el sistema").
+Este plan define la estrategia de construcción del **Módulo 2** de SEA-SHARE: un servicio backend en **Java 21 + Spring Boot 4.1.2**, empaquetado con **Maven**, que usa **RabbitMQ** como broker de mensajería para la integración asíncrona y la entrega garantizada de eventos hacia el Módulo 3 ("el sistema").
 
 El módulo es dueño del **ciclo de vida de la reserva** (22 casos de uso: CU-01 a CU-18 operativos y CU-19 a CU-21 de vista de consulta) y se integra con dos sistemas externos mediante contratos de API: **Módulo 1** (Gestión de Flota y Activos P2P) como fuente de verdad de la flota y **Módulo 3** (Liquidación, Seguros y Dispersión de Fondos) como autoridad única en todo cálculo monetario.
 
@@ -24,7 +24,7 @@ El código se organiza en **dos contextos acotados** (`reservas` y `disputa`) m�
 
 **Language/Version**: Java 21 (LTS)
 
-**Primary Dependencies**: Spring Boot 3.5.x · Spring Web · Spring Validation · Spring Data JPA · Spring Security (OAuth2 Resource Server) · Spring AMQP (`spring-boot-starter-amqp`, cliente RabbitMQ) · Spring Actuator · Micrometer (Prometheus) · Flyway (migraciones versionadas) · Resilience4j (timeouts, reintentos y circuit breaker de clientes externos) · ShedLock (lock de jobs en despliegues multi-réplica) · springdoc-openapi (contratos de API) · ArchUnit (reglas de arquitectura y de la regla "Sin dinero")
+**Primary Dependencies**: Spring Boot 4.1.2 · Spring Web MVC (spring-boot-starter-webmvc) · Spring Validation · Spring Data JPA · Spring Security (OAuth2 Resource Server) · Spring AMQP (`spring-boot-starter-amqp`, cliente RabbitMQ) · Spring Actuator · Micrometer (Prometheus) · Flyway (migraciones versionadas) · Resilience4j (timeouts, reintentos y circuit breaker de clientes externos) · ShedLock (lock de jobs en despliegues multi-réplica) · springdoc-openapi (contratos de API) · ArchUnit (reglas de arquitectura y de la regla "Sin dinero")
 
 **Storage**: **PostgreSQL 16** con claves primarias `UUID` (vía `gen_random_uuid()`), columnas de timestamp con zona horaria (`timestamptz`), *optimistic locking* con columna de versión (CU-08 FR-006), bloqueo pesimista de filas `SELECT … FOR UPDATE` donde lo exija la atomicidad (CU-03), y **migraciones versionadas con Flyway** (el esquema de `reservation` y `dispute_guarantee` es estructura de datos propia, no un esquema heredado). Se eligió por: soporte nativo de `UUID`, `timestamptz`, `@Version`, locks de fila, rango de exclusividad `EXCLUDE` sobre `(vessel_id, daterange)` (la extensión `btree_gist` es obligatoria para la restricción `EXCLUDE`; la migración Flyway debe ejecutar `CREATE EXTENSION btree_gist`), y soporte maduro en Flyway y Testcontainers. El día de la reserva se calcula en la zona horaria del puerto, informada por Módulo 1 (CU-09), no en UTC ni en la del servidor. Los alquileres son por días completos; el último día cuenta como ocupado y no hay relevo el mismo día.
 
@@ -119,7 +119,7 @@ SeaShare-modulo-2/
 │   │   │   ├── model/           # Reservation, ReservationStatus, CancellationSubtype,
 │   │   │   │                     # StatusAudit, CheckInEvent, CheckOutEvent, CancellationEvent, NoShowEvent
 │   │   │   ├── valueobject/     # ReservationId, BoatId, OwnerId, RenterId, IdempotencyKey, Money (opaco, sin aritmética)
-│   │   │   ├── state/           # StateMachine, ValidTransition  (CU-08)
+│   │   │   ├── state/           # ReservationStateMachine, ValidTransition  (CU-08)
 │   │   │   ├── service/         # CancellationClassifier, NoShowWindowPolicy, TtlPolicy  (sin dinero)
 │   │   │   └── event/           # Eventos de dominio de la reserva
 │   │   ├── application/
@@ -156,7 +156,7 @@ SeaShare-modulo-2/
 │   ├── application.yml
 │   ├── application-dev.yml
 │   ├── application-test.yml
-│   └── db/migration/            # Migraciones versionadas (Flyway / Liquibase)
+│   └── db/migration/            # Migraciones versionadas (Flyway)
 │
 └── src/test/java/com/seashare/m2/
     ├── shared/                  # Fixtures, bases de pruebas, Testcontainers compartidas
@@ -267,7 +267,16 @@ Cada contrato vive en el `plan.md` (o `plan.external.md` / `plan.event.md`) de l
 | 409 | `VESSEL_NOT_AVAILABLE` | Embarcación no disponible. |
 | 409 | `VESSEL_CURRENTLY_IN_NAVIGATION` | El barco sigue en navegación en otra reserva. |
 | 404 | `VESSEL_NOT_FOUND` | La embarcación no existe. |
-| 503 | HARBOR_TIMEZONE_UNAVAILABLE | Módulo 1 no responde con la zona horaria del puerto. |
+| 503 | `HARBOR_TIMEZONE_UNAVAILABLE` | Módulo 1 no responde con la zona horaria del puerto. |
+| 400 | `INVALID_PARAMETERS` | Parámetros de ruta, consulta o cuerpo inválidos. |
+| 400 | `INVALID_UUID` | El identificador no es un UUID válido. |
+| 401 | `UNAUTHENTICATED` | Falta la identidad del llamador (headers temporales X-User-Id / X-User-Role). |
+| 403 | `PROFILE_NOT_AUTHORIZED` | El perfil o rol no tiene permiso para esta operación. |
+| 403 | `RESERVATION_NOT_OWNED` | La reserva no pertenece al usuario que consulta. |
+| 404 | `RESERVATION_NOT_FOUND` | La reserva no existe. |
+| 409 | `CAPACITY_EXCEEDED` | Los pasajeros superan la capacidad máxima de la embarcación. |
+| 500 | `INTERNAL_ERROR` | Error interno inesperado. |
+| 503 | `FLEET_SERVICE_UNAVAILABLE` | Módulo 1 no responde o falla al consultar la embarcación. |
 *Nota de concurrencia*: `VERSION_CONFLICT` de CU-08 queda como error interno del motor; los endpoints lo traducen a `CONCURRENT_STATE_CHANGE`.
 
 **Entrega y verificación**: tests de contrato con los ejemplos de cada `.md` (MockMvc para REST; cuerpo AMQP contra el esquema; WireMock para M1 y M3) y verificación cruzada con los contratos de Módulo 3 antes de cada hito.
@@ -336,8 +345,8 @@ Cada contrato vive en el `plan.md` (o `plan.external.md` / `plan.event.md`) de l
 
 **Purpose**: Inicialización del repositorio Spring Boot y de la estructura base del proyecto.
 
-- [ ] T001 Inicializar el repositorio Maven con `spring-boot-starter-parent` 3.5.x y `java.version` 21
-- [ ] T002 Declarar en `pom.xml` las dependencias base: `spring-boot-starter-web`, `-validation`, `-data-jpa`, `-security`, `-amqp`, `-actuator`, `springdoc-openapi`, `resilience4j-spring-boot3` y el driver `postgresql`
+- [ ] T001 Inicializar el repositorio Maven con `spring-boot-starter-parent` 4.1.2 y `java.version` 21
+- [ ] T002 Declarar en `pom.xml` las dependencias base: `spring-boot-starter-webmvc`, `-validation`, `-data-jpa`, `-amqp`, `-actuator`, `springdoc-openapi`, `resilience4j` (artefacto por verificar para Boot 4) y el driver `postgresql`
 - [ ] T003 Configurar el build: `maven-compiler-plugin` (release 21), `maven-surefire-plugin` (tests unitarios), `maven-failsafe-plugin` (tests de integración) y `spring-boot-maven-plugin`
 - [ ] T004 Crear la clase principal `M2Application` con *component scanning* de `com.seashare.m2`
 - [ ] T005 Crear el árbol de paquetes de _Project Structure_ (`shared/`, `reservas/`, `disputa/`) y los `package-info.java` que documentan la regla "Sin dinero"
@@ -537,4 +546,4 @@ Esta sección **no resuelve** las inconsistencias: las señala para que se cierr
 > 6. **Estado inicial de la reserva**: `INITIATED` (en el spec en espanol se llama "Borrador").
 > 7. **Idioma**: identificadores en ingles; prosa y documentacion en espanol.
 >
-> Pendiente: reescribir las secciones de este plan que mencionan Boot 3.5.x y Security (aprox. lineas 10 y 339).
+> Actualizado: el stack (lineas 10, 27, 339 y 340) ya usa Boot 4.1.2. Las menciones a Security y JWT (D-22, T012) siguen en el plan pero no se implementan.
