@@ -277,6 +277,7 @@ Cada contrato vive en el `plan.md` (o `plan.external.md` / `plan.event.md`) de l
 | 409 | `CAPACITY_EXCEEDED` | Los pasajeros superan la capacidad máxima de la embarcación. |
 | 500 | `INTERNAL_ERROR` | Error interno inesperado. |
 | 503 | `FLEET_SERVICE_UNAVAILABLE` | Módulo 1 no responde o falla al consultar la embarcación. |
+
 *Nota de concurrencia*: `VERSION_CONFLICT` de CU-08 queda como error interno del motor; los endpoints lo traducen a `CONCURRENT_STATE_CHANGE`.
 
 **Entrega y verificación**: tests de contrato con los ejemplos de cada `.md` (MockMvc para REST; cuerpo AMQP contra el esquema; WireMock para M1 y M3) y verificación cruzada con los contratos de Módulo 3 antes de cada hito.
