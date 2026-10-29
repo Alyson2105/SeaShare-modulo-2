@@ -69,7 +69,7 @@ Como motor financiero (Módulo 3), necesito obtener los detalles de cierre de un
 ### Functional Requirements
 
 - **FR-001**: El sistema DEBE exponer un *endpoint* de lectura síncrona dedicado a proveer información de la reserva a Módulo 3.
-- **FR-002**: Si la reserva existe, el sistema DEBE retornar un payload estructurado que incluya obligatoriamente: identificador de la reserva, identificadores de arrendatario y embarcación, fechas/horas pactadas de zarpe y desembarque, cantidad de pasajeros, estado principal actual y referencia de la cotización original.
+- **FR-002**: Si la reserva existe, el sistema DEBE retornar un payload estructurado que incluya obligatoriamente: identificador de la reserva, identificadores de arrendatario y embarcación, fechas/horas pactadas de zarpe y desembarque, cantidad de pasajeros y estado principal actual.
 - **FR-003**: Si el estado es `Completada`, el sistema DEBE incluir la fecha/hora real de check-out y, si existe, el texto literal de las novedades u observaciones registradas por el Propietario.
 - **FR-004**: Si el estado es `Cancelada`, el sistema DEBE incluir el sub-estado correspondiente (`Flexible`, `Moderado`, `Tardío`, `Por Propietario`, `Por Inasistencia`), el actor que disparó la cancelación y las horas exactas de anticipación calculadas.
 - **FR-005**: Si el estado es `Pendiente de Pago`, el sistema DEBE incluir la marca de tiempo exacta en la que expirará el temporizador TTL de 15 minutos.

@@ -18,7 +18,7 @@ Como sistema (Módulo 2), quiero notificar a Módulo 3 cada vez que una reserva 
 
 ***Why this priority***: Módulo 3 es ciego a la operación si Módulo 2 no le avisa. Esta notificación es el gatillo que permite a Módulo 3 saber cuándo debe esperar un pago, cuándo activar un seguro o cuándo devolver dinero.
 
-***Independent Test***: Se prueba interceptando la salida HTTP desde `Actualizar estado reserva` hacia un *mock* de la API de Módulo 3. Se provoca la creación de una reserva en estado `Pendiente de Pago` (vía `Iniciar pago`) y se verifica que Módulo 2 emita un *payload* con el ID de la reserva, el nuevo estado y la marca de tiempo, sin enviar montos calculados.
+***Independent Test***: Se prueba revisando el mensaje que `Actualizar estado reserva` deja en el outbox y publica en el exchange `seashare.reservations` (routing key `reservation.status.changed`) con un consumidor de prueba que simula la cola de Módulo 3. Se provoca la creación de una reserva en estado `Pendiente de Pago` (vía `Iniciar pago`) y se verifica que Módulo 2 emita un *payload* con el ID de la reserva, el nuevo estado y la marca de tiempo, sin enviar montos calculados.
 
 ***Acceptance Scenarios***:
 
@@ -28,7 +28,7 @@ Como sistema (Módulo 2), quiero notificar a Módulo 3 cada vez que una reserva 
     - **Then** el sistema emite, por la cola de entrega garantizada (primer intento asíncrono), la notificación a Módulo 3 informando que la reserva identificada entró a `Pendiente de Pago`, activando el interés financiero sobre el contrato
 
 2. **Scenario**: Notificaciones de ciclo de vida activo
-    - **Given** una reserva que transiciona a `Reservada`, `En Navegación`, o cualquier estado terminal (`Completada`, `Cancelada`, `Expirada`, `Pago Fallido`)
+    - **Given** una reserva que transiciona a `Reservada`, `En Navegación`, `Completada` o `Cancelada` (`Expirada` y `Pago Fallido` no se notifican; única excepción: el cobro aprobado tardío tras el TTL, que se publica como `CANCELLED_FLEXIBLE`)
     - **When** se asienta el cambio en la máquina de estados
     - **Then** el sistema notifica el evento exacto a Módulo 3, incluyendo sub-estados si aplican (ej. `Cancelada` con sub-estado `Moderado`)
 
@@ -40,12 +40,12 @@ Como sistema, quiero encolar y reintentar las notificaciones dirigidas a Módulo
 
 ***Why this priority***: Una notificación perdida significa que un seguro no se activó o que un propietario nunca recibió su dinero. La entrega garantizada (Event Delivery Guarantee) es innegociable en arquitecturas desacopladas.
 
-***Independent Test***: Se simula una caída (HTTP 503 o timeout) en la API de Módulo 3. Se dispara un cambio de estado en Módulo 2. Se verifica que Módulo 2 guarde la transición exitosamente y encole el mensaje de notificación, reintentándolo según FR-005 (máx. 5 intentos con backoff) y derivando a DLQ si se agotan.
+***Independent Test***: Se simula que el broker no confirma la publicación del mensaje. Se dispara un cambio de estado en Módulo 2. Se verifica que Módulo 2 guarde la transición exitosamente y encole el mensaje de notificación, reintentándolo según FR-005 (máx. 5 intentos con backoff) y marcándolo como muerto con su último error si se agotan.
 
 ***Acceptance Scenarios***:
 
 1. **Scenario**: Reintento automático por indisponibilidad de Módulo 3
-    - **Given** una reserva que cambia a `En Navegación` pero la API de Módulo 3 está caída
+    - **Given** una reserva que cambia a `En Navegación` pero el broker no confirma la publicación
     - **When** el sistema intenta enviar la notificación y recibe un error de conexión
     - **Then** el sistema marca el evento como "Pendiente de envío" y lo reintenta con una estrategia de respaldo progresivo (backoff) hasta que Módulo 3 confirme la recepción
 
@@ -63,11 +63,11 @@ Como sistema, quiero encolar y reintentar las notificaciones dirigidas a Módulo
 
 ### Functional Requirements
 
-- **FR-001**: El sistema DEBE enviar una petición a la API externa `Recibir estado de reserva` de Módulo 3 cada vez que el caso de uso `Actualizar estado reserva` consolide una creación o transición de estado válida. La integración con Módulo 3 inicia estrictamente a partir del estado `Pendiente de Pago` (la reserva nace en `Iniciada` por `Iniciar reserva`; solo se comunica a Módulo 3 al formalizar el cobro).
+- **FR-001**: El sistema DEBE publicar el evento `reservation.status.changed` (vía outbox, exchange `seashare.reservations`) hacia Módulo 3 cada vez que el caso de uso `Actualizar estado reserva` consolide una transición hacia un estado que Módulo 3 debe conocer (`Pendiente de Pago`, `Reservada`, `En Navegación`, `Completada` y `Cancelada`). `Iniciada`, `Expirada` y `Pago Fallido` no se publican; única excepción: el cobro aprobado tardío tras el TTL, que se publica como `CANCELLED_FLEXIBLE`. La integración con Módulo 3 inicia estrictamente a partir del estado `Pendiente de Pago` (la reserva nace en `Iniciada` por `Iniciar reserva`; solo se comunica a Módulo 3 al formalizar el cobro).
 - **FR-002**: El *payload* de la notificación DEBE contener obligatoriamente: identificador de la reserva, nuevo estado principal, sub-estado (si aplica), marca temporal exacta del evento (en formato ISO 8601) y actor que disparó el evento.
 - **FR-003**: Si el estado es `Cancelada`, la notificación DEBE incluir el sub-estado (`Flexible`, `Moderado`, `Tardío`, `Por Propietario`, `Por Inasistencia`) y la anticipación temporal cronológica.
 - **FR-004**: Si el cierre de la navegación incluye texto opcional de novedades provisto por el Propietario, la notificación de `Completada` DEBE incluirlo como campo informativo, sin que ello modifique el tratamiento del cierre.
-- **FR-005**: El sistema DEBE implementar un mecanismo de entrega garantizada (cola de reintentos) para asegurar que las notificaciones alcancen Módulo 3 ante fallos temporales de red o timeouts. Esta cola gobierna tanto el camino feliz (primer intento) como el de fallo (reintentos con backoff); no existe envío síncrono directo. Política de reintento: máximo 5 intentos por evento (primer intento inmediato), backoff exponencial con jitter de 1 s, 5 s, 25 s y 125 s, solo ante 5xx o timeout (nunca ante un 4xx permanente); tras el quinto fallo, derivación a DLQ y alerta.
+- **FR-005**: El sistema DEBE implementar un mecanismo de entrega garantizada (cola de reintentos) para asegurar que las notificaciones alcancen Módulo 3 ante fallos temporales del broker o de la red. Esta cola gobierna tanto el camino feliz (primer intento) como el de fallo (reintentos con backoff); no existe envío síncrono directo. Política de reintento: máximo 5 intentos por evento (primer intento inmediato), backoff exponencial con jitter de 1 s, 5 s, 25 s y 125 s, cuando el broker no confirma la publicación (el mismo `Message-Id` en cada reintento); tras el quinto fallo, el evento queda marcado como muerto con su último error y se genera una alerta.
 - **FR-006**: **REGLA ESTRICTA**: El sistema **NO DEBE** calcular ni incluir datos financieros procesados en la notificación. Finanzas es responsable de interpretar el estado operativo y traducir ese evento a dinero.
 
 ---
@@ -82,6 +82,6 @@ Como sistema, quiero encolar y reintentar las notificaciones dirigidas a Módulo
 
 ### Measurable Outcomes
 
-- **SC-001**: El 100% de los cambios de estado (a partir de la transición a `Pendiente de Pago`) son notificados a Módulo 3 (0% de eventos perdidos gracias a la cola de reintentos).
+- **SC-001**: El 100% de los cambios de estado publicables (a partir de la transición a `Pendiente de Pago`, sin incluir `Expirada` ni `Pago Fallido`)son notificados a Módulo 3 (0% de eventos perdidos gracias a la cola de reintentos).
 - **SC-002**: El tiempo de emisión del primer intento de notificación no supera los 500 milisegundos tras la consolidación del estado en la base de datos local.
 - **SC-003**: Cero (0) valores financieros o monetarios calculados incluidos en el cuerpo del mensaje enviado a Módulo 3.

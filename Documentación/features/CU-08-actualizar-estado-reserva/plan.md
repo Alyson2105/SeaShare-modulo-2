@@ -4,7 +4,7 @@
 **Spec de referencia**: [`Documentación/features/CU-08-actualizar-estado-reserva/spec.md`](../../features/CU-08-actualizar-estado-reserva/spec.md)  
 **Fecha**: 2026-10-22
 
-Este caso de uso es interno: no expone ningún endpoint REST. Es el motor que aplica todos los cambios de estado de la reserva y el único escritor de estado de Módulo 2 (FR-001). Lo invocan, siempre por su puerto de aplicación, CU-02, CU-03, CU-13 (con dos canales: webhook REST de M3 y job de consulta periódica), CU-06, CU-07, CU-04, CU-05 y el job de expiración del TTL.
+Este caso de uso es interno: no expone ningún endpoint REST. Es el motor que aplica todos los cambios de estado de la reserva y el único escritor de estado de Módulo 2 (FR-001). Lo invocan, siempre por su puerto de aplicación, CU-02, CU-03, CU-13 (con dos canales: Canal B, job de consulta periódica a M3, activo; Canal A, endpoint REST que M3 podría invocar, disponible pero apagado), CU-06, CU-07, CU-04, CU-05 y el job de expiración del TTL.
 
 Al ejecutarse:
 1. Valida que la reserva exista y que la transición pedida esté en la matriz de estados (FR-003, FR-005).
@@ -69,7 +69,7 @@ La creación usa un comando aparte (`CreateReservationCommand`), solo desde CU-0
 | `INITIATED` | `EXPIRED` | Job de TTL | `SYSTEM` |
 | `PENDING_PAYMENT` | `RESERVED` | CU-13 (pago aprobado) | `SYSTEM` |
 | `PENDING_PAYMENT` | `EXPIRED` | Job de TTL | `SYSTEM` |
-| `PENDING_PAYMENT` | `PAYMENT_FAILED` | CU-13 (rechazo definitivo, cancelado o expirado) | `SYSTEM` |
+| `PENDING_PAYMENT` | `PAYMENT_FAILED` | CU-13 (M3 reporta CANCELLED o EXPIRED; un REJECTED no cambia el estado y permite reintento) | `SYSTEM` |
 | `RESERVED` | `IN_NAVIGATION` | CU-06 | `OWNER` |
 | `RESERVED` | `CANCELLED` | CU-04 o CU-05 | `RENTER`, `OWNER` |
 | `IN_NAVIGATION` | `COMPLETED` | CU-07 | `OWNER` |
@@ -147,9 +147,9 @@ La creación usa un comando aparte (`CreateReservationCommand`), solo desde CU-0
 | `IN_NAVIGATION` | Sí | `IN_NAVIGATION` |
 | `COMPLETED` | Sí, con novedades si existen (FR-009) | `MAINTENANCE_CLEANING` |
 | `CANCELLED` | Sí, con sub-estado y anticipación | `AVAILABLE`, o `MAINTENANCE_CLEANING` si hay avería |
-| `EXPIRED` desde `PENDING_PAYMENT` | [PEND] ver Pendiente 2 | No |
+| `EXPIRED` desde `PENDING_PAYMENT` | No (excepción: cobro aprobado tardío, ver CU-13) | No |
 | `EXPIRED` desde `INITIATED` | No | No |
-| `PAYMENT_FAILED` | [PEND] ver Pendiente 2 | No |
+| `PAYMENT_FAILED` | No (excepción: cobro aprobado tardío, ver CU-13) | No |
 
 La tabla FR-002 de CU-22 es la fuente de verdad del mapeo hacia Módulo 1; este plan no la duplica.
 
@@ -194,7 +194,7 @@ No aplica. Operación sobre una única reserva.
 - **Transacción única (FR-004, FR-011)**: la lectura, validación, cambio de estado, auditoría y escritura de eventos en `outbox_message` se confirman juntos o no se confirma nada. El `event_id` se genera una sola vez y se conserva en todos los reintentos.
 - **Entrega de eventos**: un relay publica con confirmación del broker y marca `published_at` solo tras el `ack`. El primer intento sale tras el commit, sin esperar al sondeo (SC-002, menos de 500 ms). Política: máximo 5 intentos (el primero inmediato), backoff con jitter de 1 s, 5 s, 25 s y 125 s, solo ante `5xx` o timeout. Un `4xx` permanente va directo a DLQ con alerta. Tras el quinto fallo: DLQ y alerta, sin descartar el evento ni revertir la transición.
 - **Guarda `m1_blocked`**: la reserva persiste el booleano `m1_blocked` que indica si ya se notificó `RESERVED` a Módulo 1. La liberación (`AVAILABLE`) o pase a mantenimiento (`MAINTENANCE_CLEANING`) hacia M1 solo se encola si este indicador es verdadero (SC-003). Así, `EXPIRED` o `CANCELLED` desde `INITIATED` o `PENDING_PAYMENT` nunca emite eventos de liberación indebidos a Módulo 1.
-- **TTL**: `ttl_expires_at` se fija al crear la reserva y no se reinicia nunca. Un job (propuesta: cada 5 s) toma con `FOR UPDATE SKIP LOCKED` las reservas en `INITIATED` o `PENDING_PAYMENT` vencidas y las envía a CU-08 como `EXPIRED`, actor `SYSTEM`. Ejemplo con creación a las 10:00:00: a las 10:14:59 `RESERVED` es válido; a las 10:15:00 devuelve `RESERVATION_EXPIRED` y el job la pasa a `EXPIRED`.
+- **TTL**: `ttl_expires_at` se fija al crear la reserva y no se reinicia nunca. Un job (propuesta: cada 5 s) toma con `FOR UPDATE SKIP LOCKED` las reservas en `INITIATED` o `PENDING_PAYMENT` vencidas y las envía a CU-08 como `EXPIRED`, actor `SYSTEM`. Ejemplo con creación a las 10:00:00: a las 10:14:59 `RESERVED` es válido; a las 10:15:00 devuelve `RESERVATION_EXPIRED` y el job la pasa a `EXPIRED`. La consulta final de pago a M3 antes del corte la hace el adaptador de CU-13, no CU-08: el job solo expira lo que sigue en `PENDING_PAYMENT` al llegar el corte. La consulta final de pago a M3 antes del corte la hace el adaptador de CU-13, no CU-08: el job solo expira lo que sigue en `PENDING_PAYMENT` al llegar el corte. La consulta final de pago a M3 antes del corte la hace el adaptador de CU-13, no CU-08: el job solo expira lo que sigue en `PENDING_PAYMENT` al llegar el corte.
 - **Auditoría**: cada transición, incluida la creación, escribe una fila inmutable en `reservation_status_audit` (reserva, estados anterior y nuevo, sub-estado, actor, motivo, `occurred_at` y `event_ids`).
 - **Modelo de datos mínimo**:
 
@@ -210,8 +210,8 @@ No aplica. Operación sobre una única reserva.
 
 ### Pendientes (`NEEDS CLARIFICATION`)
 
-1. **Guarda de TTL en `RESERVED`**: este plan la pone dentro de CU-08. Confirmar si vive aquí o solo en CU-13.
-2. **`EXPIRED` (desde `PENDING_PAYMENT`) y `PAYMENT_FAILED` hacia Módulo 3**: CU-14 FR-001 dice que toda transición desde `PENDING_PAYMENT` se notifica; el flujo alterno del spec de CU-08 dice que no. Módulo 3 los necesita para cancelar la autorización o revertir un cobro huérfano, y se le pidió aceptar los estados de reserva expirada y de pago fallido (`EXPIRED` y `PAYMENT_FAILED` en nuestro vocabulario; el nombre en el enum de M3 está por confirmar).
+1. **Guarda de TTL en `RESERVED`**: este plan la pone dentro de CU-08. Decidido: vive en CU-08; si el pago llega tarde se registra en `operational_failure`.
+2. **`EXPIRED` (desde `PENDING_PAYMENT`) y `PAYMENT_FAILED` hacia Módulo 3**: CU-14 FR-001 dice que toda transición desde `PENDING_PAYMENT` se notifica; el flujo alterno del spec de CU-08 dice que no. Decidido: Módulo 2 no los notifica a Módulo 3 (en INITIATED→EXPIRED no hay nada que deshacer y PAYMENT_FAILED lo origina M3). Única excepción: cobro aprobado tardío tras el TTL, que se publica como `CANCELLED_FLEXIBLE` (ver CU-13 y CU-14). No se le pide nada a M3.
 3. **Barco `RESERVED` por semanas**: con una reserva confirmada para dentro de un mes, Módulo 1 mostraría el barco ocupado todo ese tiempo. Choca con H1 (disponibilidad instantánea). Decisión de negocio.
 4. **Orden de entrega a Módulo 1**: pedirle que aplique un evento solo si su `occurred_at` es más reciente que el último aplicado.
 5. **Último salto a Módulo 1**: cola (AMQP) o HTTP `PATCH`, y el valor `M1_HTTP` del enum `destino` en `plan.md`. Confirmar también si `outbox_message` es una tabla compartida.

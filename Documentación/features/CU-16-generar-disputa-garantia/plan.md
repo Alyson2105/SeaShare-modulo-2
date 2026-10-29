@@ -197,13 +197,13 @@ Todos los errores retornan el sobre uniforme con `code` y `message`:
 | :--- | :--- | :--- | :--- |
 | **`400 Bad Request`** | `VALIDATION_ERROR` | Descripción vacía o menor a 10 caracteres; categoría no reconocida. | `{"code": "VALIDATION_ERROR", "message": "La descripción del daño es obligatoria y debe contener al menos 10 caracteres."}` |
 | **`400 Bad Request`** | `INVALID_UUID` | El parámetro `dispute_id` no es un UUIDv4 válido. | `{"code": "INVALID_UUID", "message": "El identificador de disputa proporcionado no es válido."}` |
-| **`401 Unauthorized`** | `AUTH_TOKEN_MISSING_OR_INVALID` | El header `Authorization` no fue provisto o expiró. | `{"code": "AUTH_TOKEN_MISSING_OR_INVALID", "message": "Token de autenticación ausente o inválido."}` |
-| **`403 Forbidden`** | `FORBIDDEN_NOT_OWNER` | El usuario autenticado no es el Propietario registrado del barco asociado a la disputa. | `{"code": "FORBIDDEN_NOT_OWNER", "message": "Acceso denegado: solo el propietario registrado de la embarcación puede radicar un reclamo de garantía."}` |
+| **`401 Unauthorized`** | `UNAUTHENTICATED` | El header `Authorization` no fue provisto o expiró. | `{"code": "UNAUTHENTICATED", "message": "Token de autenticación ausente o inválido."}` |
+| **`403 Forbidden`** | `RESERVATION_NOT_OWNED` | El usuario autenticado no es el Propietario registrado del barco asociado a la disputa. | `{"code": "RESERVATION_NOT_OWNED", "message": "Acceso denegado: solo el propietario registrado de la embarcación puede radicar un reclamo de garantía."}` |
 | **`404 Not Found`** | `DISPUTE_NOT_FOUND` | La disputa no existe en la base de datos de Módulo 2. | `{"code": "DISPUTE_NOT_FOUND", "message": "No se encontró ninguna disputa de garantía asociada al identificador provisto."}` |
 | **`409 Conflict`** | `WINDOW_EXPIRED` | La ventana de 24 horas ya venció y la disputa fue cerrada automáticamente en `REJECTED`. | `{"code": "WINDOW_EXPIRED", "message": "La ventana contractual de 24 horas ha expirado. La disputa fue cerrada automáticamente por el sistema como improcedente (REJECTED)."}` |
 | **`409 Conflict`** | `CLAIM_ALREADY_EXISTS` | Ya se radicó previamente un reclamo para esta disputa. Solo se admite un único registro formal. | `{"code": "CLAIM_ALREADY_EXISTS", "message": "Ya existe un reclamo registrado en curso para esta disputa de garantía. No se admiten múltiples registros simultáneos."}` |
 | **`409 Conflict`** | `DISPUTE_ALREADY_RESOLVED` | La disputa ya no está en `PENDING` (se encuentra en `ACCEPTED` o `REJECTED`). | `{"code": "DISPUTE_ALREADY_RESOLVED", "message": "No es posible radicar reclamos sobre una disputa que ya ha alcanzado un estado final."}` |
-| **`500 Internal Server Error`** | `INTERNAL_SERVER_ERROR` | Fallo de base de datos al persistir el reclamo. | `{"code": "INTERNAL_SERVER_ERROR", "message": "Error interno del servidor al procesar el reclamo de garantía."}` |
+| **`500 Internal Server Error`** | `INTERNAL_ERROR` | Fallo de base de datos al persistir el reclamo. | `{"code": "INTERNAL_ERROR", "message": "Error interno del servidor al procesar el reclamo de garantía."}` |
 
 ---
 

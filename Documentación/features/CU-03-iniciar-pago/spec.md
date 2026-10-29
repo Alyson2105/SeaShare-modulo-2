@@ -4,7 +4,7 @@
 **Fecha de Creación**: 2026-09-08 (Actualizado: 2026-09-28 por corrección estricta de relaciones UML de Iniciar Pago)  
 **Actores Primarios**: Arrendatario (Turista / Cliente)  
 **Dependencias Externas (APIs)**:
-- **Módulo 3 – Liquidación, Seguros y Dispersión de Fondos**: Interfaz de la pasarela o motor de pagos donde se enviará al usuario con el monto exacto a cobrar.
+- **Módulo 3 – Liquidación, Seguros y Dispersión de Fondos**: Recibe el evento `PENDING` con el token de pago y realiza el cobro de forma asíncrona por el monto exacto calculado.
 
 - **Casos de uso internos de Módulo 2**:
     - `Ver detalle de reserva` (`<<extend>>`): Este caso de uso (`Iniciar pago`) **es la extensión** que se ancla a `Ver detalle de reserva` (la flecha del diagrama apunta al caso base). Se activa cuando el Arrendatario decide proceder al pago de una reserva en estado `Iniciada`.
@@ -24,14 +24,14 @@ Como Arrendatario con una reserva en estado `Iniciada` (con su TTL ya en curso d
 
 ***Why this priority***: Es el embudo transaccional crítico. Garantiza que el usuario pague exactamente lo que dictamina Finanzas y que la plataforma proteja la disponibilidad del barco exclusivamente para él mientras introduce su método de pago.
 
-***Independent Test***: Se prueba con una reserva en estado `Iniciada` con su TTL en curso (accesible desde `Ver detalle de reserva`). Se ejecuta la acción de pagar y se verifica que el sistema llame a `Brindar cálculo total de la reserva`, transicione la reserva a estado `Pendiente de Pago` (llamando a `Actualizar estado reserva`, sin reiniciar el TTL que sigue corriendo desde `Iniciada`, sin generar ninguna notificación a Módulo 1) y entregue los datos correctos para redirigir a la pasarela de Módulo 3.
+***Independent Test***: Se prueba con una reserva en estado `Iniciada` con su TTL en curso (accesible desde `Ver detalle de reserva`). Se ejecuta la acción de pagar y se verifica que el sistema llame a `Brindar cálculo total de la reserva`, transicione la reserva a estado `Pendiente de Pago` (llamando a `Actualizar estado reserva`, sin reiniciar el TTL que sigue corriendo desde `Iniciada`, sin generar ninguna notificación a Módulo 1) y entregue el desglose oficial de Módulo 3; el token de pago viaja en el evento `PENDING` y Módulo 3 realiza el cobro de forma asíncrona.
 
 ***Acceptance Scenarios***:
 
-1. **Scenario**: Transición exitosa a Pendiente de Pago e inicio de pasarela
+1. **Scenario**: Transición exitosa a Pendiente de Pago e Inicio del Cobro
     - **Given** un Arrendatario con una reserva en estado `Iniciada` con su TTL en curso, para fechas disponibles
     - **When** el usuario decide proceder con el pago (extendiendo desde `Ver detalle de reserva`)
-    - **Then** el sistema invoca `(<<include>>)` a "Brindar cálculo total de la reserva" para obtener el valor final, luego invoca `(<<include>>)` a "Actualizar estado reserva" transicionando la reserva de `Iniciada` a `Pendiente de Pago` (el TTL sigue corriendo desde `Iniciada`, no se reinicia; esta transición no notifica nada a Módulo 1) y redirige al motor de Módulo 3.
+    - **Then** el sistema invoca `(<<include>>)` a "Brindar cálculo total de la reserva" para obtener el valor final, luego invoca `(<<include>>)` a "Actualizar estado reserva" transicionando la reserva de `Iniciada` a `Pendiente de Pago` (el TTL sigue corriendo desde `Iniciada`, no se reinicia; esta transición no notifica nada a Módulo 1) y entrega el desglose oficial al frontend; el token de pago viaja en el evento `PENDING` y Módulo 3 cobra de forma asíncrona.
 
 2. **Scenario**: Falla al obtener el cálculo total desde Módulo 3
     - **Given** un Arrendatario intentando pagar una reserva en estado `Iniciada`
@@ -41,7 +41,7 @@ Como Arrendatario con una reserva en estado `Iniciada` (con su TTL ya en curso d
 3. **Scenario**: Intento de pago sin aceptar la política de cancelación
     - **Given** un Arrendatario en la pantalla de pago con un temporizador activo
     - **When** el usuario intenta accionar el botón "Confirmar y Pagar" sin haber seleccionado el checkbox obligatorio "Acepto la Política de Cancelación"
-    - **Then** el sistema bloquea el avance hacia la pasarela de Módulo 3, mantiene al usuario en la vista actual y resalta una advertencia indicando la obligación de aceptar las políticas de cancelación.
+    - **Then** el sistema bloquea el avance hacia el pago, mantiene al usuario en la vista actual y resalta una advertencia indicando la obligación de aceptar las políticas de cancelación.
 
 ---
 
@@ -65,7 +65,7 @@ Como sistema, quiero evitar que dos usuarios retengan las mismas fechas para la 
 ## Edge Cases
 
 - **Inicio de pago sin disponibilidad**: Si al validar de forma atómica bajo lock la embarcación ya no figura Disponible en el chequeo instantáneo de estado operativo (CU-10) (bloqueada en Módulo 1 por otra reserva que alcanzó `Reservada`, o retenida internamente por otra reserva en `Pendiente de Pago`), el sistema DEBE denegar inmediatamente el inicio del flujo sin transicionar la reserva (permanece en `Iniciada`).
-- **Temporizador TTL de 15 minutos en curso**: El temporizador corre desde que la reserva entró a `Iniciada` y sigue consumiéndose al entrar a `Pendiente de Pago`. Si el usuario abandona la pasarela y vuelve a entrar, el temporizador NO se reinicia.
+- **Temporizador TTL de 15 minutos en curso**: El temporizador corre desde que la reserva entró a `Iniciada` y sigue consumiéndose al entrar a `Pendiente de Pago`. Si el usuario abandona la pantalla de pago y vuelve a entrar, el temporizador NO se reinicia.
 - **Expiración del temporizador TTL en pantalla (00:00)**: El corte en el backend es estricto a los 15 minutos exactos sin ventana de gracia. Al llegar el contador a 00:00 en pantalla, el sistema DEBE deshabilitar los botones de inmediato, mostrar un modal de expiración, redirigir a CU-01 y el backend debe liberar la retención de fechas de Módulo 2; Módulo 1 nunca recibió bloqueo en `Iniciada` ni en `Pendiente de pago`.
 
 ---
@@ -82,7 +82,7 @@ Como sistema, quiero evitar que dos usuarios retengan las mismas fechas para la 
 - **FR-006**: Si la disponibilidad es validada, el sistema DEBE invocar al orquestador `Actualizar estado reserva` (`<<include>>`) para transicionar la reserva de `Iniciada` a `Pendiente de Pago`.
 - **FR-007**: Al confirmarse la transición a `Pendiente de Pago`, el sistema NO DEBE reiniciar el temporizador TTL: el temporizador iniciado en `Iniciada` sigue corriendo y conserva su vencimiento original.
 - **FR-008**: Si el proceso de validación concurrente falla (las fechas acaban de ser ocupadas), el sistema DEBE rechazar el inicio del pago sin transicionar la reserva (permanece en `Iniciada`) y notificar al usuario.
-- **FR-009**: El sistema DEBE transferir el identificador de la reserva, el monto total devuelto por el cálculo y los datos del usuario hacia la interfaz o API de cobro de Módulo 3 para que el usuario efectúe la transacción.
+- **FR-009**: El sistema DEBE transferir el identificador de la reserva, el monto total devuelto por el cálculo y los datos del usuario hacia el cobro de Módulo 3: el token de pago generado en el frontend viaja en el evento de estado `PENDING` y Módulo 3 ejecuta el cobro de forma asíncrona.
 - **FR-010**: El sistema DEBE desplegar visualmente en la pantalla la información resumida de la reserva: imagen de portada, nombre de la embarcación, rango de fechas, número total de noches, cantidad de pasajeros, modalidad de viaje (ej. "Viaje con capitán") y ubicación/marina.
 - **FR-011**: El sistema DEBE renderizar en la interfaz un temporizador dinámico visible en cuenta regresiva basado en el TTL de 15 minutos (ej. "Reserva expira en: 14:52") acompañado en la parte inferior por el texto confirmatorio "Precio y disponibilidad bloqueados"
 - **FR-012**: El sistema DEBE exigir mostrar el total de la reserva y el desglose oficial proporcionado por Módulo 3 a través de `Brindar cálculo total de la reserva` (tarifa base, seguro náutico, depósito de garantía reembolsable y el mensaje aclaratorio sobre las condiciones del reembolso: "El depósito se reembolsa completo si el barco se devuelve sin daños"). El sistema NO DEBE mostrar, calcular ni presentar montos derivados como comisión o neto a recibir.
@@ -105,4 +105,4 @@ Como sistema, quiero evitar que dos usuarios retengan las mismas fechas para la 
 - **SC-001**: El 100% de los intentos de inicio de pago exitosos transicionan la reserva de `Iniciada` a `Pendiente de Pago` sin reiniciar el temporizador heredado de `Iniciada`.
 - **SC-002**: Cero (0%) sobreventas ante intentos de pago concurrentes sobre la misma embarcación en el mismo rango de fechas.
 - **SC-003**: Cero (0) valores financieros calculados dentro del alcance de Módulo 2; el 100% de los cobros utilizan el dato provisto por `Brindar cálculo total de la reserva`.
-- **SC-004**: El 100% de las transacciones redirigidas hacia Módulo 3 cuentan con la confirmación previa y explícita de la política de cancelación por parte del usuario.
+- **SC-004**: El 100% de las transacciones enviadas a Módulo 3 cuentan con la confirmación previa y explícita de la política de cancelación por parte del usuario.

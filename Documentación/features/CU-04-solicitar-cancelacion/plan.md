@@ -338,13 +338,13 @@ Todos los errores retornan un sobre uniforme con `code` y `message`:
 | :--- | :--- | :--- | :--- |
 | **`400 Bad Request`** | `INVALID_UUID` | El identificador `reservation_id` no cumple el formato UUIDv4. | `{"code": "INVALID_UUID", "message": "El identificador de reserva proporcionado no es un UUID válido."}` |
 | **`400 Bad Request`** | `VALIDATION_ERROR` | El solicitante es Propietario y omitió el campo `reason`, o envió un valor no soportado. | `{"code": "VALIDATION_ERROR", "message": "El campo 'reason' es obligatorio para el Propietario y debe ser 'fuerza_mayor_logistica' o 'averia_mecanica'."}` |
-| **`401 Unauthorized`** | `AUTH_TOKEN_MISSING_OR_INVALID` | El header `Authorization` no fue proporcionado o el JWT expiró. | `{"code": "AUTH_TOKEN_MISSING_OR_INVALID", "message": "Token de autenticación ausente o inválido."}` |
-| **`403 Forbidden`** | `FORBIDDEN_NOT_AUTHORIZED` | El usuario autenticado no es ni el Arrendatario titular ni el Propietario registrado de la reserva. | `{"code": "FORBIDDEN_NOT_AUTHORIZED", "message": "No está autorizado para cancelar esta reserva. Solo el arrendatario titular o el propietario del activo pueden solicitar la cancelación."}` |
+| **`401 Unauthorized`** | `UNAUTHENTICATED` | El header `Authorization` no fue proporcionado o el JWT expiró. | `{"code": "UNAUTHENTICATED", "message": "Token de autenticación ausente o inválido."}` |
+| **`403 Forbidden`** | `RESERVATION_NOT_OWNED` | El usuario autenticado no es ni el Arrendatario titular ni el Propietario registrado de la reserva. | `{"code": "RESERVATION_NOT_OWNED", "message": "No está autorizado para cancelar esta reserva. Solo el arrendatario titular o el propietario del activo pueden solicitar la cancelación."}` |
 | **`404 Not Found`** | `RESERVATION_NOT_FOUND` | La reserva no existe en la base de datos de Módulo 2. | `{"code": "RESERVATION_NOT_FOUND", "message": "No se encontró ninguna reserva asociada al identificador proporcionado."}` |
 | **`409 Conflict`** | `INVALID_RESERVATION_STATE` | La reserva no está en estado `RESERVED` (p. ej. en `INITIATED`, `PENDING_PAYMENT`, `IN_NAVIGATION`, `COMPLETED` o `CANCELLED`). | `{"code": "INVALID_RESERVATION_STATE", "message": "Solo se pueden cancelar reservas en estado 'Reservada'. Las reservas 'Pendiente de Pago' no admiten cancelación activa y deben esperar la expiración de su temporizador TTL."}` |
 | **`409 Conflict`** | `CONCURRENT_STATE_CHANGE` | Condición de carrera: la reserva comenzó la navegación o fue cancelada por el otro actor milisegundos antes. | `{"code": "CONCURRENT_STATE_CHANGE", "message": "Conflicto de concurrencia: el estado de la reserva ha cambiado simultáneamente por otra operación confirmada."}` |
 | **`503 Service Unavailable`** | `HARBOR_TIMEZONE_UNAVAILABLE` | Fallo de comunicación o timeout con Módulo 1 (`CU-09`) impidiendo conocer la zona horaria del puerto. Fail-safe activo. | `{"code": "HARBOR_TIMEZONE_UNAVAILABLE", "message": "No es posible calcular la anticipación de la cancelación debido a que el servicio de Flota (Módulo 1) no respondió con la zona horaria del puerto. Operación detenida por seguridad contractual. Reintente en unos instantes."}` |
-| **`500 Internal Server Error`** | `INTERNAL_SERVER_ERROR` | Fallo no controlado de base de datos o broker de eventos. | `{"code": "INTERNAL_SERVER_ERROR", "message": "Error interno del servidor al procesar la cancelación."}` |
+| **`500 Internal Server Error`** | `INTERNAL_ERROR` | Fallo no controlado de base de datos o broker de eventos. | `{"code": "INTERNAL_ERROR", "message": "Error interno del servidor al procesar la cancelación."}` |
 
 ---
 
@@ -386,7 +386,7 @@ Si el cliente reenvía la petición con el mismo `X-Idempotency-Key` dentro de u
 | :--- | :--- | :--- |
 | **FR-001** | Activación como extensión (`<<extend>>`) de `Ver detalle de reserva`. | Diseñado para invocarse desde el contexto profundo de la reserva; path `/api/v1/reservations/{reservation_id}/cancellation`. |
 | **FR-002** | Permitir cancelación si y solo si la reserva está en `RESERVED`. | Validación estricta de estado. Retorna `409 Conflict` si no está en `RESERVED`. |
-| **FR-003** | Validar que el solicitante sea Arrendatario titular o Propietario registrado. | Seguridad JWT y autorización estricta en sección 3 y código `403 FORBIDDEN_NOT_AUTHORIZED`. |
+| **FR-003** | Validar que el solicitante sea Arrendatario titular o Propietario registrado. | Seguridad JWT y autorización estricta en sección 3 y código `403 RESERVATION_NOT_OWNED`. |
 | **FR-004** | Denegar explícitamente reservas en `INITIATED` y `PENDING_PAYMENT` (deben expirar pasivamente). | Regla explícita documentada en sección 2 y error `409 INVALID_RESERVATION_STATE`. |
 | **FR-005** | Consultar puerto y zona horaria a M1 (`CU-09`); no asumir huso por defecto si M1 falla. | Inclusión obligatoria de zona horaria del puerto y código `503 HARBOR_TIMEZONE_UNAVAILABLE`. |
 | **FR-006** | Calcular anticipación exacta en horas y minutos bajo zona horaria del puerto. | Atributo `anticipation_hours` computado según `port_timezone`. |

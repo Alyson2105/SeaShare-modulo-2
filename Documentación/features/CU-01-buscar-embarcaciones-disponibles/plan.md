@@ -2,9 +2,9 @@
 
 **Módulo**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
 **Spec de referencia**: [`Documentación/features/CU-01-buscar-embarcaciones-disponibles/spec.md`](../../features/CU-01-buscar-embarcaciones-disponibles/spec.md)  
-**Fecha**: 2026-10-09  
+**Fecha**: 2026-10-09
 
-Este caso de uso expone la operación REST de exploración y búsqueda paginada del catálogo de embarcaciones de SEA-SHARE (FR-001 a FR-010). Permite filtrar por rango de fechas, cantidad de pasajeros, tipo de embarcación y texto de búsqueda libre, o explorar el catálogo completo sin filtros (User Story 2). 
+Este caso de uso expone la operación REST de exploración y búsqueda paginada del catálogo de embarcaciones de SEA-SHARE (FR-001 a FR-010). Permite filtrar por rango de fechas, cantidad de pasajeros, tipo de embarcación y texto de búsqueda libre, o explorar el catálogo completo sin filtros (User Story 2).
 
 El endpoint orquesta internamente dos dependencias:
 1. Recupera la información técnica y de puerto invocando en modo lote a `Proveer información de embarcación` (`<<include>>`, FR-002), respaldado por el contrato de [`CU-09 Proveer información de embarcación`](../CU-09-proveer-informacion-embarcacion/plan.md).
@@ -80,16 +80,14 @@ GET /api/v1/vessels
       "max_capacity": "number (entero)",
       "captain_included": "boolean",
       "quotation_available": "boolean",
-      "estimated_fare": {
-        "amount": "number (BigDecimal literal entregado por Módulo 3)",
-        "currency": "string (ej. COP)"
-      }
+      "estimated_total": "string (decimal literal entregado por Módulo 3)",
+      "currency": "string (COP fijo)"
     }
   ]
-]
+}
 ```
 
-*(Si la cotización para una embarcación no está disponible por contingencia en Módulo 3, `quotation_available` es `false` y `estimated_fare` es `null`, cumpliendo SC-001 y Edge Case "Ausencia de Cotización Temporal").*
+*(Si la cotización para una embarcación no está disponible por contingencia en Módulo 3, `quotation_available` es `false` y `estimated_total` es `null`, cumpliendo SC-001 y Edge Case "Ausencia de Cotización Temporal").*
 
 **Headers de respuesta**:
 
@@ -138,10 +136,8 @@ curl -X GET "https://api.seashare.com/api/v1/vessels?start_date=2026-11-15&end_d
       "max_capacity": 12,
       "captain_included": true,
       "quotation_available": true,
-      "estimated_fare": {
-        "amount": 3200000.00,
-        "currency": "COP"
-      }
+      "estimated_total": "3200000.00",
+      "currency": "COP"
     },
     {
       "vessel_id": "8f4b2319-58b9-4c8d-b0a3-9e41f7d12a99",
@@ -157,10 +153,8 @@ curl -X GET "https://api.seashare.com/api/v1/vessels?start_date=2026-11-15&end_d
       "max_capacity": 10,
       "captain_included": true,
       "quotation_available": true,
-      "estimated_fare": {
-        "amount": 4500000.00,
-        "currency": "COP"
-      }
+      "estimated_total": "4500000.00",
+      "currency": "COP"
     }
   ]
 }
@@ -204,10 +198,8 @@ curl -X GET "https://api.seashare.com/api/v1/vessels?page=1" \
       "max_capacity": 12,
       "captain_included": true,
       "quotation_available": true,
-      "estimated_fare": {
-        "amount": 3200000.00,
-        "currency": "COP"
-      }
+      "estimated_total": "3200000.00",
+      "currency": "COP"
     },
     {
       "vessel_id": "6a9e10fa-13f5-4de9-9e87-a25e9821d303",
@@ -223,10 +215,8 @@ curl -X GET "https://api.seashare.com/api/v1/vessels?page=1" \
       "max_capacity": 16,
       "captain_included": true,
       "quotation_available": true,
-      "estimated_fare": {
-        "amount": 2800000.00,
-        "currency": "COP"
-      }
+      "estimated_total": "2800000.00",
+      "currency": "COP"
     }
   ]
 }
@@ -269,7 +259,8 @@ curl -X GET "https://api.seashare.com/api/v1/vessels?page=1" \
       "max_capacity": 12,
       "captain_included": true,
       "quotation_available": false,
-      "estimated_fare": null
+      "estimated_total": null,
+      "currency": "COP"
     }
   ]
 }
@@ -309,7 +300,7 @@ curl -X GET "https://api.seashare.com/api/v1/vessels?q=IslaFicticiaInexistente" 
 |---|---|---|
 | `400 Bad Request` | Parámetros de búsqueda con formato sintáctico inválido (ej. fecha no ISO 8601, número de pasajeros negativo o no numérico, tipo no admitido) (FR-010, SC-004) | `{ "code": "INVALID_PARAMETERS", "message": "Los parámetros de búsqueda proporcionados no cumplen con el formato requerido" }` |
 | `401 Unauthorized` | Token ausente, inválido o expirado | `{ "code": "UNAUTHENTICATED", "message": "Token de autenticación ausente o inválido" }` |
-| `403 Forbidden` | El claim de rol del JWT no corresponde a Arrendatario | `{ "code": "FORBIDDEN_PROFILE", "message": "Este recurso requiere perfil Arrendatario" }` |
+| `403 Forbidden` | El claim de rol del JWT no corresponde a Arrendatario | `{ "code": "PROFILE_NOT_AUTHORIZED", "message": "Este recurso requiere perfil Arrendatario" }` |
 | `503 Service Unavailable` | Caída o tiempo de espera agotado al consultar el catálogo de Módulo 1 (*fail-safe* preventivo) | `{ "code": "FLEET_SERVICE_UNAVAILABLE", "message": "No se pudo consultar el catálogo de embarcaciones en este momento" }` |
 | `500 Internal Server Error` | Excepción interna no controlada en el servicio | `{ "code": "INTERNAL_ERROR", "message": "Ocurrió un error inesperado al procesar la búsqueda" }` |
 
@@ -328,14 +319,14 @@ curl -X GET "https://api.seashare.com/api/v1/vessels?q=IslaFicticiaInexistente" 
 - Requiere JWT emitido por el servicio de identidad centralizado de SEA-SHARE.
 - Perfil autorizado: **Arrendatario**.
 - El controlador REST valida estrictamente el claim de rol (`role == "RENTER"`) antes de disparar las consultas subordinadas de catálogo y cotización.
-- **Regla estricta "Sin dinero"**: Módulo 2 jamás calcula subtotales, promedios ni tarifas nocturnas. El importe monetario contenido en `estimated_fare.amount` se transporta como `BigDecimal` literal entregado por Módulo 3 (FR-002 de CU-11, SC-001).
+- **Regla estricta "Sin dinero"**: Módulo 2 jamás calcula subtotales, promedios ni tarifas nocturnas. El importe monetario contenido en `estimated_total` se transporta como string decimal literal entregado por Módulo 3, sin redondeo (FR-002 de CU-11, SC-001).
 
 ---
 
 ### Notas Transversales
 
 - **Disponibilidad por rango de fechas y filtrado en M2**: Módulo 1 no recibe fechas en la consulta de catálogo (`CU-09`). Si la petición incluye `start_date` y `end_date`, Módulo 2 realiza un filtrado local de disponibilidad consultando sus reservas locales activas: excluye del listado devuelto por M1 a toda embarcación que tenga una reserva en estado `PENDING_PAYMENT`, `RESERVED` o `IN_NAVIGATION` cuyo rango de fechas se solape con el solicitado (`daterange(start_date, end_date, '[]') && daterange(start_date, end_date, '[]')`). Esta depuración se ejecuta previamente a solicitar la cotización en lote hacia Módulo 3 (`CU-11`), optimizando el rendimiento de la integración. La verificación física de estado operativo instantáneo (`AVAILABLE`) se revalida en `Iniciar reserva` (`CU-02`) e `Iniciar pago` (`CU-03`).
-- **Degradación funcional ante falla de Módulo 3**: si el adaptador hacia Módulo 3 experimenta timeout o indisponibilidad (Edge Case "Ausencia de Cotización Temporal"), el catálogo **no** retorna 503; entrega la lista de embarcaciones con `quote_available: false` y `estimated_rate: null`. En cambio, si falla Módulo 1 (fuente de verdad física), se aplica el *fail-safe* obligatorio retornando `503 Service Unavailable`.
+- **Degradación funcional ante falla de Módulo 3**: si el adaptador hacia Módulo 3 experimenta timeout o indisponibilidad (Edge Case "Ausencia de Cotización Temporal"), el catálogo **no** retorna 503; entrega la lista de embarcaciones con `quotation_available: false` y `estimated_total: null`. En cambio, si falla Módulo 1 (fuente de verdad física), se aplica el *fail-safe* obligatorio retornando `503 Service Unavailable`.
 - **Navegación e interacción UI**: las entidades retornadas incluyen los metadatos visuales requeridos (`photo_url`, `type`, `captain_included`, `context_label`) para renderizar directamente las tarjetas del catálogo y permitir la selección que extiende hacia [`CU-19-ver-detalle-embarcacion.md`](CU-19-ver-detalle-embarcacion.md) (FR-004, FR-005, FR-007).
 - **Filtro por tipo**: El filtro por `type` lo aplica Módulo 2 sobre la lista recibida de Módulo 1; M1 no recibe ese parámetro.
 
@@ -348,14 +339,14 @@ curl -X GET "https://api.seashare.com/api/v1/vessels?q=IslaFicticiaInexistente" 
 | **FR-001** | Criterios opcionales de búsqueda (fechas, pasajeros, tipo) | Query parameters: `start_date`, `end_date`, `passengers`, `type` |
 | **FR-002** | Consulta de inventario mediante `Proveer información de embarcación` | Invocación interna al adaptador de catálogo respaldado por el [plan de CU-09](../CU-09-proveer-informacion-embarcacion/plan.md) |
 | **FR-003** | Cotización en lote mediante `CU-11` | Invocación interna al adaptador en lote respaldado por el [plan de CU-11](../CU-11-proveer-informacion-cotizacion-reserva/plan.external.lote.md) |
-| **FR-004** | Datos mínimos del activo y tarifa estimada devuelta | Propiedades del objeto `vessels`: `name`, `type`, `photo_url`, `port`, `max_capacity`, `estimated_fare` |
+| **FR-004** | Datos mínimos del activo y tarifa estimada devuelta | Propiedades del objeto `vessels`: `name`, `type`, `photo_url`, `port`, `max_capacity`, `estimated_total`, `currency` |
 | **FR-005** | Punto de extensión hacia `Ver detalle de embarcación` | Identificador `vessel_id` para invocar [`CU-19-ver-detalle-embarcacion.md`](CU-19-ver-detalle-embarcacion.md) |
 | **FR-006** | Búsqueda rápida de texto y categorías | Query parameters: `q`, `type` |
 | **FR-007** | Contexto dinámico y contador de resultados | Campos del envelope: `context_label`, `pagination.total_items` |
 | **FR-008** | Paginación en lotes fijos de 20 embarcaciones | Objeto `pagination` con `page_size: 20` y parámetro `page` |
 | **FR-009** | Búsqueda sin filtros retorna catálogo completo | Manejo en query params vacíos (Ejemplo exitoso 2) |
 | **FR-010** | Rechazo preventivo ante entradas con formato inválido | Respuesta `400 Bad Request` con código `INVALID_PARAMETERS` |
-| **SC-001** | 100% de resultados con tarifa de M3 (salvo caídas) | Objeto `estimated_fare` poblado literalmente y campo `quotation_available` |
+| **SC-001** | 100% de resultados con tarifa de M3 (salvo caídas) | Campos `estimated_total` y `currency` poblados literalmente y campo `quotation_available` |
 | **SC-002** | Latencia < 2000 ms en condiciones normales | Documentado en objetivos técnicos de integración |
 | **SC-003** | 100% de búsquedas sin filtros devuelven catálogo completo | Validado en contrato y Ejemplo 2 |
 | **SC-004** | Rechazo previo sin consultar Módulo 1 o Módulo 3 | Validación sintáctica previa reflejada en error `400` |

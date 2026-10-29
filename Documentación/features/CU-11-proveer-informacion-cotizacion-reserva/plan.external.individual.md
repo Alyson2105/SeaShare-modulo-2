@@ -39,7 +39,7 @@ y devuelve el monto consolidado junto con una advertencia legal que debe conserv
 ### Método HTTP y URL
 
 ```http
-POST /api/v1/finance/estimates/individual
+POST /api/v1/estimates/individual
 ```
 
 ### Elementos de la petición (request)
@@ -94,7 +94,7 @@ Módulo 3 no recibe `renterId` ni datos de usuario en esta operación de cálcul
 **Petición `curl`**
 
 ```bash
-curl -X POST "https://finanzas.seashare.internal/api/v1/finance/estimates/individual" \
+curl -X POST "https://finanzas.seashare.internal/api/v1/estimates/individual" \
   -H "Authorization: Bearer <token_servicio_m2>" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
@@ -155,7 +155,7 @@ Módulo 2 no debe crear una reserva con un precio nulo, cero, aproximado o no co
 
 ## 5. Notas transversales de integración
 
-- **Identificador y vigencia de la cotización**: Módulo 3 no devuelve `quote_id` ni fechas de expiración. Módulo 2 genera su propia referencia interna (`quote_id`) y define operativamente la vigencia, según CU-19.
+- **Identificador y vigencia de la cotización**: Módulo 3 no devuelve `quote_id` ni fechas de expiración. Módulo 2 no genera ni persiste ningún identificador de cotización; la vigencia de la cotización la define operativamente Módulo 2, según CU-19.
 - **Moneda**: Módulo 3 no devuelve un campo `currency`; Módulo 2 asume la constante de plataforma `COP`.
 - **Advertencia legal**: el campo `warning` debe transportarse y mostrarse sin cambios, respetando exactamente el texto definido en la sección 1.
 - **Solo estados de lectura**: la estimación no bloquea inventario ni produce cargos.
@@ -166,7 +166,7 @@ Módulo 2 no debe crear una reserva con un precio nulo, cero, aproximado o no co
 
 | Requisito / criterio | Descripción | Elemento de este contrato |
 |---|---|---|
-| **FR-001** | Modo individual para obtener una estimación previa a la reserva | Endpoint `POST /api/v1/finance/estimates/individual` |
+| **FR-001** | Modo individual para obtener una estimación previa a la reserva | Endpoint `POST /api/v1/estimates/individual` |
 | **FR-002** | Módulo 2 no realiza cálculos monetarios | Uso literal de `estimated_total`, parseado como `BigDecimal` |
 | **FR-009** | Invocación desde `CU-19 Ver detalle de embarcación` | Parámetros `boat_id`, fechas y pasajeros |
 | **FR-010** | Validación de fechas y parámetros | Matriz de errores de la sección 3 |

@@ -452,9 +452,9 @@ Todos los errores retornan el sobre estándar con `code` y `message`:
 | Código HTTP | Código Interno (`code`) | Causa / Condición de Disparo | Cuerpo de Respuesta de Ejemplo |
 | :--- | :--- | :--- | :--- |
 | **`400 Bad Request`** | `INVALID_QUERY_PARAMS` | Parámetros de paginación inválidos (`page < 1`, `limit < 1`, `limit > 50`, o filtro no soportado). | `{"code": "INVALID_QUERY_PARAMS", "message": "El parámetro 'page' debe ser mayor o igual a 1 y 'limit' debe encontrarse entre 1 y 50."}` |
-| **`401 Unauthorized`** | `AUTH_TOKEN_MISSING_OR_INVALID` | El header `Authorization` no fue provisto o el token JWT expiró. | `{"code": "AUTH_TOKEN_MISSING_OR_INVALID", "message": "Token de autenticación ausente o inválido."}` |
+| **`401 Unauthorized`** | `UNAUTHENTICATED` | El header `Authorization` no fue provisto o el token JWT expiró. | `{"code": "UNAUTHENTICATED", "message": "Token de autenticación ausente o inválido."}` |
 | **`403 Forbidden`** | `FORBIDDEN_INVALID_ROLE` | El usuario autenticado posee un rol no autorizado para consultar este catálogo personal. | `{"code": "FORBIDDEN_INVALID_ROLE", "message": "El perfil de usuario no cuenta con autorización para acceder al panel de reservas."}` |
-| **`500 Internal Server Error`** | `INTERNAL_SERVER_ERROR` | Fallo no controlado de la base de datos de Módulo 2. | `{"code": "INTERNAL_SERVER_ERROR", "message": "Error interno del servidor al recuperar el listado de reservas."}` |
+| **`500 Internal Server Error`** | `INTERNAL_ERROR` | Fallo no controlado de la base de datos de Módulo 2. | `{"code": "INTERNAL_ERROR", "message": "Error interno del servidor al recuperar el listado de reservas."}` |
 
 ---
 

@@ -225,11 +225,11 @@ Todos los errores retornan un sobre uniforme con `code` y `message`:
 | :--- | :--- | :--- | :--- |
 | **`400 Bad Request`** | `INVALID_UUID` | El parámetro `dispute_id` no es un UUIDv4 válido. | `{"code": "INVALID_UUID", "message": "El identificador de disputa proporcionado no es válido."}` |
 | **`400 Bad Request`** | `INVALID_STATE_TRANSITION` | El valor de `new_status` no es uno de `ACCEPTED`, `REJECTED` o `PENDING`. | `{"code": "INVALID_STATE_TRANSITION", "message": "Estado destino no permitido. Los únicos estados válidos son ACCEPTED, REJECTED o PENDING."}` |
-| **`401 Unauthorized`** | `AUTH_TOKEN_MISSING_OR_INVALID` | El header `Authorization` no fue provisto o el token expiró. | `{"code": "AUTH_TOKEN_MISSING_OR_INVALID", "message": "Token de autenticación ausente o inválido."}` |
+| **`401 Unauthorized`** | `UNAUTHENTICATED` | El header `Authorization` no fue provisto o el token expiró. | `{"code": "UNAUTHENTICATED", "message": "Token de autenticación ausente o inválido."}` |
 | **`403 Forbidden`** | `FORBIDDEN_NOT_ADMIN` | El usuario autenticado no posee el rol `ADMIN` en su token JWT. | `{"code": "FORBIDDEN_NOT_ADMIN", "message": "Acceso denegado: solo el perfil Administrador tiene atribuciones para resolver disputas de garantía."}` |
 | **`404 Not Found`** | `DISPUTE_NOT_FOUND` | La disputa no existe en la base de datos de Módulo 2. | `{"code": "DISPUTE_NOT_FOUND", "message": "No se encontró ninguna disputa de garantía asociada al identificador provisto."}` |
-| **`409 Conflict`** | `DISPUTE_ALREADY_FINALIZED` | La disputa ya se encuentra en `ACCEPTED` o `REJECTED` (`SC-002`, `FR-003`). No admite reapertura. | `{"code": "DISPUTE_ALREADY_FINALIZED", "message": "Conflicto: la disputa ya se encuentra en un estado final inmutable y no puede ser modificada ni reabierta."}` |
-| **`500 Internal Server Error`** | `INTERNAL_SERVER_ERROR` | Fallo de base de datos o broker de eventos al confirmar la resolución. | `{"code": "INTERNAL_SERVER_ERROR", "message": "Error interno del servidor al procesar la resolución de la disputa."}` |
+| **`409 Conflict`** | `DISPUTE_ALREADY_RESOLVED` | La disputa ya se encuentra en `ACCEPTED` o `REJECTED` (`SC-002`, `FR-003`). No admite reapertura. | `{"code": "DISPUTE_ALREADY_RESOLVED", "message": "Conflicto: la disputa ya se encuentra en un estado final inmutable y no puede ser modificada ni reabierta."}` |
+| **`500 Internal Server Error`** | `INTERNAL_ERROR` | Fallo de base de datos o broker de eventos al confirmar la resolución. | `{"code": "INTERNAL_ERROR", "message": "Error interno del servidor al procesar la resolución de la disputa."}` |
 
 ---
 
@@ -248,7 +248,7 @@ Una vez consolidada la transición hacia `ACCEPTED` o `REJECTED`:
 ### 7.3 Concurrencia y Carrera con Cierre Automático
 Si el Admin envía la resolución exactamente en el instante en que el job programado de 24 horas intenta ejecutar el cierre automático por vencimiento:
 - El control de concurrencia optimista (`@Version`) asegura que solo una transacción consolide.
-- Si gana el Admin, la disputa pasa a su veredicto. Si gana el job, el Admin recibe `409 Conflict` (`DISPUTE_ALREADY_FINALIZED`), garantizando cero estados inconsistentes.
+- Si gana el Admin, la disputa pasa a su veredicto. Si gana el job, el Admin recibe `409 Conflict` (`DISPUTE_ALREADY_RESOLVED`), garantizando cero estados inconsistentes.
 
 ---
 
@@ -258,7 +258,7 @@ Si el Admin envía la resolución exactamente en el instante en que el job progr
 | :--- | :--- | :--- |
 | **FR-001** | Permitir al Admin actualizar el estado si y solo si la disputa está en `PENDING`. | Validación de estado previo y códigos `403` / `409`. |
 | **FR-002** | Estados destino permitidos: `PENDING`, `REJECTED` o `ACCEPTED`. | Restricción en schema de entrada y código `400 INVALID_STATE_TRANSITION`. |
-| **FR-003** | Rechazar cualquier cambio si ya está en `REJECTED` o `ACCEPTED` (inmutables). | Código `409 DISPUTE_ALREADY_FINALIZED`. |
+| **FR-003** | Rechazar cualquier cambio si ya está en `REJECTED` o `ACCEPTED` (inmutables). | Código `409 DISPUTE_ALREADY_RESOLVED`. |
 | **FR-004** | Motivo opcional, informativo, sin efecto financiero. | Campo `reason` documentado como informativo en sección 4.1 y 7.1. |
 | **FR-005** | Regla estricta "Sin dinero": cero montos ni operaciones de pasarela. | Verificado en schema. Cero montos en entrada o salida. |
 | **FR-006** | Cierre automático de CU-16 se ejecuta mediante esta misma operación interna. | Modelo unificado de máquina de estados de disputa. |

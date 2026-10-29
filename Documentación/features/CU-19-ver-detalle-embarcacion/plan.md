@@ -132,7 +132,7 @@ curl -X GET "https://api.seashare.com/api/v1/vessels/d3b07384-d113-49cd-a5d6-812
 
 | Código | Caso | Cuerpo de respuesta (ejemplo) |
 |---|---|---|
-| `400 Bad Request` | `vessel_id` no tiene estructura de UUID válido | `{ "code": "INVALID_ID", "message": "El identificador de embarcación proporcionado no es un UUID válido" }` |
+| `400 Bad Request` | `vessel_id` no tiene estructura de UUID válido | `{ "code": "INVALID_UUID", "message": "El identificador de embarcación proporcionado no es un UUID válido" }` |
 | `401 Unauthorized` | Token de autorización ausente, corrupto o expirado | `{ "code": "UNAUTHENTICATED", "message": "Token de autenticación inválido o ausente" }` |
 | `403 Forbidden` | El claim de rol en el token no corresponde a Arrendatario | `{ "code": "PROFILE_NOT_AUTHORIZED", "message": "Este recurso requiere perfil Arrendatario" }` |
  | `404 Not Found` | La embarcación no existe en Módulo 1 o retorna capacidad inválida (capacidad = 0) (Edge Case "Inconsistencia de datos desde Módulo 1") | `{ "code": "VESSEL_NOT_FOUND", "message": "La embarcación no está disponible para mostrar su detalle" }` |
@@ -244,7 +244,7 @@ GET /api/v1/vessels/{vessel_id}/quotations
   "passengers": 8,
   "total_amount": 9600000.00,
   "currency": "COP",
-  "warning": "Valor estimado. No incluye cargos adicionales ni depósito de seguridad",
+  "warning": "Valor estimado. El valor incluye el seguro náutico, pero no incluye el depósito de garantía ni penalidades o ajustes derivados de cambios posteriores de la reserva",
   "quotation_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
   "quotation_expires_at": "2026-10-09T12:15:00Z"
 }
