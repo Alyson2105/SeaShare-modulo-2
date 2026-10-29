@@ -150,7 +150,7 @@ curl -X POST "https://api.seashare.com/api/v1/reservations/e4f81c92-7a20-4215-9c
 
 | Código | Caso | Cuerpo de respuesta (ejemplo) |
 |---|---|---|
-| `400 Bad Request` | `reservation_id` no es un UUID válido | `{ "code": "INVALID_ID", "message": "El identificador de reserva no es válido" }` |
+| `400 Bad Request` | `reservation_id` no es un UUID válido | `{ "code": "INVALID_UUID", "message": "El identificador de reserva no es válido" }` |
 | `401 Unauthorized` | Token ausente, inválido o expirado | `{ "code": "UNAUTHENTICATED", "message": "Token de autenticación inválido o ausente" }` |
 | `403 Forbidden` | El usuario autenticado no es el Propietario registrado del barco de esta reserva (FR-002, SC-006) | `{ "code": "PROFILE_NOT_AUTHORIZED", "message": "Solo el propietario registrado de la embarcación puede marcar inasistencia" }` |
 | `404 Not Found` | La reserva no existe en Módulo 2 | `{ "code": "RESERVATION_NOT_FOUND", "message": "La reserva especificada no existe" }` |
