@@ -204,6 +204,6 @@ No aplica. Operación puntual sobre una reserva individual.
 | **SC-001** | 0% reportes aceptados antes de los 30 minutos | Validación cronológica estricta |
 | **SC-002** | 0% reportes sobre estados inválidos | Matriz de validación de máquina de estados |
 | **SC-003** | 100% de intentos anticipados informan tiempo restante | Campos `minutes_remaining` y `seconds_remaining` en error 409 |
-| **SC-004** | Notificación externa encolada en < 1 segundo | Outbox transaccional, cola de notificación de CU-22 y SLA de actualización |
+| **SC-004** | Notificación externa encolada en < 1 segundo | Outbox transaccional, outbox hacia M1 (PATCH de UC07) y SLA de actualización |
 | **SC-005** | Cero operaciones de cálculo monetario en M2 | Neutralidad financiera del endpoint |
 | **SC-006** | Cero reportes autorizados a no-propietarios | Control de claim de rol y pertenencia |

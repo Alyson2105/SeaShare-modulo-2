@@ -90,7 +90,7 @@ La creación usa un comando aparte (`CreateReservationCommand`), solo desde CU-0
   "status_changed_at": "string (ISO 8601 con zona horaria)",
   "ttl_expires_at": "string (ISO 8601, no cambia nunca desde la creación)",
   "version": "number (entero, incrementada tras el cambio)",
-  "events_enqueued": ["M3_QUEUE", "M1_QUEUE"]
+  "events_enqueued": ["AMQP", "M1_HTTP"]
 }
 ```
 
@@ -122,7 +122,7 @@ La creación usa un comando aparte (`CreateReservationCommand`), solo desde CU-0
   "status_changed_at": "2026-10-22T12:10:00-05:00",
   "ttl_expires_at": "2026-10-22T12:15:00-05:00",
   "version": 4,
-  "events_enqueued": ["M3_QUEUE", "M1_QUEUE"]
+  "events_enqueued": ["AMQP", "M1_HTTP"]
 }
 ```
 
@@ -202,7 +202,7 @@ No aplica. Operación sobre una única reserva.
 |---|---|
 | `reservation` | `id`, `vessel_id`, `owner_id`, `renter_id`, `status`, `cancellation_subtype`, `start_date`, `end_date`, `departure_time`, `ttl_expires_at`, `status_changed_at`, `m1_blocked`, `version` |
 | `reservation_status_audit` | `reservation_id`, `from_status`, `to_status`, `subtype`, `actor`, `actor_id`, `reason`, `occurred_at`, `event_ids` |
-| `outbox_message` | `id` (= `event_id`), `destination` (`M3_QUEUE` o `M1_QUEUE`), `exchange`, `routing_key`, `payload`, `published_at`, `attempts`, `next_attempt_at`, `status` |
+| `outbox_message` | `id` (= `event_id`), `destination` (`AMQP` para M3, `M1_HTTP` para M1), `exchange`, `routing_key`, `payload`, `published_at`, `attempts`, `next_attempt_at`, `status` |
 
 *(Campos de fecha y control en `reservation`: `start_date` y `end_date` delimitan el rango de servicio para la restricción GiST de no solapamiento temporal; `departure_time` fija la hora programada de zarpe para el cálculo de anticipación en CU-04 y la ventana de CU-06; `m1_blocked` previene desincronizaciones operativas con Módulo 1).*
 
@@ -214,7 +214,7 @@ No aplica. Operación sobre una única reserva.
 2. **`EXPIRED` (desde `PENDING_PAYMENT`) y `PAYMENT_FAILED` hacia Módulo 3**: CU-14 FR-001 dice que toda transición desde `PENDING_PAYMENT` se notifica; el flujo alterno del spec de CU-08 dice que no. Decidido: Módulo 2 no los notifica a Módulo 3 (en INITIATED→EXPIRED no hay nada que deshacer y PAYMENT_FAILED lo origina M3). Única excepción: cobro aprobado tardío tras el TTL, que se publica como `CANCELLED_FLEXIBLE` (ver CU-13 y CU-14). No se le pide nada a M3.
 3. **Barco `RESERVED` por semanas**: con una reserva confirmada para dentro de un mes, Módulo 1 mostraría el barco ocupado todo ese tiempo. Choca con H1 (disponibilidad instantánea). Decisión de negocio.
 4. **Orden de entrega a Módulo 1**: pedirle que aplique un evento solo si su `occurred_at` es más reciente que el último aplicado.
-5. **Último salto a Módulo 1**: cola (AMQP) o HTTP `PATCH`, y el valor `M1_HTTP` del enum `destino` en `plan.md`. Confirmar también si `outbox_message` es una tabla compartida.
+5. **Último salto a Módulo 1**: Decidido: HTTP `PATCH` a M1 (contrato UC07 de M1); el destino del outbox es `M1_HTTP`. Confirmar también si `outbox_message` es una tabla compartida.
 6. **Réplicas múltiples del job de TTL**: `SKIP LOCKED` o ShedLock.
 
 ---
