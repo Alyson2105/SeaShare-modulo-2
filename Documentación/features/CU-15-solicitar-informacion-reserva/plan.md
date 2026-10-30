@@ -290,7 +290,7 @@ Todos los errores retornan un sobre uniforme con `code` y `message`:
 | :--- | :--- | :--- | :--- |
 | **`400 Bad Request`** | `INVALID_UUID` | El parámetro `reservation_id` no cumple el estándar UUIDv4. | `{"code": "INVALID_UUID", "message": "El identificador de reserva proporcionado no tiene un formato UUID válido."}` |
 | **`401 Unauthorized`** | `UNAUTHENTICATED` | El header `Authorization` no fue provisto o el token de servicio es inválido. | `{"code": "UNAUTHENTICATED", "message": "Token de autenticación de servicio ausente o inválido."}` |
-| **`403 Forbidden`** | `FORBIDDEN_NOT_SERVICE_M3` | El token JWT no contiene la identidad de servicio autorizada de Módulo 3. Petición rechazada para usuarios estándar. | `{"code": "FORBIDDEN_NOT_SERVICE_M3", "message": "Acceso denegado: este endpoint interno está reservado exclusivamente para el consumo del motor financiero de Módulo 3."}` |
+| **`403 Forbidden`** | `PROFILE_NOT_AUTHORIZED` | El token JWT no contiene la identidad de servicio autorizada de Módulo 3. Petición rechazada para usuarios estándar. | `{"code": "PROFILE_NOT_AUTHORIZED", "message": "Acceso denegado: este endpoint interno está reservado exclusivamente para el consumo del motor financiero de Módulo 3."}` |
 | **`404 Not Found`** | `RESERVATION_NOT_FOUND` | La reserva no existe en la base de datos de Módulo 2. | `{"code": "RESERVATION_NOT_FOUND", "message": "No se encontró ninguna reserva asociada al identificador proporcionado."}` |
 | **`500 Internal Server Error`** | `INTERNAL_ERROR` | Fallo inesperado en el servidor al recuperar la entidad. | `{"code": "INTERNAL_ERROR", "message": "Error interno del servidor al procesar la consulta operativa de la reserva."}` |
 
