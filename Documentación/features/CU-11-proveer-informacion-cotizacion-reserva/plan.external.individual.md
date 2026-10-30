@@ -131,10 +131,10 @@ Los errores de Módulo 3 se devuelven bajo el estándar `application/problem+jso
 | `400` | `INVALID_DATE_RANGE` | Aborta sin crear reserva | `400 INVALID_PARAMETERS` |
 | `400` | `VALIDATION_ERROR` | Aborta y genera alerta de integración | `400 INVALID_PARAMETERS` |
 | `401 / 403` | `UNAUTHENTICATED` / `FORBIDDEN` | Alerta crítica de infraestructura | `500 INTERNAL_ERROR` |
-| `422` | `BASE_RATE_NOT_AVAILABLE` | Bloquea el avance | `503 QUOTE_UNAVAILABLE` |
-| `503` | `FLEET_UNAVAILABLE` | Activa *fail-safe* | `503 QUOTE_UNAVAILABLE` |
-| `503` | `FINANCIAL_PARAMETERS_NOT_CONFIGURED` | Activa *fail-safe* | `503 QUOTE_UNAVAILABLE` |
-| `500` / timeout | `INTERNAL_ERROR` | Activa *fail-safe* | `503 QUOTE_UNAVAILABLE` |
+| `422` | `BASE_RATE_NOT_AVAILABLE` | Bloquea el avance | `503 QUOTATION_UNAVAILABLE` |
+| `503` | `FLEET_UNAVAILABLE` | Activa *fail-safe* | `503 QUOTATION_UNAVAILABLE` |
+| `503` | `FINANCIAL_PARAMETERS_NOT_CONFIGURED` | Activa *fail-safe* | `503 QUOTATION_UNAVAILABLE` |
+| `500` / timeout | `INTERNAL_ERROR` | Activa *fail-safe* | `503 QUOTATION_UNAVAILABLE` |
 
 Módulo 2 no debe crear una reserva con un precio nulo, cero, aproximado o no confirmado por Módulo 3.
 
@@ -174,7 +174,7 @@ Módulo 2 no debe crear una reserva con un precio nulo, cero, aproximado o no co
 | **FR-012** | Recepción del monto y de la advertencia obligatoria literal | Campos `estimated_total` y `warning` |
 | **FR-013** | Transferencia del valor a `CU-02 Iniciar reserva` | Uso del monto recibido en el flujo de creación de reserva |
 | **FR-014** | Recotización al cambiar fechas o pasajeros | Descarte de estimaciones obsoletas, sección 4 |
-| **FR-015** | Bloqueo si no existe tarifa base disponible | Mapeo de `BASE_RATE_NOT_AVAILABLE` a `503 QUOTE_UNAVAILABLE` |
+| **FR-015** | Bloqueo si no existe tarifa base disponible | Mapeo de `BASE_RATE_NOT_AVAILABLE` a `503 QUOTATION_UNAVAILABLE` |
 | **FR-016** | Una falla o timeout no debe producir una reserva con precio inválido | Política *fail-safe*, secciones 3 y 4 |
 | **FR-017** | Operación de solo lectura, sin compromisos contables | Principios de diseño, sección 1 |
 | **SC-001** | El monto procede directamente de Módulo 3 | Uso literal de `estimated_total` |

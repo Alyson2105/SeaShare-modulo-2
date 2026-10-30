@@ -276,7 +276,7 @@ stateDiagram-v2
 ## 9. Puntos Abiertos y Aclaraciones Necesarias
 
 - `[NEEDS CLARIFICATION: exchange, routing key y cola de Módulo 1]`: nombres pendientes; el contrato usa los placeholders `<exchange-pendiente-de-definir>`, `<routing-key-pendiente-de-definir>` y `<nombre-cola-pendiente-de-definir>`.
-- `[NEEDS CLARIFICATION: último salto a Módulo 1]`: consumo directo de la cola (AMQP) vs. relay HTTP (`M1_HTTP` en `technical-plan/plan.md`).
+- **Último salto a Módulo 1 (resuelto)**: M1 solo expone REST (UC07), el último salto es HTTP `PATCH` (`M1_HTTP`).
 - `[NEEDS CLARIFICATION: garantías de orden]`: el edge case "Entrega fuera de orden" de CU-22 sigue abierto.
 - `[NEEDS CLARIFICATION: 4xx permanentes]`: acordar con Módulo 1 qué códigos se consideran permanentes.
-- **Inconsistencia detectada (no corregida)**: el enum de `destino` en `technical-plan/plan.md` es `AMQP | M1_HTTP` y la decisión D-07 menciona "PUT a M1". Este contrato asume publicación AMQP en la cola de CU-22; el valor `M1_HTTP` debe revisarse cuando se cierre el contrato con Módulo 1.
+- **Inconsistencia resuelta**: el enum de `destino` en `technical-plan/plan.md` es `AMQP` (M3) o `M1_HTTP` (M1) y la decisión D-07 mencionaba "PUT a M1". Resuelto: M1 expone `PATCH /internal/v1/vessels/{vessel_id}/status` (UC07), por lo que el destino es `M1_HTTP`.	

@@ -202,7 +202,7 @@ No aplica. Operación puntual sobre una reserva individual.
 | **FR-009** | Rechazo sobre reservas que no estén `IN_NAVIGATION` | Matriz de errores tipados de la Sección 3 |
 | **FR-010** | Apertura de ventana de disputa de 24 horas vía CU-16 | Campos devueltos `dispute_id` y `dispute_window_expires_at` |
 | **SC-001** | Cero cierres permitidos fuera de `IN_NAVIGATION` | Validación estricta de máquina de estados |
-| **SC-002** | Notificación a M1 para liberar barco encolada en < 1 segundo | Outbox transaccional, cola de notificación de CU-22 y SLA operativo |
+| **SC-002** | Notificación a M1 para liberar barco encolada en < 1 segundo | Outbox transaccional, outbox hacia M1 (PATCH de UC07) y SLA operativo |
 | **SC-003** | Cero evaluaciones de daños o cobros ejecutados en M2 | Neutralidad financiera garantizada |
 | **SC-004** | 100% de entregas registradas con hora real | Campo `actual_arrival_at` auditado |
 | **SC-005** | Cero cierres autorizados a no-propietarios | Control estricto de legitimación por JWT |

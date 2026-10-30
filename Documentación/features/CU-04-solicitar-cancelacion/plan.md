@@ -337,7 +337,7 @@ Todos los errores retornan un sobre uniforme con `code` y `message`:
 | Código HTTP | Código Interno (`code`) | Causa / Condición de Disparo | Cuerpo de Respuesta de Ejemplo |
 | :--- | :--- | :--- | :--- |
 | **`400 Bad Request`** | `INVALID_UUID` | El identificador `reservation_id` no cumple el formato UUIDv4. | `{"code": "INVALID_UUID", "message": "El identificador de reserva proporcionado no es un UUID válido."}` |
-| **`400 Bad Request`** | `VALIDATION_ERROR` | El solicitante es Propietario y omitió el campo `reason`, o envió un valor no soportado. | `{"code": "VALIDATION_ERROR", "message": "El campo 'reason' es obligatorio para el Propietario y debe ser 'fuerza_mayor_logistica' o 'averia_mecanica'."}` |
+| **`400 Bad Request`** | `INVALID_PARAMETERS` | El solicitante es Propietario y omitió el campo `reason`, o envió un valor no soportado. | `{"code": "INVALID_PARAMETERS", "message": "El campo 'reason' es obligatorio para el Propietario y debe ser 'fuerza_mayor_logistica' o 'averia_mecanica'."}` |
 | **`401 Unauthorized`** | `UNAUTHENTICATED` | El header `Authorization` no fue proporcionado o el JWT expiró. | `{"code": "UNAUTHENTICATED", "message": "Token de autenticación ausente o inválido."}` |
 | **`403 Forbidden`** | `RESERVATION_NOT_OWNED` | El usuario autenticado no es ni el Arrendatario titular ni el Propietario registrado de la reserva. | `{"code": "RESERVATION_NOT_OWNED", "message": "No está autorizado para cancelar esta reserva. Solo el arrendatario titular o el propietario del activo pueden solicitar la cancelación."}` |
 | **`404 Not Found`** | `RESERVATION_NOT_FOUND` | La reserva no existe en la base de datos de Módulo 2. | `{"code": "RESERVATION_NOT_FOUND", "message": "No se encontró ninguna reserva asociada al identificador proporcionado."}` |
@@ -393,7 +393,7 @@ Si el cliente reenvía la petición con el mismo `X-Idempotency-Key` dentro de u
 | **FR-007** | Clasificación temporal Arrendatario: Flexible ($\ge 72$h), Moderado ($24$h a $72$h), Tardío ($< 24$h). | Matriz de cálculo y ejemplos 1, 2 y 3. |
 | **FR-008** | Permitir cancelar hasta el último minuto previo al zarpe bajo franja Tardío. | Confirmado en reglas de negocio y ejemplo 3. |
 | **FR-009** | Propietario recibe clasificación directa "Por Propietario" sin evaluar horas. | Ejemplos 4 y 5. Campo `anticipation_hours` se serializa como `null`. |
-| **FR-010** | Captura obligatoria de motivo para Propietario (`logistics_force_majeure` o `mechanical_failure`). | Validación de Request Body en sección 4.1 y error `400 VALIDATION_ERROR`. En `mechanical_failure`, rige la regla estricta de cero cancelación en cascada. |
+| **FR-010** | Captura obligatoria de motivo para Propietario (`logistics_force_majeure` o `mechanical_failure`). | Validación de Request Body en sección 4.1 y error `400 INVALID_PARAMETERS`. En `mechanical_failure`, rige la regla estricta de cero cancelación en cascada. |
 | **FR-011** | Invocar obligatoriamente el caso de uso interno `Actualizar estado reserva` (`CU-08`). | Se delega internamente la persistencia y control transaccional a CU-08. |
 | **FR-012** | Delegar actualización de estado operativo de M1 (`AVAILABLE` o `MAINTENANCE_CLEANING`). | Notificación asíncrona documentada en los campos `vessel_new_operational_status` y `m1_sync_status` (condicionada a `m1_blocked == true`). No genera cancelaciones en cascada. |
 | **FR-013** | Delegar notificación AMQP a Módulo 3 (`reserva.estado.cancelada`) con sub-estado. | Notificación AMQP documentada en campo `m3_notification_status` y contrato `CU-14-estado-reserva`. |

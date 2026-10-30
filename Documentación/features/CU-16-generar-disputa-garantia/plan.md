@@ -195,7 +195,7 @@ Todos los errores retornan el sobre uniforme con `code` y `message`:
 
 | Código HTTP | Código Interno (`code`) | Causa / Condición de Disparo | Cuerpo de Respuesta de Ejemplo |
 | :--- | :--- | :--- | :--- |
-| **`400 Bad Request`** | `VALIDATION_ERROR` | Descripción vacía o menor a 10 caracteres; categoría no reconocida. | `{"code": "VALIDATION_ERROR", "message": "La descripción del daño es obligatoria y debe contener al menos 10 caracteres."}` |
+| **`400 Bad Request`** | `INVALID_PARAMETERS` | Descripción vacía o menor a 10 caracteres; categoría no reconocida. | `{"code": "INVALID_PARAMETERS", "message": "La descripción del daño es obligatoria y debe contener al menos 10 caracteres."}` |
 | **`400 Bad Request`** | `INVALID_UUID` | El parámetro `dispute_id` no es un UUIDv4 válido. | `{"code": "INVALID_UUID", "message": "El identificador de disputa proporcionado no es válido."}` |
 | **`401 Unauthorized`** | `UNAUTHENTICATED` | El header `Authorization` no fue provisto o expiró. | `{"code": "UNAUTHENTICATED", "message": "Token de autenticación ausente o inválido."}` |
 | **`403 Forbidden`** | `RESERVATION_NOT_OWNED` | El usuario autenticado no es el Propietario registrado del barco asociado a la disputa. | `{"code": "RESERVATION_NOT_OWNED", "message": "Acceso denegado: solo el propietario registrado de la embarcación puede radicar un reclamo de garantía."}` |
