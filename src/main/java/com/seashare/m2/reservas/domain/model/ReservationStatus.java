@@ -8,5 +8,9 @@ public enum ReservationStatus { // estados de una reserva
     COMPLETED, // final: navegacion terminada
     CANCELLED, // final: requiere CancellationSubtype
     EXPIRED, // final: vencio el TTL
-    PAYMENT_FAILED // final: M3 reporto cobro cancelado o expirado
+    PAYMENT_FAILED; // final: M3 reporto cobro cancelado o expirado
+
+    public boolean isFinal() { // true si no tiene salida
+        return this == COMPLETED || this == CANCELLED || this == EXPIRED || this == PAYMENT_FAILED; // los 4 finales
+    }
 }
