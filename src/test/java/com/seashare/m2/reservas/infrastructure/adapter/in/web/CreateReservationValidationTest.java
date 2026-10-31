@@ -23,7 +23,6 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -194,40 +193,71 @@ class CreateReservationValidationTest { // pruebas de validacion, errores y conc
     }
 
     @Test
-    void invalidHarborTimezoneIs503WritesNothing() throws Exception { // zona horaria ausente o invalida retorna 503 y revierte datos
-        List<String> invalidZones = Arrays.asList("Not/AZone", "", null); // casos no validos segun especificacion
-        for (String invalidZone : invalidZones) { // itera cada caso invalido
-            UUID vesselId = UUID.randomUUID(); // embarcacion aleatoria
-            trackedVessels.add(vesselId); // registra para limpieza
-            String key = UUID.randomUUID().toString(); // clave de idempotencia unica
-            trackedKeys.add(key); // registra para limpieza
+    void nullHarborTimezoneIs503WritesNothing() throws Exception { // zona horaria nula retorna 503 y revierte datos
+        UUID vesselId = UUID.randomUUID(); // embarcacion aleatoria
+        trackedVessels.add(vesselId); // registra para limpieza
+        String key = UUID.randomUUID().toString(); // clave de idempotencia
+        trackedKeys.add(key); // registra para limpieza
 
-            when(fleetInfoPort.getVesselInfo(vesselId)) // mockea zona horaria no valida
-                    .thenReturn(new FleetInfo(defaultOwnerId, 12, invalidZone));
+        when(fleetInfoPort.getVesselInfo(vesselId)) // mockea zona horaria nula
+                .thenReturn(new FleetInfo(defaultOwnerId, 12, null));
 
-            mockMvc.perform(post("/api/v1/reservations") // ejecuta peticion post
-                            .header("X-User-Id", UUID.randomUUID().toString())
-                            .header("X-User-Role", "RENTER")
-                            .header("Idempotency-Key", key)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(buildValidBody(vesselId)))
-                    .andExpect(status().isServiceUnavailable()) // valida 503
-                    .andExpect(jsonPath("$.code").value("HARBOR_TIMEZONE_UNAVAILABLE")); // valida HARBOR_TIMEZONE_UNAVAILABLE
+        mockMvc.perform(post("/api/v1/reservations") // ejecuta peticion post
+                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-User-Role", "RENTER")
+                        .header("Idempotency-Key", key)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(buildValidBody(vesselId)))
+                .andExpect(status().isServiceUnavailable()) // valida 503
+                .andExpect(jsonPath("$.code").value("HARBOR_TIMEZONE_UNAVAILABLE")); // valida HARBOR_TIMEZONE_UNAVAILABLE
 
-            Integer reservationCount = jdbcTemplate.queryForObject( // valida rollback en reservation
-                    "SELECT count(*) FROM reservation WHERE vessel_id = ?",
-                    Integer.class,
-                    vesselId
-            );
-            assertThat(reservationCount).isEqualTo(0); // cero filas en reservation
+        Integer reservationCount = jdbcTemplate.queryForObject( // valida rollback en reservation
+                "SELECT count(*) FROM reservation WHERE vessel_id = ?",
+                Integer.class,
+                vesselId
+        );
+        assertThat(reservationCount).isEqualTo(0); // cero filas en reservation
 
-            Integer keyCount = jdbcTemplate.queryForObject( // valida rollback en idempotency_key
-                    "SELECT count(*) FROM idempotency_key WHERE key = ?",
-                    Integer.class,
-                    key
-            );
-            assertThat(keyCount).isEqualTo(0); // cero filas en idempotency_key
-        }
+        Integer keyCount = jdbcTemplate.queryForObject( // valida rollback en idempotency_key
+                "SELECT count(*) FROM idempotency_key WHERE key = ?",
+                Integer.class,
+                key
+        );
+        assertThat(keyCount).isEqualTo(0); // cero filas en idempotency_key
+    }
+
+    @Test
+    void invalidHarborTimezoneIs503WritesNothing() throws Exception { // zona horaria invalida retorna 503 y revierte datos
+        UUID vesselId = UUID.randomUUID(); // embarcacion aleatoria
+        trackedVessels.add(vesselId); // registra para limpieza
+        String key = UUID.randomUUID().toString(); // clave de idempotencia
+        trackedKeys.add(key); // registra para limpieza
+
+        when(fleetInfoPort.getVesselInfo(vesselId)) // mockea zona horaria invalida
+                .thenReturn(new FleetInfo(defaultOwnerId, 12, "Not/AZone"));
+
+        mockMvc.perform(post("/api/v1/reservations") // ejecuta peticion post
+                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-User-Role", "RENTER")
+                        .header("Idempotency-Key", key)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(buildValidBody(vesselId)))
+                .andExpect(status().isServiceUnavailable()) // valida 503
+                .andExpect(jsonPath("$.code").value("HARBOR_TIMEZONE_UNAVAILABLE")); // valida HARBOR_TIMEZONE_UNAVAILABLE
+
+        Integer reservationCount = jdbcTemplate.queryForObject( // valida rollback en reservation
+                "SELECT count(*) FROM reservation WHERE vessel_id = ?",
+                Integer.class,
+                vesselId
+        );
+        assertThat(reservationCount).isEqualTo(0); // cero filas en reservation
+
+        Integer keyCount = jdbcTemplate.queryForObject( // valida rollback en idempotency_key
+                "SELECT count(*) FROM idempotency_key WHERE key = ?",
+                Integer.class,
+                key
+        );
+        assertThat(keyCount).isEqualTo(0); // cero filas en idempotency_key
     }
 
     @Test

@@ -74,13 +74,13 @@ public class CreateReservationService implements CreateReservationUseCase { // s
 
         FleetInfo fleetInfo = fleetInfoPort.getVesselInfo(command.vesselId()); // consulta datos de flota propagando posibles excepciones
 
-        if (fleetInfo.harborTimezone() == null || fleetInfo.harborTimezone().isBlank()) { // el plan no permite zona horaria por defecto
-            throw new ReservationRuleException(ErrorCode.HARBOR_TIMEZONE_UNAVAILABLE, "Harbor timezone is missing or invalid"); // rechaza zona ausente
+        if (fleetInfo.harborTimezone() == null || fleetInfo.harborTimezone().isBlank()) { // valida presencia de zona horaria
+            throw new ReservationRuleException(ErrorCode.HARBOR_TIMEZONE_UNAVAILABLE, "Harbor timezone is invalid or unavailable"); // rechaza zona horaria ausente
         }
         try {
             ZoneId.of(fleetInfo.harborTimezone()); // valida formato de zona horaria
         } catch (DateTimeException e) {
-            throw new ReservationRuleException(ErrorCode.HARBOR_TIMEZONE_UNAVAILABLE, "Harbor timezone is missing or invalid"); // rechaza zona invalida
+            throw new ReservationRuleException(ErrorCode.HARBOR_TIMEZONE_UNAVAILABLE, "Harbor timezone is invalid or unavailable"); // rechaza zona horaria invalida
         }
 
         if (!fleetOperationalStatusPort.isAvailable(command.vesselId())) { // valida aptitud operativa en modulo 1

@@ -2,10 +2,8 @@ package com.seashare.m2.reservas.infrastructure.adapter.in.web;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.seashare.m2.reservas.application.port.out.ReservationView;
-import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import com.seashare.m2.reservas.domain.service.TtlPolicy;
-import com.seashare.m2.shared.domain.ErrorCode;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -69,10 +67,7 @@ public record ReservationResponse(
     }
 
     public static ReservationResponse from(ReservationView view) { // fabrica de respuesta a partir de la vista de reserva
-        if (view.harborTimezone() == null || view.harborTimezone().isBlank()) { // valida presencia obligatoria de zona horaria
-            throw new ReservationRuleException(ErrorCode.HARBOR_TIMEZONE_UNAVAILABLE, "Harbor timezone is missing or invalid"); // rechaza zona ausente
-        }
-        ZoneId zoneId = ZoneId.of(view.harborTimezone()); // resuelve zona horaria del puerto directamente
+        ZoneId zoneId = ZoneId.of(view.harborTimezone()); // resuelve zona horaria validada directamente
 
         OffsetDateTime createdAt = view.createdAt().atZone(zoneId).toOffsetDateTime(); // convierte creacion a zona del puerto
         OffsetDateTime ttlExpiresAt = view.ttlExpiresAt().atZone(zoneId).toOffsetDateTime(); // convierte expiracion a zona del puerto
