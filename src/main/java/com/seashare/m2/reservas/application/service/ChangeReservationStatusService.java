@@ -14,6 +14,7 @@ import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import com.seashare.m2.reservas.domain.state.InvalidTransitionException;
 import com.seashare.m2.reservas.domain.state.ReservationStateMachine;
+import com.seashare.m2.shared.domain.ClockPort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,19 +38,22 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
     private final ReservationRepositoryPort repository; // puerto de persistencia de reservas
     private final StatusAuditPort statusAuditPort; // puerto de auditoria de estados
     private final OutboxPort outboxPort; // puerto de mensajeria outbox
+    private final ClockPort clockPort; // puerto de reloj para marca temporal
     private final ReservationStateMachine machine = new ReservationStateMachine(); // maquina de estados de reservas
 
     public ChangeReservationStatusService(ReservationRepositoryPort repository,
                                           StatusAuditPort statusAuditPort,
-                                          OutboxPort outboxPort) { // constructor con inyeccion de puertos
+                                          OutboxPort outboxPort,
+                                          ClockPort clockPort) { // constructor con inyeccion de puertos
         this.repository = repository; // asigna repositorio
         this.statusAuditPort = statusAuditPort; // asigna auditoria
         this.outboxPort = outboxPort; // asigna outbox
+        this.clockPort = clockPort; // asigna reloj
     }
 
     @Override
     public void execute(ChangeReservationStatusCommand command) { // ejecuta el flujo transaccional de cambio de estado
-        Instant changedAt = Instant.now(); // reloj temporal a reemplazar en proximo issue
+        Instant changedAt = clockPort.now(); // captura instante actual provisto por el puerto de reloj
 
         Reservation reservation = repository.findById(command.reservationId()) // busca reserva por id
                 .orElseThrow(() -> new ReservationNotFoundException(command.reservationId())); // lanza excepcion si no existe
@@ -58,7 +62,6 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
 
         ReservationStatus previousStatus = reservation.getStatus(); // guarda estado anterior
         reservation.changeStatus(command.targetStatus(), command.subtype(), machine); // aplica transicion de estado en el dominio
-
         repository.save(reservation); // guarda cambios en la reserva
 
         statusAuditPort.record(new StatusAuditEntry( // registra auditoria inmutable

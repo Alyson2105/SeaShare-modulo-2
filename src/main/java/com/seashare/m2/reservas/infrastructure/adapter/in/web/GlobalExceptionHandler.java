@@ -6,7 +6,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -29,6 +31,18 @@ public class GlobalExceptionHandler { // manejador global de excepciones para re
                 : ex.getBindingResult().getFieldErrors().get(0).getDefaultMessage(); // toma el primer mensaje de validacion
         return ResponseEntity.status(HttpStatus.BAD_REQUEST) // retorna status 400 bad request
                 .body(new ErrorBody(ErrorCode.INVALID_PARAMETERS.getCode(), message)); // cuerpo uniforme de validacion
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ErrorBody> handleMissingHeader(MissingRequestHeaderException ex) { // procesa encabezado requerido ausente
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST) // retorna status 400 bad request
+                .body(new ErrorBody(ErrorCode.INVALID_PARAMETERS.getCode(), "Required request header is missing")); // cuerpo uniforme para encabezado ausente
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorBody> handleNotReadable(HttpMessageNotReadableException ex) { // procesa cuerpo de peticion no legible o json malformado
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST) // retorna status 400 bad request
+                .body(new ErrorBody(ErrorCode.INVALID_PARAMETERS.getCode(), "Malformed JSON request")); // cuerpo uniforme para json malformado
     }
 
     @ExceptionHandler(Exception.class)

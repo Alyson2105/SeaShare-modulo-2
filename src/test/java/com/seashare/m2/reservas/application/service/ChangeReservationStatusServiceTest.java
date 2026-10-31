@@ -21,6 +21,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.UUID;
@@ -72,6 +73,7 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion para el ser
         entity.setRentalAmount(new BigDecimal("1000000.0000")); // monto alquiler
         entity.setInsuranceAmount(new BigDecimal("1000000.0000")); // monto seguro
         entity.setGuaranteeDepositAmount(new BigDecimal("1000000.0000")); // monto garantia
+        entity.setCreatedAt(Instant.now()); // marca temporal de creacion
         return entity; // retorna entidad preparada
     }
 

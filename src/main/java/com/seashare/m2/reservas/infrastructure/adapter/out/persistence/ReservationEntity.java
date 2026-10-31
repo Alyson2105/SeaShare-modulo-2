@@ -11,7 +11,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
-import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
@@ -112,7 +111,6 @@ public class ReservationEntity { // entidad jpa para la tabla reservation
     @Column(name = "m1_blocked", nullable = false)
     private boolean m1Blocked; // indicador de bloqueo notificado al modulo 1
 
-    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt; // marca temporal de creacion del registro
 

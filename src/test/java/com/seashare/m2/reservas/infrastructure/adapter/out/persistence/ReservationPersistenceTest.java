@@ -8,6 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -54,6 +55,7 @@ class ReservationPersistenceTest { // pruebas de persistencia para la entidad re
         entity.setRentalAmount(new BigDecimal("1000000.0000")); // monto alquiler
         entity.setInsuranceAmount(new BigDecimal("1000000.0000")); // monto seguro
         entity.setGuaranteeDepositAmount(new BigDecimal("1000000.0000")); // monto garantia
+        entity.setCreatedAt(Instant.now()); // marca temporal de creacion
         return entity; // retorna entidad preparada
     }
 
