@@ -1,6 +1,8 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.persistence;
 
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,4 +22,12 @@ public interface ReservationJpaRepository extends JpaRepository<ReservationEntit
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     ); // comprueba solapamiento de fechas con estados bloqueantes
+
+    Page<ReservationEntity> findByRenterId(UUID renterId, Pageable pageable); // consulta paginada por arrendatario
+
+    Page<ReservationEntity> findByOwnerId(UUID ownerId, Pageable pageable); // consulta paginada por propietario
+
+    boolean existsByIdAndRenterId(UUID id, UUID renterId); // verifica pertenencia a arrendatario
+
+    boolean existsByIdAndOwnerId(UUID id, UUID ownerId); // verifica pertenencia a propietario
 }
