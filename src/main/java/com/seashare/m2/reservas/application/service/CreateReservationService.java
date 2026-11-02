@@ -1,15 +1,16 @@
 package com.seashare.m2.reservas.application.service;
 
 import com.seashare.m2.reservas.application.dto.CreateReservationCommand;
+import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.application.port.in.CreateReservationUseCase;
 import com.seashare.m2.reservas.application.port.out.FleetInfo;
 import com.seashare.m2.reservas.application.port.out.FleetInfoPort;
 import com.seashare.m2.reservas.application.port.out.FleetOperationalStatusPort;
 import com.seashare.m2.reservas.application.port.out.IdempotencyPort;
-import com.seashare.m2.reservas.application.port.out.NewReservation;
-import com.seashare.m2.reservas.application.port.out.ReservationCreationPort;
-import com.seashare.m2.reservas.application.port.out.ReservationView;
+import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
+import com.seashare.m2.reservas.domain.model.NewReservation;
+import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import com.seashare.m2.reservas.domain.service.TtlPolicy;
 import com.seashare.m2.shared.domain.ClockPort;
@@ -41,18 +42,18 @@ public class CreateReservationService implements CreateReservationUseCase { // s
     private final IdempotencyPort idempotencyPort; // puerto para garantizar atomicidad e idempotencia
     private final FleetInfoPort fleetInfoPort; // puerto para consulta de informacion de flota en modulo 1
     private final FleetOperationalStatusPort fleetOperationalStatusPort; // puerto para consultar disponibilidad operativa en modulo 1
-    private final ReservationCreationPort reservationCreationPort; // puerto para verificacion de solapamiento y persistencia
+    private final ReservationRepositoryPort reservationRepositoryPort; // puerto para verificacion de solapamiento y persistencia
 
     public CreateReservationService(ClockPort clockPort,
                                     IdempotencyPort idempotencyPort,
                                     FleetInfoPort fleetInfoPort,
                                     FleetOperationalStatusPort fleetOperationalStatusPort,
-                                    ReservationCreationPort reservationCreationPort) { // inyeccion de dependencias requeridas
+                                    ReservationRepositoryPort reservationRepositoryPort) { // inyeccion de dependencias requeridas
         this.clockPort = clockPort; // asigna puerto de reloj
         this.idempotencyPort = idempotencyPort; // asigna puerto de idempotencia
         this.fleetInfoPort = fleetInfoPort; // asigna puerto de flota
         this.fleetOperationalStatusPort = fleetOperationalStatusPort; // asigna puerto de estado operativo
-        this.reservationCreationPort = reservationCreationPort; // asigna puerto de creacion
+        this.reservationRepositoryPort = reservationRepositoryPort; // asigna puerto de creacion
     }
 
     @Override
@@ -68,8 +69,9 @@ public class CreateReservationService implements CreateReservationUseCase { // s
         if (!idempotencyPort.tryClaim(normalizedKey, IDEMPOTENCY_ENDPOINT, now, IDEMPOTENCY_WINDOW)) { // intenta reclamar clave dentro de la ventana
             UUID reservationId = idempotencyPort.findReservationId(normalizedKey, IDEMPOTENCY_ENDPOINT) // consulta id de reserva existente
                     .orElseThrow(() -> new ReservationRuleException(ErrorCode.INTERNAL_ERROR, "Existing idempotent reservation id not found")); // falla si no hay id
-            return reservationCreationPort.findViewById(reservationId) // recupera la reserva original
+            Reservation existing = reservationRepositoryPort.findById(reservationId) // recupera la reserva original
                     .orElseThrow(() -> new ReservationRuleException(ErrorCode.INTERNAL_ERROR, "Existing idempotent reservation not found")); // retorna reserva original sin duplicar
+            return ReservationView.from(existing);
         }
 
         FleetInfo fleetInfo = fleetInfoPort.getVesselInfo(command.vesselId()); // consulta datos de flota propagando posibles excepciones
@@ -91,7 +93,7 @@ public class CreateReservationService implements CreateReservationUseCase { // s
             throw new ReservationRuleException(ErrorCode.CAPACITY_EXCEEDED, "Requested passengers exceed vessel maximum capacity"); // rechaza exceso de pasajeros
         }
 
-        if (reservationCreationPort.existsOverlap(command.vesselId(), command.startDate(), command.endDate(), BLOCKING_STATUSES)) { // valida disponibilidad local
+        if (reservationRepositoryPort.existsOverlap(command.vesselId(), command.startDate(), command.endDate(), BLOCKING_STATUSES)) { // valida disponibilidad local
             throw new ReservationRuleException(ErrorCode.VESSEL_NOT_AVAILABLE, "Vessel has overlapping active reservations for given dates"); // rechaza solapamiento
         }
 
@@ -114,8 +116,9 @@ public class CreateReservationService implements CreateReservationUseCase { // s
                 ttlExpiresAt // marca temporal de expiracion
         );
 
-        ReservationView createdReservation = reservationCreationPort.create(newReservation); // persiste registro formalmente
-        idempotencyPort.complete(normalizedKey, IDEMPOTENCY_ENDPOINT, createdReservation.reservationId()); // asocia reserva a la clave reclamada
+        Reservation created = reservationRepositoryPort.create(Reservation.initiate(newReservation)); // persiste registro formalmente
+        ReservationView createdReservation = ReservationView.from(created); // mapea a vista
+        idempotencyPort.complete(normalizedKey, IDEMPOTENCY_ENDPOINT, created.getId()); // asocia reserva a la clave reclamada
 
         return createdReservation; // retorna vista inmutable de la reserva creada
     }
