@@ -4,8 +4,9 @@ import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
 import com.seashare.m2.reservas.domain.exception.ReservationNotFoundException;
 import com.seashare.m2.reservas.domain.exception.VersionConflictException;
 import com.seashare.m2.reservas.domain.model.Reservation;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -28,6 +29,7 @@ public class ReservationRepositoryAdapter implements ReservationRepositoryPort {
     }
 
     @Override
+    @Transactional // asegura lectura, comparacion y guardado en una sola transaccion
     public Reservation save(Reservation reservation) { // guarda cambios en la reserva controlando versiones
         ReservationEntity entity = repository.findById(reservation.getId()) // carga entidad existente por id
                 .orElseThrow(() -> new ReservationNotFoundException(reservation.getId())); // lanza excepcion si no existe
@@ -41,7 +43,7 @@ public class ReservationRepositoryAdapter implements ReservationRepositoryPort {
         try { // bloque protegido contra concurrencia de base de datos
             ReservationEntity saved = repository.saveAndFlush(entity); // guarda y fuerza flush inmediato
             return mapper.toDomain(saved); // retorna dominio con version actualizada
-        } catch (ObjectOptimisticLockingFailureException e) { // captura colision optimista de spring orm
+        } catch (OptimisticLockingFailureException e) { // captura colision optimista de base de datos
             throw new VersionConflictException("Version conflict while saving reservation " + reservation.getId(), e); // traduce a excepcion de dominio
         }
     }
