@@ -1,7 +1,7 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.persistence;
 
 import com.seashare.m2.reservas.application.port.out.ReservationQueryPort;
-import com.seashare.m2.reservas.application.port.out.ReservationView;
+import com.seashare.m2.reservas.application.dto.ReservationView;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

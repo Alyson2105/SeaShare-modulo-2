@@ -2,7 +2,7 @@ package com.seashare.m2.reservas.infrastructure.adapter.in.web;
 
 import com.seashare.m2.reservas.application.dto.CreateReservationCommand;
 import com.seashare.m2.reservas.application.port.in.CreateReservationUseCase;
-import com.seashare.m2.reservas.application.port.out.ReservationView;
+import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.shared.domain.ErrorCode;
 import jakarta.validation.Valid;

@@ -1,5 +1,7 @@
 package com.seashare.m2.reservas.application.port.out;
 
+import com.seashare.m2.reservas.application.dto.ReservationView;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

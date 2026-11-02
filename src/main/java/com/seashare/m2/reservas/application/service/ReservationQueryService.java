@@ -1,7 +1,7 @@
 package com.seashare.m2.reservas.application.service;
 
 import com.seashare.m2.reservas.application.port.out.ReservationQueryPort;
-import com.seashare.m2.reservas.application.port.out.ReservationView;
+import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.shared.domain.ErrorCode;
 import org.springframework.stereotype.Service;

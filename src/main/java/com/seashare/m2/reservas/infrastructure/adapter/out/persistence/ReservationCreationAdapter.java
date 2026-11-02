@@ -1,8 +1,8 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.persistence;
 
-import com.seashare.m2.reservas.application.port.out.NewReservation;
+import com.seashare.m2.reservas.domain.model.NewReservation;
 import com.seashare.m2.reservas.application.port.out.ReservationCreationPort;
-import com.seashare.m2.reservas.application.port.out.ReservationView;
+import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import com.seashare.m2.shared.domain.ErrorCode;

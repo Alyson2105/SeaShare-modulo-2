@@ -2,7 +2,7 @@ package com.seashare.m2.reservas.infrastructure.adapter.in.web;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.seashare.m2.reservas.application.port.out.ReservationQueryPort;
-import com.seashare.m2.reservas.application.port.out.ReservationView;
+import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.application.service.ReservationQueryService;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.shared.domain.ErrorCode;

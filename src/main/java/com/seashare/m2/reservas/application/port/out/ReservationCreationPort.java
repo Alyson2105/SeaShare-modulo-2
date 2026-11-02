@@ -1,5 +1,7 @@
 package com.seashare.m2.reservas.application.port.out;
 
+import com.seashare.m2.reservas.application.dto.ReservationView;
+import com.seashare.m2.reservas.domain.model.NewReservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 
 import java.time.LocalDate;
