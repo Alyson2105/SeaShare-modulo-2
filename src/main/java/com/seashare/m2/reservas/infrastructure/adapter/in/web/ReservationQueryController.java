@@ -1,7 +1,7 @@
 package com.seashare.m2.reservas.infrastructure.adapter.in.web;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.seashare.m2.reservas.application.port.out.ReservationQueryPort;
+import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
 import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.application.service.ReservationQueryService;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
@@ -46,7 +46,7 @@ public class ReservationQueryController { // controlador rest para consultas pag
             @RequestParam(name = "page", defaultValue = "1") int page, // pagina solicitada por defecto uno
             @RequestParam(name = "limit", defaultValue = "10") int limit // tamano solicitado por defecto diez
     ) { // endpoint para listar reservas propias de forma paginada
-        ReservationQueryPort.ReservationPage result = queryService.findReservations(identity.userId(), identity.role(), page, limit); // ejecuta consulta en servicio
+        ReservationRepositoryPort.ReservationPage result = queryService.findReservations(identity.userId(), identity.role(), page, limit); // ejecuta consulta en servicio
         List<ReservationResponse> items = result.items().stream() // procesa lista de vistas obtenidas
                 .map(ReservationResponse::from) // transforma cada vista a respuesta web
                 .toList(); // recopila lista inmutable

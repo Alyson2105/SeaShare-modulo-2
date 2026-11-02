@@ -1,6 +1,6 @@
 package com.seashare.m2.reservas.application.service;
 
-import com.seashare.m2.reservas.application.port.out.ReservationQueryPort;
+import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
 import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.shared.domain.ErrorCode;
@@ -14,13 +14,13 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class ReservationQueryService { // servicio de aplicacion para consulta paginada y detalle de reservas
 
-    private final ReservationQueryPort queryPort; // puerto de salida para ejecucion de consultas
+    private final ReservationRepositoryPort queryPort; // puerto de salida para ejecucion de consultas
 
-    public ReservationQueryService(ReservationQueryPort queryPort) { // inyeccion del puerto de consulta
+    public ReservationQueryService(ReservationRepositoryPort queryPort) { // inyeccion del puerto de consulta
         this.queryPort = queryPort; // asigna puerto de consulta
     }
 
-    public ReservationQueryPort.ReservationPage findReservations(UUID userId, String role, int page, int limit) { // consulta reservas propias con paginacion
+    public ReservationRepositoryPort.ReservationPage findReservations(UUID userId, String role, int page, int limit) { // consulta reservas propias con paginacion
         validateRole(role); // valida que el rol tenga permisos de consulta
 
         if (page < 1 || limit < 1 || limit > 50) { // valida limites de paginacion permitidos
@@ -37,7 +37,7 @@ public class ReservationQueryService { // servicio de aplicacion para consulta p
     public ReservationView getReservationDetail(UUID reservationId, UUID userId, String role) { // consulta detalle de reserva propia
         validateRole(role); // valida que el rol tenga permisos de consulta
 
-        Optional<ReservationView> viewOpt = queryPort.findById(reservationId); // busca reserva por su identificador unico
+        Optional<ReservationView> viewOpt = queryPort.findByIdView(reservationId); // busca reserva por su identificador unico
         if (viewOpt.isEmpty()) { // comprueba si la reserva existe
             throw new ReservationRuleException(ErrorCode.RESERVATION_NOT_FOUND, "Reservation not found"); // rechaza reserva no encontrada
         }
