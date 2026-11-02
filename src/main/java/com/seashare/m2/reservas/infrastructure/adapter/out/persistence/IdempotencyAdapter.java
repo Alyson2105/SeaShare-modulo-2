@@ -23,6 +23,9 @@ public class IdempotencyAdapter implements IdempotencyPort { // adaptador de inf
 
     // [NEEDS CLARIFICATION] el plan no define que pasa con la misma clave y distinto cuerpo: se devuelve la reserva original sin comparar el cuerpo;
     // [NEEDS CLARIFICATION] pasados 60 s la clave expira y se reutiliza la fila (la llave primaria es key+endpoint).
+    // la tabla idempotency_key tiene primary key (key, endpoint); tryClaim usa insert ... on conflict de forma atomica
+    // y no debe cambiarse a insert simple con try/catch porque en postgresql una violacion de restriccion aborta
+    // la transaccion en curso y la consulta posterior fallaria con "current transaction is aborted".
     @Override
     public boolean tryClaim(String key, String endpoint, Instant now, Duration window) { // reclama clave de forma atomica con upsert condicional
         String sql = "INSERT INTO idempotency_key (key, endpoint, response_ref, created_at) " + // sentencia de insercion inicial
@@ -39,7 +42,10 @@ public class IdempotencyAdapter implements IdempotencyPort { // adaptador de inf
     @Override
     public void complete(String key, String endpoint, UUID reservationId) { // asocia la reserva a la clave completada
         String sql = "UPDATE idempotency_key SET response_ref = ? WHERE key = ? AND endpoint = ?"; // actualiza referencia del resultado
-        jdbcTemplate.update(sql, reservationId.toString(), key, endpoint); // persiste id de reserva completada
+        int rowsAffected = jdbcTemplate.update(sql, reservationId.toString(), key, endpoint); // persiste id de reserva completada
+        if (rowsAffected != 1) { // verifica que se actualizo exactamente una fila
+            throw new IllegalStateException("No idempotency key claimed for endpoint"); // lanza si no hay reclamo previo
+        }
     }
 
     @Override
