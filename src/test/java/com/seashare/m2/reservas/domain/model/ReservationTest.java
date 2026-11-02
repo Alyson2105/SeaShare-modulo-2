@@ -15,14 +15,28 @@ class ReservationTest { // pruebas unitarias del modelo de dominio reservation
 
     @Test
     void initiatedToCompletedThrowsInvalidTransition() { // valida que transicion directa no permitida lance excepcion
-        Reservation reservation = new Reservation(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), ReservationStatus.INITIATED, null, 0L); // instancia reserva inicial
+        Reservation reservation = Reservation.builder()
+                .id(UUID.randomUUID())
+                .renterId(UUID.randomUUID())
+                .ownerId(UUID.randomUUID())
+                .status(ReservationStatus.INITIATED)
+                .cancellationSubtype(null)
+                .version(0L)
+                .build(); // instancia reserva inicial
         assertThatThrownBy(() -> reservation.changeStatus(ReservationStatus.COMPLETED, null, machine)) // intenta cambio invalido
                 .isInstanceOf(InvalidTransitionException.class); // espera transicion invalida
     }
 
     @Test
     void cancelWithSubtypeStoresSubtype() { // valida cancelacion correcta almacenando subtipo
-        Reservation reservation = new Reservation(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), ReservationStatus.RESERVED, null, 0L); // instancia reserva reservada
+        Reservation reservation = Reservation.builder()
+                .id(UUID.randomUUID())
+                .renterId(UUID.randomUUID())
+                .ownerId(UUID.randomUUID())
+                .status(ReservationStatus.RESERVED)
+                .cancellationSubtype(null)
+                .version(0L)
+                .build(); // instancia reserva reservada
         reservation.changeStatus(ReservationStatus.CANCELLED, CancellationSubtype.FLEXIBLE, machine); // ejecuta transicion a cancelado
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CANCELLED); // verifica estado cancelado
         assertThat(reservation.getCancellationSubtype()).isEqualTo(CancellationSubtype.FLEXIBLE); // verifica preservacion del subtipo

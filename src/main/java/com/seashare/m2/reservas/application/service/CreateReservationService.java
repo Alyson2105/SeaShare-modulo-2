@@ -1,15 +1,16 @@
 package com.seashare.m2.reservas.application.service;
 
 import com.seashare.m2.reservas.application.dto.CreateReservationCommand;
+import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.application.port.in.CreateReservationUseCase;
 import com.seashare.m2.reservas.application.port.out.FleetInfo;
 import com.seashare.m2.reservas.application.port.out.FleetInfoPort;
 import com.seashare.m2.reservas.application.port.out.FleetOperationalStatusPort;
 import com.seashare.m2.reservas.application.port.out.IdempotencyPort;
-import com.seashare.m2.reservas.domain.model.NewReservation;
 import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
-import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
+import com.seashare.m2.reservas.domain.model.NewReservation;
+import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import com.seashare.m2.reservas.domain.service.TtlPolicy;
 import com.seashare.m2.shared.domain.ClockPort;
@@ -68,8 +69,9 @@ public class CreateReservationService implements CreateReservationUseCase { // s
         if (!idempotencyPort.tryClaim(normalizedKey, IDEMPOTENCY_ENDPOINT, now, IDEMPOTENCY_WINDOW)) { // intenta reclamar clave dentro de la ventana
             UUID reservationId = idempotencyPort.findReservationId(normalizedKey, IDEMPOTENCY_ENDPOINT) // consulta id de reserva existente
                     .orElseThrow(() -> new ReservationRuleException(ErrorCode.INTERNAL_ERROR, "Existing idempotent reservation id not found")); // falla si no hay id
-            return reservationRepositoryPort.findViewById(reservationId) // recupera la reserva original
+            Reservation existing = reservationRepositoryPort.findById(reservationId) // recupera la reserva original
                     .orElseThrow(() -> new ReservationRuleException(ErrorCode.INTERNAL_ERROR, "Existing idempotent reservation not found")); // retorna reserva original sin duplicar
+            return ReservationView.from(existing);
         }
 
         FleetInfo fleetInfo = fleetInfoPort.getVesselInfo(command.vesselId()); // consulta datos de flota propagando posibles excepciones
@@ -114,8 +116,9 @@ public class CreateReservationService implements CreateReservationUseCase { // s
                 ttlExpiresAt // marca temporal de expiracion
         );
 
-        ReservationView createdReservation = reservationRepositoryPort.create(newReservation); // persiste registro formalmente
-        idempotencyPort.complete(normalizedKey, IDEMPOTENCY_ENDPOINT, createdReservation.reservationId()); // asocia reserva a la clave reclamada
+        Reservation created = reservationRepositoryPort.create(Reservation.initiate(newReservation)); // persiste registro formalmente
+        ReservationView createdReservation = ReservationView.from(created); // mapea a vista
+        idempotencyPort.complete(normalizedKey, IDEMPOTENCY_ENDPOINT, created.getId()); // asocia reserva a la clave reclamada
 
         return createdReservation; // retorna vista inmutable de la reserva creada
     }

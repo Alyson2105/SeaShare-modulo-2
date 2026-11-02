@@ -1,8 +1,10 @@
 package com.seashare.m2.reservas.application.service;
 
-import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
 import com.seashare.m2.reservas.application.dto.ReservationView;
+import com.seashare.m2.reservas.application.dto.ReservationViewPage;
+import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
+import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.shared.domain.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,33 +22,43 @@ public class ReservationQueryService { // servicio de aplicacion para consulta p
         this.queryPort = queryPort; // asigna puerto de consulta
     }
 
-    public ReservationRepositoryPort.ReservationPage findReservations(UUID userId, String role, int page, int limit) { // consulta reservas propias con paginacion
+    public ReservationViewPage findReservations(UUID userId, String role, int page, int limit) { // consulta reservas propias con paginacion
         validateRole(role); // valida que el rol tenga permisos de consulta
 
         if (page < 1 || limit < 1 || limit > 50) { // valida limites de paginacion permitidos
             throw new ReservationRuleException(ErrorCode.INVALID_PARAMETERS, "Page must be greater than or equal to 1 and limit between 1 and 50"); // rechaza parametros fuera de rango
         }
 
+        ReservationRepositoryPort.ReservationPage pageResult;
         if ("RENTER".equalsIgnoreCase(role)) { // rol arrendatario consulta reservas donde es titular
-            return queryPort.findByRenter(userId, page, limit); // retorna pagina de reservas del arrendatario
+            pageResult = queryPort.findByRenter(userId, page, limit); // retorna pagina de reservas del arrendatario
+        } else {
+            pageResult = queryPort.findByOwner(userId, page, limit); // retorna pagina de reservas del propietario
         }
-
-        return queryPort.findByOwner(userId, page, limit); // retorna pagina de reservas del propietario
+        java.util.List<ReservationView> items = pageResult.items().stream().map(ReservationView::from).toList();
+        return new ReservationViewPage(items, pageResult.totalItems());
     }
 
     public ReservationView getReservationDetail(UUID reservationId, UUID userId, String role) { // consulta detalle de reserva propia
         validateRole(role); // valida que el rol tenga permisos de consulta
 
-        Optional<ReservationView> viewOpt = queryPort.findByIdView(reservationId); // busca reserva por su identificador unico
-        if (viewOpt.isEmpty()) { // comprueba si la reserva existe
+        Optional<Reservation> reservationOpt = queryPort.findById(reservationId); // busca reserva por su identificador unico
+        if (reservationOpt.isEmpty()) { // comprueba si la reserva existe
             throw new ReservationRuleException(ErrorCode.RESERVATION_NOT_FOUND, "Reservation not found"); // rechaza reserva no encontrada
         }
+        Reservation reservation = reservationOpt.get();
 
-        if (!queryPort.isOwnedByUser(reservationId, userId, role)) { // valida pertenencia de la reserva segun rol
+        boolean owned = false;
+        if ("RENTER".equalsIgnoreCase(role)) {
+            owned = reservation.isRenter(userId);
+        } else if ("OWNER".equalsIgnoreCase(role)) {
+            owned = reservation.isOwner(userId);
+        }
+        if (!owned) { // valida pertenencia de la reserva segun rol
             throw new ReservationRuleException(ErrorCode.RESERVATION_NOT_OWNED, "Reservation does not belong to user"); // rechaza acceso no autorizado
         }
 
-        return viewOpt.get(); // retorna proyeccion inmutable de la reserva
+        return ReservationView.from(reservation); // retorna proyeccion inmutable de la reserva
     }
 
     private void validateRole(String role) { // valida pertenencia de rol segun especificacion

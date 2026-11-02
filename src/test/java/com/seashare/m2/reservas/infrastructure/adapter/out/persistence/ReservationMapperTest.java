@@ -17,7 +17,7 @@ class ReservationMapperTest { // pruebas unitarias para el mapeador de persisten
     private final ReservationMapper mapper = new ReservationMapper(); // instancia del mapeador bajo prueba
 
     @Test
-    void toDomainKeepsAllFields() { // verifica conversion completa de los seis campos hacia el dominio
+    void toDomainKeepsAllFields() { // verifica conversion completa hacia el dominio
         ReservationEntity entity = new ReservationEntity(); // crea entidad jpa
         UUID id = UUID.randomUUID(); // id aleatorio
         UUID renterId = UUID.randomUUID(); // arrendatario aleatorio
@@ -59,7 +59,14 @@ class ReservationMapperTest { // pruebas unitarias para el mapeador de persisten
         entity.setHarborTimezone("America/Bogota"); // asigna zona horaria
         entity.setVersion(2L); // asigna version
 
-        Reservation domain = new Reservation(entity.getId(), entity.getRenterId(), entity.getOwnerId(), ReservationStatus.CANCELLED, CancellationSubtype.FLEXIBLE, 2L); // modelo modificado
+        Reservation domain = Reservation.builder()
+                .id(entity.getId())
+                .renterId(entity.getRenterId())
+                .ownerId(entity.getOwnerId())
+                .status(ReservationStatus.CANCELLED)
+                .cancellationSubtype(CancellationSubtype.FLEXIBLE)
+                .version(2L)
+                .build(); // modelo modificado
 
         mapper.applyChanges(domain, entity); // aplica cambios a la entidad existente
 
@@ -76,5 +83,21 @@ class ReservationMapperTest { // pruebas unitarias para el mapeador de persisten
         assertThat(entity.isM1Blocked()).isFalse(); // verifica bandera m1 intacta
         assertThat(entity.getHarborTimezone()).isEqualTo("America/Bogota"); // verifica zona horaria intacta
         assertThat(entity.getVersion()).isEqualTo(2L); // verifica version intacta
+    }
+
+    @Test
+    void toNewEntityMapsInitiatedCopAndNulls() {
+        com.seashare.m2.reservas.domain.model.NewReservation nr = new com.seashare.m2.reservas.domain.model.NewReservation(
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                java.time.LocalDate.of(2026, 12, 1), java.time.LocalDate.of(2026, 12, 5),
+                2, "Ana", "3000000000", "ana@test.com", new java.math.BigDecimal("100.0000"),
+                java.time.LocalTime.of(9, 0), "America/Bogota", java.time.Instant.now(), java.time.Instant.now().plusSeconds(900)
+        );
+        Reservation reservation = Reservation.initiate(nr);
+        ReservationEntity entity = mapper.toNewEntity(reservation, "RS-TEST1234");
+        assertThat(entity.getStatus()).isEqualTo(ReservationStatus.INITIATED);
+        assertThat(entity.getCurrency()).isEqualTo("COP");
+        assertThat(entity.getId()).isNull();
+        assertThat(entity.getVersion()).isNull();
     }
 }

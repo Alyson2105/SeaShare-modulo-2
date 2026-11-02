@@ -1,5 +1,6 @@
 package com.seashare.m2.reservas.application.dto;
 
+import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 
 import java.math.BigDecimal;
@@ -25,4 +26,25 @@ public record ReservationView(
         Instant ttlExpiresAt, // marca temporal de expiracion de la reserva
         Instant createdAt // marca temporal de creacion del registro
 ) { // proyeccion inmutable de lectura de la reserva
+
+    public static ReservationView from(Reservation reservation) {
+        return new ReservationView(
+                reservation.getId(),
+                reservation.getStatus(),
+                reservation.getVesselId(),
+                reservation.getStartDate(),
+                reservation.getEndDate(),
+                reservation.getPassengers(),
+                reservation.getHolderName(),
+                reservation.getHolderPhone(),
+                reservation.getHolderEmail(),
+                reservation.getEstimatedTotal(),
+                reservation.getCurrency(),
+                reservation.getDepartureTime(),
+                reservation.getHarborTimezone(),
+                reservation.getTtlExpiresAt(),
+                reservation.getCreatedAt()
+        );
+    }
 }
+
