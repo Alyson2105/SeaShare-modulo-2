@@ -6,7 +6,9 @@ import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.application.port.in.CreateReservationUseCase;
 import com.seashare.m2.reservas.application.port.out.FleetInfoPort;
 import com.seashare.m2.reservas.application.port.out.FleetOperationalStatusPort;
+import com.seashare.m2.reservas.application.port.out.IdempotencyPort;
 import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
+import com.seashare.m2.reservas.application.service.CreateReservationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,23 +17,32 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @Transactional
-class IdempotencyAdapterTest { // pruebas de comportamiento de idempotencia a traves del caso de uso de creacion
+class IdempotencyAdapterTest { // pruebas de comportamiento de idempotencia a traves del puerto y del caso de uso de creacion
+
+    private static final String ENDPOINT = CreateReservationService.IDEMPOTENCY_ENDPOINT; // endpoint logico usado por el caso de uso real
+    private static final Duration WINDOW = CreateReservationService.IDEMPOTENCY_WINDOW; // ventana de expiracion usada por el caso de uso real
 
     @Autowired
     private CreateReservationUseCase createReservationUseCase; // caso de uso bajo prueba
 
     @Autowired
     private ReservationRepositoryPort reservationRepositoryPort; // puerto de lectura para verificar reservas creadas
+
+    @Autowired
+    private IdempotencyPort idempotencyPort; // puerto bajo prueba para reclamar y completar claves
 
     @MockitoBean
     private FleetInfoPort fleetInfoPort; // simulacion del puerto de flota de modulo 1
@@ -83,5 +94,30 @@ class IdempotencyAdapterTest { // pruebas de comportamiento de idempotencia a tr
 
         assertThat(second.reservationId()).isNotEqualTo(first.reservationId());
         assertThat(reservationRepositoryPort.findByRenter(renterId, 1, 10).totalItems()).isEqualTo(2);
+    }
+
+    @Test
+    void newKeyIsClaimedAndSameKeyWithinWindowIsRejected() { // clave nueva se reclama; la misma clave dentro de la ventana no
+        String key = UUID.randomUUID().toString();
+        Instant now = Instant.now();
+
+        assertThat(idempotencyPort.tryClaim(key, ENDPOINT, now, WINDOW)).isTrue();
+        assertThat(idempotencyPort.tryClaim(key, ENDPOINT, now.plusSeconds(1), WINDOW)).isFalse();
+    }
+
+    @Test
+    void expiredKeyCanBeClaimedAgain() { // una clave vencida vuelve a ser reclamable con un now posterior
+        String key = UUID.randomUUID().toString();
+        Instant firstClaim = Instant.now();
+
+        assertThat(idempotencyPort.tryClaim(key, ENDPOINT, firstClaim, WINDOW)).isTrue();
+        assertThat(idempotencyPort.tryClaim(key, ENDPOINT, firstClaim.plus(WINDOW).plusSeconds(1), WINDOW)).isTrue();
+    }
+
+    @Test
+    void completingAnUnclaimedKeyFails() { // completar una clave no reclamada falla con el mismo mensaje de siempre
+        assertThatThrownBy(() -> idempotencyPort.complete(UUID.randomUUID().toString(), ENDPOINT, UUID.randomUUID()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("No idempotency key claimed for endpoint");
     }
 }
