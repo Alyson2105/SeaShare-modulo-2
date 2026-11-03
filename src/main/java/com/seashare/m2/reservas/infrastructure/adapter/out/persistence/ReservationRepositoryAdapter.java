@@ -1,13 +1,13 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.persistence;
 
-import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
-import com.seashare.m2.reservas.domain.exception.ReservationNotFoundException;
-import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
-import com.seashare.m2.reservas.domain.exception.VersionConflictException;
-import com.seashare.m2.reservas.domain.model.Reservation;
-import com.seashare.m2.reservas.domain.model.ReservationStatus;
-import com.seashare.m2.shared.domain.ErrorCode;
-import jakarta.persistence.EntityManager;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -16,13 +16,16 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import com.seashare.m2.reservas.application.dto.ReservationPage;
+import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
+import com.seashare.m2.reservas.domain.exception.ReservationNotFoundException;
+import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
+import com.seashare.m2.reservas.domain.exception.VersionConflictException;
+import com.seashare.m2.reservas.domain.model.Reservation;
+import com.seashare.m2.reservas.domain.model.ReservationStatus;
+import com.seashare.m2.shared.domain.ErrorCode;
+
+import jakarta.persistence.EntityManager;
 
 @Component
 public class ReservationRepositoryAdapter implements ReservationRepositoryPort { // adaptador de repositorio para reservas

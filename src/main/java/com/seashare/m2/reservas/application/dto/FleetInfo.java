@@ -1,4 +1,4 @@
-package com.seashare.m2.reservas.application.port.out;
+package com.seashare.m2.reservas.application.dto;
 
 import java.util.UUID;
 

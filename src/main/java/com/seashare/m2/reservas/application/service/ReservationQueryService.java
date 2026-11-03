@@ -1,5 +1,6 @@
 package com.seashare.m2.reservas.application.service;
 
+import com.seashare.m2.reservas.application.dto.ReservationPage;
 import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.application.dto.ReservationViewPage;
 import com.seashare.m2.reservas.application.port.in.ReservationQueryUseCase;
@@ -31,7 +32,7 @@ public class ReservationQueryService implements ReservationQueryUseCase { // ser
             throw new ReservationRuleException(ErrorCode.INVALID_PARAMETERS, "Page must be greater than or equal to 1 and limit between 1 and 50"); // rechaza parametros fuera de rango
         }
 
-        ReservationRepositoryPort.ReservationPage pageResult;
+        ReservationPage pageResult;
         if ("RENTER".equalsIgnoreCase(role)) { // rol arrendatario consulta reservas donde es titular
             pageResult = queryPort.findByRenter(userId, page, limit); // retorna pagina de reservas del arrendatario
         } else {

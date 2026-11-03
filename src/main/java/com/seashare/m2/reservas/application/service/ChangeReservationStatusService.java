@@ -1,18 +1,18 @@
 package com.seashare.m2.reservas.application.service;
 
 import com.seashare.m2.reservas.application.dto.ChangeReservationStatusCommand;
+import com.seashare.m2.reservas.application.dto.StatusAuditEntry;
+import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
 import com.seashare.m2.reservas.application.port.in.ChangeReservationStatusUseCase;
 import com.seashare.m2.reservas.application.port.out.OutboxPort;
 import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
-import com.seashare.m2.reservas.application.port.out.StatusAuditEntry;
 import com.seashare.m2.reservas.application.port.out.StatusAuditPort;
-import com.seashare.m2.reservas.application.port.out.StatusChangedEvent;
+import com.seashare.m2.reservas.domain.exception.InvalidTransitionException;
 import com.seashare.m2.reservas.domain.exception.ReservationNotFoundException;
 import com.seashare.m2.reservas.domain.model.ActorType;
 import com.seashare.m2.reservas.domain.model.CancellationSubtype;
 import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
-import com.seashare.m2.reservas.domain.exception.InvalidTransitionException;
 import com.seashare.m2.reservas.domain.state.ReservationStateMachine;
 import com.seashare.m2.shared.domain.ClockPort;
 import org.springframework.stereotype.Service;

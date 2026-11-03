@@ -1,7 +1,7 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.persistence;
 
+import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
 import com.seashare.m2.reservas.application.port.out.OutboxPort;
-import com.seashare.m2.reservas.application.port.out.StatusChangedEvent;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;

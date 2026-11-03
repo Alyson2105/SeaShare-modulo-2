@@ -1,6 +1,6 @@
 package com.seashare.m2.reservas.infrastructure.adapter.in.web;
 
-import com.seashare.m2.reservas.application.port.out.FleetInfo;
+import com.seashare.m2.reservas.application.dto.FleetInfo;
 import com.seashare.m2.reservas.application.port.out.FleetInfoPort;
 import com.seashare.m2.reservas.application.port.out.FleetOperationalStatusPort;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;

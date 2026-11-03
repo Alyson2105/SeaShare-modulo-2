@@ -1,6 +1,6 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.fleet;
 
-import com.seashare.m2.reservas.application.port.out.FleetInfo;
+import com.seashare.m2.reservas.application.dto.FleetInfo;
 import com.seashare.m2.reservas.application.port.out.FleetInfoPort;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;

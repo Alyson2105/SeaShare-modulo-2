@@ -1,4 +1,4 @@
-package com.seashare.m2.reservas.application.port.out;
+package com.seashare.m2.reservas.application.dto;
 
 import com.seashare.m2.reservas.domain.model.CancellationSubtype;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;

@@ -1,5 +1,7 @@
 package com.seashare.m2.reservas.application.port.out;
 
+import com.seashare.m2.reservas.application.dto.FleetInfo;
+
 import java.util.UUID;
 
 public interface FleetInfoPort { // puerto de salida para consultar datos de la embarcacion en modulo 1

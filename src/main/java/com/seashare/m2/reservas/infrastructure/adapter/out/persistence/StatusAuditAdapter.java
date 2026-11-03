@@ -1,6 +1,6 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.persistence;
 
-import com.seashare.m2.reservas.application.port.out.StatusAuditEntry;
+import com.seashare.m2.reservas.application.dto.StatusAuditEntry;
 import com.seashare.m2.reservas.application.port.out.StatusAuditPort;
 import org.springframework.stereotype.Component;
 

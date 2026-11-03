@@ -1,9 +1,9 @@
 package com.seashare.m2.reservas.application.service;
 
 import com.seashare.m2.reservas.application.dto.CreateReservationCommand;
+import com.seashare.m2.reservas.application.dto.FleetInfo;
 import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.application.port.in.CreateReservationUseCase;
-import com.seashare.m2.reservas.application.port.out.FleetInfo;
 import com.seashare.m2.reservas.application.port.out.FleetInfoPort;
 import com.seashare.m2.reservas.application.port.out.FleetOperationalStatusPort;
 import com.seashare.m2.reservas.application.port.out.IdempotencyPort;
