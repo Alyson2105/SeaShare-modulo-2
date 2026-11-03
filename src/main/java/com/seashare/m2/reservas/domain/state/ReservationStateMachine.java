@@ -1,5 +1,6 @@
 package com.seashare.m2.reservas.domain.state;
 
+import com.seashare.m2.reservas.domain.exception.InvalidTransitionException;
 import com.seashare.m2.reservas.domain.model.CancellationSubtype;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 

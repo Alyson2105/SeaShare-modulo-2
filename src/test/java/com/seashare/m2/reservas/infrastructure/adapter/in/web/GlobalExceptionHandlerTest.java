@@ -1,7 +1,7 @@
 package com.seashare.m2.reservas.infrastructure.adapter.in.web;
 
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
-import com.seashare.m2.reservas.domain.state.InvalidTransitionException;
+import com.seashare.m2.reservas.domain.exception.InvalidTransitionException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.BeforeEach;

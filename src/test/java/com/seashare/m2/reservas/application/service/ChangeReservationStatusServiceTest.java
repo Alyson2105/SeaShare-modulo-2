@@ -8,7 +8,7 @@ import com.seashare.m2.reservas.domain.model.ActorType;
 import com.seashare.m2.reservas.domain.model.CancellationSubtype;
 import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
-import com.seashare.m2.reservas.domain.state.InvalidTransitionException;
+import com.seashare.m2.reservas.domain.exception.InvalidTransitionException;
 import com.seashare.m2.reservas.domain.state.ReservationStateMachine;
 import com.seashare.m2.reservas.infrastructure.adapter.out.persistence.ReservationEntity;
 import com.seashare.m2.reservas.infrastructure.adapter.out.persistence.ReservationJpaRepository;

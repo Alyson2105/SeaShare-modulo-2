@@ -1,6 +1,6 @@
 package com.seashare.m2.reservas.domain.model;
 
-import com.seashare.m2.reservas.domain.state.InvalidTransitionException;
+import com.seashare.m2.reservas.domain.exception.InvalidTransitionException;
 import com.seashare.m2.reservas.domain.state.ReservationStateMachine;
 import org.junit.jupiter.api.Test;
 

@@ -1,4 +1,4 @@
-package com.seashare.m2.reservas.domain.state;
+package com.seashare.m2.reservas.domain.exception;
 
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import com.seashare.m2.shared.domain.DomainException;
