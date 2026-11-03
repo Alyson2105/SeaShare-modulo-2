@@ -2,6 +2,7 @@ package com.seashare.m2.reservas.application.service;
 
 import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.application.dto.ReservationViewPage;
+import com.seashare.m2.reservas.application.port.in.ReservationQueryUseCase;
 import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.reservas.domain.model.Reservation;
@@ -14,7 +15,7 @@ import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
-public class ReservationQueryService { // servicio de aplicacion para consulta paginada y detalle de reservas
+public class ReservationQueryService implements ReservationQueryUseCase { // servicio de aplicacion para consulta paginada y detalle de reservas
 
     private final ReservationRepositoryPort queryPort; // puerto de salida para ejecucion de consultas
 
@@ -22,6 +23,7 @@ public class ReservationQueryService { // servicio de aplicacion para consulta p
         this.queryPort = queryPort; // asigna puerto de consulta
     }
 
+    @Override
     public ReservationViewPage findReservations(UUID userId, String role, int page, int limit) { // consulta reservas propias con paginacion
         validateRole(role); // valida que el rol tenga permisos de consulta
 
@@ -39,6 +41,7 @@ public class ReservationQueryService { // servicio de aplicacion para consulta p
         return new ReservationViewPage(items, pageResult.totalItems());
     }
 
+    @Override
     public ReservationView getReservationDetail(UUID reservationId, UUID userId, String role) { // consulta detalle de reserva propia
         validateRole(role); // valida que el rol tenga permisos de consulta
 

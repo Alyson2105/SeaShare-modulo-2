@@ -3,7 +3,7 @@ package com.seashare.m2.reservas.infrastructure.adapter.in.web;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.application.dto.ReservationViewPage;
-import com.seashare.m2.reservas.application.service.ReservationQueryService;
+import com.seashare.m2.reservas.application.port.in.ReservationQueryUseCase;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.shared.domain.ErrorCode;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,9 +19,9 @@ import java.util.UUID;
 @RequestMapping("/api/v1/reservations")
 public class ReservationQueryController { // controlador rest para consultas paginadas y detalle de reservas
 
-    private final ReservationQueryService queryService; // servicio de aplicacion para resolucion de consultas
+    private final ReservationQueryUseCase queryService; // caso de uso para resolucion de consultas
 
-    public ReservationQueryController(ReservationQueryService queryService) { // inyeccion del servicio de consultas
+    public ReservationQueryController(ReservationQueryUseCase queryService) { // inyeccion del caso de uso de consultas
         this.queryService = queryService; // asigna servicio de consultas
     }
 
