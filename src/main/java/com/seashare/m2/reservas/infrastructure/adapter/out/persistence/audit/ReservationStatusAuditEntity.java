@@ -1,4 +1,4 @@
-package com.seashare.m2.reservas.infrastructure.adapter.out.persistence;
+package com.seashare.m2.reservas.infrastructure.adapter.out.persistence.audit;
 
 import com.seashare.m2.reservas.domain.model.CancellationSubtype;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
@@ -18,7 +18,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "reservation_status_audit")
 @Immutable
-public class ReservationStatusAuditEntity { // entidad jpa inmutable para auditoria de estados
+class ReservationStatusAuditEntity { // entidad jpa inmutable para auditoria de estados
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

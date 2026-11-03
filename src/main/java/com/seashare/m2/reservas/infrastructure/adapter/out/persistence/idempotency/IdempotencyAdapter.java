@@ -1,4 +1,4 @@
-package com.seashare.m2.reservas.infrastructure.adapter.out.persistence;
+package com.seashare.m2.reservas.infrastructure.adapter.out.persistence.idempotency;
 
 import com.seashare.m2.reservas.application.port.out.IdempotencyPort;
 import org.springframework.jdbc.core.JdbcTemplate;

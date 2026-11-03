@@ -1,4 +1,4 @@
-package com.seashare.m2.reservas.infrastructure.adapter.out.persistence;
+package com.seashare.m2.reservas.infrastructure.adapter.out.persistence.reservation;
 
 import java.time.LocalDate;
 import java.util.List;

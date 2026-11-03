@@ -1,4 +1,4 @@
-package com.seashare.m2.reservas.infrastructure.adapter.out.persistence;
+package com.seashare.m2.reservas.infrastructure.adapter.out.persistence.audit;
 
 import com.seashare.m2.reservas.application.dto.StatusAuditEntry;
 import com.seashare.m2.reservas.application.port.out.StatusAuditPort;

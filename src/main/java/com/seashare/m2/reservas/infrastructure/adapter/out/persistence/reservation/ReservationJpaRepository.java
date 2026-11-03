@@ -1,4 +1,4 @@
-package com.seashare.m2.reservas.infrastructure.adapter.out.persistence;
+package com.seashare.m2.reservas.infrastructure.adapter.out.persistence.reservation;
 
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import org.springframework.data.domain.Page;
@@ -11,7 +11,7 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.UUID;
 
-public interface ReservationJpaRepository extends JpaRepository<ReservationEntity, UUID> { // repositorio jpa para la entidad reservation
+interface ReservationJpaRepository extends JpaRepository<ReservationEntity, UUID> { // repositorio jpa para la entidad reservation
 
     boolean existsByReservationCode(String code); // verifica si ya existe una reserva con el codigo provisto
 

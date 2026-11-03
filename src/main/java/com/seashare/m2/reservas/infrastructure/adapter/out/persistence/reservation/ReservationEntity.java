@@ -1,4 +1,4 @@
-package com.seashare.m2.reservas.infrastructure.adapter.out.persistence;
+package com.seashare.m2.reservas.infrastructure.adapter.out.persistence.reservation;
 
 import com.seashare.m2.reservas.domain.model.CancellationSubtype;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
@@ -23,7 +23,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "reservation")
-public class ReservationEntity { // entidad jpa para la tabla reservation
+class ReservationEntity { // entidad jpa para la tabla reservation
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

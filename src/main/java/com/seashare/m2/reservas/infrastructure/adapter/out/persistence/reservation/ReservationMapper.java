@@ -1,11 +1,11 @@
-package com.seashare.m2.reservas.infrastructure.adapter.out.persistence;
+package com.seashare.m2.reservas.infrastructure.adapter.out.persistence.reservation;
 
 import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ReservationMapper { // mapeador entre entidad de persistencia y modelo de dominio
+class ReservationMapper { // mapeador entre entidad de persistencia y modelo de dominio
 
     public Reservation toDomain(ReservationEntity entity) { // convierte entidad jpa a agregado de dominio
         if (entity == null) { // valida si la entidad es nula

@@ -1,4 +1,4 @@
-package com.seashare.m2.reservas.infrastructure.adapter.out.persistence;
+package com.seashare.m2.reservas.infrastructure.adapter.out.persistence.reservation;
 
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import org.junit.jupiter.api.AfterEach;
