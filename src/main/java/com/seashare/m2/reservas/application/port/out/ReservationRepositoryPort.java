@@ -4,7 +4,9 @@ import com.seashare.m2.reservas.application.dto.ReservationPage;
 import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -22,4 +24,12 @@ public interface ReservationRepositoryPort { // puerto de persistencia para el a
     ReservationPage findByRenter(UUID renterId, int page, int limit); // consulta reservas paginadas por arrendatario
 
     ReservationPage findByOwner(UUID ownerId, int page, int limit); // consulta reservas paginadas por propietario
+
+    /**
+     * Retorna los IDs de reservas en estado INITIATED cuyo ttl_expires_at sea menor o igual a {@code now},
+     * ordenadas por ttl_expires_at ascendente y limitadas a {@code batchSize}.
+     * Usa el índice ix_reservation_ttl existente.
+     */
+    List<UUID> findInitiatedExpiredBefore(Instant now, int batchSize); // lectura de IDs vencidos para el scheduler de TTL
 }
+

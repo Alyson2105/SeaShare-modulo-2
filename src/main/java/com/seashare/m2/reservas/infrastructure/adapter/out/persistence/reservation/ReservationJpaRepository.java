@@ -7,8 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 interface ReservationJpaRepository extends JpaRepository<ReservationEntity, UUID> { // repositorio jpa para la entidad reservation
@@ -30,4 +32,8 @@ interface ReservationJpaRepository extends JpaRepository<ReservationEntity, UUID
     boolean existsByIdAndRenterId(UUID id, UUID renterId); // verifica pertenencia a arrendatario
 
     boolean existsByIdAndOwnerId(UUID id, UUID ownerId); // verifica pertenencia a propietario
+
+    @Query("select r.id from ReservationEntity r where r.status = 'INITIATED' and r.ttlExpiresAt <= :now order by r.ttlExpiresAt asc")
+    List<UUID> findIdsByStatusInitiatedAndTtlExpiredBefore(@Param("now") Instant now, Pageable pageable); // busca IDs vencidos usando el índice ix_reservation_ttl
 }
+

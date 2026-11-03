@@ -27,3 +27,10 @@ management:
     web:
       exposure:
         include: health,info                 # Solo se exponen estos endpoints de Actuator
+
+m2:
+  scheduler:
+    ttl:
+      enabled: true                          # Activa el job de expiración por TTL (false en tests que no lo necesiten)
+      fixed-delay-ms: 30000                  # Intervalo entre ejecuciones del job en milisegundos (default: 30 s)
+      batch-size: 100                        # Máximo de reservas procesadas por ciclo (default: 100)

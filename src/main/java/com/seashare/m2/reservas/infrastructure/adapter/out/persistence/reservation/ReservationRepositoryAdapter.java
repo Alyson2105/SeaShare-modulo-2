@@ -1,5 +1,6 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.persistence.reservation;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
@@ -104,4 +105,12 @@ public class ReservationRepositoryAdapter implements ReservationRepositoryPort {
         List<Reservation> items = entityPage.getContent().stream().map(mapper::toDomain).toList(); // mapea entidades a dominio
         return new ReservationPage(items, entityPage.getTotalElements()); // retorna resultado con total de filas
     }
+
+    @Override
+    @Transactional(readOnly = true) // lectura de solo IDs, sin bloqueo de escritura
+    public List<UUID> findInitiatedExpiredBefore(Instant now, int batchSize) { // busca IDs de reservas INITIATED con TTL vencido
+        Pageable limit = PageRequest.of(0, batchSize); // primer página con el tamaño de lote como límite máximo
+        return repository.findIdsByStatusInitiatedAndTtlExpiredBefore(now, limit); // delega en JPQL que usa el índice ix_reservation_ttl
+    }
 }
+
