@@ -1,4 +1,4 @@
-package com.seashare.m2.reservas.infrastructure.adapter.out.persistence;
+package com.seashare.m2.reservas.infrastructure.adapter.out.messaging.outbox;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "outbox_message")
-public class OutboxMessageEntity { // entidad jpa para mensajes outbox
+class OutboxMessageEntity { // entidad jpa para mensajes outbox
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
