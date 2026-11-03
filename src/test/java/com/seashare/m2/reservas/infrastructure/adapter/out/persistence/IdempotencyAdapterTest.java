@@ -9,12 +9,11 @@ import com.seashare.m2.reservas.application.port.out.IdempotencyPort;
 import com.seashare.m2.reservas.application.service.CreateReservationService;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import com.seashare.m2.shared.domain.ClockPort;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -34,15 +33,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
+@Transactional
 class IdempotencyAdapterTest {
 
     private static final String TEST_ENDPOINT = "CREATE_RESERVATION_TEST";
 
     @Autowired
     private IdempotencyAdapter idempotencyAdapter;
-
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private CreateReservationService createReservationService;
@@ -55,14 +52,6 @@ class IdempotencyAdapterTest {
 
     @MockitoBean
     private ClockPort clockPort;
-
-    @BeforeEach
-    void setUp() {
-        jdbcTemplate.update("DELETE FROM reservation_status_audit");
-        jdbcTemplate.update("DELETE FROM outbox_message");
-        jdbcTemplate.update("DELETE FROM idempotency_key");
-        jdbcTemplate.update("DELETE FROM reservation");
-    }
 
     @Test
     void secondClaimWithinWindowReturnsFalseAndPreservesOriginal() {
