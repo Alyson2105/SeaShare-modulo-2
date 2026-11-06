@@ -72,7 +72,7 @@ Pendiente de pago:
 {
   "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
   "status": "PENDING",
-  "status_changed_at": "2026-10-09T12:05:00-05:00",
+  "status_changed_at": "2026-10-09T17:05:00Z",
   "payment_token_ref": "tok_12345abcdef",
   "payment_method_type": "CREDIT_CARD",
   "payment_metadata": {
@@ -90,7 +90,7 @@ Reservada:
 {
   "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
   "status": "RESERVED",
-  "status_changed_at": "2026-10-09T12:08:45-05:00"
+  "status_changed_at": "2026-10-09T17:08:45Z"
 }
 ```
 
@@ -100,7 +100,7 @@ Cancelada moderadamente:
 {
   "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
   "status": "CANCELLED_MODERATE",
-  "status_changed_at": "2026-11-13T10:00:00-05:00"
+  "status_changed_at": "2026-11-13T15:00:00Z"
 }
 ```
 
@@ -110,7 +110,7 @@ Completada:
 {
   "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
   "status": "COMPLETED",
-  "status_changed_at": "2026-11-18T18:30:00-05:00"
+  "status_changed_at": "2026-11-18T23:30:00Z"
 }
 ```
 

@@ -119,7 +119,7 @@ La creación usa un comando aparte (`CreateReservationCommand`), solo desde CU-0
   "reservation_id": "e4f81c92-7a20-4215-9c5e-8812c3f1a001",
   "status": "RESERVED",
   "cancellation_subtype": null,
-  "status_changed_at": "2026-10-22T12:10:00-05:00",
+  "status_changed_at": "2026-10-22T17:10:00Z",
   "ttl_expires_at": "2026-10-22T12:15:00-05:00",
   "version": 4,
   "events_enqueued": ["AMQP", "M1_HTTP"]

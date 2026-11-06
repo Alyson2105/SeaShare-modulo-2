@@ -68,6 +68,38 @@ Automatizar el paso de reservas en estado `INITIATED` cuyo tiempo de vida (`ttl_
 
 ---
 
+## Parte C: Encolado de reservation.info.provided en Outbox (CU-02)
+
+### Objetivo
+Garantizar que al crearse una reserva en estado `INITIATED` mediante `CreateReservationService` (CU-02), se encole de forma transaccional el evento `reservation.info.provided` en la tabla `outbox_message` para su posterior publicación a Módulo 3.
+
+### Componentes y Verificación en Código
+1. **Encolado en la Transacción de Creación**:
+   - En `CreateReservationService.java`:
+     - Línea 33: `@Transactional` a nivel de clase. Línea 66: método `execute(CreateReservationCommand command)`.
+     - Línea 125: persiste la reserva formalmente mediante `reservationRepositoryPort.create(...)` en estado inicial `INITIATED` (`Reservation.initiate(...)`, verificado en línea 133 de `Reservation.java`).
+     - Línea 128: calcula el `eventId` determinista (`UUID.nameUUIDFromBytes(("reservation.info.provided:" + created.getId()).getBytes(StandardCharsets.UTF_8))`).
+     - Línea 129: `outboxPort.enqueue(new ReservationInfoProvidedEvent(...))`.
+     - Línea 141: asocia la reserva a la clave reclamada invocando `idempotencyPort.complete(normalizedKey, IDEMPOTENCY_ENDPOINT, created.getId())`.
+   - El payload del evento contiene exactamente los 7 campos requeridos por Módulo 3 (`reservation_id`, `boat_id`, `start_date`, `end_date`, `passengers`, `owner_id`, `max_capacity`).
+   - El nombre real del campo en el record es `vesselId` (verificado en línea 10 de `ReservationInfoProvidedEvent.java`).
+   - Quien traduce `vessel_id` a `boat_id` es `OutboxAdapter.java` en su línea 60: `payloadMap.put("boat_id", event.vesselId().toString())`.
+2. **Infraestructura de Outbox**:
+   - Puerto: `OutboxPort`.
+   - Adaptador: `OutboxAdapter`, que serializa el payload a JSON snake_case con Jackson 3 y construye `OutboxMessageEntity` (exchange `seashare.reservations`, routing key `reservation.info.provided`, destino `AMQP`).
+   - Repositorio: `OutboxMessageJpaRepository.save(entity)`.
+   - La entidad `OutboxMessageEntity` define su clave primaria mediante `@Id` y `@GeneratedValue(strategy = GenerationType.UUID)` (verificado en líneas 18-21 de `OutboxMessageEntity.java`).
+3. **Corrección de Persistencia en Idempotencia**:
+   - En `IdempotencyKeyJpaRepository.java` (línea 24), el método `complete(...)` se anotó exactamente como:
+     ```java
+     @Modifying(flushAutomatically = true, clearAutomatically = true)
+     ```
+   - Causa del fallo previo: con `clearAutomatically = true` y `flushAutomatically = false` (valor por defecto), Spring Data JPA ejecutaba `EntityManager.clear()` tras actualizar la clave de idempotencia sin sincronizar previamente los cambios pendientes al motor. Al generarse el UUID de `OutboxMessageEntity` en memoria Java sin un flush intermedio, la acción de inserción encolada en Hibernate era descartada de la sesión, provocando que `insert into outbox_message` nunca llegara a ejecutarse antes del commit de la transacción.
+4. **Estado del Relay de Mensajería**:
+   - El relay del outbox a RabbitMQ no existe todavía y los eventos quedan en la tabla outbox_message.
+
+---
+
 ## 3. Decisiones de Diseño y Arquitectura
 
 1. **Un solo adaptador por puerto**: Se mantuvo `ReservationRepositoryAdapter` como la única implementación de `ReservationRepositoryPort`, sin crear adaptadores paralelos ni duplicar la infraestructura de persistencia.
