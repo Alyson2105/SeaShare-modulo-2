@@ -4,6 +4,7 @@ import com.seashare.m2.reservas.application.dto.ChangeReservationStatusCommand;
 import com.seashare.m2.reservas.application.dto.CreateReservationCommand;
 import com.seashare.m2.reservas.application.dto.FleetInfo;
 import com.seashare.m2.reservas.application.dto.ReservationView;
+import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
 import com.seashare.m2.reservas.application.port.in.ChangeReservationStatusUseCase;
 import com.seashare.m2.reservas.application.port.in.CreateReservationUseCase;
 import com.seashare.m2.reservas.application.port.out.FleetInfoPort;
@@ -112,7 +113,7 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
         assertThat(updated.getStatus()).isEqualTo(ReservationStatus.PENDING_PAYMENT);
         assertThat(updated.getVersion()).isGreaterThan(originalVersion);
         verify(statusAuditPort).record(any());
-        verify(outboxPort).enqueue(any());
+        verify(outboxPort).enqueue(any(StatusChangedEvent.class));
     }
 
     @Test
@@ -127,7 +128,7 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
         assertThat(unchanged.getStatus()).isEqualTo(ReservationStatus.INITIATED);
         assertThat(unchanged.getVersion()).isEqualTo(originalVersion);
         verify(statusAuditPort, never()).record(any());
-        verify(outboxPort, never()).enqueue(any());
+        verify(outboxPort, never()).enqueue(any(StatusChangedEvent.class));
     }
 
     @Test
@@ -147,7 +148,7 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void failureRollsEverythingBack() { // un fallo en outbox revierte el cambio de estado real en base de datos
-        doThrow(new RuntimeException("boom")).when(outboxPort).enqueue(any());
+        doThrow(new RuntimeException("boom")).when(outboxPort).enqueue(any(StatusChangedEvent.class));
 
         Reservation created = createReservation();
         Long originalVersion = created.getVersion();
@@ -174,6 +175,6 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
         Reservation unchanged = reservationRepositoryPort.findById(created.getId()).orElseThrow();
         assertThat(unchanged.getStatus()).isEqualTo(ReservationStatus.RESERVED);
         verify(statusAuditPort, never()).record(any());
-        verify(outboxPort, never()).enqueue(any());
+        verify(outboxPort, never()).enqueue(any(StatusChangedEvent.class));
     }
 }
