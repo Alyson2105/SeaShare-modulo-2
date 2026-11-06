@@ -21,7 +21,7 @@ interface IdempotencyKeyJpaRepository extends JpaRepository<IdempotencyKeyEntity
                  @Param("now") OffsetDateTime now,
                  @Param("threshold") OffsetDateTime threshold); // upsert atomico condicionado a la ventana de expiracion
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE IdempotencyKeyEntity e SET e.responseRef = :ref "
             + "WHERE e.id.idempotencyKey = :key AND e.id.endpoint = :endpoint")
     int complete(@Param("ref") String ref,
