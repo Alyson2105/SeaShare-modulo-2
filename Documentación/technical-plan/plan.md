@@ -184,7 +184,7 @@ Convenciones: UUID v4; `timestamptz`; montos `NUMERIC(18,4)` (solo almacenados l
 
 | Tabla | Tipo | Columnas relevantes | Restricciones |
 |---|---|---|---|
-| `reservation` | Entidad (CU-02/03/08) | `id`, `reservation_code`, `renter_id`, `vessel_id`, `owner_id`, `status`, `cancellation_subtype`, `start_date`, `end_date`, `departure_time` (HH:mm hora local del puerto; NOT NULL en V4), `harbor_timezone` (zona IANA del puerto; V4), `passengers`, `holder_name`, `holder_phone`, `holder_email`, `estimated_total`, `rental_amount`, `insurance_amount`, `guarantee_deposit_amount`, `total_amount` (nulos hasta Pendiente de Pago), `currency` (COP), `ttl_expires_at`, `actual_departure_at`, `actual_arrival_at`, `completion_notes`, `payment_reference`, `payment_confirmed_at`, `created_at`, `updated_at`, `m1_blocked`, `version` | `CHECK (end_date >= start_date)`; `CHECK (passengers > 0)`; `EXCLUDE USING gist (vessel_id WITH =, daterange(start_date, end_date, '[]') WITH &&) WHERE (status IN ('PENDING_PAYMENT', 'RESERVED', 'IN_NAVIGATION'))` (permite coexistencia de varias INITIATED respetando FCFS; el día de la reserva se calcula en la zona horaria del puerto (America/Bogota), no en UTC. Los alquileres son por días completos; el último día cuenta como ocupado y no hay relevo el mismo día); índices `(renter_id, created_at DESC)`, `(owner_id, created_at DESC)`, `(status, ttl_expires_at)`, `(vessel_id, start_date, end_date)` |
+| `reservation` | Entidad (CU-02/03/08) | `id`, `reservation_code`, `renter_id`, `vessel_id`, `owner_id`, `status`, `cancellation_subtype`, `start_date`, `end_date`, `departure_time` (HH:mm hora local del puerto; NOT NULL en V3), `harbor_timezone` (zona IANA del puerto; V3), `passengers`, `holder_name`, `holder_phone`, `holder_email`, `estimated_total`, `rental_amount`, `insurance_amount`, `guarantee_deposit_amount`, `total_amount` (nulos hasta Pendiente de Pago), `currency` (COP), `ttl_expires_at`, `actual_departure_at`, `actual_arrival_at`, `completion_notes`, `payment_reference`, `payment_confirmed_at`, `created_at`, `updated_at`, `m1_blocked`, `version` | `CHECK (end_date >= start_date)`; `CHECK (passengers > 0)`; `EXCLUDE USING gist (vessel_id WITH =, daterange(start_date, end_date, '[]') WITH &&) WHERE (status IN ('PENDING_PAYMENT', 'RESERVED', 'IN_NAVIGATION'))` (permite coexistencia de varias INITIATED respetando FCFS; el día de la reserva se calcula en la zona horaria del puerto (America/Bogota), no en UTC. Los alquileres son por días completos; el último día cuenta como ocupado y no hay relevo el mismo día); índices `(renter_id, created_at DESC)`, `(owner_id, created_at DESC)`, `(status, ttl_expires_at)`, `(vessel_id, start_date, end_date)` |
 | `reservation_status_audit` | Inmutable | `id`, `reservation_id`, `from_status`, `to_status`, `cancellation_subtype`, `actor`, `reason`, `occurred_at` | FK; trigger anti-`UPDATE`/`DELETE` |
 | `payment_attempt` | Entidad (CU-13) | `id`, `reservation_id`, `result`, `detail`, `external_reference`, `consulted_at` | FK; índice `(reservation_id, consulted_at DESC)` |
 | `cancellation_event` | Inmutable (CU-04) | `id`, `reservation_id`, `actor`, `requested_at`, `anticipation_minutes`, `cancellation_subtype`, `reason`, `justification` | FK; unicidad por reserva |
@@ -233,6 +233,7 @@ Exchange común hacia Módulo 3: `seashare.reservations` (topic, durable); topol
 | C7 | **M3 → M2** | CU-15 | Endpoint expuesto (lectura) | `GET /api/v1/internal/reservations/{id}` | [CU-15/plan.md](../features/CU-15-solicitar-informacion-reserva/plan.md) |
 | C8 | M2 → M3 | CU-14 | Evento AMQP | `reservation.status.changed` → `finance.reservation-status.v1` | [CU-14/plan.md](../features/CU-14-recibir-estado-reserva/plan.md) |
 | C9 | M2 → M3 | CU-18 | Evento AMQP | `reservation.dispute.updated` → `finance.guarantee-dispute.v1` | [CU-18/plan.md](../features/CU-18-recibir-informacion-disputa-garantia/plan.md) |
+| C12 | M2 → M3 | CU-02 | Evento AMQP | `reservation.info.provided` → `finance.reservation-info.v1` (payload con `boat_id`; un solo mensaje por reserva, sin reemision) | [CU-02/plan.event.md](../features/CU-02-iniciar-reserva/plan.event.md) |
 | C10 | Usuarios → M2 | CU-01…07, 16, 17, 19…21 | Request/response (REST) | — | [features/](../features/) |
 | C11 | M2 → M2 | CU-08, TTL, dispute | Scheduled jobs | ShedLock | §Jobs |
 
@@ -249,7 +250,7 @@ Cada contrato vive en el `plan.md` (o `plan.external.md` / `plan.event.md`) de l
 | Tipo | Contratos | Quién → quién |
 |---|---|---|
 | REST expuesto | CU-01…07, **13**, **15**, 16, 17, 19, 20, 21 | Usuarios / Módulo 3 → M2 |
-| Evento publicado | CU-14, CU-18 | M2 → M3 (unidireccional) |
+| Evento publicado | CU-02, CU-14, CU-18 | M2 → M3 (unidireccional) |
 | Externo consumido (M1) | información de embarcación, estado operativo, asignar estado operativo | M2 → M1 |
 | Externo consumido (M3) | estimación lote, estimación individual, cálculo total | M2 → M3 |
 | Interno | CU-08 | Casos de uso → CU-08 |
@@ -339,7 +340,7 @@ Cada contrato vive en el `plan.md` (o `plan.external.md` / `plan.event.md`) de l
 | Arrendatario / Propietario / Admin | `Renter` / `Owner` / `Admin` |
 | Notificación de estado / estado de reserva | `ReservationStatusEvent` |
 | Embarcación (de Módulo 1) | `Boat` (solo `boatId` persistido) |
-| Puerto / zona horaria | `Harbor` / `ZoneId` (se guarda como `harbor_timezone` en la reserva, V4) |
+| Puerto / zona horaria | `Harbor` / `ZoneId` (se guarda como `harbor_timezone` en la reserva, V3) |
 | Contrato interno de apertura de disputa | `shared.contracts.dispute.OpenDisputeUseCase` |
 
 ---

@@ -137,6 +137,25 @@ Los tests de idempotencia se conservaron y verificaron tras la migración de `Id
   - Dos hilos compiten con `CountDownLatch` y commits reales mediante `TransactionTemplate`; exactamente uno obtiene la clave.
 - La idempotencia implementada es **solo de entrada**; no existe deduplicación de eventos salientes en un relay.
 
+### 4.5 Encolado de reservation.info.provided en Outbox (CU-02) (Parte C)
+
+- **Objetivo**: Garantizar que al crearse una reserva en estado `INITIATED` mediante `CreateReservationService` (CU-02), se encole de forma transaccional el evento `reservation.info.provided` en la tabla `outbox_message` para su posterior publicación a Módulo 3.
+- **Encolado en la Transacción de Creación**:
+  - En `CreateReservationService.java`:
+    - `@Transactional` a nivel de clase.
+    - Persiste la reserva formalmente mediante `reservationRepositoryPort.create(...)` en estado inicial `INITIATED`.
+    - Calcula el `eventId` determinista (`UUID.nameUUIDFromBytes(("reservation.info.provided:" + created.getId()).getBytes(StandardCharsets.UTF_8))`).
+    - Encola el evento: `outboxPort.enqueue(new ReservationInfoProvidedEvent(...))`.
+    - Asocia la reserva a la clave reclamada invocando `idempotencyPort.complete(normalizedKey, IDEMPOTENCY_ENDPOINT, created.getId())`.
+  - El payload del evento contiene exactamente los 7 campos requeridos por Módulo 3 (`reservation_id`, `boat_id`, `start_date`, `end_date`, `passengers`, `owner_id`, `max_capacity`).
+  - El nombre real del campo en el record es `vesselId` (`ReservationInfoProvidedEvent.java`), traducido a `boat_id` por `OutboxAdapter.java`.
+- **Infraestructura de Outbox**:
+  - Puerto `OutboxPort`, adaptador `OutboxAdapter` (serializa a JSON snake_case con Jackson 3 y construye `OutboxMessageEntity` con exchange `seashare.reservations`, routing key `reservation.info.provided`, destino `AMQP`), persistido con `OutboxMessageJpaRepository`.
+- **Corrección de Persistencia en Idempotencia**:
+  - En `IdempotencyKeyJpaRepository.java`: el método `complete(...)` se anotó con `@Modifying(flushAutomatically = true, clearAutomatically = true)` para evitar que `clear()` descarte las entidades pendientes del outbox antes del flush.
+- **Estado del Relay de Mensajería**:
+  - El relay del outbox a RabbitMQ no existe todavía y los eventos quedan persistidos en la tabla `outbox_message`.
+
 ---
 
 ## 5. Pruebas y verificación
