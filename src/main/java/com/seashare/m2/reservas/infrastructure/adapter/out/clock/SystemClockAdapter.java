@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @Component
 public class SystemClockAdapter implements ClockPort { // adaptador de reloj del sistema
@@ -17,6 +18,7 @@ public class SystemClockAdapter implements ClockPort { // adaptador de reloj del
 
     @Override
     public Instant now() { // obtiene el instante actual
-        return clock.instant(); // retorna instante provisto por el reloj
+        return clock.instant().truncatedTo(ChronoUnit.MILLIS); // evita diferencias de precision al reconstruir el instante
+
     }
 }
