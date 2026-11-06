@@ -1,151 +1,199 @@
 # Contexto de Progreso de Implementación - Módulo 2 (SEA-SHARE)
 
-**Fecha**: 2026-11-03  
+**Fecha**: 2026-11-06  
 **Módulo**: Módulo 2 - Operación de Reservas, Tiempos y Cancelaciones  
 **Stack**: Java 21, Spring Boot 4.1.2, Maven, PostgreSQL, Flyway  
+**Referencias**: `Documentación/technical-plan/plan.md` y los `plan.md` de cada caso de uso en `Documentación/features/`.
+
+> **Criterio de esta bitácora**: solo se marca como implementado lo que existe en el código y está respaldado por pruebas o por el estado verificable del repositorio. La existencia de una tabla en Flyway, de una propiedad de configuración o de una clase sin uso **no** acredita por sí sola la implementación de un caso de uso.
 
 ---
 
-## 1. Parte A: Recuperación y Verificación de Tests de Idempotencia
+## 1. Resumen del estado actual
 
-### Objetivo
-Asegurar que la migración previa de `IdempotencyAdapter` hacia Spring Data JPA mantenga intactos todos los escenarios de prueba funcionales y de concurrencia requeridos para el control de idempotencia mediante `IdempotencyPort`.
-
-### Estado de los Casos de Test
-Se revisaron los tests existentes en `src/test/java/com/seashare/m2/reservas/integration/`:
-- **Caso a) Clave nueva y duplicada dentro de la ventana**:
-  - `newKeyIsClaimedAndSameKeyWithinWindowIsRejected()` en `IdempotencyAdapterTest.java`: `tryClaim` retorna `true` para una clave nueva y `false` para la misma clave dentro de la ventana temporal. *(Ya estaba implementado)*
-- **Caso b) Clave vencida**:
-  - `expiredKeyCanBeClaimedAgain()` en `IdempotencyAdapterTest.java`: `tryClaim` retorna `true` de nuevo con un `now` posterior a la ventana de expiración. *(Ya estaba implementado)*
-- **Caso c) Completar clave no reclamada**:
-  - `completingAnUnclaimedKeyFails()` en `IdempotencyAdapterTest.java`: invocar `complete` sobre una clave inexistente arroja `IllegalStateException("No idempotency key claimed for endpoint")`. *(Ya estaba implementado)*
-- **Caso d) Concurrencia entre hilos sin `@Transactional` de test**:
-  - `onlyOneConcurrentClaimSucceeds()` en `IdempotencyClaimConcurrencyTest.java`: dos hilos compiten simultáneamente con `CountDownLatch` y commits reales mediante `TransactionTemplate` (usando clave y endpoint únicos por UUID); exactamente uno obtiene `true` y el otro `false`. *(Ya estaba implementado)*
-
----
-
-## 2. Parte B: Scheduler de Expiración por TTL
-
-### Objetivo
-Automatizar el paso de reservas en estado `INITIATED` cuyo tiempo de vida (`ttl_expires_at`) ya venció hacia el estado `EXPIRED`, invocando el caso de uso central `ChangeReservationStatusUseCase` (CU-08) como único escritor del estado.
-
-### Componentes Implementados
-
-1. **Puerto de Entrada (`port/in`)**:
-   - `ExpireReservationsUseCase.java`: define el método `int execute()`, que orquesta la expiración en lote y retorna el conteo de reservas procesadas.
-2. **Servicio de Aplicación (`application/service`)**:
-   - `ExpireReservationsService.java`:
-     - Consulta `ClockPort` para obtener la hora actual del sistema (sin usar `Instant.now()` directamente).
-     - Obtiene los IDs vencidos a través del puerto de lectura con límite de lote (`batchSize`).
-     - Itera cada reserva invocando `ChangeReservationStatusUseCase.execute(...)` con actor `SYSTEM` y motivo descriptivo de expiración por TTL.
-     - Aislamiento transaccional: cada reserva se procesa de forma independiente bajo la transacción gestionada por `ChangeReservationStatusService`.
-     - Manejo de excepciones: omite sin error `VersionConflictException` e `InvalidTransitionException` (condiciones de carrera normales, p. ej. si se pagó a tiempo); captura cualquier otra excepción con log de error y continúa con la siguiente reserva sin interrumpir el ciclo del scheduler.
-3. **Método de Lectura Agregado al Puerto de Salida (`port/out`)**:
-   - En `ReservationRepositoryPort.java`:
-     ```java
-     List<UUID> findInitiatedExpiredBefore(Instant now, int batchSize);
-     ```
-     Permite consultar los identificadores de reservas en `INITIATED` cuyo `ttl_expires_at <= now`, ordenadas por vencimiento y limitadas por lote.
-4. **Persistencia e Infraestructura de Salida (`adapter/out/persistence`)**:
-   - En `ReservationJpaRepository.java`: consulta JPQL optimizada que aprovecha el índice compuesto existente `ix_reservation_ttl` (`status`, `ttl_expires_at`):
-     ```java
-     @Query("select r.id from ReservationEntity r where r.status = 'INITIATED' and r.ttlExpiresAt <= :now order by r.ttlExpiresAt asc")
-     List<UUID> findIdsByStatusInitiatedAndTtlExpiredBefore(@Param("now") Instant now, Pageable pageable);
-     ```
-   - En `ReservationRepositoryAdapter.java`: implementación de `findInitiatedExpiredBefore` utilizando `PageRequest.of(0, batchSize)` para acotar la consulta en lectura transaccional de solo lectura (`@Transactional(readOnly = true)`). Se preserva la arquitectura de un solo adaptador de persistencia para el agregado de reservas.
-5. **Adaptador de Entrada Scheduler (`adapter/in/scheduler`)**:
-   - `TtlExpiryJob.java`: componente `@Component` que expone el método programado `@Scheduled` que delega íntegramente en `ExpireReservationsUseCase`. Sin lógica de negocio. Incluye comentario `// TODO (D-15)` para ShedLock.
-   - `SchedulerConfig.java`: configuración con `@EnableScheduling` condicionado por la propiedad `m2.scheduler.ttl.enabled` (habilitado por defecto; desactivable en suites de test para evitar ejecuciones asíncronas no deseadas).
-6. **Propiedades de Configuración (`src/main/resources/application.yaml`)**:
-   ```yaml
-   m2:
-     scheduler:
-       ttl:
-         enabled: true                          # Activa el job de expiración por TTL (false en tests que no lo requieran)
-         fixed-delay-ms: 30000                  # Intervalo entre ejecuciones del job en milisegundos (30 s)
-         batch-size: 100                        # Máximo de reservas procesadas por ciclo (100)
-   ```
+- El repositorio implementa **únicamente el contexto `reservas`**. No existen los paquetes `disputa` ni `shared/contracts`.
+- Funcionalidad operativa verificable:
+  - Creación de reservas (`POST /api/v1/reservations`) con idempotencia y TTL de 15 minutos.
+  - Motor interno de cambio de estado (`ChangeReservationStatusUseCase`), con matriz de transiciones, auditoría y escritura en outbox.
+  - Consultas básicas de reservas (`GET /api/v1/reservations` y `GET /api/v1/reservations/{id}`).
+  - Job programado de expiración por TTL para reservas en `INITIATED`.
+  - Manejo global de errores `{ code, message }`, identidad temporal por headers, reloj inyectable y reglas base de ArchUnit.
+- **No implementado**:
+  - Integración HTTP real con Módulo 1 y Módulo 3; solo existen adaptadores *fake* para flota.
+  - Topología RabbitMQ, relay del outbox, publicador con *publisher confirms*, consumidores y DLQ.
+  - ShedLock, Spring Security, OpenAPI, Resilience4j, Testcontainers, WireMock y Awaitility.
+  - Contexto `disputa` y contrato interno `shared/contracts`.
+  - Todos los CU salvo los avances parciales de CU-02, CU-08, CU-20 y CU-21.
+- La última ejecución registrada de la suite completa es del **2026-11-03 00:16**: **75 pruebas, 0 fallos, 0 errores**.
 
 ---
 
-## 3. Decisiones de Diseño y Arquitectura
+## 2. Estado por fase del plan general
 
-1. **Un solo adaptador por puerto**: Se mantuvo `ReservationRepositoryAdapter` como la única implementación de `ReservationRepositoryPort`, sin crear adaptadores paralelos ni duplicar la infraestructura de persistencia.
-2. **Uso estricto de ClockPort**: Tanto en la creación como en la expiración se utiliza exclusivamente `ClockPort.now()`. Nunca se utiliza `Instant.now()` de forma directa en los servicios de aplicación.
-3. **Aislamiento transaccional por reserva**: La orquestación en lote delega cada transición a `ChangeReservationStatusUseCase`, cuya implementación (`ChangeReservationStatusService`) ya es `@Transactional`. De esta manera, cada reserva corre en su propia transacción física; si una reserva falla o presenta conflicto de concurrencia optimista, su transacción local revierte sin afectar el commit de las demás reservas del lote.
-4. **Sin ShedLock en esta fase**: Al contar con una sola instancia del servicio, no se introduce la dependencia de ShedLock todavía; se deja la anotación explícita `// TODO (D-15)` en el job para cuando se configure despliegue multi-réplica.
-5. **Auditoría y Outbox**:
-   - Cada transición a `EXPIRED` asienta su registro en la tabla de auditoría inmutable (`status_audit`) vía `StatusAuditPort`.
-   - Según la especificación oficial de `CU-08` (tabla de transiciones, flujo alterno de `Expirada`), no se emite notificación saliente a Módulo 1 ni a Módulo 3, por lo que `OUTBOX_STATUSES` no incluye `EXPIRED`.
-6. **Cumplimiento de Reglas ArchUnit**: El nuevo adaptador de entrada en `adapter/in/scheduler` solo depende de `port/in` (`ExpireReservationsUseCase`), sin conocer adaptadores de salida ni entidades de persistencia.
-
----
-
-## 4. Archivos Modificados y Creados
-
-### Archivos Creados
-- `src/main/java/com/seashare/m2/reservas/application/port/in/ExpireReservationsUseCase.java`
-- `src/main/java/com/seashare/m2/reservas/application/service/ExpireReservationsService.java`
-- `src/main/java/com/seashare/m2/reservas/infrastructure/adapter/in/scheduler/TtlExpiryJob.java`
-- `src/main/java/com/seashare/m2/reservas/infrastructure/adapter/in/scheduler/SchedulerConfig.java`
-- `src/test/java/com/seashare/m2/reservas/application/service/ExpireReservationsServiceTest.java`
-- `src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/TtlExpiryJobTest.java`
-- `src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java`
-
-### Archivos Modificados
-- `src/main/java/com/seashare/m2/reservas/application/port/out/ReservationRepositoryPort.java`: agregado método `findInitiatedExpiredBefore`.
-- `src/main/java/com/seashare/m2/reservas/infrastructure/adapter/out/persistence/reservation/ReservationJpaRepository.java`: agregada query JPQL con índice `ix_reservation_ttl`.
-- `src/main/java/com/seashare/m2/reservas/infrastructure/adapter/out/persistence/reservation/ReservationRepositoryAdapter.java`: implementación del método de lectura paginada.
-- `src/main/resources/application.yaml`: bloque de configuración `m2.scheduler.ttl`.
-- `Documentación/context/implementContext.md`: bitácora de progreso y arquitectura.
+| Fase | CUs / alcance | Estado | Evidencia y brecha principal |
+| :--- | :--- | :--- | :--- |
+| Fase 1 — Setup | Infraestructura base | **Parcial** | Existen `pom.xml` con Boot 4.1.2/Java 21, `M2Application`, `docker-compose.yml` y `.gitignore`. Faltan `Dockerfile`, `README.md`, perfiles `dev/test/prod`, springdoc, Resilience4j, Checkstyle/Spotless y `maven-failsafe-plugin`. |
+| Fase 2 — Foundational | Persistencia, errores, reloj, outbox, seguridad, mensajería, testing | **Parcial** | Implementados: errores globales, `ErrorCode`, Flyway V1–V3, `ClockPort`, repositorio de reservas, idempotencia de entrada, escritura en outbox y reglas base de ArchUnit. Faltan: seguridad, topología RabbitMQ, relay y publicación, clientes HTTP salientes, observabilidad con *correlation id*, deduplicación de eventos salientes, Testcontainers/WireMock y reglas ArchUnit completas. |
+| Fase 3 — Adaptadores de lectura | CU-09, CU-10, CU-11, CU-12 | **No iniciada** | Solo existen los puertos `FleetInfoPort` y `FleetOperationalStatusPort` con adaptadores *fake*. No hay clientes reales ni CU-09/10/11/12. |
+| Fase 4 — Núcleo de dominio | CU-08 | **Parcial** | Existe el motor de transiciones, auditoría, outbox y TTL para `INITIATED`. Falta el contrato completo de CU-08, la expiración desde `PENDING_PAYMENT`, `expected_version`/`actor_id`, `events_enqueued`, la guarda `m1_blocked` y los destinos `AMQP` + `M1_HTTP`. |
+| Fase 5 — Superficie Módulo 3 | CU-14, CU-15 | **No iniciada** | No hay consumidores, publicadores ni endpoint interno de consulta para Módulo 3. |
+| Fase 6 — Vistas de consulta | CU-19, CU-20, CU-21 | **Parcial** | CU-20 y CU-21 tienen endpoints básicos de listado y detalle. CU-19 no existe y los contratos de CU-20/21 están simplificados. |
+| Fase 7 — Embudo de conversión | CU-01, CU-02, CU-03, CU-13 | **Parcial** | Solo CU-02 tiene una implementación básica. CU-01, CU-03 y CU-13 no existen. |
+| Fase 8 — Operaciones en muelle | CU-04, CU-05, CU-06, CU-07 | **No iniciada** | Sin endpoints, servicios ni eventos de cancelación, inasistencia, check-in o check-out. |
+| Fase 9 — Disputa de garantía | CU-16, CU-17, CU-18 | **No iniciada** | Las tablas `dispute_*` existen en V2, pero no hay contexto `disputa`, lógica, endpoints ni publicación de eventos. |
+| Fase 10 — Polish | Transversal | **No iniciada** | Sin pruebas de carga, resiliencia, observabilidad operativa, cierre de `[NEEDS CLARIFICATION]` ni documentación de arranque. |
 
 ---
 
-## 5. Pruebas y Verificación
+## 3. Estado por caso de uso
 
-### Tests Añadidos
-1. **`ExpireReservationsServiceTest` (Unitarios Mockito)**:
-   - `expiraSoloLasVencidas()`: expira solo reservas devueltas por el puerto con parámetros SYSTEM.
-   - `noProcesaNadaSiNoHayVencidas()`: salida limpia si no hay IDs vencidos.
-   - `bordeExactoVenceEnNowExpira()`: límite exacto en `now`.
-   - `bordeUnSegundoAntesNoExpira()`: simula reserva que no ha vencido.
-   - `conflictoDeVersionSeOmiteSinError()`: captura `VersionConflictException` sin propagar.
-   - `transicionInvalidaSeOmiteSinError()`: captura `InvalidTransitionException` sin propagar.
-   - `excepcionInesperadaEnUnaReservaNoImpideProcesarLasDemas()`: una excepción general en el medio del lote no detiene las restantes.
-   - `respetaLimiteDeLote()`: valida paso de `batchSize`.
-   - `nuncaLlamaInstantNowDirectamente()`: verifica uso exclusivo de `ClockPort`.
-2. **`TtlExpiryJobTest` (Unitario)**:
-   - `runDelegaEnElCasoDeUso()`: verifica que el job programado delega sin lógica al caso de uso.
-3. **`TtlExpiryIntegrationTest` (Integración con base de datos real y puertos públicos)**:
-   - `expiraReservasConTtlVencido()`: siembra reserva con `CreateReservationUseCase`, avanza el reloj con mock de `ClockPort`, ejecuta expiración y verifica estado `EXPIRED` con `ReservationRepositoryPort`.
-   - `noExpiraReservasCuyoTtlNoHaVencido()`: reloj antes del TTL mantiene estado `INITIATED`.
-   - `expiracionGeneraAuditoria()`: verifica que el cambio de estado asienta auditoría con `from: INITIATED` a `to: EXPIRED`.
-   - `noExpiraReservasSiRelojEsAnteriorACreacion()`: valida protección temporal.
-
-### Ejecución de Pruebas
-Para ejecutar la suite completa:
-```bash
-./mvnw test
-```
-Para ejecutar específicamente las pruebas de expiración TTL:
-```bash
-./mvnw test -Dtest=ExpireReservationsServiceTest,TtlExpiryJobTest,TtlExpiryIntegrationTest
-```
-**Resultado final**: 75 pruebas ejecutadas, 0 fallos, 0 errores (BUILD SUCCESS).
+| CU | Estado | Detalle verificado |
+| :--- | :--- | :--- |
+| CU-01 — Buscar embarcaciones disponibles | **No implementado** | No hay endpoint de búsqueda ni integración de catálogo/cotización. |
+| CU-02 — Iniciar reserva | **Parcial** | `POST /api/v1/reservations`; valida fechas, capacidad, zona horaria y solapamiento; usa idempotencia de 60 s y fija TTL de 15 min. Depende de adaptadores *fake* de flota y su contrato no cubre la totalidad del plan. |
+| CU-03 — Iniciar pago | **No implementado** | No hay endpoint, bloqueo pesimista ni transición a `PENDING_PAYMENT`. |
+| CU-04 — Solicitar cancelación | **No implementado** | Sin endpoint ni clasificación de cancelación. |
+| CU-05 — Marcar inasistencia | **No implementado** | Sin endpoint ni validación de la ventana de 30 min. |
+| CU-06 — Marcar inicio de navegación | **No implementado** | Sin endpoint ni registro de check-in. |
+| CU-07 — Marcar fin de navegación | **No implementado** | Sin endpoint ni registro de check-out. |
+| CU-08 — Actualizar estado de reserva | **Parcial** | Motor interno con matriz de transiciones, auditoría inmutable, outbox y `@Version`. No implementa el contrato completo (`ApplyReservationTransitionUseCase`, `expected_version`, `actor_id`, `events_enqueued`), ni la notificación a M1 (`M1_HTTP`), ni la guarda `m1_blocked`, ni la expiración desde `PENDING_PAYMENT`. |
+| CU-09 — Proveer información de embarcación | **No implementado** | Solo puerto de salida y adaptador *fake*. |
+| CU-10 — Brindar información de estado operativo | **No implementado** | Solo puerto de salida y adaptador *fake*. |
+| CU-11 — Proveer información de cotización | **No implementado** | Sin cliente de Módulo 3 ni endpoint. |
+| CU-12 — Brindar cálculo total de la reserva | **No implementado** | Sin cliente de Módulo 3 ni endpoint. |
+| CU-13 — Confirmar pago | **No implementado** | Sin canal B activo ni canal A. |
+| CU-14 — Recibir estado de reserva | **No implementado** | El outbox inserta filas `AMQP`, pero no existe relay, publicador ni consumidor. |
+| CU-15 — Solicitar información de la reserva | **No implementado** | Sin endpoint interno para Módulo 3. |
+| CU-16 — Generar disputa de garantía | **No implementado** | Solo tablas en Flyway; sin lógica ni API. |
+| CU-17 — Actualizar estado de disputa | **No implementado** | Solo tablas en Flyway; sin lógica ni API. |
+| CU-18 — Recibir información de disputa | **No implementado** | Sin contexto `disputa` ni publicación AMQP. |
+| CU-19 — Ver detalle de embarcación | **No implementado** | Sin endpoint ni integración con CU-09/CU-11. |
+| CU-20 — Ver mis reservas | **Parcial** | `GET /api/v1/reservations` con paginación (`page`, `limit`) y filtrado por rol `RENTER`/`OWNER`. Faltan el filtro `filter` y la estructura exacta del contrato (`pagination`, `applied_filter`, `status_badge`). |
+| CU-21 — Ver detalle de reserva | **Parcial** | `GET /api/v1/reservations/{id}` con validación de pertenencia. Faltan campos y estructura del contrato (`status_badge`, datos operativos completos). |
+| CU-22 — Recibir información de estado operativo | **No implementado** | Sin eventos ni notificación hacia Módulo 1. |
 
 ---
 
-## 6. Estado de Casos de Uso y Tareas
+## 4. Implementación verificable
 
-- **CU-08 (Actualizar Estado de Reserva)**:
-  - Disparador real de expiración por TTL completado e integrado mediante `TtlExpiryJob` y `ExpireReservationsUseCase`.
-  - Transición automática `INITIATED -> EXPIRED` operativa con persistencia y auditoría.
-- **CU-02 (Iniciar Reserva)**:
-  - Integrado con TTL de 15 minutos que ahora es consumido y liberado activamente por el scheduler.
+### 4.1 Fundaciones y configuración
+
+- Proyecto Spring Boot 4.1.2 con Java 21 y Maven. Dependencias presentes: Web MVC, Validation, Data JPA, AMQP, Actuator, Flyway (`spring-boot-starter-flyway` + `flyway-database-postgresql`), PostgreSQL y ArchUnit para pruebas.
+- Flyway administra el esquema con `spring.jpa.hibernate.ddl-auto: validate`. Existen las migraciones **V1, V2 y V3**.
+  - V1 crea `reservation`, `reservation_status_audit` y `outbox_message`, con `btree_gist`, restricción `EXCLUDE` de solapamiento e índice `ix_reservation_ttl`.
+  - V2 crea tablas de funcionalidades aún no implementadas (`payment_attempt`, eventos de cancelación/inasistencia/check-in/check-out, `external_query_log`, `dispute_*`, `operational_failure`, `idempotency_key`, `shedlock`). **Estas tablas son estructura de datos, no funcionalidad implementada.**
+  - V3 agrega campos de reserva y columnas de control del outbox.
+- `docker-compose.yml` define PostgreSQL en `localhost:5433` y RabbitMQ en `5672`/`15672`.
+- Manejo global de errores con cuerpo `{ code, message }` y catálogo `ErrorCode`, incluyendo la traducción de errores internos a códigos públicos.
+- Identidad temporal por headers `X-User-Id` y `X-User-Role`; no hay Spring Security.
+- `ClockPort` como fuente única de tiempo en los servicios de aplicación.
+- Reglas base de arquitectura por capas con ArchUnit.
+
+### 4.2 Reservas: CU-02, CU-08, CU-20 y CU-21
+
+- **CU-02**: `ReservationController`, `CreateReservationService`, `CreateReservationCommand`, `ReservationView`.
+  - Valida rango de fechas, zona horaria del puerto, disponibilidad operativa, capacidad y solapamiento con estados bloqueantes.
+  - Reclama la clave de idempotencia y devuelve la reserva original si la clave ya fue usada dentro de la ventana.
+  - Crea la reserva en `INITIATED` y fija `ttl_expires_at` con `TtlPolicy`.
+- **CU-08**: `ReservationStateMachine`, `ChangeReservationStatusService`, `StatusAuditPort` y `OutboxPort`.
+  - Matriz de transiciones: `INITIATED → PENDING_PAYMENT | EXPIRED`; `PENDING_PAYMENT → RESERVED | EXPIRED | PAYMENT_FAILED`; `RESERVED → IN_NAVIGATION | CANCELLED`; `IN_NAVIGATION → COMPLETED`; estados finales sin salida.
+  - Persiste el cambio con *optimistic locking* (`version`), registra auditoría y encola un evento en outbox para los estados configurados.
+  - El mapeo de persistencia en `ReservationMapper.applyChanges` solo actualiza `status` y `cancellationSubtype`; los campos de CU-08 como horas reales, notas de finalización o referencia de pago no se persisten.
+- **CU-20 / CU-21**: `ReservationQueryController` y `ReservationQueryService`.
+  - Listado paginado por arrendatario o propietario, con límites `page >= 1` y `1 <= limit <= 50`.
+  - Detalle con validación de existencia y pertenencia según rol.
+  - Los contratos son básicos y no reproducen todos los campos ni envoltorios definidos en los planes de CU-20 y CU-21.
+
+### 4.3 Scheduler de expiración por TTL (Parte B)
+
+- `ExpireReservationsUseCase` y `ExpireReservationsService`:
+  - Obtienen la hora con `ClockPort`.
+  - Consultan IDs de reservas `INITIATED` con `ttl_expires_at <= now`, ordenadas por vencimiento y limitadas por lote.
+  - Invocan `ChangeReservationStatusUseCase` con destino `EXPIRED`, actor `SYSTEM` y motivo de expiración.
+  - Omiten sin error `VersionConflictException` e `InvalidTransitionException`; registran y continúan ante otras excepciones.
+- `TtlExpiryJob` delega en el caso de uso; `SchedulerConfig` habilita el *scheduling* según `m2.scheduler.ttl.enabled`.
+- Puerto y persistencia:
+  - `ReservationRepositoryPort.findInitiatedExpiredBefore(Instant now, int batchSize)`.
+  - Consulta JPQL en `ReservationJpaRepository` que aprovecha `ix_reservation_ttl`.
+  - Implementación paginada en `ReservationRepositoryAdapter`.
+- Configuración en `application.yaml`:
+  - `m2.scheduler.ttl.enabled: true`
+  - `m2.scheduler.ttl.fixed-delay-ms: 30000`
+  - `m2.scheduler.ttl.batch-size: 100`
+- Pruebas añadidas:
+  - `ExpireReservationsServiceTest` (9 pruebas unitarias).
+  - `TtlExpiryJobTest` (1 prueba unitaria).
+  - `TtlExpiryIntegrationTest` (4 pruebas de integración con PostgreSQL real).
+
+### 4.4 Idempotencia de creación (Parte A)
+
+Los tests de idempotencia se conservaron y verificaron tras la migración de `IdempotencyAdapter` a Spring Data JPA:
+
+- `IdempotencyAdapterTest`:
+  - Clave nueva reclamada y misma clave rechazada dentro de la ventana.
+  - Clave vencida reclamable de nuevo.
+  - `complete` sobre una clave no reclamada falla con `IllegalStateException`.
+- `IdempotencyClaimConcurrencyTest`:
+  - Dos hilos compiten con `CountDownLatch` y commits reales mediante `TransactionTemplate`; exactamente uno obtiene la clave.
+- La idempotencia implementada es **solo de entrada**; no existe deduplicación de eventos salientes en un relay.
 
 ---
 
-## 7. Pendiente / Deuda Técnica
+## 5. Pruebas y verificación
 
-1. **ShedLock (D-15)**: Pendiente de incorporar cuando se prepare el despliegue con múltiples instancias/réplicas para evitar ejecuciones duplicadas simultáneas del job.
-2. **Expiración de reservas en `PENDING_PAYMENT`**: De acuerdo con las reglas de negocio de la tarea, solo se incluyeron reservas en `INITIATED`. Si en el futuro se requiere expirar pasivamente reservas en `PENDING_PAYMENT` que superen su ventana de pago, se puede extender la consulta JPQL o crear una regla específica.
+- La suite contiene **75 métodos `@Test` distribuidos en 18 archivos**.
+- La última ejecución completa registrada en `target/surefire-reports` es del **2026-11-03 00:16**: **75 pruebas ejecutadas, 0 fallos, 0 errores, 0 omitidas**.
+- Comandos de referencia:
+  ```bash
+  ./mvnw test
+  ./mvnw test -Dtest=ExpireReservationsServiceTest,TtlExpiryJobTest,TtlExpiryIntegrationTest
+  ```
+- En Windows: `.\mvnw.cmd test`.
+- **Nota de verificación (2026-11-06)**: no se volvió a ejecutar la suite en esta actualización porque Docker/PostgreSQL no estaban disponibles. El estado se contrastó con el código fuente y con los reportes de Surefire existentes. Los reportes del 2026-11-02 corresponden a una ejecución anterior y no se contabilizan.
+
+---
+
+## 6. Pendiente / deuda técnica
+
+### 6.1 Integraciones externas
+
+1. Implementar los clientes HTTP reales de Módulo 1 para CU-09 y CU-10, con timeouts, reintento rápido y *fail-safe*; retirar los adaptadores *fake* como comportamiento por defecto.
+2. Implementar los clientes de Módulo 3 para CU-11 y CU-12.
+3. Implementar CU-22 y la notificación de estado operativo hacia Módulo 1 por `M1_HTTP`.
+
+### 6.2 Mensajería y outbox
+
+4. Definir la topología RabbitMQ (exchange, colas, *bindings*, DLQ y retención).
+5. Implementar el relay del outbox con *publisher confirms*, reintentos con *backoff* y marcado de publicación.
+6. Implementar el publicador y los consumidores AMQP, incluida la deduplicación por `event_id`.
+7. Incorporar ShedLock y el bloqueo de jobs. La tabla `shedlock` existe en V2, pero la dependencia y su uso **no** están implementados.
+
+### 6.3 Núcleo CU-08
+
+8. Completar el contrato interno de CU-08: `ApplyReservationTransitionUseCase`, `expected_version`, `actor_id`, `events_enqueued` y validación de versión.
+9. Implementar la expiración por TTL también desde `PENDING_PAYMENT`.
+10. Implementar la matriz completa de notificaciones a Módulo 1 y Módulo 3, incluida la guarda `m1_blocked` y los destinos `AMQP`/`M1_HTTP`.
+11. Persistir los campos de CU-08 que hoy no mapea `ReservationMapper.applyChanges` (horas reales, notas de finalización, referencia de pago, etcétera).
+12. Verificar y completar la inmutabilidad de estados terminales y la auditoría con todos los campos del plan.
+
+### 6.4 Casos de uso y contextos faltantes
+
+13. Implementar el contexto `disputa` (CU-16, CU-17, CU-18) y `shared/contracts/dispute/OpenDisputeUseCase`.
+14. Implementar CU-01, CU-03, CU-04, CU-05, CU-06, CU-07, CU-13, CU-14, CU-15, CU-19 y CU-22.
+15. Completar los contratos de CU-20 y CU-21 según sus planes.
+16. Completar el contrato de CU-02 y sustituir las dependencias *fake* por integraciones reales.
+
+### 6.5 Infraestructura y calidad
+
+17. Añadir `Dockerfile`, `README.md` y perfiles `application-dev/test/prod`.
+18. Incorporar springdoc/OpenAPI, Resilience4j y verificación de estilo.
+19. Incorporar Testcontainers, WireMock y Awaitility para pruebas de integración y contrato.
+20. Implementar observabilidad con *correlation id* en HTTP/AMQP, logging estructurado y métricas.
+21. Cerrar los `[NEEDS CLARIFICATION]` abiertos y ejecutar las fases de *polish* del plan general.
+
+---
+
+## 7. Historial de actualizaciones
+
+- **2026-11-03**: se verificaron y consolidaron los tests de idempotencia (Parte A) y se implementó el scheduler de expiración por TTL (Parte B), con CU-02 integrado al TTL y 75 pruebas sin fallos.
+- **2026-11-06**: se reescribió esta bitácora para reflejar el avance global contra el plan general, separar lo implementado de lo pendiente y eliminar justificaciones de diseño que no describían estado de implementación. No se modificó código en esta actualización.
