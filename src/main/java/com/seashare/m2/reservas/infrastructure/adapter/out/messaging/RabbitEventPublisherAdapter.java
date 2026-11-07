@@ -4,8 +4,10 @@ import com.seashare.m2.reservas.application.dto.PendingOutboxMessage;
 import com.seashare.m2.reservas.application.port.out.EventPublishException;
 import com.seashare.m2.reservas.application.port.out.EventPublisherPort;
 import com.seashare.m2.reservas.infrastructure.adapter.out.messaging.config.MessagingProperties;
+import com.seashare.m2.shared.infrastructure.adapter.in.web.CorrelationIdFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageDeliveryMode;
 import org.springframework.amqp.core.MessageProperties;
@@ -50,6 +52,10 @@ public class RabbitEventPublisherAdapter implements EventPublisherPort { // adap
         properties.setMessageId(message.eventId().toString()); // Message-Id = event_id (deduplicacion en el consumidor)
         properties.setContentType(MessageProperties.CONTENT_TYPE_JSON); // Content-Type application/json
         properties.setDeliveryMode(MessageDeliveryMode.PERSISTENT); // mensaje persistente en el broker
+        String correlationId = MDC.get(CorrelationIdFilter.MDC_KEY); // correlation id de la peticion actual (T-22)
+        if (correlationId != null && !correlationId.isBlank()) { // solo si hay contexto HTTP con el id
+            properties.setHeader(CorrelationIdFilter.HEADER, correlationId); // se propaga como header AMQP
+        }
         Message amqpMessage = new Message(message.payload().getBytes(StandardCharsets.UTF_8), properties); // sobre
         CorrelationData correlationData = new CorrelationData(message.eventId().toString()); // correlacion del confirm
         try {
