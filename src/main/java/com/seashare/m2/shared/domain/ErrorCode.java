@@ -23,6 +23,7 @@ public enum ErrorCode { // catalogo de codigos de error con mapeo http
     DISPUTE_ALREADY_RESOLVED("DISPUTE_ALREADY_RESOLVED", 409), // disputa ya resuelta
     INTERNAL_ERROR("INTERNAL_ERROR", 500), // error interno del servidor
     FLEET_SERVICE_UNAVAILABLE("FLEET_SERVICE_UNAVAILABLE", 503), // servicio de flota no disponible
+    CALCULATION_UNAVAILABLE("CALCULATION_UNAVAILABLE", 503), // calculo del valor final no disponible
     HARBOR_TIMEZONE_UNAVAILABLE("HARBOR_TIMEZONE_UNAVAILABLE", 503), // zona horaria del puerto no disponible
     QUOTATION_UNAVAILABLE("QUOTATION_UNAVAILABLE", 503); // cotizacion no disponible
 

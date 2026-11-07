@@ -38,12 +38,12 @@ class ErrorCodeTest { // pruebas unitarias del catalogo de errores
     @Test
     void noDuplicateCodes() { // valida cantidad exacta y ausencia de duplicados
         ErrorCode[] values = ErrorCode.values(); // todos los valores del enum
-        assertThat(values).hasSize(20); // verifica 20 elementos
+        assertThat(values).hasSize(21); // verifica 21 elementos
 
         Set<String> codes = Arrays.stream(values) // flujo de valores
                 .map(ErrorCode::getCode) // extrae cada codigo
                 .collect(Collectors.toSet()); // recolecta en conjunto unico
 
-        assertThat(codes).hasSize(20); // conjunto tiene tamano 20
+        assertThat(codes).hasSize(21); // conjunto tiene tamano 21
     }
 }

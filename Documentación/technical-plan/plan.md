@@ -280,6 +280,7 @@ Cada contrato vive en el `plan.md` (o `plan.external.md` / `plan.event.md`) de l
 | 503 | `FLEET_SERVICE_UNAVAILABLE` | Módulo 1 no responde o falla al consultar la embarcación. |
 | 503 | `QUOTATION_UNAVAILABLE` | Módulo 3 no responde o no puede cotizar (sin tarifa base o sin parámetros financieros). |
 | 409 | `DISPUTE_ALREADY_RESOLVED` | La disputa ya está en `ACCEPTED` o `REJECTED` y no admite cambios. |
+| 503 | `CALCULATION_UNAVAILABLE` | Módulo 3 no responde o no puede calcular el valor final de la reserva. |
 
 *Nota de concurrencia*: `VERSION_CONFLICT` de CU-08 queda como error interno del motor; los endpoints lo traducen a `CONCURRENT_STATE_CHANGE`.
 
