@@ -38,7 +38,7 @@ GET /api/v1/vessels/{vessel_id}
 
 | Nombre | Obligatorio | Descripción |
 |---|---|---|
-| `Authorization` | Sí | `Bearer <token>` — JWT firmado de identidad de servicio expedido para Módulo 2 [NEEDS CLARIFICATION] |
+| `X-Internal-Service-Token` | Sí | Token de servicio interno de Módulo 2 (lo entrega Módulo 1) |
 | `Accept` | No | `application/json` |
 
 **Path Parameters**:
@@ -96,7 +96,7 @@ GET /api/v1/vessels/{vessel_id}
 
 ```bash
 curl -X GET "https://flota.seashare.internal/api/v1/vessels/d3b07384-d113-49cd-a5d6-812e9bcfc101" \
-  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.serviceIdentityM2Token" \
+  -H "X-Internal-Service-Token: <token_servicio_m2>" \
   -H "Accept: application/json"
 ```
 
@@ -150,7 +150,7 @@ GET /api/v1/vessels
 
 | Nombre | Obligatorio | Descripción |
 |---|---|---|
-| `Authorization` | Sí | `Bearer <token>` — JWT de identidad de servicio |
+| `X-Internal-Service-Token` | Sí | Token de servicio interno de Módulo 2 (lo entrega Módulo 1) |
 | `Accept` | No | `application/json` |
 
 **Query Parameters**:
@@ -206,7 +206,7 @@ GET /api/v1/vessels
 
 ```bash
 curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones?page=1&size=20" \
-  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.serviceIdentityM2Token" \
+  -H "X-Internal-Service-Token: <token_servicio_m2>" \
   -H "Accept: application/json"
 ```
 
@@ -245,7 +245,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones?page=1&size=20
 
 | Código HTTP M1 | Causa en Módulo 1 | Reacción Arquitectónica de Módulo 2 | Código Mapeado por M2 |
 |---|---|---|---|
-| `400 Bad Request` | Parámetros o `vessel_id` con sintaxis inválida | Módulo 2 registra el error y aborta inmediatamente sin reintento | `400 Bad Request` (`INVALID_ID` / `INVALID_PARAMETERS`) |
+| `400 Bad Request` | Parámetros o `vessel_id` con sintaxis inválida | Módulo 2 registra el error y aborta inmediatamente sin reintento | `400 Bad Request` (`INVALID_UUID` / `INVALID_PARAMETERS`) |
 | `401 Unauthorized` / `403 Forbidden` | Token de servicio de M2 rechazado o sin permisos | Módulo 2 genera alerta crítica en observabilidad y corta la ejecución | `500 Internal Server Error` (`INTERNAL_ERROR`) |
  | `404 Not Found` | Embarcación no registrada en flota | En consulta individual, informa no disponibilidad del activo sin reintentos | `404 Not Found` (`VESSEL_NOT_FOUND`) |
 | `500 Internal Server Error` / `502 Bad Gateway` | Falla interna o caída en Módulo 1 | Módulo 2 ejecuta máximo un (1) reintento rápido; si persiste, activa *fail-safe* | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |

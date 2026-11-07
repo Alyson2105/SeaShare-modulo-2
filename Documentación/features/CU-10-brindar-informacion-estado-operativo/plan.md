@@ -37,7 +37,7 @@ GET /api/v1/vessels/{vessel_id}/operational-status
 
 | Nombre | Obligatorio | Descripción |
 |---|---|---|
-| `Authorization` | Sí | `Bearer <token>` — JWT firmado de identidad de servicio expedido para Módulo 2 [NEEDS CLARIFICATION] |
+| `X-Internal-Service-Token` | Sí | Token de servicio interno de Módulo 2 (lo entrega Módulo 1) |
 | `Accept` | No | `application/json` |
 
 **Path Parameters**:
@@ -85,7 +85,7 @@ GET /api/v1/vessels/{vessel_id}/operational-status
 
 ```bash
 curl -X GET "https://flota.seashare.internal/api/v1/vessels/d3b07384-d113-49cd-a5d6-812e9bcfc101/operational-status" \
-  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.serviceTokenM2" \
+  -H "X-Internal-Service-Token: <token_servicio_m2>" \
   -H "Accept: application/json"
 ```
 
@@ -107,7 +107,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/vessels/d3b07384-d113-49cd-a
 
 ```bash
 curl -X GET "https://flota.seashare.internal/api/v1/vessels/8f4b2319-58b9-4c8d-b0a3-9e41f7d12a99/operational-status" \
-  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.serviceTokenM2" \
+  -H "X-Internal-Service-Token: <token_servicio_m2>" \
   -H "Accept: application/json"
 ```
 
@@ -127,7 +127,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/vessels/8f4b2319-58b9-4c8d-b
 
 | Código HTTP M1 | Causa en Módulo 1 | Reacción Arquitectónica de Módulo 2 | Mapeo al Endpoint de M2 |
 |---|---|---|---|
-| `400 Bad Request` | `vessel_id` con formato UUID corrupto | Módulo 2 aborta sin reintento | `400 Bad Request` (`INVALID_ID`) |
+| `400 Bad Request` | `vessel_id` con formato UUID corrupto | Módulo 2 aborta sin reintento | `400 Bad Request` (`INVALID_UUID`) |
 | `401 Unauthorized` / `403 Forbidden` | Credencial de servicio de M2 rechazada | Alerta crítica de seguridad en observabilidad | `500 Internal Server Error` (`INTERNAL_ERROR`) |
  | `404 Not Found` | Embarcación no existe en los registros de flota | Declara activo inexistente sin reintento (SC-005) | `404 Not Found` (`VESSEL_NOT_FOUND`) |
 | `500 Internal Server Error` / `502 Bad Gateway` | Falla interna en los servidores de Módulo 1 | Aplica máximo 1 reintento rápido; si persiste, activa *fail-safe* preventivo | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |
@@ -149,7 +149,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/vessels/8f4b2319-58b9-4c8d-b
 
 ## 5. Puntos Abiertos y Aclaraciones Necesarias
 
-- `[NEEDS CLARIFICATION: mecanismo de autenticación servicio-a-servicio]`: acordar con el equipo de Módulo 1 la validación de identidad mediante JWT de servicio en cabecera `Authorization: Bearer <token>`.
+- `[NEEDS CLARIFICATION: mecanismo de autenticación servicio-a-servicio]`: M1 exige el header `X-Internal-Service-Token` (contrato UC07 de M1); falta que M1 indique quién entrega el valor.
 - `[NEEDS CLARIFICATION: endpoint formal en Módulo 1]`: ratificar la ruta `GET /api/v1/vessels/{vessel_id}/operational-status` en la especificación OpenAPI de Módulo 1.
 
 ---

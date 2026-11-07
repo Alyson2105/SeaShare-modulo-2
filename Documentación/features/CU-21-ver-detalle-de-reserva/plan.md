@@ -542,10 +542,10 @@ Todos los errores retornan un sobre uniforme con `code` y `message`:
 | Código HTTP | Código Interno (`code`) | Causa / Condición de Disparo | Cuerpo de Respuesta de Ejemplo |
 | :--- | :--- | :--- | :--- |
 | **`400 Bad Request`** | `INVALID_UUID` | El parámetro de ruta `reservation_id` no cumple el estándar UUIDv4. | `{"code": "INVALID_UUID", "message": "El identificador de reserva proporcionado no tiene un formato UUID válido."}` |
-| **`401 Unauthorized`** | `AUTH_TOKEN_MISSING_OR_INVALID` | El header `Authorization` no fue provisto o el token JWT expiró. | `{"code": "AUTH_TOKEN_MISSING_OR_INVALID", "message": "Token de autenticación ausente o inválido."}` |
-| **`403 Forbidden`** | `FORBIDDEN_NOT_AUTHORIZED` | El usuario autenticado no es el Arrendatario titular ni el Propietario del activo náutico asociado (`SC-002`). | `{"code": "FORBIDDEN_NOT_AUTHORIZED", "message": "Acceso denegado: no está autorizado para consultar los detalles de una reserva en la que no participa activamente."}` |
+| **`401 Unauthorized`** | `UNAUTHENTICATED` | El header `Authorization` no fue provisto o el token JWT expiró. | `{"code": "UNAUTHENTICATED", "message": "Token de autenticación ausente o inválido."}` |
+| **`403 Forbidden`** | `RESERVATION_NOT_OWNED` | El usuario autenticado no es el Arrendatario titular ni el Propietario del activo náutico asociado (`SC-002`). | `{"code": "RESERVATION_NOT_OWNED", "message": "Acceso denegado: no está autorizado para consultar los detalles de una reserva en la que no participa activamente."}` |
 | **`404 Not Found`** | `RESERVATION_NOT_FOUND` | No existe ninguna reserva en Módulo 2 con el `reservation_id` indicado. | `{"code": "RESERVATION_NOT_FOUND", "message": "No se encontró ninguna reserva asociada al identificador proporcionado."}` |
-| **`500 Internal Server Error`** | `INTERNAL_SERVER_ERROR` | Fallo inesperado en base de datos al recuperar la información. | `{"code": "INTERNAL_SERVER_ERROR", "message": "Error interno del servidor al procesar la consulta del detalle de la reserva."}` |
+| **`500 Internal Server Error`** | `INTERNAL_ERROR` | Fallo inesperado en base de datos al recuperar la información. | `{"code": "INTERNAL_ERROR", "message": "Error interno del servidor al procesar la consulta del detalle de la reserva."}` |
 
 ---
 
@@ -569,7 +569,7 @@ El objeto `available_actions` abstrae la complejidad temporal y de roles:
 | Requisito Funcional / Criterio | Descripción en Spec | Cobertura en este Contrato |
 | :--- | :--- | :--- |
 | **FR-001** | Recibir el identificador de la reserva específica como parámetro (`<<extend>>` de Ver mis reservas). | Path parameter `reservation_id` en `/api/v1/reservations/{reservation_id}`. |
-| **FR-002** | Validar autorización del usuario en sesión (Arrendatario o Propietario). | Verificación JWT y código `403 FORBIDDEN_NOT_AUTHORIZED`. |
+| **FR-002** | Validar autorización del usuario en sesión (Arrendatario o Propietario). | Verificación JWT y código `403 RESERVATION_NOT_OWNED`. |
 | **FR-003** | Exponer ID, fechas, horas, estado, sub-estado y breakdown monetario guardado. | Estructura JSON completa en sección 4.1. |
 | **FR-004** | Todos los valores financieros son de solo lectura y reflejan lo devuelto por Módulo 3. | Regla documentada en sección 2 y 7.1. Cero matemáticas locales. |
 | **FR-005** | En `RESERVED`, proveer punto de acceso para detonar `Solicitar cancelación`. | Flag `available_actions.can_cancel: true` en estado `RESERVED`. |

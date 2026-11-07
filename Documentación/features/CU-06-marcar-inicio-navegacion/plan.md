@@ -154,7 +154,7 @@ curl -X POST "https://api.seashare.com/api/v1/reservations/e4f81c92-7a20-4215-9c
 
 | Código | Caso | Cuerpo de respuesta (ejemplo) |
 |---|---|---|
-| `400 Bad Request` | `reservation_id` no es un UUID válido | `{ "code": "INVALID_ID", "message": "El identificador de reserva no es válido" }` |
+| `400 Bad Request` | `reservation_id` no es un UUID válido | `{ "code": "INVALID_UUID", "message": "El identificador de reserva no es válido" }` |
 | `401 Unauthorized` | Token ausente, inválido o expirado | `{ "code": "UNAUTHENTICATED", "message": "Token de autenticación ausente o inválido" }` |
 | `403 Forbidden` | El usuario autenticado no es el Propietario registrado de la embarcación (FR-002, SC-006) | `{ "code": "PROFILE_NOT_AUTHORIZED", "message": "Solo el propietario registrado de la embarcación puede marcar el inicio de la navegación" }` |
 | `404 Not Found` | La reserva no existe en Módulo 2 | `{ "code": "RESERVATION_NOT_FOUND", "message": "La reserva especificada no existe" }` |
@@ -203,7 +203,7 @@ No aplica. Operación puntual sobre una reserva individual.
 | **FR-009** | Desactivación permanente de No-Show y cancelación | Invariante técnica garantizada en Notas Transversales |
 | **FR-010** | Regla "Sin dinero" (cero cobros en muelle) | Respuesta sin conceptos monetarios |
 | **SC-001** | Cero inicios permitidos fuera de estado `RESERVED` | Verificado en control previo de máquina de estados |
-| **SC-002** | Notificación a M1 encolada en < 1 segundo | Outbox transaccional, cola de notificación de CU-22 y SLA operativo |
+| **SC-002** | Notificación a M1 encolada en < 1 segundo | Outbox transaccional, outbox hacia M1 (PATCH de UC07) y SLA operativo |
 | **SC-003** | Cero posibilidad de cancelar o No-Show tras inicio | Bloqueo definitivo documentado |
 | **SC-004** | 100% de inicios notifican a M3 para activar póliza | Publicación garantizada en RabbitMQ |
 | **SC-005** | Cero cobros monetarios ejecutados en Módulo 2 | Neutralidad financiera de la interfaz |

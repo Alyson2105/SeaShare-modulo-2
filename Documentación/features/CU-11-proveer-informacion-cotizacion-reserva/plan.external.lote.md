@@ -109,7 +109,7 @@ Módulo 2 parsea `estimated_total` como `BigDecimal`, sin redondeo ni operacione
 
 ```bash
 curl -X POST "https://finanzas.seashare.internal/api/v1/estimates/batch" \\
-  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.serviceTokenM2" \\
+  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.serviceTokenM2" \\" \\
   -H "Content-Type: application/json" \\
   -H "Accept: application/json" \\
   -d '{
@@ -147,7 +147,7 @@ curl -X POST "https://finanzas.seashare.internal/api/v1/estimates/batch" \\
 
 ```bash
 curl -X POST "https://finanzas.seashare.internal/api/v1/estimates/batch" \\
-  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.serviceTokenM2" \\
+  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.serviceTokenM2" \\" \\
   -H "Content-Type: application/json" \\
   -d '{
     "boat_ids": [

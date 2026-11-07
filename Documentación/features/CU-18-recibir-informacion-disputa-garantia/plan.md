@@ -66,7 +66,7 @@ Cierre automático por vencimiento (REJECTED → `REJECTED`):
   "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
   "dispute_id": "d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
   "status": "REJECTED",
-  "status_changed_at": "2026-10-10T10:00:00-05:00",
+  "status_changed_at": "2026-10-10T15:00:00Z",
   "event_key": "disputa-d1a2b3c4-REJECTED"
 }
 ```
@@ -78,7 +78,7 @@ El Administrador acepta el reclamo (ACCEPTED → `COMPLETED`):
   "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
   "dispute_id": "d1a2b3c4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
   "status": "COMPLETED",
-  "status_changed_at": "2026-10-09T16:45:00-05:00",
+  "status_changed_at": "2026-10-09T21:45:00Z",
   "event_key": "disputa-d1a2b3c4-COMPLETED"
 }
 ```

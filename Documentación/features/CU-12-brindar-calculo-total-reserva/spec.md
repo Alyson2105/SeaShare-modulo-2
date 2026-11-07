@@ -4,7 +4,7 @@
 **Fecha de Creación**: 2026-09-08 (Evolución arquitectónica y reemplazo conceptual de `Recibir solicitud de pago`)  
 **Actores Primarios / Disparador**: Invocación interna desde el caso de uso `Iniciar pago` (`<<include>>`), cuando el Arrendatario titular decide formalizar el pago sobre una reserva ya persistida en estado `Iniciada`.  
 **Dependencias Externas (APIs)**:
-- **Módulo 3 – Liquidación, Seguros y Dispersión de Fondos**: API externa de liquidación final (`Calcular total de reserva` / `Obtener liquidación completa de reserva` [NEEDS CLARIFICATION: confirmar el nombre formal del endpoint en el contrato de API de Módulo 3]). Módulo 3 es el único motor financiero de la plataforma y el único autorizado para liquidar el cobro: calcula y entrega el monto total definitivo y vinculante de la reserva, desglosando tarifa base, seguro náutico obligatorio por pasajero y depósito de garantía retenido temporalmente.
+- **Módulo 3 – Liquidación, Seguros y Dispersión de Fondos**: API externa de liquidación final (`Calcular valor de la reserva` (contrato UC04 de Módulo 3: `POST /api/v1/reservations/{reservation_id}/calculated-value`)). Módulo 3 es el único motor financiero de la plataforma y el único autorizado para liquidar el cobro: calcula y entrega el monto total definitivo y vinculante de la reserva, desglosando tarifa base, seguro náutico obligatorio por pasajero y depósito de garantía retenido temporalmente.
 - **Casos de uso internos de Módulo 2**:
   - `Iniciar pago` (`<<include>>`): Invoca este caso de uso para obtener el cálculo final oficial antes de asociar el cobro a la reserva y transicionarla a `Pendiente de Pago`.
 
