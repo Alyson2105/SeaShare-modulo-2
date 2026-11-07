@@ -3,6 +3,7 @@ package com.seashare.m2.reservas.infrastructure.adapter.out.messaging.outbox;
 import com.seashare.m2.reservas.application.dto.ReservationInfoProvidedEvent;
 import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
+import com.seashare.m2.reservas.infrastructure.adapter.out.messaging.config.MessagingProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,7 +35,7 @@ class OutboxAdapterTest { // pruebas unitarias del adaptador outbox y formato de
 
     @BeforeEach
     void setUp() { // inicializa adaptador antes de cada prueba
-        adapter = new OutboxAdapter(repository);
+        adapter = new OutboxAdapter(repository, new MessagingProperties()); // propiedades con valores por defecto
     }
 
     @Test

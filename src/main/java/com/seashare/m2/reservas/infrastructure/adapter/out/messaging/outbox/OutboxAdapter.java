@@ -3,6 +3,7 @@ package com.seashare.m2.reservas.infrastructure.adapter.out.messaging.outbox;
 import com.seashare.m2.reservas.application.dto.ReservationInfoProvidedEvent;
 import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
 import com.seashare.m2.reservas.application.port.out.OutboxPort;
+import com.seashare.m2.reservas.infrastructure.adapter.out.messaging.config.MessagingProperties;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -14,16 +15,15 @@ import java.util.Map;
 @Component
 public class OutboxAdapter implements OutboxPort { // adaptador de persistencia para el patron outbox
 
-    public static final String EXCHANGE = "seashare.reservations"; // exchange rabbitmq para eventos de reserva
-    public static final String ROUTING_KEY = "reservation.status.changed"; // routing key del evento de cambio de estado
-    public static final String ROUTING_KEY_INFO_PROVIDED = "reservation.info.provided"; // routing key del evento de informacion de reserva
     public static final String DESTINATION_AMQP = "AMQP"; // identificador del tipo de destino amqp
 
     private final OutboxMessageJpaRepository repository; // repositorio jpa de mensajes outbox
+    private final MessagingProperties messagingProperties; // nombres de topologia leidos de application.yaml
     private final ObjectMapper objectMapper = new JsonMapper(); // mapeador jackson 3 para construir el payload
 
-    public OutboxAdapter(OutboxMessageJpaRepository repository) { // constructor con dependencias
+    public OutboxAdapter(OutboxMessageJpaRepository repository, MessagingProperties messagingProperties) { // constructor con dependencias
         this.repository = repository; // asigna repositorio
+        this.messagingProperties = messagingProperties; // asigna propiedades de mensajeria
     }
 
     @Override
@@ -46,8 +46,8 @@ public class OutboxAdapter implements OutboxPort { // adaptador de persistencia 
         OutboxMessageEntity entity = new OutboxMessageEntity(); // instancia entidad outbox
         entity.setEventId(event.eventId()); // asigna event id para deduplicacion
         entity.setDestination(DESTINATION_AMQP); // asigna destino amqp
-        entity.setExchange(EXCHANGE); // asigna exchange
-        entity.setRoutingKey(ROUTING_KEY); // asigna routing key
+        entity.setExchange(messagingProperties.getExchange()); // asigna exchange de application.yaml
+        entity.setRoutingKey(messagingProperties.getRoutingKeyStatusChanged()); // asigna routing key de application.yaml
         entity.setPayload(payload); // asigna payload json
         entity.setNextAttemptAt(event.changedAt()); // programa intento inicial
         repository.save(entity); // persiste mensaje en outbox
@@ -74,8 +74,8 @@ public class OutboxAdapter implements OutboxPort { // adaptador de persistencia 
         OutboxMessageEntity entity = new OutboxMessageEntity(); // instancia entidad outbox
         entity.setEventId(event.eventId()); // asigna event id deterministico para deduplicacion
         entity.setDestination(DESTINATION_AMQP); // asigna destino amqp
-        entity.setExchange(EXCHANGE); // asigna exchange seashare.reservations
-        entity.setRoutingKey(ROUTING_KEY_INFO_PROVIDED); // asigna routing key reservation.info.provided
+        entity.setExchange(messagingProperties.getExchange()); // asigna exchange de application.yaml
+        entity.setRoutingKey(messagingProperties.getRoutingKeyInfoProvided()); // asigna routing key de application.yaml
         entity.setPayload(payload); // asigna cuerpo json con los 7 campos
         entity.setNextAttemptAt(event.occurredAt()); // programa intento inicial con la hora del evento
         repository.save(entity); // persiste mensaje en outbox

@@ -29,6 +29,14 @@ management:
         include: health,info                 # Solo se exponen estos endpoints de Actuator
 
 m2:
+  messaging:                                # Nombres de la topologia RabbitMQ (T-02)
+    exchange: seashare.reservations         # Exchange topic durable de eventos de reserva
+    dead-letter-exchange: seashare.reservations.dlx  # Exchange directo de dead-lettering
+    routing-key-status-changed: reservation.status.changed  # CU-14: cambio de estado hacia M3
+    routing-key-info-provided: reservation.info.provided    # CU-02: informacion de reserva hacia M3
+    queue-status: finance.reservation-status.v1  # Cola de M3 para cambios de estado
+    queue-info: finance.reservation-info.v1      # Cola de M3 para informacion de reserva
+
   scheduler:
     ttl:
       enabled: true                          # Activa el job de expiración por TTL (false en tests que no lo necesiten)
