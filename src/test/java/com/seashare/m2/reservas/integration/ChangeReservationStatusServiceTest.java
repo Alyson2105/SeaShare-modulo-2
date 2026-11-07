@@ -19,12 +19,14 @@ import com.seashare.m2.reservas.domain.model.CancellationSubtype;
 import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import com.seashare.m2.reservas.domain.state.ReservationStateMachine;
+import com.seashare.m2.shared.PostgresTestContainers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Propagation;
@@ -45,6 +47,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
+@Import(PostgresTestContainers.class)
 @Transactional
 class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio de estado usando solo puertos y casos de uso
 

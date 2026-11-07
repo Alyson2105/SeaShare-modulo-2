@@ -1,0 +1,12 @@
+# Perfil DEV: entorno local de desarrollo (PostgreSQL y RabbitMQ via docker compose).
+# El datasource local vive en application.yaml (compartido con la suite de tests);
+# aqui solo se registra lo que cambia en este entorno.
+
+logging:
+  level:
+    com.seashare: DEBUG              # Trazas de la aplicacion para depurar en local
+
+m2:
+  scheduler:
+    ttl:
+      enabled: true                  # Job TTL activo en local

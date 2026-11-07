@@ -1,0 +1,25 @@
+# Perfil PROD: cero secretos en el repositorio.
+# Todos los valores sensibles llegan por variables de entorno; si faltan, la app
+# no arranca (placeholder sin valor) en lugar de caer a credenciales por defecto.
+# spring.jpa.hibernate.ddl-auto sigue en validate (heredado de application.yaml).
+
+spring:
+  datasource:
+    url: ${SEASHARE_DB_URL}
+    username: ${SEASHARE_DB_USERNAME}
+    password: ${SEASHARE_DB_PASSWORD}
+
+  rabbitmq:
+    host: ${SEASHARE_RABBIT_HOST}
+    port: ${SEASHARE_RABBIT_PORT:5672}
+    username: ${SEASHARE_RABBIT_USERNAME}
+    password: ${SEASHARE_RABBIT_PASSWORD}
+
+logging:
+  level:
+    root: INFO                       # Sin debug en produccion
+
+m2:
+  scheduler:
+    ttl:
+      enabled: true                  # Job TTL activo (unica instancia o ShedLock, T-05)

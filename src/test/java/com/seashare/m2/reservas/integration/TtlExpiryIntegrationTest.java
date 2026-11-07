@@ -12,12 +12,14 @@ import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
 import com.seashare.m2.reservas.application.port.out.StatusAuditPort;
 import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
+import com.seashare.m2.shared.PostgresTestContainers;
 import com.seashare.m2.shared.domain.ClockPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +38,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest(properties = "m2.scheduler.ttl.enabled=false") // scheduler desactivado en tests para ejecucion controlada
+@Import(PostgresTestContainers.class)
 @Transactional
 class TtlExpiryIntegrationTest { // pruebas de integracion del scheduler de TTL usando BD real y puertos/casos de uso
 

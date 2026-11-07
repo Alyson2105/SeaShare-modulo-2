@@ -6,11 +6,13 @@ import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.application.port.in.CreateReservationUseCase;
 import com.seashare.m2.reservas.application.port.out.FleetInfoPort;
 import com.seashare.m2.reservas.application.port.out.FleetOperationalStatusPort;
+import com.seashare.m2.shared.PostgresTestContainers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
+@Import(PostgresTestContainers.class)
 @AutoConfigureMockMvc
 @Transactional
 class ReservationQueryTest { // pruebas de integracion de endpoints de consulta usando MockMvc y el caso de uso de creacion

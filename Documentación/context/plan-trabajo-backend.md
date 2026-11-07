@@ -27,23 +27,27 @@ Criterio de cierre global: `.\mvnw.cmd clean package` en verde, `.\mvnw.cmd test
 
 Cada fila trae la recomendación técnica para destrabar hoy. Se adopta por defecto si no hay objeción en 1 hora (regla de proceso del equipo, no sale de los documentos).
 
-| ID | Pregunta / conflicto | Recomendación por defecto | Destraba |
-|---|---|---|---|
-| D-01 | Transporte de la notificación a M1 (CU-22): AMQP o PATCH HTTP | **PATCH HTTP con destino `M1_HTTP`**. M1 solo expone REST (`features/CU-22-*/plan.md` L279; `technical-plan/plan.md` L229). Descarta AMQP, que exige un consumidor de M1 que no está documentado | T-02 (parte M1), T-04 (parte M1), T-08, T-17a..d |
-| D-02 | Exchange, routing key y cola de M1 | Sin efecto mientras D-01 = HTTP. Si M1 exige AMQP, usar la convención de M3 (`consistencia-m2-m1.md` L45-L47) y acordarla con M1 | T-02 (parte M1) |
-| D-03 | ¿Se publica `PENDING_PAYMENT` a M3? | **Sí, como `PENDING`**. Lo exige CU-14 (`features/CU-14-*/spec.md` L66; `plan.md` L18, L53) y el código ya lo hace (`ChangeReservationStatusService.java` L31). La excepción es `features/CU-08-*/plan.md` L214: corregirla | T-08, T-12, T-16b |
-| D-04 | ¿Hay orden garantizado entre eventos de la misma embarcación? | **No**. M1 trata cada `event_id` como idempotente (`features/CU-22-*/plan.md` L236). El consumidor deduplica | T-04 |
-| D-05 | ¿Qué 4xx de M1 son permanentes? | **Todo 4xx es permanente**: no reintenta, va a DLQ con alerta (`features/CU-22-*/spec.md` L91) | T-03 |
-| D-06 | Identidad de M3 al llamar a M2 (CU-13 canal A, CU-15) | **Headers temporales** `X-User-Id` y `X-User-Role` con rol de servicio `FINANCE` (rol nuevo, no está en los documentos: `[NEEDS CLARIFICATION]` del nombre). Auth real queda para Fase 10 | T-13, T-16c |
-| D-07 | SLA de CU-11 y CU-12 | Usar **read timeout 1000 ms** de `technical-plan/plan.md` L297-L298. Los placeholders de L46 se reemplazan por ese valor hasta que negocio decida | T-15, T-16a |
-| D-08 | Disputa: ¿uno o varios reclamos? | **Un reclamo** por disputa (`technical-plan/plan.md` L195, `UNIQUE(dispute_id)`) | T-18a, T-18b |
-| D-09 | Versiones de librerías con Boot 4 (ShedLock, Resilience4j, springdoc, Testcontainers, WireMock, Awaitility) | **Verificar en Maven Central antes de agregar cada una**. Preferir lo nativo de Spring Framework 7 (`@Retryable`) para reintentos, según `CLAUDE.md` (Dudas abiertas) | T-05, T-14, T-15, T-20, T-21 |
-| D-10 | Alcance: 21 o 22 CU | **22 CU**. CU-22 existe en `Documentación/features/` y `contexto_m2.md` L41 lo incluye | Alcance global |
-| D-11 | Perfiles `.yml` (plan) o `.yaml` (repo) | **Mantener `.yaml`**: `src/main/resources/application.yaml` ya existe. Ajustar el texto del plan | T-19 |
-| D-12 | Prioridad de fases | **Orden de fases 1 a 10 completo** (`technical-plan/plan.md` L477-L503). P1 (fases 3-7) primero; P2 (fases 8-9) en el mismo ciclo, después | Roadmap (sección 3) |
-| D-13 | Seguridad antes de Fase 2 | **Headers temporales sin Spring Security** (`context/contexto_m2.md` L27; `technical-plan/plan.md` L545). El plan original con JWT (L27, L328) queda como referencia | T-11a, T-13, T-16c, endpoints |
-| D-14 | Ubicación de este documento | **Mantener en `Documentación\context\`**. Registrar la excepción de solo lectura de `technical-plan/plan.md` L532 | T-01 |
-| D-15 | Fase de CU-22 (no asignado en `plan.md`) | **Fase 4, dentro de T-08**. CU-22 es `<<include>>` de CU-08 (`features/CU-22-*/spec.md` L6) | T-08 |
+| ID | Pregunta / conflicto | Recomendación por defecto | Destraba | Estado |
+|---|---|---|---|---|
+| D-01 | Transporte de la notificación a M1 (CU-22): AMQP o PATCH HTTP | **PATCH HTTP con destino `M1_HTTP`**. M1 solo expone REST (`features/CU-22-*/plan.md` L279; `technical-plan/plan.md` L229). Descarta AMQP, que exige un consumidor de M1 que no está documentado | T-02 (parte M1), T-04 (parte M1), T-08, T-17a..d | Adoptada por defecto, PENDIENTE de confirmar con M1 |
+| D-02 | Exchange, routing key y cola de M1 | Sin efecto mientras D-01 = HTTP. Si M1 exige AMQP, usar la convención de M3 (`consistencia-m2-m1.md` L45-L47) y acordarla con M1 | T-02 (parte M1) | Adoptada por defecto, PENDIENTE de confirmar con M1 |
+| D-03 | ¿Se publica `PENDING_PAYMENT` a M3? | **Sí, como `PENDING`**. Lo exige CU-14 (`features/CU-14-*/spec.md` L66; `plan.md` L18, L53) y el código ya lo hace (`ChangeReservationStatusService.java` L31). La excepción es `features/CU-08-*/plan.md` L214: corregirla | T-08, T-12, T-16b | Adoptada por defecto, PENDIENTE de confirmar con M3 |
+| D-04 | ¿Hay orden garantizado entre eventos de la misma embarcación? | **No**. M1 trata cada `event_id` como idempotente (`features/CU-22-*/plan.md` L236). El consumidor deduplica | T-04 | Adoptada por defecto, PENDIENTE de confirmar con M1 |
+| D-05 | ¿Qué 4xx de M1 son permanentes? | **Todo 4xx es permanente**: no reintenta, va a DLQ con alerta (`features/CU-22-*/spec.md` L91) | T-03 | Adoptada por defecto, PENDIENTE de confirmar con M1 |
+| D-06 | Identidad de M3 al llamar a M2 (CU-13 canal A, CU-15) | **Headers temporales** `X-User-Id` y `X-User-Role` con rol de servicio `FINANCE` (rol nuevo, no está en los documentos: `[NEEDS CLARIFICATION]` del nombre). Auth real queda para Fase 10 | T-13, T-16c | Adoptada por defecto, PENDIENTE de confirmar con M3; nombre del rol `FINANCE`: NEEDS CLARIFICATION |
+| D-07 | SLA de CU-11 y CU-12 | Usar **read timeout 1000 ms** de `technical-plan/plan.md` L297-L298. Los placeholders de L46 se reemplazan por ese valor hasta que negocio decida | T-15, T-16a | Adoptada por defecto |
+| D-08 | Disputa: ¿uno o varios reclamos? | **Un reclamo** por disputa (`technical-plan/plan.md` L195, `UNIQUE(dispute_id)`) | T-18a, T-18b | Adoptada por defecto |
+| D-09 | Versiones de librerías con Boot 4 (ShedLock, Resilience4j, springdoc, Testcontainers, WireMock, Awaitility) | **Verificar en Maven Central antes de agregar cada una**. Preferir lo nativo de Spring Framework 7 (`@Retryable`) para reintentos, según `CLAUDE.md` (Dudas abiertas) | T-05, T-14, T-15, T-20, T-21 | Adoptada por defecto |
+| D-10 | Alcance: 21 o 22 CU | **22 CU**. CU-22 existe en `Documentación/features/` y `contexto_m2.md` L41 lo incluye | Alcance global | Adoptada por defecto |
+| D-11 | Perfiles `.yml` (plan) o `.yaml` (repo) | **Mantener `.yaml`**: `src/main/resources/application.yaml` ya existe. Ajustar el texto del plan | T-19 | Adoptada por defecto |
+| D-12 | Prioridad de fases | **Orden de fases 1 a 10 completo** (`technical-plan/plan.md` L477-L503). P1 (fases 3-7) primero; P2 (fases 8-9) en el mismo ciclo, después | Roadmap (sección 3) | Adoptada por defecto |
+| D-13 | Seguridad antes de Fase 2 | **Headers temporales sin Spring Security** (`context/contexto_m2.md` L27; `technical-plan/plan.md` L545). El plan original con JWT (L27, L328) queda como referencia | T-11a, T-13, T-16c, endpoints | Adoptada por defecto |
+| D-14 | Ubicación de este documento | **Mantener en `Documentación\context\`**. Registrar la excepción de solo lectura de `technical-plan/plan.md` L532 | T-01 | Adoptada por defecto (excepción de ubicación registrada, ver nota) |
+| D-15 | Fase de CU-22 (no asignado en `plan.md`) | **Fase 4, dentro de T-08**. CU-22 es `<<include>>` de CU-08 (`features/CU-22-*/spec.md` L6) | T-08 | Adoptada por defecto |
+
+> **Registro de excepción (D-14)**: este documento permanece en `Documentación/context/` pese a la regla de solo lectura de `technical-plan/plan.md` L532. Excepción autorizada y registrada el2026-11-07 en T-01.
+>
+> **Estado de la matriz (T-01, 2026-11-07)**: todas las decisiones quedan adoptadas por defecto. D-01, D-02, D-04 y D-05 pendientes de confirmar con M1; D-03 y D-06 pendientes de confirmar con M3 (D-06 además con el nombre del rol `FINANCE` como NEEDS CLARIFICATION). El resto no afecta a otros equipos.
 
 ---
 

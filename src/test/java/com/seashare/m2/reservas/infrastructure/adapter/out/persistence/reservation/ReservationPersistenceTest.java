@@ -1,10 +1,12 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.persistence.reservation;
 
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
+import com.seashare.m2.shared.PostgresTestContainers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import java.math.BigDecimal;
@@ -19,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
+@Import(PostgresTestContainers.class)
 class ReservationPersistenceTest { // pruebas de persistencia para la entidad reservation
 
     @Autowired
