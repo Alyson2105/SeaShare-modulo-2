@@ -35,7 +35,24 @@
 		<checkstyle.plugin.version>3.6.0</checkstyle.plugin.version>
 		<!-- El maven-checkstyle-plugin 3.6.0 trae 9.3 por defecto (2022); se fija una version actual -->
 		<checkstyle.version>14.4.0</checkstyle.version>
+		<!-- Versiones verificadas en Maven Central (D-09) para test -->
+		<wiremock.version>3.13.2</wiremock.version>
+		<awaitility.version>4.3.0</awaitility.version>
+		<testcontainers.version>2.0.5</testcontainers.version>
 	</properties>
+	<dependencyManagement>
+		<dependencies>
+			<!-- El BOM de Spring Boot 4.1.2 no gestiona org.testcontainers: se importa aparte (D-09) -->
+			<dependency>
+				<groupId>org.testcontainers</groupId>
+				<artifactId>testcontainers-bom</artifactId>
+				<version>${testcontainers.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -109,6 +126,31 @@
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>${springdoc.version}</version>
+		</dependency>
+
+		<!-- T-21: infraestructura de pruebas. Versiones gestionadas por el BOM de
+		     spring-boot-starter-parent 4.1.2 salvo WireMock y Awaitility (D-09). -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-testcontainers</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.wiremock</groupId>
+			<artifactId>wiremock-standalone</artifactId>
+			<version>${wiremock.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.awaitility</groupId>
+			<artifactId>awaitility</artifactId>
+			<version>${awaitility.version}</version>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 
