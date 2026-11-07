@@ -91,12 +91,18 @@ La autenticación real queda para una fase posterior (decisión D-13).
 ## 4. Tests
 
 ```bash
-docker compose up -d      # necesario: los tests de integración usan PostgreSQL real
-.\mvnw.cmd test           # suite completa (en Windows)
+docker                 # solo hace falta Docker en ejecución (NO docker-compose)
+.\mvnw.cmd test        # suite completa (en Windows)
 ```
 
-- No hay H2: todo `@SpringBootTest` necesita PostgreSQL en `localhost:5433`.
-- Tests unitarios puros no necesitan Docker.
+- **Los tests no necesitan `docker-compose`**: usan Testcontainers, que levanta un
+  PostgreSQL 16 en contenedor (uno solo, compartido por toda la corrida) y lo retira al
+  terminar. Requisito único: Docker corriendo.
+- `docker-compose.yml` sigue siendo necesario para **correr la app en desarrollo**
+  (su PostgreSQL en `localhost:5433` y RabbitMQ), no para los tests.
+- No hay H2: todo `@SpringBootTest` necesita PostgreSQL real; lo aporta Testcontainers
+  vía `@Import(PostgresTestContainers.class)` (`src/test/java/com/seashare/m2/shared/`).
+- Tests unitarios puros no abren contexto de Spring ni levantan contenedor.
 - Para una clase o método: `.\mvnw.cmd test "-Dtest=CreateReservationTest"`.
 
 ## 5. Perfiles de configuración

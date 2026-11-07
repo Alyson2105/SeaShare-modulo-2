@@ -1,9 +1,11 @@
 package com.seashare.m2.reservas.integration;
 
 import com.seashare.m2.reservas.application.port.out.IdempotencyPort;
+import com.seashare.m2.shared.PostgresTestContainers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -21,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
+@Import(PostgresTestContainers.class)
 class IdempotencyClaimConcurrencyTest { // prueba de concurrencia real: dos transacciones compiten por la misma clave
 
     @Autowired
