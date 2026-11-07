@@ -29,6 +29,12 @@
 	<properties>
 		<java.version>21</java.version>
 		<archunit.version>1.4.1</archunit.version>
+		<!-- Versiones verificadas en Maven Central (D-09): springdoc 3.2.0 tiene
+		     parent spring-boot-starter-parent 4.1.2 (misma version que este proyecto) -->
+		<springdoc.version>3.2.0</springdoc.version>
+		<checkstyle.plugin.version>3.6.0</checkstyle.plugin.version>
+		<!-- El maven-checkstyle-plugin 3.6.0 trae 9.3 por defecto (2022); se fija una version actual -->
+		<checkstyle.version>14.4.0</checkstyle.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -98,6 +104,12 @@
 			<version>${archunit.version}</version>
 			<scope>test</scope>
 		</dependency>
+		<!-- Documentacion OpenAPI generada: /v3/api-docs y Swagger UI en /swagger-ui.html -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>${springdoc.version}</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -105,6 +117,29 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<!-- Verificacion de estilo (T-20): SOLO reporta, no falla el build.
+			     Regla de alcance: no se reformatea el codigo existente. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<version>${checkstyle.plugin.version}</version>
+				<configuration>
+					<configLocation>config/checkstyle/checkstyle.xml</configLocation>
+					<consoleOutput>true</consoleOutput>
+					<failOnViolation>false</failOnViolation>
+					<failOnWarning>false</failOnWarning>
+					<includeTestSourceDirectory>false</includeTestSourceDirectory>
+					<violationSeverity>warning</violationSeverity>
+				</configuration>
+				<executions>
+					<execution>
+						<id>check-style</id>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>
