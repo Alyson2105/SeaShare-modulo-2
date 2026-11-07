@@ -21,7 +21,7 @@
 - **No implementado**:
   - Integración HTTP real con Módulo 1 y Módulo 3; solo existen adaptadores *fake* para flota.
   - Topología RabbitMQ, relay del outbox, publicador con *publisher confirms*, consumidores y DLQ.
-  - ShedLock, Spring Security, OpenAPI, Resilience4j, Testcontainers, WireMock y Awaitility.
+  - ShedLock, Spring Security y Resilience4j. (springdoc/OpenAPI, Testcontainers, WireMock y Awaitility sí están desde el Hito H1; ver historial.)
   - Contexto `disputa` y contrato interno `shared/contracts`.
   - Todos los CU salvo los avances parciales de CU-02, CU-08, CU-20 y CU-21.
 - La última ejecución registrada de la suite completa es del **2026-11-07 00:48**: **84 pruebas, 0 fallos, 0 errores** (era de 75 pruebas el 2026-11-03 y de 83 el 2026-11-06).
@@ -33,7 +33,7 @@
 | Fase | CUs / alcance | Estado | Evidencia y brecha principal |
 | :--- | :--- | :--- | :--- |
 | Fase 1 — Setup | Infraestructura base | **Parcial (Hito H1 completado)** | Existen `pom.xml` con Boot 4.1.2/Java 21, `M2Application`, `docker-compose.yml` y `.gitignore`. Añadidos en el Hito H1: `Dockerfile` multi-stage, `README.md`, perfiles `dev/test/prod`, springdoc-openapi 3.2.0 y Checkstyle (reporte sin fallar). Siguen faltando Resilience4j y `maven-failsafe-plugin`. |
-| Fase 2 — Foundational | Persistencia, errores, reloj, outbox, seguridad, mensajería, testing | **Parcial** | Implementados: errores globales, `ErrorCode`, Flyway V1–V3, `ClockPort`, repositorio de reservas, idempotencia de entrada, escritura en outbox y reglas base de ArchUnit. Faltan: seguridad, topología RabbitMQ, relay y publicación, clientes HTTP salientes, observabilidad con *correlation id*, deduplicación de eventos salientes, Testcontainers/WireMock y reglas ArchUnit completas. |
+| Fase 2 — Foundational | Persistencia, errores, reloj, outbox, seguridad, mensajería, testing | **Parcial** | Implementados: errores globales, `ErrorCode`, Flyway V1–V3, `ClockPort`, repositorio de reservas, idempotencia de entrada, escritura en outbox, reglas base de ArchUnit, Testcontainers y WireMock (dependencias). Faltan: seguridad, topología RabbitMQ, relay y publicación, clientes HTTP salientes, observabilidad con *correlation id*, deduplicación de eventos salientes y reglas ArchUnit completas. |
 | Fase 3 — Adaptadores de lectura | CU-09, CU-10, CU-11, CU-12 | **No iniciada** | Solo existen los puertos `FleetInfoPort` y `FleetOperationalStatusPort` con adaptadores *fake*. No hay clientes reales ni CU-09/10/11/12. |
 | Fase 4 — Núcleo de dominio | CU-08 | **Parcial** | Existe el motor de transiciones, auditoría, outbox y TTL para `INITIATED`. Falta el contrato completo de CU-08, la expiración desde `PENDING_PAYMENT`, `expected_version`/`actor_id`, `events_enqueued`, la guarda `m1_blocked` y los destinos `AMQP` + `M1_HTTP`. |
 | Fase 5 — Superficie Módulo 3 | CU-14, CU-15 | **No iniciada** | No hay consumidores, publicadores ni endpoint interno de consulta para Módulo 3. |
@@ -170,6 +170,7 @@ Los tests de idempotencia se conservaron y verificaron tras la migración de `Id
 - En Windows: `.\mvnw.cmd test`.
 - **Nota de verificación (2026-11-06)**: no se volvió a ejecutar la suite en esta actualización porque Docker/PostgreSQL no estaban disponibles. El estado se contrastó con el código fuente y con los reportes de Surefire existentes. Los reportes del 2026-11-02 corresponden a una ejecución anterior y no se contabilizan.
 - **Nota de verificación (2026-11-07, Hito H1)**: suite completa en verde con Docker disponible: `.\mvnw.cmd test` → 84 pruebas, 0 fallos; `.\mvnw.cmd verify` → BUILD SUCCESS (incluye Checkstyle en modo reporte). Ver historial para el detalle.
+- **Migración a Testcontainers (2026-11-07)**: la suite ya **no** necesita docker-compose, solo Docker corriendo; `docker-compose.yml` sigue siendo necesario para la app en desarrollo. Detalle y métricas en el historial.
 
 ---
 
@@ -207,7 +208,7 @@ Los tests de idempotencia se conservaron y verificaron tras la migración de `Id
 
 17. ~~Añadir `Dockerfile`, `README.md` y perfiles `application-dev/test/prod`.~~ **Completado (Hito H1, 2026-11-07)**.
 18. Incorporar springdoc/OpenAPI y verificación de estilo: **completado en el Hito H1** (springdoc 3.2.0 + Checkstyle en modo reporte). **Siguen pendientes**: Resilience4j y `maven-failsafe-plugin`.
-19. ~~Incorporar Testcontainers, WireMock y Awaitility para pruebas de integración y contrato.~~ **Completado (Hito H1)**: dependencias añadidas, base de pruebas reutilizable y un test de humo con PostgreSQL en contenedor. Los tests existentes **no** se migraron; WireMock se usará en T-14/T-15.
+19. ~~Incorporar Testcontainers, WireMock y Awaitility para pruebas de integración y contrato.~~ **Completado (Hito H1)**: dependencias añadidas, base de pruebas reutilizable y un test de humo con PostgreSQL en contenedor. **Migración posterior (2026-11-07)**: las 11 clases `@SpringBootTest` usan ya el contenedor y la suite no requiere docker-compose. WireMock se usará en T-14/T-15.
 20. Implementar observabilidad con *correlation id* en HTTP/AMQP, logging estructurado y métricas.
 21. Cerrar los `[NEEDS CLARIFICATION]` abiertos y ejecutar las fases de *polish* del plan general.
 
@@ -232,3 +233,14 @@ Los tests de idempotencia se conservaron y verificaron tras la migración de `Id
   **T-21**: `pom.xml` + `src/test/java/com/seashare/m2/shared/`. Versiones verificadas en Maven Central (D-09): `spring-boot-testcontainers` **4.1.2** (BOM del parent), `org.testcontainers:testcontainers-postgresql` **2.0.5** (en Testcontainers 2.x el artifactId `postgresql` pasó a `testcontainers-postgresql`; el BOM de Spring Boot 4.1.2 **no** gestiona `org.testcontainers`, así que se importa `testcontainers-bom` 2.0.5 en `dependencyManagement`), `org.wiremock:wiremock-standalone` **3.13.2** (última estable; 4.0.0 está en beta) y `org.awaitility:awaitility` **4.3.0**. Archivos nuevos: `PostgresTestContainers.java` (configuración reutilizable con contenedor PostgreSQL 16 compartido por JVM + `@ServiceConnection`) y `PostgresSmokeTest.java` (único test de humo: la app conecta al contenedor y Flyway aplica las migraciones; verificado con puerto efímero 52049, distinto del 5433 de docker-compose). Los tests existentes **no** se migraron a Testcontainers; RabbitMQ con Testcontainers queda para T-02.
 
   **Decisiones y pendientes**: se adoptó por defecto todo lo previsto en el plan; siguen abiertas las confirmaciones con M1 (D-01, D-02, D-04, D-05), con M3 (D-03, D-06) y el nombre del rol `FINANCE`. Pendientes de H1: ninguno. Deudas observadas: `CLAUDE.md` no existe en el repo (el plan lo cita); 19 violaciones de Checkstyle por documentar/corregir en una tarea futura; Resilience4j y `maven-failsafe-plugin` siguen ausentes (no son parte del H1).
+- **2026-11-07 — Migración de tests de integración a Testcontainers** (rama `feature/fase1-setupV2`, sin push). Commit `c6e8ff2` `chore: migrar tests de integracion a Testcontainers` (10 clases + `README.md`).
+  - **Qué se migró**: las **11** clases con `@SpringBootTest` (el enunciato indicaba 12; la decimotercera coincidencia es un comentario javadoc dentro de `PostgresTestContainers.java`). A cada una se le añadió `@Import(PostgresTestContainers.class)`. **No** se tocaron aserciones, lógica de tests ni código de producción.
+  - **Estrategia elegida**: `@Import` sobre clase base abstracta — una anotación por clase, sin cambiar jerarquías ni firmas de las clases de prueba.
+  - **Contextos de Spring**: la caché `DefaultContextCache` quedó con **`size = 6`** contextos, **`hitCount = 592`** reutilizaciones, **`missCount = 6`** y `failureCount = 0` (medido con `logging.level.org.springframework.test.context.cache=DEBUG`). Los 6 corresponden a configuraciones distintas (con/sin `@AutoConfigureMockMvc`, `properties = "m2.scheduler.ttl.enabled=false"`, `@MockitoBean`/`@MockitoSpyBean`); el resto de clases reutiliza contexto cacheado.
+  - **Contenedor**: PostgreSQL 16 arranca **una sola vez** por corrida (log único `Container postgres:16-alpine started`; el otro `started in` es Ryuk) y se retira al terminar la JVM de tests.
+  - **Tiempos de `.\mvnw.cmd test`**: **antes con docker-compose: 77.8 s** (baseline) → **después sin compose: 84.9 s** (primera corrida, incluye arranque de contenedor), **74.9 s** (segunda corrida seguida) y **75.6 s** (con `-Dsurefire.runOrder=reversealphabetical`). `.\mvnw.cmd verify`: 82.7 s, BUILD SUCCESS.
+  - **Verificaciones**: (a) `docker compose down` **sin `-v`** (volumen conservado), puertos 5433 y 5672 cerrados y suite en verde **solo con Docker** (84/0); (b) segunda corrida seguida en verde y corrida con orden inverso en verde; (c) tiempos arriba; (d) `verify` en verde (84/0 + Checkstyle: 19 violaciones reportadas sin fallar). **Ningún test dependía de orden ni de datos de otro test.**
+  - **Configuración**: `application-test.yaml` no define datasource y ningún test fija `spring.datasource.*` ni usa `@ActiveProfiles` → sin cambios; `@ServiceConnection` tiene prioridad sobre `application.yaml`. La app en modo `dev` sigue usando docker-compose.
+  - **Concurrencia**: `IdempotencyClaimConcurrencyTest` (commits reales, sin `@Transactional`) y `IdempotencyAdapterTest` en verde con la BD nueva del contenedor en cada corrida.
+  - **README**: sección «4. Tests» actualizada (solo requiere Docker; docker-compose sigue para desarrollo).
+  - **Pendientes**: RabbitMQ con Testcontainers queda fuera (T-02). Al terminar la verificación se volvió a levantar `docker compose up -d` para dejar el entorno de desarrollo listo.
