@@ -1,0 +1,13 @@
+# Perfil TEST: arranque manual de verificacion (spring.profiles.active=test).
+# La suite de tests NO activa este perfil (ningun test usa @ActiveProfiles),
+# asi que su existencia no altera el comportamiento de .\mvnw.cmd test.
+
+logging:
+  level:
+    root: WARN                       # Menos ruido al arrancar a mano
+    com.seashare: INFO
+
+m2:
+  scheduler:
+    ttl:
+      enabled: false                 # Sin jobs programados durante la verificacion
