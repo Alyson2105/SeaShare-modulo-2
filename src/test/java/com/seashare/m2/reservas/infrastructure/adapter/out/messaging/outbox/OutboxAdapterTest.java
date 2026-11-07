@@ -18,11 +18,13 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class OutboxAdapterTest { // pruebas unitarias del adaptador outbox y formato de payload jackson 3
@@ -114,5 +116,40 @@ class OutboxAdapterTest { // pruebas unitarias del adaptador outbox y formato de
         assertThat(saved.getExchange()).isEqualTo("seashare.reservations");
         assertThat(saved.getRoutingKey()).isEqualTo("reservation.status.changed");
         assertThat(saved.getDestination()).isEqualTo("AMQP");
+    }
+
+    @Test
+    void markPublishedPurgsPayloadWithPaymentToken() { // D-09: el payload con token se vacia tras confirmar
+        UUID messageId = UUID.randomUUID(); // id de la fila
+        Instant publishedAt = Instant.parse("2026-11-07T12:00:00Z"); // hora del confirm
+        OutboxMessageEntity entity = new OutboxMessageEntity(); // entidad de prueba
+        entity.setEventId(UUID.randomUUID()); // event id
+        entity.setDestination("AMQP"); // destino
+        entity.setPayload("{\"reservation_id\":\"abc\",\"payment_token_ref\":\"tok_123\"}"); // payload con token
+        when(repository.findById(messageId)).thenReturn(Optional.of(entity)); // fila existente
+
+        adapter.markPublished(messageId, publishedAt); // ejecuta el marcado con purga
+
+        assertThat(entity.getPayload()).isEqualTo("{}"); // payload purgado sin cambio de esquema
+        assertThat(entity.getPublishedAt()).isEqualTo(publishedAt); // published_at marcado
+        verify(repository).save(entity); // persiste el cambio
+    }
+
+    @Test
+    void markPublishedKeepsPayloadWithoutPaymentToken() { // sin token el payload no se toca
+        UUID messageId = UUID.randomUUID(); // id de la fila
+        Instant publishedAt = Instant.parse("2026-11-07T12:00:00Z"); // hora del confirm
+        String payload = "{\"reservation_id\":\"abc\",\"status\":\"RESERVED\"}"; // payload sin token
+        OutboxMessageEntity entity = new OutboxMessageEntity(); // entidad de prueba
+        entity.setEventId(UUID.randomUUID()); // event id
+        entity.setDestination("AMQP"); // destino
+        entity.setPayload(payload); // payload sin token
+        when(repository.findById(messageId)).thenReturn(Optional.of(entity)); // fila existente
+
+        adapter.markPublished(messageId, publishedAt); // ejecuta el marcado
+
+        assertThat(entity.getPayload()).isEqualTo(payload); // payload intacto
+        assertThat(entity.getPublishedAt()).isEqualTo(publishedAt); // published_at marcado
+        verify(repository).save(entity); // persiste el cambio
     }
 }

@@ -10,3 +10,5 @@ m2:
   scheduler:
     ttl:
       enabled: true                  # Job TTL activo en local
+    outbox:
+      enabled: true                  # Relay del outbox activo en local (T-03)
