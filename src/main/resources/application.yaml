@@ -21,6 +21,7 @@ spring:
     port: 5672                               # Puerto AMQP
     username: seashare                       # Solo desarrollo local
     password: seashare
+    publisher-confirm-type: correlated       # Publisher confirms: published_at solo tras el ack (T-03)
 
 management:
   endpoints:
@@ -29,8 +30,25 @@ management:
         include: health,info                 # Solo se exponen estos endpoints de Actuator
 
 m2:
+  messaging:                                # Nombres de la topologia RabbitMQ (T-02)
+    exchange: seashare.reservations         # Exchange topic durable de eventos de reserva
+    dead-letter-exchange: seashare.reservations.dlx  # Exchange directo de dead-lettering
+    routing-key-status-changed: reservation.status.changed  # CU-14: cambio de estado hacia M3
+    routing-key-info-provided: reservation.info.provided    # CU-02: informacion de reserva hacia M3
+    queue-status: finance.reservation-status.v1  # Cola de M3 para cambios de estado
+    queue-info: finance.reservation-info.v1      # Cola de M3 para informacion de reserva
+    publish-timeout-ms: 5000                # Espera maxima del publisher confirm del broker (T-03)
+
   scheduler:
     ttl:
       enabled: true                          # Activa el job de expiración por TTL (false en tests que no lo necesiten)
       fixed-delay-ms: 30000                  # Intervalo entre ejecuciones del job en milisegundos (default: 30 s)
-      batch-size: 100                        # Máximo de reservas procesadas por ciclo (default: 100)
+      batch-size: 100                        # Máximo de reservas procesadas por ciclo (default: 100)
+    outbox:
+      enabled: false                         # Relay del outbox (T-03): false en la suite; true en perfiles dev/prod
+      fixed-delay-ms: 5000                   # Intervalo entre ciclos del relay en milisegundos (default: 5 s)
+      batch-size: 50                         # Maximo de mensajes outbox por ciclo (default: 50)
+      max-attempts: 5                        # Intentos maximos por mensaje antes de marcar dead (T-03)
+      backoff-initial-ms: 1000               # Base del backoff: 1/5/25/125 s con backoff-multiplier 5
+      backoff-multiplier: 5                  # Multiplicador exponencial entre intentos
+      jitter-ratio: 0.1                      # Jitter uniforme de +/-10 % sobre cada retardo

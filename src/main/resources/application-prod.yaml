@@ -23,3 +23,5 @@ m2:
   scheduler:
     ttl:
       enabled: true                  # Job TTL activo (unica instancia o ShedLock, T-05)
+    outbox:
+      enabled: true                  # Relay del outbox activo (publica con publisher confirms)

@@ -19,12 +19,13 @@
   - Job programado de expiración por TTL para reservas en `INITIATED`.
   - Manejo global de errores `{ code, message }`, identidad temporal por headers, reloj inyectable y reglas base de ArchUnit.
 - **No implementado**:
-  - Integración HTTP real con Módulo 1 y Módulo 3; solo existen adaptadores *fake* para flota.
-  - Topología RabbitMQ, relay del outbox, publicador con *publisher confirms*, consumidores y DLQ.
+  - Integración HTTP real con Módulo 1 y Módulo 3; solo existen adaptadores *fake* para flota (incluido el nuevo `FakeFleetStatusNotificationAdapter` de notificación a M1).
+  - Consumidores AMQP de producción: la deduplicación por `event_id` solo tiene un consumidor de prueba en `src/test` (T-04); M3 es quien deduplica en producción (D-04).
   - ShedLock, Spring Security y Resilience4j. (springdoc/OpenAPI, Testcontainers, WireMock y Awaitility sí están desde el Hito H1; ver historial.)
   - Contexto `disputa` y contrato interno `shared/contracts`.
   - Todos los CU salvo los avances parciales de CU-02, CU-08, CU-20 y CU-21.
-- La última ejecución registrada de la suite completa es del **2026-11-07 00:48**: **84 pruebas, 0 fallos, 0 errores** (era de 75 pruebas el 2026-11-03 y de 83 el 2026-11-06).
+- **Hito H2 completado (2026-11-07)**: topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` y prueba de deduplicación (T-04) y filtro de correlation id HTTP→AMQP (T-22). Detalle en la sección 4.6.
+- La última ejecución registrada de la suite completa es del **2026-11-07 03:24** (`.\mvnw.cmd verify`): **115 pruebas, 0 fallos, 0 errores** (era de 84 pruebas la mañana del 2026-11-07 antes del Hito H2).
 
 ---
 
@@ -33,7 +34,7 @@
 | Fase | CUs / alcance | Estado | Evidencia y brecha principal |
 | :--- | :--- | :--- | :--- |
 | Fase 1 — Setup | Infraestructura base | **Parcial (Hito H1 completado)** | Existen `pom.xml` con Boot 4.1.2/Java 21, `M2Application`, `docker-compose.yml` y `.gitignore`. Añadidos en el Hito H1: `Dockerfile` multi-stage, `README.md`, perfiles `dev/test/prod`, springdoc-openapi 3.2.0 y Checkstyle (reporte sin fallar). Siguen faltando Resilience4j y `maven-failsafe-plugin`. |
-| Fase 2 — Foundational | Persistencia, errores, reloj, outbox, seguridad, mensajería, testing | **Parcial** | Implementados: errores globales, `ErrorCode`, Flyway V1–V3, `ClockPort`, repositorio de reservas, idempotencia de entrada, escritura en outbox, reglas base de ArchUnit, Testcontainers y WireMock (dependencias). Faltan: seguridad, topología RabbitMQ, relay y publicación, clientes HTTP salientes, observabilidad con *correlation id*, deduplicación de eventos salientes y reglas ArchUnit completas. |
+| Fase 2 — Foundational | Persistencia, errores, reloj, outbox, seguridad, mensajería, testing | **Parcial** | Implementados: errores globales, `ErrorCode`, Flyway V1–V3, `ClockPort`, repositorio de reservas, idempotencia de entrada, escritura en outbox, reglas base de ArchUnit, Testcontainers y WireMock, **topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` + deduplicación probada (T-04) y correlation id HTTP→AMQP (T-22)**. Faltan: seguridad, ShedLock, clientes HTTP salientes, métricas/health y reglas ArchUnit completas. |
 | Fase 3 — Adaptadores de lectura | CU-09, CU-10, CU-11, CU-12 | **No iniciada** | Solo existen los puertos `FleetInfoPort` y `FleetOperationalStatusPort` con adaptadores *fake*. No hay clientes reales ni CU-09/10/11/12. |
 | Fase 4 — Núcleo de dominio | CU-08 | **Parcial** | Existe el motor de transiciones, auditoría, outbox y TTL para `INITIATED`. Falta el contrato completo de CU-08, la expiración desde `PENDING_PAYMENT`, `expected_version`/`actor_id`, `events_enqueued`, la guarda `m1_blocked` y los destinos `AMQP` + `M1_HTTP`. |
 | Fase 5 — Superficie Módulo 3 | CU-14, CU-15 | **No iniciada** | No hay consumidores, publicadores ni endpoint interno de consulta para Módulo 3. |
@@ -62,7 +63,7 @@
 | CU-11 — Proveer información de cotización | **No implementado** | Sin cliente de Módulo 3 ni endpoint. |
 | CU-12 — Brindar cálculo total de la reserva | **No implementado** | Sin cliente de Módulo 3 ni endpoint. |
 | CU-13 — Confirmar pago | **No implementado** | Sin canal B activo ni canal A. |
-| CU-14 — Recibir estado de reserva | **No implementado** | El outbox inserta filas `AMQP`, pero no existe relay, publicador ni consumidor. |
+| CU-14 — Recibir estado de reserva | **Parcial** | El relay publica las filas `AMQP` con `Message-Id` y publisher confirm (T-03/T-04) hacia `finance.reservation-status.v1`. Falta el contrato de payload de T-12; el consumidor real es de M3. |
 | CU-15 — Solicitar información de la reserva | **No implementado** | Sin endpoint interno para Módulo 3. |
 | CU-16 — Generar disputa de garantía | **No implementado** | Solo tablas en Flyway; sin lógica ni API. |
 | CU-17 — Actualizar estado de disputa | **No implementado** | Solo tablas en Flyway; sin lógica ni API. |
@@ -70,7 +71,7 @@
 | CU-19 — Ver detalle de embarcación | **No implementado** | Sin endpoint ni integración con CU-09/CU-11. |
 | CU-20 — Ver mis reservas | **Parcial** | `GET /api/v1/reservations` con paginación (`page`, `limit`) y filtrado por rol `RENTER`/`OWNER`. Faltan el filtro `filter` y la estructura exacta del contrato (`pagination`, `applied_filter`, `status_badge`). |
 | CU-21 — Ver detalle de reserva | **Parcial** | `GET /api/v1/reservations/{id}` con validación de pertenencia. Faltan campos y estructura del contrato (`status_badge`, datos operativos completos). |
-| CU-22 — Recibir información de estado operativo | **No implementado** | Sin eventos ni notificación hacia Módulo 1. |
+| CU-22 — Recibir información de estado operativo | **Parcial** | El relay despacha el destino `M1_HTTP` al puerto `FleetStatusNotificationPort` con adaptador fake (loguea y responde OK); sin HTTP real. Falta la matriz de notificaciones de T-08 y el cliente HTTP real (D-01). |
 
 ---
 
@@ -154,23 +155,58 @@ Los tests de idempotencia se conservaron y verificaron tras la migración de `Id
 - **Corrección de Persistencia en Idempotencia**:
   - En `IdempotencyKeyJpaRepository.java`: el método `complete(...)` se anotó con `@Modifying(flushAutomatically = true, clearAutomatically = true)` para evitar que `clear()` descarte las entidades pendientes del outbox antes del flush.
 - **Estado del Relay de Mensajería**:
-  - El relay del outbox a RabbitMQ no existe todavía y los eventos quedan persistidos en la tabla `outbox_message`.
+  - ~~El relay del outbox a RabbitMQ no existe todavía~~ **Actualizado (Hito H2, 2026-11-07)**: el relay existe y publica; ver sección 4.6.
+
+### 4.6 Infraestructura de mensajería y observabilidad (Hito H2)
+
+Ejecutado en cuatro tareas con un commit por tarea (ver historial, sección 7).
+
+**T-02 — Topología RabbitMQ**
+- `MessagingProperties` (`@ConfigurationProperties` `m2.messaging`): exchange `seashare.reservations`, DLX `seashare.reservations.dlx`, routing keys `reservation.status.changed` / `reservation.info.provided`, colas `finance.reservation-status.v1` / `finance.reservation-info.v1` y sus DLQs (`<cola>.dlq`). `OutboxAdapter` lee los mismos nombres para no divergir.
+- `RabbitTopologyConfig`: bean `Declarables` con exchange topic durable, DLX directo,4 colas (las dos de M3 con argumentos `x-dead-letter-exchange`/`x-dead-letter-routing-key`) y4 bindings; `RabbitAdmin` los declara al abrir la primera conexión.
+- `application.yaml` ya tenía host/credenciales de RabbitMQ (prod usa variables de entorno `SEASHARE_RABBIT_*`, sin secretos); `docker-compose.yml` traía `rabbitmq:3-management` en5672/15672 sin cambios.
+- `pom.xml`: + `org.testcontainers:testcontainers-rabbitmq` **2.0.5** (versión gestionada por el `testcontainers-bom`2.0.5 ya importado; D-09 verificado en Maven Central).
+- Pruebas: `RabbitTestContainers` (contenedor `rabbitmq:3-management` compartido por JVM, patrón de `PostgresTestContainers`) y `RabbitTopologyTest` (5 pruebas: exchange topic+DLX,4 colas con argumentos, bindings por routing key y DLQs ligadas al DLX, vía API de management).
+
+**T-03 — Relay del outbox**
+- Puerto de entrada: `PublishPendingOutboxUseCase` → `PublishPendingOutboxService`.
+- `OutboxPort` ampliado con3 métodos: `findPending(Instant now, int batchSize)`, `markPublished(UUID messageId, Instant publishedAt)` (incluye la purga condicional de `payment_token_ref` → `{}` por D-09, sin cambio de esquema) y `markFailed(UUID messageId, int attempts, Instant nextAttemptAt, String lastError, boolean dead)`.
+- Puertos nuevos de salida: `EventPublisherPort` (publicación AMQP con confirm; lanza `EventPublishException` sin ack) y `FleetStatusNotificationPort` con `FleetNotificationOutcome` (`DELIVERED`/`RETRYABLE_FAILURE`/`PERMANENT_FAILURE`).
+- Nuevo DTO público `PendingOutboxMessage` (la entidad outbox es *package-private* en infraestructura).
+- `PublishPendingOutboxService`: lee pendientes (`published_at IS NULL AND dead = false AND next_attempt_at <= now`, orden `next_attempt_at, created_at`), transacción por mensaje con `TransactionTemplate` (aislamiento), despacho por destino (`AMQP` → publica y marca tras confirm; `M1_HTTP` → llama al puerto, nunca HTTP), backoff1/5/25/125 s con jitter ±10 % (`BackoffPolicy`, `Random` inyectable), máximo5 intentos → `dead=true` + log de alerta, M1 4xx → dead directo (D-05),5xx/timeout → reintento. `ClockPort` siempre; nunca `Instant.now()`. No propaga excepciones.
+- `BackoffPolicy`: componente con `@Value` (`max-attempts`, `backoff-initial-ms`, `backoff-multiplier`, `jitter-ratio`) y constructor de paquete con `Random` fijo para pruebas exactas.
+- `OutboxRelayJob` (`adapter/in/scheduler`): `@Scheduled(fixedDelayString=m2.scheduler.outbox.fixed-delay-ms)`, `@ConditionalOnProperty(m2.scheduler.outbox.enabled)`, solo delega y atrapa todo. `SchedulerConfig` ahora habilita scheduling si `ttl` **o** `outbox` están activos (`@ConditionalOnExpression`).
+- Adaptadores: `RabbitEventPublisherAdapter` (RabbitTemplate + `publisher-confirm-type: correlated` + `CorrelationData`, espera de confirm con timeout `m2.messaging.publish-timeout-ms`, `Message-Id` = `event_id`, `Content-Type` JSON, mensaje persistente) y `FakeFleetStatusNotificationAdapter` en `adapter/out/fleet/` (log + `DELIVERED`; el cliente HTTP real cambiará solo este adaptador).
+- Configuración (`application.yaml`): `m2.scheduler.outbox.enabled: false` por defecto (evita que la suite publique sin querer; `true` en `application-dev.yaml` y `application-prod.yaml`), `fixed-delay-ms:5000`, `batch-size:50`, `max-attempts:5`, `backoff-initial-ms:1000`, `backoff-multiplier:5`, `jitter-ratio:0.1`; `spring.rabbitmq.publisher-confirm-type: correlated`.
+- Pruebas: `BackoffPolicyTest` (3), `PublishPendingOutboxServiceTest` (10: backoff exacto,5º→dead,4xx→dead, reintentos M1, aislamiento, lote, destino desconocido), `OutboxRelayJobTest` (2), `OutboxAdapterTest` (+2 de purga D-09) e `OutboxRelayIntegrationTest` (3, con RabbitMQ real y Awaitility: publica+`published_at`, fallo simulado→reintento, M1_HTTP vía puerto fake).
+
+**T-04 — Message-Id y deduplicación (versión mínima)**
+- El publicador ya envía `Message-Id` = `event_id` (T-03). Sin consumidor de producción: `EventDeduplicationTest` registra un consumidor **solo de prueba** en `src/test` que descarta `event_id` ya vistos y publica el mismo evento dos veces → procesado una sola vez; asimismo verifica `Message-Id`, `Content-Type` y persistencia.
+
+**T-22 — Correlation id (solo eso)**
+- `shared/infrastructure/adapter/in/web/CorrelationIdFilter` (`@Component`, `@Order(HIGHEST_PRECEDENCE)`): lee/genera `X-Correlation-Id`, lo pone en MDC (`correlationId`), lo devuelve en la respuesta y lo limpia en `finally`.
+- `RabbitEventPublisherAdapter` propaga el valor de MDC como header AMQP `X-Correlation-Id` **solo si hay contexto HTTP**; el relay corre sin MDC y no añade el header (sin cambio de esquema para guardarlo en outbox).
+- Pruebas: `CorrelationIdFilterTest` (2: respeta el id entrante, genera UUID) y `RabbitEventPublisherAdapterTest` (3: headers + propagación desde MDC, sin MDC no hay header, nack → `EventPublishException`).
+- Fuera de alcance de T-22 (siguen pendientes): métricas, health checks y la regla ArchUnit "sin dinero".
 
 ---
 
 ## 5. Pruebas y verificación
 
-- La suite contiene **84 métodos `@Test` distribuidos en 23 archivos** (eran 75 en 18 archivos el 2026-11-03).
-- La última ejecución completa registrada en `target/surefire-reports` es del **2026-11-07 00:48**: **84 pruebas ejecutadas, 0 fallos, 0 errores, 0 omitidas**.
+- La suite contiene **115 métodos `@Test` distribuidos en 31 archivos** (eran 84 en 23 archivos antes del Hito H2; 75 en 18 el 2026-11-03).
+- La última ejecución completa registrada en `target/surefire-reports` es del **2026-11-07 03:24**: **115 pruebas ejecutadas, 0 fallos, 0 errores, 0 omitidas**.
 - Comandos de referencia:
   ```bash
   ./mvnw test
   ./mvnw test -Dtest=ExpireReservationsServiceTest,TtlExpiryJobTest,TtlExpiryIntegrationTest
+  ./mvnw test "-Dtest=RabbitTopologyTest,OutboxRelayIntegrationTest,EventDeduplicationTest"   # Hito H2 (requiere Docker)
+  ./mvnw test "-Dtest=PublishPendingOutboxServiceTest,BackoffPolicyTest,OutboxRelayJobTest"   # unitarios del relay
   ```
 - En Windows: `.\mvnw.cmd test`.
 - **Nota de verificación (2026-11-06)**: no se volvió a ejecutar la suite en esta actualización porque Docker/PostgreSQL no estaban disponibles. El estado se contrastó con el código fuente y con los reportes de Surefire existentes. Los reportes del 2026-11-02 corresponden a una ejecución anterior y no se contabilizan.
 - **Nota de verificación (2026-11-07, Hito H1)**: suite completa en verde con Docker disponible: `.\mvnw.cmd test` → 84 pruebas, 0 fallos; `.\mvnw.cmd verify` → BUILD SUCCESS (incluye Checkstyle en modo reporte). Ver historial para el detalle.
-- **Migración a Testcontainers (2026-11-07)**: la suite ya **no** necesita docker-compose, solo Docker corriendo; `docker-compose.yml` sigue siendo necesario para la app en desarrollo. Detalle y métricas en el historial.
+- **Nota de verificación (2026-11-07, Hito H2)**: baseline en verde antes de empezar (84/0); `.\mvnw.cmd test` → **115 pruebas, 0 fallos**; `.\mvnw.cmd verify` → BUILD SUCCESS (115/0 + Checkstyle: 19 violaciones reportadas sin fallar). El contenedor RabbitMQ de Testcontainers arranca **una vez por corrida** (compartido por JVM, igual que PostgreSQL): **10 arranques confirmados en log** durante la sesión (1 por cada una de las10 corridas de Maven con tests de mensajería que cargaron el contexto completo);2 corridas intermedias fallaron al cargar el contexto por un error de configuración propio (`publisher-confirm-type`) y su arranque no quedó confirmado en log. Ver historial para el detalle.
+- **Migración a Testcontainers (2026-11-07)**: la suite ya **no** necesita docker-compose, solo Docker corriendo; `docker-compose.yml` sigue siendo necesario para la app en desarrollo. Detalle y métricas en el historial. Desde el Hito H2 la suite también usa un contenedor **RabbitMQ** compartido.
 
 ---
 
@@ -184,9 +220,9 @@ Los tests de idempotencia se conservaron y verificaron tras la migración de `Id
 
 ### 6.2 Mensajería y outbox
 
-4. Definir la topología RabbitMQ (exchange, colas, *bindings*, DLQ y retención).
-5. Implementar el relay del outbox con *publisher confirms*, reintentos con *backoff* y marcado de publicación.
-6. Implementar el publicador y los consumidores AMQP, incluida la deduplicación por `event_id`.
+4. ~~Definir la topología RabbitMQ (exchange, colas, *bindings*, DLQ y retención).~~ **Completado (Hito H2, T-02)**: exchange topic,2 colas de M3 con sus DLQ y bindings. **Pendiente**: la cola de disputa `finance.guarantee-dispute.v1` queda para T-18c (decisión: no crearla en T-02).
+5. ~~Implementar el relay del outbox con *publisher confirms*, reintentos con *backoff* y marcado de publicación.~~ **Completado (Hito H2, T-03)**.
+6. Implementar los **consumidores AMQP de producción** (el publicador y la deduplicación por `event_id` ya están: T-03/T-04; la deduplicación solo tiene consumidor de prueba en `src/test`). **Pendiente también**: republicar a DLQ desde el relay tras el5º fallo (decisión del Hito H2: por ahora solo `dead=true` + log de alerta, sin consumidores aún).
 7. Incorporar ShedLock y el bloqueo de jobs. La tabla `shedlock` existe en V2, pero la dependencia y su uso **no** están implementados.
 
 ### 6.3 Núcleo CU-08
@@ -209,7 +245,7 @@ Los tests de idempotencia se conservaron y verificaron tras la migración de `Id
 17. ~~Añadir `Dockerfile`, `README.md` y perfiles `application-dev/test/prod`.~~ **Completado (Hito H1, 2026-11-07)**.
 18. Incorporar springdoc/OpenAPI y verificación de estilo: **completado en el Hito H1** (springdoc 3.2.0 + Checkstyle en modo reporte). **Siguen pendientes**: Resilience4j y `maven-failsafe-plugin`.
 19. ~~Incorporar Testcontainers, WireMock y Awaitility para pruebas de integración y contrato.~~ **Completado (Hito H1)**: dependencias añadidas, base de pruebas reutilizable y un test de humo con PostgreSQL en contenedor. **Migración posterior (2026-11-07)**: las 11 clases `@SpringBootTest` usan ya el contenedor y la suite no requiere docker-compose. WireMock se usará en T-14/T-15.
-20. Implementar observabilidad con *correlation id* en HTTP/AMQP, logging estructurado y métricas.
+20. Implementar observabilidad con *correlation id* en HTTP/AMQP: **completado (Hito H2, T-22)** (filtro `X-Correlation-Id` en MDC/respuesta y header AMQP). **Siguen pendientes**: logging estructurado, métricas y health checks específicos; y la regla ArchUnit "sin dinero" (`MoneyArchitectureTest`).
 21. Cerrar los `[NEEDS CLARIFICATION]` abiertos y ejecutar las fases de *polish* del plan general.
 
 ---
@@ -244,3 +280,25 @@ Los tests de idempotencia se conservaron y verificaron tras la migración de `Id
   - **Concurrencia**: `IdempotencyClaimConcurrencyTest` (commits reales, sin `@Transactional`) y `IdempotencyAdapterTest` en verde con la BD nueva del contenedor en cada corrida.
   - **README**: sección «4. Tests» actualizada (solo requiere Docker; docker-compose sigue para desarrollo).
   - **Pendientes**: RabbitMQ con Testcontainers queda fuera (T-02). Al terminar la verificación se volvió a levantar `docker compose up -d` para dejar el entorno de desarrollo listo.
+- **2026-11-07 — Hito H2 (Fase 2: Fundación de integración) completado** en la rama `feature/fase2-Foundational` (rama activa del repositorio al empezar; el enunciato citaba `feature/fase1-setup`), sin push. Commits (uno por tarea):
+  - `979e962` `feat: declarar topologia RabbitMQ con exchange, colas y DLQ (T-02)`.
+  - `45b68ec` `feat: implementar relay del outbox con publisher confirms y reintentos (T-03)`.
+  - `a56aad8` `feat: probar Message-Id y deduplicacion de eventos con consumidor de prueba (T-04)`.
+  - `6158bc8` `feat: agregar filtro de correlation id y propagacion a headers AMQP (T-22)`.
+  - `docs: actualizar implementContext tras Hito H2` (este commit).
+
+  **T-02**: `RabbitTopologyConfig` declara exchange topic `seashare.reservations`, DLX `seashare.reservations.dlx`, colas `finance.reservation-status.v1` y `finance.reservation-info.v1` (con `x-dead-letter-exchange`/`x-dead-letter-routing-key`), sus2 DLQs y4 bindings; los nombres viven en `application.yaml` (`m2.messaging.*`) vía `MessagingProperties`, que también consume `OutboxAdapter` para no divergir. `docker-compose.yml` ya traía `rabbitmq:3-management` (sin cambios). Dependencia nueva: `org.testcontainers:testcontainers-rabbitmq` **2.0.5** (D-09: existe en Maven Central y la gestiona el `testcontainers-bom`2.0.5 ya importado). Pruebas: `RabbitTestContainers` (contenedor compartido por JVM) + `RabbitTopologyTest` (5 pruebas contra broker real).
+
+  **T-03**: `PublishPendingOutboxUseCase`/`PublishPendingOutboxService` con `ClockPort`, lote ordenado (`next_attempt_at, created_at`), transacción por mensaje (`TransactionTemplate`), despacho `AMQP`/`M1_HTTP`, backoff1/5/25/125 s con jitter ±10 % (`BackoffPolicy`, `Random` inyectable),5 intentos → `dead=true` + alerta,4xx de M1 → dead directo (D-05), nunca propaga excepciones. `OutboxPort` ampliado con `findPending`, `markPublished` (purga condicional de `payment_token_ref` → `{}` por D-09, sin cambio de esquema) y `markFailed`. Puertos nuevos: `EventPublisherPort`, `FleetStatusNotificationPort` (+ `FleetNotificationOutcome`), DTO `PendingOutboxMessage`. Adaptadores: `RabbitEventPublisherAdapter` (confirms con `CorrelationData`), `FakeFleetStatusNotificationAdapter` (log + OK) y `OutboxRelayJob` con `m2.scheduler.outbox.enabled` (default `false` en `application.yaml`, `true` en dev/prod; decisión para proteger la suite, que comparte BD entre contextos cacheados). `SchedulerConfig` pasa a habilitar scheduling si `ttl` u `outbox` están activos.
+
+  **T-04**: el publicador envía `Message-Id` = `event_id`, `Content-Type` JSON y mensaje persistente. Deduplicación demostrada **solo** con consumidor de prueba en `src/test` (`EventDeduplicationTest`):2 copias del mismo evento →1 procesamiento. Sin consumidor de producción (decisión: la deduplicación es de M3, D-04).
+
+  **T-22**: `CorrelationIdFilter` en `shared/infrastructure/adapter/in/web/` (lee/genera `X-Correlation-Id`, MDC, respuesta) y propagación como header AMQP desde MDC en el publicador (solo con contexto HTTP; el relay corre sin MDC). Sin métricas/health ni `MoneyArchitectureTest` (fuera del alcance de esta tarea).
+
+  **Decisiones del hito** (confirmadas antes de codificar): (1) `m2.scheduler.outbox.enabled` = `false` por defecto en `application.yaml` para que la suite no publique sin querer; (2) purga condicional del payload con token ya en este hito (a `{}`, sin cambio de esquema); (3) jitter ±10 % con `Random` inyectable para poder verificar retardos exactos; (4) el relay **no** republica a DLQ tras el5º fallo (solo `dead=true` + log); (5) no se crea la cola de disputa en T-02 (queda para T-18c).
+
+  **Versiones (D-09)**: `testcontainers-rabbitmq`2.0.5 (BOM ya importado), `spring-boot-starter-amqp`4.1.2 (parent), `publisher-confirm-type: correlated` (Spring AMQP4 renombró `correlate`→`CORRELATED`), Awaitility4.3.0 ya presente. `@ServiceConnection` sobre `RabbitMQContainer` soportado por `RabbitContainerConnectionDetailsFactory` en `spring-boot-amqp`4.1.2.
+
+  **Pruebas y verificación**: baseline `.\mvnw.cmd test` =84/0 antes de empezar; verde tras cada tarea (89/0,109/0,110/0,115/0); `.\mvnw.cmd verify` final = **115 pruebas,0 fallos**, BUILD SUCCESS con Checkstyle (19 violaciones, reporte sin fallar). Contenedor RabbitMQ: **1 arranque por corrida** de Maven (compartido por JVM); **10 arranques confirmados en log** en la sesión (las2 corridas con fallo temprano de `publisher-confirm-type` no lo confirmaron). Contenedor PostgreSQL:1 por corrida. Sin `Thread.sleep` (Awaitility en los reintentos).
+
+  **Pendientes dejados**: T-05 (ShedLock), T-12 (contrato de payload de CU-14), adaptador HTTP real de M1 (`FakeFleetStatusNotificationAdapter` → `Http*`), consumidores AMQP de producción, republicación a DLQ, cola de disputa (T-18c), `MoneyArchitectureTest` y métricas/health.

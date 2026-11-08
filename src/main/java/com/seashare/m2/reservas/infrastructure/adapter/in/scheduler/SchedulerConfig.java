@@ -1,15 +1,17 @@
 package com.seashare.m2.reservas.infrastructure.adapter.in.scheduler;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Activa el scheduling de Spring para el módulo 2.
- * Se puede deshabilitar con m2.scheduler.ttl.enabled=false (útil en tests que no necesitan el job).
+ * Se activa si el job TTL (m2.scheduler.ttl.enabled) o el relay del outbox
+ * (m2.scheduler.outbox.enabled) estan habilitados; con ambos en false no hay
+ * scheduling (util en tests que no necesitan ningun job).
  */
 @Configuration
 @EnableScheduling
-@ConditionalOnProperty(name = "m2.scheduler.ttl.enabled", havingValue = "true", matchIfMissing = true) // habilitado por defecto; desactivable en tests
+@ConditionalOnExpression("'${m2.scheduler.ttl.enabled:true}' == 'true' or '${m2.scheduler.outbox.enabled:false}' == 'true'") // OR de ambos jobs
 public class SchedulerConfig { // configuración que habilita el scheduling condicional del módulo 2
 }
