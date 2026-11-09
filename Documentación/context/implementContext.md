@@ -35,7 +35,7 @@
 | :--- | :--- | :--- | :--- |
 | Fase 1 — Setup | Infraestructura base | **Parcial (Hito H1 completado)** | Existen `pom.xml` con Boot 4.1.2/Java 21, `M2Application`, `docker-compose.yml` y `.gitignore`. Añadidos en el Hito H1: `Dockerfile` multi-stage, `README.md`, perfiles `dev/test/prod`, springdoc-openapi 3.2.0 y Checkstyle (reporte sin fallar). Siguen faltando Resilience4j y `maven-failsafe-plugin`. |
 | Fase 2 — Foundational | Persistencia, errores, reloj, outbox, seguridad, mensajería, testing | **Parcial** | Implementados: errores globales, `ErrorCode`, Flyway V1–V3, `ClockPort`, repositorio de reservas, idempotencia de entrada, escritura en outbox, reglas base de ArchUnit, Testcontainers y WireMock, **topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` + deduplicación probada (T-04) y correlation id HTTP→AMQP (T-22)**. Faltan: seguridad, ShedLock, clientes HTTP salientes, métricas/health y reglas ArchUnit completas. |
-| Fase 3 — Adaptadores de lectura | CU-09, CU-10, CU-11, CU-12 | **En curso** | T-14 hecha: clientes HTTP reales de M1 para CU-09 y CU-10 con registro de consultas (ver 4.8); activos con `seashare.fleet.mode=http`, los *fake* siguen por defecto. Faltan los clientes de M3 (CU-11 y CU-12, T-15). |
+| Fase 3 — Adaptadores de lectura | CU-09, CU-10, CU-11, CU-12 | **En curso** | T-14 hecha: clientes HTTP reales de M1 para CU-09 y CU-10 con registro de consultas (ver 4.8); activos con `seashare.fleet.mode=http`, los *fake* siguen por defecto. T-15 hecha: clientes HTTP de M3 para CU-11 y CU-12 (ver 4.9), activos con `seashare.finance.mode=http`. |
 | Fase 4 — Núcleo de dominio | CU-08 | **Parcial** | Existe el motor de transiciones, auditoría, outbox y TTL para `INITIATED`. Falta el contrato completo de CU-08, la expiración desde `PENDING_PAYMENT`, `expected_version`/`actor_id`, `events_enqueued`, la guarda `m1_blocked` y los destinos `AMQP` + `M1_HTTP`. |
 | Fase 5 — Superficie Módulo 3 | CU-14, CU-15 | **No iniciada** | No hay consumidores, publicadores ni endpoint interno de consulta para Módulo 3. |
 | Fase 6 — Vistas de consulta | CU-19, CU-20, CU-21 | **Parcial** | CU-20 y CU-21 tienen endpoints básicos de listado y detalle. CU-19 no existe y los contratos de CU-20/21 están simplificados. |
@@ -60,8 +60,8 @@
 | CU-08 — Actualizar estado de reserva | **Parcial** | Motor interno con matriz de transiciones, auditoría inmutable, outbox y `@Version`. No implementa el contrato completo (`ApplyReservationTransitionUseCase`, `expected_version`, `actor_id`, `events_enqueued`), ni la notificación a M1 (`M1_HTTP`), ni la guarda `m1_blocked`, ni la expiración desde `PENDING_PAYMENT`. |
 | CU-09 — Proveer información de embarcación | **Parcial** | Cliente HTTP real (`HttpFleetInfoAdapter`) con timeouts, un reintento y registro de consultas; se activa con `seashare.fleet.mode=http`. Contrato con M1 sin firmar. |
 | CU-10 — Brindar información de estado operativo | **Parcial** | Cliente HTTP real (`HttpFleetOperationalStatusAdapter`) con registro de consultas; solo `AVAILABLE` es disponible y una respuesta ilegible da 503. Contrato con M1 sin firmar. |
-| CU-11 — Proveer información de cotización | **No implementado** | Sin cliente de Módulo 3 ni endpoint. |
-| CU-12 — Brindar cálculo total de la reserva | **No implementado** | Sin cliente de Módulo 3 ni endpoint. |
+| CU-11 — Proveer información de cotización | **Parcial** | Clientes HTTP reales de M3 para estimación individual y en lote (`HttpIndividualEstimateAdapter`, `HttpBatchEstimateAdapter`) con puertos, fakes y pruebas WireMock; se activan con `seashare.finance.mode=http`. Falta `base-url` de M3 y que algún caso de uso los llame (CU-01 usará el lote en H7). |
+| CU-12 — Brindar cálculo total de la reserva | **Parcial** | Cliente HTTP real (`HttpCalculatedValueAdapter`) con reintento del 404 y tope total de 800 ms; se activa con `seashare.finance.mode=http`. Falta `base-url` de M3, la auditoría de CU-12 (FR-010) y que CU-03 lo llame (H7). |
 | CU-13 — Confirmar pago | **No implementado** | Sin canal B activo ni canal A. |
 | CU-14 — Recibir estado de reserva | **Parcial** | El relay publica las filas `AMQP` con `Message-Id` y publisher confirm (T-03/T-04) hacia `finance.reservation-status.v1`. Falta el contrato de payload de T-12; el consumidor real es de M3. |
 | CU-15 — Solicitar información de la reserva | **No implementado** | Sin endpoint interno para Módulo 3. |
@@ -254,6 +254,36 @@ Rama `feature/fase3-adaptadores-lectura` (creada desde develop; se le fusionó d
 
 ---
 
+### 4.9 Clientes HTTP de M3: estimaciones y valor calculado, Hito H3 (2026-11-09)
+
+Misma rama `feature/fase3-adaptadores-lectura`. T-15 completa: clientes HTTP de M3 para CU-11 (estimacion individual y en lote) y CU-12 (valor calculado de la reserva). Contratos de M3 usados: UC01 individual, UC01 lote y UC04.
+
+**Commits**: `f30b5dc`, `4ab85ec`, `f5cbb5d`, `4330d7d` (CU-11); `af81673`, `3877e16`, `5518aa7`, `107a238` (CU-12).
+
+**Estructura**
+- Puertos `IndividualEstimatePort`, `BatchEstimatePort` y `CalculatedValuePort`; adaptadores `Http...` y `Fake...` en `infrastructure/adapter/out/finance`.
+- `seashare.finance.mode`: `fake` por defecto, `http` activa los clientes reales. Tres `RestClient` con su `@Qualifier` y sin header `Authorization` (el README de contratos de M3 dice que su servicio no exige autenticacion).
+- Timeouts: individual connect 100 ms y read 1000 ms; lote connect 150 ms y read 1000 ms; valor calculado connect 100 ms y read 1000 ms.
+
+**Reglas por caso de uso**
+- Individual: 400 `INVALID_PARAMETERS`; 401 o 403 `INTERNAL_ERROR`; el resto de fallos, timeout, cuerpo vacio o ilegible y precio invalido `QUOTATION_UNAVAILABLE`. Un reintento solo ante `ConnectException`, nunca ante timeout.
+- Lote: bloques de 50 en secuencia y sin reintentos. Un bloque que falla deja sus ids como no disponibles y los demas siguen. Un id que M3 no devuelve o con total invalido tambien queda no disponible.
+- Valor calculado: 400, 401 y 403 `INTERNAL_ERROR`; 404 se reintenta hasta 3 veces cada 300 ms con tope total de 800 ms medido con `ClockPort` (en la practica son 2 reintentos); el resto de fallos `CALCULATION_UNAVAILABLE`. Mismo reintento por socket que el individual.
+- Dinero opaco: `BigDecimal` sin sumas ni redondeos. Decision 2026-11-09: en el valor calculado, alquiler y total se rechazan si son cero o negativos; seguro y deposito se rechazan solo si son negativos.
+
+**Pruebas**: 25 de CU-11 y 23 de CU-12 con WireMock; suite completa en 234 pruebas, 0 fallos.
+
+**Limites conocidos y dudas abiertas (no bloqueantes, sin confirmar con M3)**
+- [NEEDS CLARIFICATION] `seashare.finance.base-url` no esta definida (puerto de M3 desconocido); hace falta antes de usar `mode=http`.
+- Timeouts y SLA (800 ms individual y valor calculado, 1500 ms lote) son valores provisionales de M2. El ejemplo de M3 menciona un timeout de 1 s hacia Flota, igual a nuestro read timeout.
+- Un evento `reservation.info.provided` duplicado puede invalidar el calculo ya hecho (UC03 hace upsert y el `Message-Id` es fijo por reserva). El riesgo se acepta; volver a pedir CU-12 recalcula.
+- La auditoria de CU-12 (FR-010) no esta implementada: no se reutilizo `ExternalQueryLogPort`.
+- Ningun caso de uso llama aun a los puertos nuevos: CU-01 usara el lote y CU-03 el calculo (H7); quien consume el individual esta por definir.
+- Metodos `post` y `exchange` duplicados entre los adaptadores de M3 y los de M1. Refactor pendiente.
+- Huecos de pruebas: body del individual, ausencia de `Authorization` en individual y lote, y `X-Correlation-Id` del valor calculado.
+
+---
+
 ## 5. Pruebas y verificación
 
 - La suite contiene **115 métodos `@Test` distribuidos en 31 archivos** (eran 84 en 23 archivos antes del Hito H2; 75 en 18 el 2026-11-03).
@@ -278,7 +308,7 @@ Rama `feature/fase3-adaptadores-lectura` (creada desde develop; se le fusionó d
 ### 6.1 Integraciones externas
 
 1. ~~Implementar los clientes HTTP reales de Módulo 1 para CU-09 y CU-10~~ **Hecho (Hito H3, T-14)**, ver 4.8. Falta retirar los adaptadores *fake* como comportamiento por defecto (hoy `seashare.fleet.mode=fake`) cuando M1 firme el contrato.
-2. Implementar los clientes de Módulo 3 para CU-11 y CU-12.
+2. ~~Implementar los clientes de Módulo 3 para CU-11 y CU-12~~ **Hecho (Hito H3, T-15)**, ver 4.9. Falta definir `seashare.finance.base-url` (puerto de M3) y que algun caso de uso llame a los puertos nuevos.
 3. Implementar CU-22 y la notificación de estado operativo hacia Módulo 1 por `M1_HTTP`.
 
 ### 6.2 Mensajería y outbox
