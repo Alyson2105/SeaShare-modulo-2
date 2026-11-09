@@ -25,7 +25,7 @@
   - Contexto `disputa` y contrato interno `shared/contracts`.
   - Todos los CU salvo los avances parciales de CU-02, CU-08, CU-20 y CU-21.
 - **Hito H2 completado (2026-11-07)**: topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` y prueba de deduplicación (T-04) y filtro de correlation id HTTP→AMQP (T-22). Detalle en la sección 4.6.
-- La última ejecución registrada de la suite completa es del **2026-11-07 03:24** (`.\mvnw.cmd verify`): **115 pruebas, 0 fallos, 0 errores** (era de 84 pruebas la mañana del 2026-11-07 antes del Hito H2).
+- La última ejecución registrada de la suite completa es del **2026-11-09** (`.\mvnw.cmd test`): **234 pruebas, 0 fallos, 0 errores, 0 omitidas** (eran 115 el 2026-11-07, tras el Hito H2).
 
 ---
 
@@ -34,7 +34,7 @@
 | Fase | CUs / alcance | Estado | Evidencia y brecha principal |
 | :--- | :--- | :--- | :--- |
 | Fase 1 — Setup | Infraestructura base | **Parcial (Hito H1 completado)** | Existen `pom.xml` con Boot 4.1.2/Java 21, `M2Application`, `docker-compose.yml` y `.gitignore`. Añadidos en el Hito H1: `Dockerfile` multi-stage, `README.md`, perfiles `dev/test/prod`, springdoc-openapi 3.2.0 y Checkstyle (reporte sin fallar). Siguen faltando Resilience4j y `maven-failsafe-plugin`. |
-| Fase 2 — Foundational | Persistencia, errores, reloj, outbox, seguridad, mensajería, testing | **Parcial** | Implementados: errores globales, `ErrorCode`, Flyway V1–V3, `ClockPort`, repositorio de reservas, idempotencia de entrada, escritura en outbox, reglas base de ArchUnit, Testcontainers y WireMock, **topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` + deduplicación probada (T-04) y correlation id HTTP→AMQP (T-22)**. Faltan: seguridad, ShedLock, clientes HTTP salientes, métricas/health y reglas ArchUnit completas. |
+| Fase 2 — Foundational | Persistencia, errores, reloj, outbox, seguridad, mensajería, testing | **Parcial** | Implementados: errores globales, `ErrorCode`, Flyway V1 a V5, `ClockPort`, repositorio de reservas, idempotencia de entrada, escritura en outbox, reglas base de ArchUnit, Testcontainers y WireMock, **topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` + deduplicación probada (T-04) y correlation id HTTP→AMQP (T-22)**. Faltan: seguridad, ShedLock, métricas/health y reglas ArchUnit completas. Los clientes HTTP salientes de M1 y M3 ya existen (Hito H3), pero siguen en modo `fake` por defecto. |
 | Fase 3 — Adaptadores de lectura | CU-09, CU-10, CU-11, CU-12 | **En curso** | T-14 hecha: clientes HTTP reales de M1 para CU-09 y CU-10 con registro de consultas (ver 4.8); activos con `seashare.fleet.mode=http`, los *fake* siguen por defecto. T-15 hecha: clientes HTTP de M3 para CU-11 y CU-12 (ver 4.9), activos con `seashare.finance.mode=http`. |
 | Fase 4 — Núcleo de dominio | CU-08 | **Parcial** | Existe el motor de transiciones, auditoría, outbox y TTL para `INITIATED`. Falta el contrato completo de CU-08, la expiración desde `PENDING_PAYMENT`, `expected_version`/`actor_id`, `events_enqueued`, la guarda `m1_blocked` y los destinos `AMQP` + `M1_HTTP`. |
 | Fase 5 — Superficie Módulo 3 | CU-14, CU-15 | **No iniciada** | No hay consumidores, publicadores ni endpoint interno de consulta para Módulo 3. |
@@ -80,10 +80,12 @@
 ### 4.1 Fundaciones y configuración
 
 - Proyecto Spring Boot 4.1.2 con Java 21 y Maven. Dependencias presentes: Web MVC, Validation, Data JPA, AMQP, Actuator, Flyway (`spring-boot-starter-flyway` + `flyway-database-postgresql`), PostgreSQL y ArchUnit para pruebas.
-- Flyway administra el esquema con `spring.jpa.hibernate.ddl-auto: validate`. Existen las migraciones **V1, V2 y V3**.
+- Flyway administra el esquema con `spring.jpa.hibernate.ddl-auto: validate`. Existen las migraciones **V1 a V5**.
   - V1 crea `reservation`, `reservation_status_audit` y `outbox_message`, con `btree_gist`, restricción `EXCLUDE` de solapamiento e índice `ix_reservation_ttl`.
   - V2 crea tablas de funcionalidades aún no implementadas (`payment_attempt`, eventos de cancelación/inasistencia/check-in/check-out, `external_query_log`, `dispute_*`, `operational_failure`, `idempotency_key`, `shedlock`). **Estas tablas son estructura de datos, no funcionalidad implementada.**
   - V3 agrega campos de reserva y columnas de control del outbox.
+  - V4 agrega `reservation.status_changed_at` y, en `reservation_status_audit`, `actor_id` y `event_ids`.
+  - V5 agrega `returned_status` a `external_query_log`.
 - `docker-compose.yml` define PostgreSQL en `localhost:5433` y RabbitMQ en `5672`/`15672`.
 - Manejo global de errores con cuerpo `{ code, message }` y catálogo `ErrorCode`, incluyendo la traducción de errores internos a códigos públicos.
 - Identidad temporal por headers `X-User-Id` y `X-User-Role`; no hay Spring Security.
@@ -286,8 +288,8 @@ Misma rama `feature/fase3-adaptadores-lectura`. T-15 completa: clientes HTTP de 
 
 ## 5. Pruebas y verificación
 
-- La suite contiene **115 métodos `@Test` distribuidos en 31 archivos** (eran 84 en 23 archivos antes del Hito H2; 75 en 18 el 2026-11-03).
-- La última ejecución completa registrada en `target/surefire-reports` es del **2026-11-07 03:24**: **115 pruebas ejecutadas, 0 fallos, 0 errores, 0 omitidas**.
+- La suite ejecuta **234 pruebas** (eran 115 tras el Hito H2, 84 antes y 75 el 2026-11-03).
+- La última ejecución completa es del **2026-11-09** (`.\mvnw.cmd test`): **234 pruebas ejecutadas, 0 fallos, 0 errores, 0 omitidas**.
 - Comandos de referencia:
   ```bash
   ./mvnw test
@@ -395,3 +397,12 @@ Misma rama `feature/fase3-adaptadores-lectura`. T-15 completa: clientes HTTP de 
   **Pruebas y verificación**: baseline `.\mvnw.cmd test` =84/0 antes de empezar; verde tras cada tarea (89/0,109/0,110/0,115/0); `.\mvnw.cmd verify` final = **115 pruebas,0 fallos**, BUILD SUCCESS con Checkstyle (19 violaciones, reporte sin fallar). Contenedor RabbitMQ: **1 arranque por corrida** de Maven (compartido por JVM); **10 arranques confirmados en log** en la sesión (las2 corridas con fallo temprano de `publisher-confirm-type` no lo confirmaron). Contenedor PostgreSQL:1 por corrida. Sin `Thread.sleep` (Awaitility en los reintentos).
 
   **Pendientes dejados**: T-05 (ShedLock), T-12 (contrato de payload de CU-14), adaptador HTTP real de M1 (`FakeFleetStatusNotificationAdapter` → `Http*`), consumidores AMQP de producción, republicación a DLQ, cola de disputa (T-18c), `MoneyArchitectureTest` y métricas/health.
+
+
+- **2026-11-09 — Hito H3 (Fase 3: Adaptadores de lectura)**, rama `feature/fase3-adaptadores-lectura`, subida a origin, sin PR abierto. Commits de T-14 (CU-09 y CU-10, clientes de M1): `6665507`, `0792fd3`, `912e961`, `7778a7b`, `229df4e` (merge), `d685305` (V5), `9c79976`, `1cb39e2`, `8cd8a11`, `a289741`, `9d47663`, `48bb289`, `a7d5a4f`. Commits de T-15: CU-11 `f30b5dc`, `4ab85ec`, `f5cbb5d`, `4330d7d`; CU-12 `af81673`, `3877e16`, `5518aa7`, `107a238`. Documentación: `6d6d72b` y `39d88b5`; comentario de `application.yaml`: `2927d9c`.
+
+  **Decisiones**: no se envía `Authorization` a M3 (el README de contratos de M3 lo confirma); reintento por socket una vez y solo ante `ConnectException`; precio inválido = cotización no disponible; en CU-12, alquiler y total en cero se rechazan y seguro y depósito en cero se aceptan. Detalle en las secciones 4.8 y 4.9.
+
+  **Pruebas y verificación**: `.\mvnw.cmd test` el 2026-11-09 = **234 pruebas, 0 fallos, 0 errores, 0 omitidas**, BUILD SUCCESS (antes 115).
+
+  **Pendientes dejados**: `base-url` de M3, que algún caso de uso llame a los puertos de M3 (H7), auditoría de CU-12 (FR-010), refactor del código duplicado en los adaptadores de M1 y M3, y tests opcionales (body del individual, ausencia de `Authorization`, `X-Correlation-Id` del valor calculado).
