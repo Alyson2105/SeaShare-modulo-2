@@ -2,6 +2,7 @@ package com.seashare.m2.reservas.application.service;
 
 import com.seashare.m2.reservas.application.dto.ChangeReservationStatusCommand;
 import com.seashare.m2.reservas.application.dto.ChangeReservationStatusResult;
+import com.seashare.m2.reservas.application.dto.OperationalStatusEvent;
 import com.seashare.m2.reservas.application.dto.StatusAuditEntry;
 import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
 import com.seashare.m2.reservas.application.port.in.ChangeReservationStatusUseCase;
@@ -24,10 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -36,28 +35,25 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
 
     static final String DESTINATION_AMQP = "AMQP"; // destino outbox hacia modulo 3 (CU-14)
 
-    private static final Set<ReservationStatus> OUTBOX_STATUSES = EnumSet.of( // estados destino que generan evento outbox
-            ReservationStatus.PENDING_PAYMENT,
-            ReservationStatus.RESERVED,
-            ReservationStatus.IN_NAVIGATION,
-            ReservationStatus.COMPLETED,
-            ReservationStatus.CANCELLED
-    ); // estados destino que generan evento outbox
+    static final String DESTINATION_M1_HTTP = "M1_HTTP"; // destino outbox hacia modulo 1 (CU-22, D-01)
 
     private final ReservationRepositoryPort repository; // puerto de persistencia de reservas
     private final StatusAuditPort statusAuditPort; // puerto de auditoria de estados
     private final OutboxPort outboxPort; // puerto de mensajeria outbox
     private final ClockPort clockPort; // puerto de reloj para marca temporal
+    private final ModuleNotificationMatrix notificationMatrix; // T-08: matriz de notificaciones M3/M1
     private final ReservationStateMachine machine = new ReservationStateMachine(); // maquina de estados de reservas
 
     public ChangeReservationStatusService(ReservationRepositoryPort repository,
                                           StatusAuditPort statusAuditPort,
                                           OutboxPort outboxPort,
-                                          ClockPort clockPort) { // constructor con inyeccion de puertos
+                                          ClockPort clockPort,
+                                          ModuleNotificationMatrix notificationMatrix) { // constructor con inyeccion de puertos
         this.repository = repository; // asigna repositorio
         this.statusAuditPort = statusAuditPort; // asigna auditoria
         this.outboxPort = outboxPort; // asigna outbox
         this.clockPort = clockPort; // asigna reloj
+        this.notificationMatrix = notificationMatrix; // asigna matriz de notificaciones
     }
 
     @Override
@@ -68,19 +64,33 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
                 .orElseThrow(() -> new ReservationNotFoundException(command.reservationId())); // lanza excepcion si no existe
 
         ReservationStatus previousStatus = reservation.getStatus(); // guarda estado anterior
+        boolean m1BlockedBefore = reservation.isM1Blocked(); // guarda SC-003 antes del cambio
         validateCommand(reservation, previousStatus, command, changedAt); // valida actor, subtipo, campos condicionales, version y ttl
+
+        ModuleNotificationMatrix.NotificationDecision decision = notificationMatrix.decide( // T-08: decision de notificacion
+                previousStatus, // estado anterior
+                command.targetStatus(), // estado destino
+                command.mechanicalFailure(), // averia reportada por el Propietario
+                m1BlockedBefore); // guarda previa de bloqueo en M1
 
         reservation.changeStatus(command.targetStatus(), command.subtype(), machine); // aplica transicion de estado en el dominio
         applyCommandFields(reservation, command, changedAt); // fija campos de CU-08 persistidos (T-09)
+        if (decision.moduleOneStatus() != null && command.targetStatus() == ReservationStatus.RESERVED) { // entro en RESERVED con notificacion a M1
+            reservation.setM1Blocked(true); // activa la guarda: ya se notifico RESERVED a M1 (plan L196)
+        }
         Reservation saved = repository.save(reservation); // guarda cambios y retorna la version actualizada
 
         List<String> eventsEnqueued = new ArrayList<>(); // destinos con evento encolado
         List<UUID> eventIds = new ArrayList<>(); // ids de los eventos de esta transaccion (FR-011)
-        boolean enqueueM3 = OUTBOX_STATUSES.contains(saved.getStatus()); // el destino requiere evento a modulo 3
-        UUID m3EventId = UUID.randomUUID(); // id generado en la misma transaccion antes de auditar
-        if (enqueueM3) { // solo si corresponde
+        UUID m3EventId = UUID.randomUUID(); // id del evento a M3 generado en la misma transaccion
+        UUID m1EventId = UUID.randomUUID(); // id del evento a M1 generado en la misma transaccion
+        if (decision.notifyModuleThree()) { // M3 requiere evento para este destino (CU-14 FR-001)
             eventIds.add(m3EventId); // registra el id para la auditoria
             eventsEnqueued.add(DESTINATION_AMQP); // registra destino AMQP (modulo 3)
+        }
+        if (decision.moduleOneStatus() != null) { // M1 requiere notificacion para este destino (CU-22 FR-002)
+            eventIds.add(m1EventId); // registra el id para la auditoria
+            eventsEnqueued.add(DESTINATION_M1_HTTP); // registra destino M1_HTTP (modulo 1)
         }
 
         statusAuditPort.record(new StatusAuditEntry( // registra auditoria inmutable
@@ -95,7 +105,7 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
                 List.copyOf(eventIds) // eventos encolados en esta transaccion
         ));
 
-        if (enqueueM3) { // encola el evento con el id ya registrado en auditoria
+        if (decision.notifyModuleThree()) { // encola el evento M3 con el id ya registrado en auditoria
             outboxPort.enqueue(new StatusChangedEvent( // encola evento outbox
                     m3EventId, // id unico generado arriba (mismo para auditoria y outbox)
                     saved.getId(), // id de la reserva
@@ -105,6 +115,14 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
                     command.actor(), // actor que disparo la transicion (CU-14 FR-002)
                     command.anticipationMinutes(), // anticipacion al cancelar (CU-14 FR-003)
                     command.completionNotes() // notas de cierre en COMPLETED (CU-14 FR-004)
+            ));
+        }
+        if (decision.moduleOneStatus() != null) { // encola el evento M1 con el id ya registrado en auditoria
+            outboxPort.enqueue(new OperationalStatusEvent( // encola notificacion de estado operativo
+                    m1EventId, // id unico por transicion (CU-22 FR-004)
+                    saved.getVesselId(), // embarcacion en modulo 1
+                    decision.moduleOneStatus(), // estado operativo ya mapeado (CU-22 FR-002)
+                    changedAt // hora exacta de la transicion
             ));
         }
 

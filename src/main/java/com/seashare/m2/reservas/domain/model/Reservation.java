@@ -34,6 +34,7 @@ public class Reservation { // agregado de reserva del dominio
     private Instant statusChangedAt; // hora exacta del ultimo cambio de estado (CU-08)
     private Instant actualDepartureAt; // hora real de zarpe; la fija CU-06 (T-17c), aqui solo persistencia
     private Instant actualArrivalAt; // hora real de desembarque; la fija CU-07 (T-17d), aqui solo persistencia
+    private boolean m1Blocked; // true si ya se notifico RESERVED a Modulo 1 (guarda SC-003)
     private final Long version; // version de concurrencia optimista
 
     public Reservation(UUID id, UUID renterId, UUID ownerId, UUID vesselId, LocalDate startDate, LocalDate endDate,
@@ -203,6 +204,14 @@ public class Reservation { // agregado de reserva del dominio
 
     public void setActualArrivalAt(Instant actualArrivalAt) { // fija hora real de desembarque (la fija CU-07)
         this.actualArrivalAt = actualArrivalAt; // establece actualArrivalAt
+    }
+
+    public boolean isM1Blocked() { // consulta si Modulo 1 ya fue notificado de RESERVED
+        return m1Blocked; // retorna m1Blocked
+    }
+
+    public void setM1Blocked(boolean m1Blocked) { // fija la guarda de bloqueo en Modulo 1 (T-08)
+        this.m1Blocked = m1Blocked; // establece m1Blocked
     }
 
     public UUID getId() { // obtiene el id

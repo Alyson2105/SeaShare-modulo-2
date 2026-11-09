@@ -4,6 +4,7 @@ import com.seashare.m2.reservas.application.dto.ChangeReservationStatusCommand;
 import com.seashare.m2.reservas.application.dto.ChangeReservationStatusResult;
 import com.seashare.m2.reservas.application.dto.CreateReservationCommand;
 import com.seashare.m2.reservas.application.dto.FleetInfo;
+import com.seashare.m2.reservas.application.dto.OperationalStatusEvent;
 import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
 import com.seashare.m2.reservas.application.port.in.ChangeReservationStatusUseCase;
@@ -18,6 +19,7 @@ import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.reservas.domain.exception.VersionConflictException;
 import com.seashare.m2.reservas.domain.model.ActorType;
 import com.seashare.m2.reservas.domain.model.CancellationSubtype;
+import com.seashare.m2.reservas.domain.model.OperationalStatus;
 import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import com.seashare.m2.reservas.domain.state.ReservationStateMachine;
@@ -202,7 +204,7 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
         assertThat(result.version()).isGreaterThan(created.getVersion());
         assertThat(result.ttlExpiresAt()).isEqualTo(created.getTtlExpiresAt());
         assertThat(result.statusChangedAt()).isNotNull();
-        assertThat(result.eventsEnqueued()).containsExactly("AMQP");
+        assertThat(result.eventsEnqueued()).containsExactly("AMQP", "M1_HTTP"); // M3 y bloqueo en M1 (CU-22 FR-002)
         Reservation updated = reservationRepositoryPort.findById(created.getId()).orElseThrow();
         assertThat(updated.getStatus()).isEqualTo(ReservationStatus.RESERVED);
         verify(statusAuditPort).record(any());
@@ -289,7 +291,7 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
                 created.getId(), ReservationStatus.IN_NAVIGATION, null, ActorType.OWNER, "Check-in",
                 UUID.randomUUID(), null, null, null, null, null));
         assertThat(inNavigation.status()).isEqualTo(ReservationStatus.IN_NAVIGATION);
-        assertThat(inNavigation.eventsEnqueued()).containsExactly("AMQP");
+        assertThat(inNavigation.eventsEnqueued()).containsExactly("AMQP", "M1_HTTP"); // M3 y M1 (check-in)
 
         ChangeReservationStatusResult completed = changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
                 created.getId(), ReservationStatus.COMPLETED, null, ActorType.OWNER, "Check-out",
@@ -436,5 +438,80 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
         verify(statusAuditPort).record(org.mockito.ArgumentMatchers.argThat(entry ->
                 entry.actorId() == null // SYSTEM sin usuario
                         && entry.eventIds().isEmpty())); // ningun evento para EXPIRED
+    }
+
+    @Test
+    void enqueuesReservedToModuleOneOnPaymentConfirmed() { // T-08: RESERVED notifica a M1 y activa m1_blocked
+        Reservation created = createReservation();
+        changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
+        clearInvocations(outboxPort);
+
+        changeStatus(created, ReservationStatus.RESERVED, null, ActorType.SYSTEM);
+
+        ArgumentCaptor<OperationalStatusEvent> captor = ArgumentCaptor.forClass(OperationalStatusEvent.class);
+        verify(outboxPort).enqueue(captor.capture()); // unico evento M1
+        assertThat(captor.getValue().operationalStatus()).isEqualTo(OperationalStatus.RESERVED); // estado ya mapeado
+        assertThat(captor.getValue().vesselId()).isEqualTo(created.getVesselId());
+        assertThat(captor.getValue().eventId()).isNotNull(); // id unico por transicion (FR-004)
+        Reservation updated = reservationRepositoryPort.findById(created.getId()).orElseThrow();
+        assertThat(updated.isM1Blocked()).isTrue(); // guarda SC-003 activada
+    }
+
+    @Test
+    void initiatedAndPendingPaymentDoNotEnqueueModuleOne() { // T-08: ni creacion ni PENDING_PAYMENT notifican a M1
+        clearInvocations(outboxPort);
+        Reservation created = createReservation(); // creacion en INITIATED
+
+        changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
+
+        verify(outboxPort, never()).enqueue(any(OperationalStatusEvent.class)); // cero eventos a M1
+        verify(outboxPort).enqueue(any(StatusChangedEvent.class)); // pero si el evento a M3 (D-03)
+        Reservation updated = reservationRepositoryPort.findById(created.getId()).orElseThrow();
+        assertThat(updated.isM1Blocked()).isFalse(); // sin bloqueo notificado
+    }
+
+    @Test
+    void cancelledBeforeReservedDoesNotEnqueueModuleOne() { // T-08: cancelar antes de RESERVED no emite liberacion a M1
+        Reservation created = createReservation();
+        changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
+        clearInvocations(outboxPort, statusAuditPort);
+
+        // cancelacion activa desde PENDING_PAYMENT rechazada: la liberacion indebida jamas se encola
+        assertThatThrownBy(() -> changeStatus(created, ReservationStatus.CANCELLED, CancellationSubtype.FLEXIBLE, ActorType.RENTER))
+                .isInstanceOf(InvalidTransitionException.class);
+
+        verify(outboxPort, never()).enqueue(any(OperationalStatusEvent.class)); // nada a M1
+        verify(outboxPort, never()).enqueue(any(StatusChangedEvent.class)); // nada a M3 tampoco
+        Reservation unchanged = reservationRepositoryPort.findById(created.getId()).orElseThrow();
+        assertThat(unchanged.isM1Blocked()).isFalse();
+    }
+
+    @Test
+    void cancelledByOwnerWithMechanicalFailureEnqueuesMaintenance() { // T-08: averia del Propietario -> MAINTENANCE_CLEANING
+        Reservation created = createReservation();
+        changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
+        changeStatus(created, ReservationStatus.RESERVED, null, ActorType.SYSTEM);
+        clearInvocations(outboxPort);
+
+        changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.CANCELLED, CancellationSubtype.BY_OWNER, ActorType.OWNER, "Averia del propietario",
+                UUID.randomUUID(), null, true, null, null, null)); // mechanical_failure = true
+
+        ArgumentCaptor<OperationalStatusEvent> captor = ArgumentCaptor.forClass(OperationalStatusEvent.class);
+        verify(outboxPort).enqueue(captor.capture());
+        assertThat(captor.getValue().operationalStatus()).isEqualTo(OperationalStatus.MAINTENANCE_CLEANING); // nombre real del spec
+    }
+
+    @Test
+    void failedTransitionEnqueuesNothing() { // T-08: transicion fallida no encola a ningun destino
+        Reservation created = createReservation();
+        clearInvocations(outboxPort, statusAuditPort);
+
+        assertThatThrownBy(() -> changeStatus(created, ReservationStatus.COMPLETED, null, ActorType.OWNER))
+                .isInstanceOf(InvalidTransitionException.class);
+
+        verify(outboxPort, never()).enqueue(any(StatusChangedEvent.class));
+        verify(outboxPort, never()).enqueue(any(OperationalStatusEvent.class));
+        verify(statusAuditPort, never()).record(any());
     }
 }

@@ -196,7 +196,7 @@ class TtlExpiryIntegrationTest { // pruebas de integracion del scheduler de TTL 
                 null, null, null, null, null, "pg-1000"));
 
         assertThat(result.status()).isEqualTo(ReservationStatus.RESERVED);
-        assertThat(result.eventsEnqueued()).containsExactly("AMQP");
+        assertThat(result.eventsEnqueued()).containsExactly("AMQP", "M1_HTTP"); // M3 + bloqueo M1
     }
 
     @Test

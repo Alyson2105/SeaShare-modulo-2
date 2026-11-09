@@ -2,6 +2,7 @@ package com.seashare.m2.reservas.infrastructure.adapter.out.messaging.outbox;
 
 import com.seashare.m2.reservas.application.dto.ReservationInfoProvidedEvent;
 import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
+import com.seashare.m2.reservas.application.dto.OperationalStatusEvent;
 import com.seashare.m2.reservas.application.dto.PendingOutboxMessage;
 import com.seashare.m2.reservas.application.port.out.OutboxPort;
 import com.seashare.m2.reservas.infrastructure.adapter.out.messaging.config.MessagingProperties;
@@ -21,6 +22,8 @@ import java.util.UUID;
 public class OutboxAdapter implements OutboxPort { // adaptador de persistencia para el patron outbox
 
     public static final String DESTINATION_AMQP = "AMQP"; // identificador del tipo de destino amqp
+
+    public static final String DESTINATION_M1_HTTP = "M1_HTTP"; // T-08: destino http hacia Modulo 1 (D-01)
 
     public static final String PAYMENT_TOKEN_FIELD = "payment_token_ref"; // campo con token de pago: se purga al confirmar (D-09)
 
@@ -85,6 +88,31 @@ public class OutboxAdapter implements OutboxPort { // adaptador de persistencia 
         entity.setRoutingKey(messagingProperties.getRoutingKeyInfoProvided()); // asigna routing key de application.yaml
         entity.setPayload(payload); // asigna cuerpo json con los 7 campos
         entity.setNextAttemptAt(event.occurredAt()); // programa intento inicial con la hora del evento
+        repository.save(entity); // persiste mensaje en outbox
+    }
+
+    @Override
+    public void enqueue(OperationalStatusEvent event) { // T-08: notificacion de estado operativo a M1 (sin dinero, FR-007)
+        Map<String, Object> payloadMap = new LinkedHashMap<>(); // mapa ordenado para claves json
+        payloadMap.put("vessel_id", event.vesselId().toString()); // embarcacion en modulo 1
+        payloadMap.put("operational_status", event.operationalStatus().name()); // estado operativo ya mapeado
+        payloadMap.put("occurred_at", event.occurredAt().toString()); // hora exacta de la transicion iso-8601
+        payloadMap.put("event_id", event.eventId().toString()); // id unico por transicion (deduplicacion)
+
+        String payload; // variable para almacenar texto json serializado
+        try { // serializacion segura con jackson 3
+            payload = objectMapper.writeValueAsString(payloadMap); // genera texto json
+        } catch (Exception e) { // captura cualquier excepcion de serializacion
+            throw new IllegalStateException("Failed to serialize operational status payload", e); // lanza error si falla serializacion
+        }
+
+        OutboxMessageEntity entity = new OutboxMessageEntity(); // instancia entidad outbox
+        entity.setEventId(event.eventId()); // asigna event id para deduplicacion
+        entity.setDestination(DESTINATION_M1_HTTP); // destino http hacia modulo 1 (D-01)
+        entity.setExchange(null); // M1_HTTP no usa exchange
+        entity.setRoutingKey(null); // tampoco routing key
+        entity.setPayload(payload); // payload json con los 4 campos del contrato
+        entity.setNextAttemptAt(event.occurredAt()); // programa intento inicial
         repository.save(entity); // persiste mensaje en outbox
     }
 

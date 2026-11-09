@@ -38,6 +38,7 @@ class ReservationMapper { // mapeador entre entidad de persistencia y modelo de 
         domain.setStatusChangedAt(entity.getStatusChangedAt()); // mapea hora del cambio de estado
         domain.setActualDepartureAt(entity.getActualDepartureAt()); // mapea hora real de zarpe (solo persistencia)
         domain.setActualArrivalAt(entity.getActualArrivalAt()); // mapea hora real de desembarque (solo persistencia)
+        domain.setM1Blocked(entity.isM1Blocked()); // mapea la guarda de bloqueo en M1
         return domain; // retorna agregado completo
     }
 
@@ -86,5 +87,6 @@ class ReservationMapper { // mapeador entre entidad de persistencia y modelo de 
         if (domain.getActualArrivalAt() != null) { // round-trip de hora real de desembarque (la fija CU-07)
             entity.setActualArrivalAt(domain.getActualArrivalAt()); // persiste llegada real
         }
+        entity.setM1Blocked(domain.isM1Blocked()); // persiste la guarda de notificacion a M1 (T-08)
     }
 }
