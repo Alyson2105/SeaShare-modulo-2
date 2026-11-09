@@ -19,7 +19,7 @@
   - Job programado de expiración por TTL para reservas en `INITIATED`.
   - Manejo global de errores `{ code, message }`, identidad temporal por headers, reloj inyectable y reglas base de ArchUnit.
 - **No implementado**:
-  - Integración HTTP real con Módulo 1 y Módulo 3; solo existen adaptadores *fake* para flota (incluido el nuevo `FakeFleetStatusNotificationAdapter` de notificación a M1).
+  - Integración HTTP real con Módulo 3 (CU-11 y CU-12); con Módulo 1 existen clientes HTTP reales para CU-09 y CU-10 (activos con `seashare.fleet.mode=http`) y adaptadores *fake* por defecto; falta el cliente de aviso de estado (CU-22) (incluido el nuevo `FakeFleetStatusNotificationAdapter` de notificación a M1).
   - Consumidores AMQP de producción: la deduplicación por `event_id` solo tiene un consumidor de prueba en `src/test` (T-04); M3 es quien deduplica en producción (D-04).
   - ShedLock, Spring Security y Resilience4j. (springdoc/OpenAPI, Testcontainers, WireMock y Awaitility sí están desde el Hito H1; ver historial.)
   - Contexto `disputa` y contrato interno `shared/contracts`.
@@ -35,7 +35,7 @@
 | :--- | :--- | :--- | :--- |
 | Fase 1 — Setup | Infraestructura base | **Parcial (Hito H1 completado)** | Existen `pom.xml` con Boot 4.1.2/Java 21, `M2Application`, `docker-compose.yml` y `.gitignore`. Añadidos en el Hito H1: `Dockerfile` multi-stage, `README.md`, perfiles `dev/test/prod`, springdoc-openapi 3.2.0 y Checkstyle (reporte sin fallar). Siguen faltando Resilience4j y `maven-failsafe-plugin`. |
 | Fase 2 — Foundational | Persistencia, errores, reloj, outbox, seguridad, mensajería, testing | **Parcial** | Implementados: errores globales, `ErrorCode`, Flyway V1–V3, `ClockPort`, repositorio de reservas, idempotencia de entrada, escritura en outbox, reglas base de ArchUnit, Testcontainers y WireMock, **topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` + deduplicación probada (T-04) y correlation id HTTP→AMQP (T-22)**. Faltan: seguridad, ShedLock, clientes HTTP salientes, métricas/health y reglas ArchUnit completas. |
-| Fase 3 — Adaptadores de lectura | CU-09, CU-10, CU-11, CU-12 | **No iniciada** | Solo existen los puertos `FleetInfoPort` y `FleetOperationalStatusPort` con adaptadores *fake*. No hay clientes reales ni CU-09/10/11/12. |
+| Fase 3 — Adaptadores de lectura | CU-09, CU-10, CU-11, CU-12 | **En curso** | T-14 hecha: clientes HTTP reales de M1 para CU-09 y CU-10 con registro de consultas (ver 4.8); activos con `seashare.fleet.mode=http`, los *fake* siguen por defecto. Faltan los clientes de M3 (CU-11 y CU-12, T-15). |
 | Fase 4 — Núcleo de dominio | CU-08 | **Parcial** | Existe el motor de transiciones, auditoría, outbox y TTL para `INITIATED`. Falta el contrato completo de CU-08, la expiración desde `PENDING_PAYMENT`, `expected_version`/`actor_id`, `events_enqueued`, la guarda `m1_blocked` y los destinos `AMQP` + `M1_HTTP`. |
 | Fase 5 — Superficie Módulo 3 | CU-14, CU-15 | **No iniciada** | No hay consumidores, publicadores ni endpoint interno de consulta para Módulo 3. |
 | Fase 6 — Vistas de consulta | CU-19, CU-20, CU-21 | **Parcial** | CU-20 y CU-21 tienen endpoints básicos de listado y detalle. CU-19 no existe y los contratos de CU-20/21 están simplificados. |
@@ -58,8 +58,8 @@
 | CU-06 — Marcar inicio de navegación | **No implementado** | Sin endpoint ni registro de check-in. |
 | CU-07 — Marcar fin de navegación | **No implementado** | Sin endpoint ni registro de check-out. |
 | CU-08 — Actualizar estado de reserva | **Parcial** | Motor interno con matriz de transiciones, auditoría inmutable, outbox y `@Version`. No implementa el contrato completo (`ApplyReservationTransitionUseCase`, `expected_version`, `actor_id`, `events_enqueued`), ni la notificación a M1 (`M1_HTTP`), ni la guarda `m1_blocked`, ni la expiración desde `PENDING_PAYMENT`. |
-| CU-09 — Proveer información de embarcación | **No implementado** | Solo puerto de salida y adaptador *fake*. |
-| CU-10 — Brindar información de estado operativo | **No implementado** | Solo puerto de salida y adaptador *fake*. |
+| CU-09 — Proveer información de embarcación | **Parcial** | Cliente HTTP real (`HttpFleetInfoAdapter`) con timeouts, un reintento y registro de consultas; se activa con `seashare.fleet.mode=http`. Contrato con M1 sin firmar. |
+| CU-10 — Brindar información de estado operativo | **Parcial** | Cliente HTTP real (`HttpFleetOperationalStatusAdapter`) con registro de consultas; solo `AVAILABLE` es disponible y una respuesta ilegible da 503. Contrato con M1 sin firmar. |
 | CU-11 — Proveer información de cotización | **No implementado** | Sin cliente de Módulo 3 ni endpoint. |
 | CU-12 — Brindar cálculo total de la reserva | **No implementado** | Sin cliente de Módulo 3 ni endpoint. |
 | CU-13 — Confirmar pago | **No implementado** | Sin canal B activo ni canal A. |
@@ -230,6 +230,28 @@ Rama `feature/h4-nucleoDom` (nombre distinto al del enunciado, `feature/h4-nucle
 
 **Pendientes tras H4**: T-24 (creación vía CU-08 + `Location`), T-12 (payload CU-14: `PENDING` vs `PENDING_PAYMENT`, `actor`/anticipación/novedades — `StatusChangedEvent` ya los transporta), adaptador HTTP real de M1, T-05 (ShedLock), `MoneyArchitectureTest`. Mención `ApplyReservationTransitionUseCase` corregida en `CU-08/plan.md` L26 (y `TransitionCommand` → `ChangeReservationStatusCommand` L36); las menciones en `implementContext.md` L60/L230 y `plan-trabajo-backend.md` L92 quedan fuera de esta sección por propiedad de frentes.
 
+### 4.8 Clientes HTTP de M1 y registro de consultas: Hito H3 (2026-11-09)
+
+Rama `feature/fase3-adaptadores-lectura` (creada desde develop; se le fusionó develop con H4 antes del registro de consultas). T-14 completa: clientes HTTP reales de M1 para CU-09 y CU-10 y registro de consultas (CU-09 FR-010, CU-10 FR-009).
+
+**Commits**: `6665507`, `0792fd3`, `912e961`, `7778a7b` (adaptadores, configuracion y pruebas WireMock); `d685305`, `9c79976`, `1cb39e2`, `8cd8a11`, `a289741`, `9d47663` (registro de consultas); `48bb289` (CU-10 lanza 503 ante respuesta ilegible).
+
+**Clientes HTTP (CU-09 y CU-10)**
+- `RestClient` con `SimpleClientHttpRequestFactory`: connect timeout 100 ms y read timeout 300 ms. Un solo reintento inmediato ante timeout, IOException o 503; nunca ante 4xx. Sin cache ni valores por defecto.
+- Errores: 404 `VESSEL_NOT_FOUND`; 400 `INVALID_UUID`; 401 o 403 `INTERNAL_ERROR`; timeout, conexion o 5xx `FLEET_SERVICE_UNAVAILABLE`; `port.timezone` ausente o invalida `HARBOR_TIMEZONE_UNAVAILABLE`.
+- Los adaptadores falsos siguen por defecto (`seashare.fleet.mode=fake`); los HTTP se activan con `seashare.fleet.mode=http`.
+- Decision tomada el 2026-11-09: en CU-10, cuerpo vacio, JSON ilegible o `operational_status` ausente lanzan `FLEET_SERVICE_UNAVAILABLE` (503), igual que CU-09. Solo un valor desconocido (por ejemplo `WEIRD_STATE`) da `false`, con fila `OK` y el valor crudo. Esto reemplaza la regla anterior de que "ausente es false".
+
+**Registro de consultas**
+- Migracion `V5__external_query_log_returned_status.sql`: agrega `returned_status VARCHAR(30)` a `external_query_log` (la tabla viene de V2).
+- Puerto `ExternalQueryLogPort`, adaptador JPA con `Propagation.REQUIRES_NEW` (la fila sobrevive al rollback de la reserva) y una fila por consulta con el resultado final: `OK`, `TIMEOUT` o `ERROR`. Si guardar el registro falla, solo se escribe un aviso en el log y la consulta a M1 no cambia.
+
+**Limites conocidos y dudas abiertas**
+- `REQUIRES_NEW` abre una segunda conexion mientras `CreateReservationService` (que es `@Transactional`) mantiene la suya. Bajo concurrencia alta con el pool por defecto, el registro puede perderse por falta de conexiones. La solucion de fondo es sacar las llamadas a M1 de la transaccion de CU-02; no se hizo en este hito.
+- Un 503 persistente tras el reintento se registra como `TIMEOUT`, aunque M1 si respondio. Nombre no exacto; duda para el grupo.
+- Los metodos `get`, `exchange` y `register` estan duplicados en los dos adaptadores HTTP. Refactor pendiente.
+- Contrato con M1 no firmado: rutas, header `X-Internal-Service-Token`, valores de `operational_status` y esquema de errores siguen por confirmar.
+
 ---
 
 ## 5. Pruebas y verificación
@@ -255,7 +277,7 @@ Rama `feature/h4-nucleoDom` (nombre distinto al del enunciado, `feature/h4-nucle
 
 ### 6.1 Integraciones externas
 
-1. Implementar los clientes HTTP reales de Módulo 1 para CU-09 y CU-10, con timeouts, reintento rápido y *fail-safe*; retirar los adaptadores *fake* como comportamiento por defecto.
+1. ~~Implementar los clientes HTTP reales de Módulo 1 para CU-09 y CU-10~~ **Hecho (Hito H3, T-14)**, ver 4.8. Falta retirar los adaptadores *fake* como comportamiento por defecto (hoy `seashare.fleet.mode=fake`) cuando M1 firme el contrato.
 2. Implementar los clientes de Módulo 3 para CU-11 y CU-12.
 3. Implementar CU-22 y la notificación de estado operativo hacia Módulo 1 por `M1_HTTP`.
 
