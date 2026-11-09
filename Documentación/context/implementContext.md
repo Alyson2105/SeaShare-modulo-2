@@ -249,6 +249,15 @@ Rama `feature/h4-nucleoDom` (nombre distinto al del enunciado, `feature/h4-nucle
 - **Nota de verificación (2026-11-07, Hito H2)**: baseline en verde antes de empezar (84/0); `.\mvnw.cmd test` → **115 pruebas, 0 fallos**; `.\mvnw.cmd verify` → BUILD SUCCESS (115/0 + Checkstyle: 19 violaciones reportadas sin fallar). El contenedor RabbitMQ de Testcontainers arranca **una vez por corrida** (compartido por JVM, igual que PostgreSQL): **10 arranques confirmados en log** durante la sesión (1 por cada una de las10 corridas de Maven con tests de mensajería que cargaron el contexto completo);2 corridas intermedias fallaron al cargar el contexto por un error de configuración propio (`publisher-confirm-type`) y su arranque no quedó confirmado en log. Ver historial para el detalle.
 - **Nota de verificación (2026-11-09, Hito H4 + limpieza post-auditoría)**: `.\mvnw.cmd test` → **152 pruebas, 0 fallos** con docker-compose **apagado** (dos corridas seguidas y una con `-Dsurefire.runOrder=reversealphabetical`, todas en verde tras el arreglo de `CorrelationIdFilterTest`); `.\mvnw.cmd verify` → BUILD SUCCESS. Arranques de contenedor por corrida: 1 PostgreSQL + 1 RabbitMQ (singleton por JVM).
 - **Migración a Testcontainers (2026-11-07)**: la suite ya **no** necesita docker-compose, solo Docker corriendo; `docker-compose.yml` sigue siendo necesario para la app en desarrollo. Detalle y métricas en el historial. Desde el Hito H2 la suite también usa un contenedor **RabbitMQ** compartido.
+- **EXCEPCIÓN HEREDADA — tests con JdbcTemplate o repos JPA (registrada 2026-11-09, sin modificar los tests)**: la regla de "tests de integración solo con puertos, casos de uso y MockMvc" tiene estas excepciones **heredadas de H1/H2** (preexistentes, no creadas en H4). Se migrarán a puertos cuando se toque cada área:
+  - `PostgresSmokeTest` (L7): `JdbcTemplate` para verificar el esquema migrado por Flyway en el test de humo.
+  - `EventDeduplicationTest` (L25): `JdbcTemplate` para limpiar filas de `outbox_message` antes/después del ensayo de deduplicación.
+  - `CreateReservationOutboxIntegrationTest` (L19): `JdbcTemplate` para limpiar `outbox_message` de las reservas creadas.
+  - `OutboxRelayIntegrationTest` (L20): `JdbcTemplate` para verificar el estado de las filas del relay (`published_at`, `attempts`, `dead`).
+  - `CreateReservationValidationTest` (L17): `JdbcTemplate` para limpiar `idempotency_key` en el `tearDown`.
+  - `ReservationPersistenceTest` (L28): inyecta `ReservationJpaRepository` directamente para probar bloqueo optimista sobre la entidad `ReservationEntity` (mismo paquete, visibilidad de paquete).
+  - `OutboxAdapterTest` (L33): mockea `OutboxMessageJpaRepository` (test unitario del adaptador, no de integración).
+  - **Excepción vigente y autorizada (H4)**: `ReservationStatusAuditImmutabilityTest` (L20) — `JdbcTemplate` solo para `UPDATE`/`DELETE` sobre `reservation_status_audit` (objeto bajo prueba: el trigger de V1; ver detalle en la sección 4.7).
 
 ---
 
