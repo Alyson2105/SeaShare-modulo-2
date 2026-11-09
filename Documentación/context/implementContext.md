@@ -189,6 +189,47 @@ Ejecutado en cuatro tareas con un commit por tarea (ver historial, sección 7).
 - Pruebas: `CorrelationIdFilterTest` (2: respeta el id entrante, genera UUID) y `RabbitEventPublisherAdapterTest` (3: headers + propagación desde MDC, sin MDC no hay header, nack → `EventPublishException`).
 - Fuera de alcance de T-22 (siguen pendientes): métricas, health checks y la regla ArchUnit "sin dinero".
 
+### 4.7 Núcleo de estados CU-08 — Hito H4 (2026-11-09)
+
+Rama `feature/h4-nucleoDom` (nombre distinto al del enunciado, `feature/h4-nucleo-estados`; creada desde develop con H1+H2 integrados, decisión del usuario). Cinco commits, uno por tarea, más el commit de docs. Relay de H2 **existía** al empezar: T-08 solo encola `M1_HTTP` y el relay ya lo despacha al puerto `FleetStatusNotificationPort` (adaptador fake; el cliente HTTP real queda pendiente, D-01).
+
+**Commits**: `ad015a1` T-06, `5c3482e` T-09, `9f7235c` T-10, `f7de0bd` T-07, `2ea01bb` T-08, más este commit de docs.
+
+**T-06 — Contrato completo de CU-08**
+- `ChangeReservationStatusCommand` ampliado con `actorId`, `expectedVersion`, `mechanicalFailure`, `anticipationMinutes`, `completionNotes`, `paymentReference`; conserva el constructor compacto de 5 args (TTL y tests existentes siguen compilando).
+- Nuevo `ChangeReservationStatusResult` (`reservationId`, `status`, `cancellationSubtype`, `statusChangedAt`, `ttlExpiresAt`, `version`, `eventsEnqueued`); `ChangeReservationStatusUseCase.execute` ahora lo retorna (los llamadores que lo ignoran no cambian).
+- Validaciones nuevas: `actor_id` obligatorio si actor ≠ SYSTEM (`INVALID_PARAMETERS`); `expected_version` distinto → `VERSION_CONFLICT`; subtipo obligatorio solo con `CANCELLED` y prohibido fuera; cancelación activa solo desde `RESERVED` con mensaje explicativo (spec L156-L159); `anticipation_minutes` obligatorio al cancelar RENTER y `mechanical_failure` al cancelar OWNER; `completion_notes` solo `COMPLETED` y `payment_reference` solo `RESERVED`; guarda de TTL en `RESERVED` con corte exacto (`now >= ttl` → `RESERVATION_EXPIRED`, plan L60/L213).
+- `StatusChangedEvent` gana `actor`, `anticipationMinutes`, `completionNotes` (datos para el payload de T-12; **el payload hacia M3 no cambió**).
+
+**T-09 — Persistencia + V4**
+- Migración única `V4__status_changed_at_and_audit_tracking.sql`: `reservation.status_changed_at TIMESTAMPTZ` (backfill `created_at` → NOT NULL); `reservation_status_audit.actor_id UUID` y `reservation_status_audit.event_ids TEXT` (JSON array). Columnas de T-09 y T-10 en la misma V4; no hizo falta nada más (V1 ya tenía `completion_notes`, `payment_reference`, `payment_confirmed_at`, `actual_departure_at/arrival_at`, `m1_blocked`) → sin V5.
+- `Reservation` (dominio) + `ReservationEntity` + `ReservationMapper`: `completionNotes`, `paymentReference`, `paymentConfirmedAt`, `statusChangedAt`, `m1Blocked` y round-trip de `actualDepartureAt/arrivalAt`. `applyChanges` solo escribe campos no nulos (no borra columnas existentes).
+- Servicio: `RESERVED` fija `paymentConfirmedAt` y `paymentReference` si viene; `COMPLETED` fija `completionNotes`; toda transición fija `statusChangedAt`. Ningún importe se recalcula.
+- **Horas reales**: el spec de CU-08 **no** dice que CU-08 las registre (los escenarios 4 y 5 solo piden cambio de estado y novedades; no hay mención de `actual_*`); se aplicó el caso 2 acordado: solo soporte de persistencia (entidad + mapper, columnas de V1), cubierto con test de mapper. Quedan pendientes para T-17c (CU-06, `checkin_event.actual_time`, V2 L52) y T-17d (CU-07, `checkout_event.actual_time`, V2 L60), que las recibirán del Propietario.
+
+**T-10 — Auditoría completa**
+- `StatusAuditEntry` + `actorId` + `eventIds`; `StatusAuditAdapter` serializa `event_ids` como JSON array; el servicio genera los `event_id` **antes** de auditar y reutiliza esos mismos ids en el outbox (misma transacción, FR-011).
+- `CreateReservationService` (cambio mínimo autorizado): inyecta `StatusAuditPort` y registra la creación (`null → INITIATED`, actor `RENTER`, `actor_id` = renter, `event_ids = [reservation.info.provided]`). **No** se refactorizó CU-08 para la creación (eso es T-24).
+- **Excepción documentada a la regla "sin JdbcTemplate en tests"** (autorizada por el usuario): nueva clase `ReservationStatusAuditImmutabilityTest` (`src/test/.../reservas/integration/`). El objeto bajo prueba es el trigger `trg_status_audit_immutable` de V1 (L80-L89) y no existe camino público para mutar la auditoría, por diseño. JdbcTemplate se usa **solo** para intentar `UPDATE` y `DELETE` sobre `reservation_status_audit`, cada intento en su propia transacción (sin `@Transactional` en la clase, porque en PostgreSQL el error del trigger aborta la transacción en curso); ambos fallan con `DataAccessException` y la integridad se verifica con un `UPDATE … WHERE` que exige los valores originales. Los datos se preparan solo por vías públicas (`CreateReservationUseCase` + `ChangeReservationStatusUseCase`). No se añadieron métodos a `StatusAuditPort` ni se abrió visibilidad de entidades/repos. ArchUnit sigue en verde.
+- Efecto lateral: las reservas creadas ya no se pueden borrar (FK a `reservation_status_audit` + trigger inmutable). Dos tests existentes dejaron de borrar reservas en su limpieza (`CreateReservationValidationTest.tearDown`, `CreateReservationOutboxIntegrationTest.cleanUp`; siguen borrando outbox y claves de idempotencia). El registro de esa deuda queda aquí.
+
+**T-07 — TTL desde PENDING_PAYMENT**
+- Conflicto L7 resuelto con el spec de CU-08 (escenario 7, L80-L83: "Iniciada **o** Pendiente de Pago … Iniciada → Expirada y Pendiente de Pago → Expirada"): expiran **ambas**. JPQL ahora `status IN ('INITIATED','PENDING_PAYMENT')` con `ttl_expires_at <= now` (corte exacto); método renombrado `findExpiredBefore` en puerto, adaptador y servicio; motivo de expiración actualizado.
+- Tests con reloj fijo: `expiresPendingPaymentPastTtl` (en `now` exacto expira, sin outbox), `pendingPaymentBeforeTtlIsNotExpired` (1 s antes no).
+- **Sin cambios**: intervalo del job (30 s en `TtlExpiryJob` vs 5 s + `FOR UPDATE SKIP LOCKED` del plan, Anexo B L21) y ausencia de ShedLock (T-05 pendiente).
+
+**T-08 — Matriz de notificaciones**
+- Nuevo `application/service/ModuleNotificationMatrix` (puro): decide M3 (CU-14 FR-001: `PENDING_PAYMENT`, `RESERVED`, `IN_NAVIGATION`, `COMPLETED`, `CANCELLED`; no `INITIATED`/`EXPIRED`/`PAYMENT_FAILED` — D-03) y M1 según **CU-22 FR-002** (fuente de verdad): `RESERVED→RESERVED`, `IN_NAVIGATION`, `COMPLETED→MAINTENANCE_CLEANING`, `CANCELLED` condicional a `m1_blocked` → `AVAILABLE` o `MAINTENANCE_CLEANING` si `mechanical_failure`; nunca `INITIATED`/`PENDING_PAYMENT`/`EXPIRED`/`PAYMENT_FAILED`.
+- Nuevos `OperationalStatusEvent` (nombre del spec CU-22 L143) y enum `OperationalStatus` (`AVAILABLE`, `RESERVED`, `IN_NAVIGATION`, `MAINTENANCE_CLEANING`, consistencia-m2-m1 L73-L76); `OutboxPort`/`OutboxAdapter.enqueue(OperationalStatusEvent)` → destino `M1_HTTP`, sin exchange/routing key, payload de exactamente 4 campos (`vessel_id`, `operational_status`, `occurred_at`, `event_id`), sin montos ni estado crudo.
+- Guarda `m1_blocked` (plan L196): `Reservation.m1Blocked` en dominio/mapper; el servicio la pone en `true` al encolar `RESERVED` hacia M1; las liberaciones solo se encolan si estaba en `true` (SC-003).
+- **D-03**: `PENDING_PAYMENT` sigue publicándose a M3 (cubierto con test). **Reporte**: el payload hoy lleva `"PENDING_PAYMENT"` (nombre interno), no `"PENDING"`; la traducción es T-12 (Anexo B L28), no se tocó el payload. L214 no contradice D-03 (habla de `EXPIRED`/`PAYMENT_FAILED`, que ya no se encolan).
+
+**Pruebas y verificación**: baseline 115/0 (hubo que arrancar Docker Desktop y `docker compose up -d` para RabbitMQ de `CorrelationIdFilterTest`); verde tras cada tarea: 128/0 (T-06), 133/0 (T-09), 137/0 (T-10), 139/0 (T-07), **152/0 (T-08)**. Tests nuevos: escenarios 3-6 y 8 de CU-08, rechazo de cancelación desde `PENDING_PAYMENT`, `expected_version`, campos restringidos, guarda TTL (borde exacto), auditoría de creación, inmutabilidad del trigger, expiración desde `PENDING_PAYMENT`, matriz M1 y payload `M1_HTTP`.
+
+**Estado de CU-08 y CU-22 tras H4**: CU-08 completo como motor interno (comando, respuesta, validaciones, auditoría con `actor_id`/`event_ids`, outbox AMQP + `M1_HTTP`, TTL doble, guarda `m1_blocked`); sigue **sin** creación vía CU-08 (T-24) y sin endpoint (no aplica). CU-22 queda con matriz de notificación y encolado implementados; falta el cliente HTTP real de M1 (adaptador `FakeFleetStatusNotificationAdapter` sigue por defecto, D-01).
+
+**Pendientes tras H4**: T-24 (creación vía CU-08 + `Location`), T-12 (payload CU-14: `PENDING` vs `PENDING_PAYMENT`, `actor`/anticipación/novedades — `StatusChangedEvent` ya los transporta), adaptador HTTP real de M1, T-05 (ShedLock), `MoneyArchitectureTest`. Mención `ApplyReservationTransitionUseCase` corregida en `CU-08/plan.md` L26 (y `TransitionCommand` → `ChangeReservationStatusCommand` L36); las menciones en `implementContext.md` L60/L230 y `plan-trabajo-backend.md` L92 quedan fuera de esta sección por propiedad de frentes.
+
 ---
 
 ## 5. Pruebas y verificación
