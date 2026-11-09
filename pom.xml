@@ -177,7 +177,6 @@
 					<configLocation>config/checkstyle/checkstyle.xml</configLocation>
 					<consoleOutput>true</consoleOutput>
 					<failOnViolation>false</failOnViolation>
-					<failOnWarning>false</failOnWarning>
 					<includeTestSourceDirectory>false</includeTestSourceDirectory>
 					<violationSeverity>warning</violationSeverity>
 				</configuration>
