@@ -6,6 +6,7 @@ import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.UUID;
@@ -99,5 +100,73 @@ class ReservationMapperTest { // pruebas unitarias para el mapeador de persisten
         assertThat(entity.getCurrency()).isEqualTo("COP");
         assertThat(entity.getId()).isNull();
         assertThat(entity.getVersion()).isNull();
+        assertThat(entity.getStatusChangedAt()).isEqualTo(reservation.getCreatedAt()); // V4 NOT NULL en creacion
+    }
+
+    @Test
+    void applyChangesPersistsCompletionNotes() { // notas de cierre persistidas al pasar a COMPLETED
+        ReservationEntity entity = new ReservationEntity(); // entidad existente
+        entity.setId(UUID.randomUUID()); // id de reserva
+        entity.setStatus(ReservationStatus.IN_NAVIGATION); // estado actual
+        entity.setStatusChangedAt(java.time.Instant.parse("2026-11-01T10:00:00Z")); // cambio previo
+
+        Reservation domain = Reservation.builder()
+                .id(entity.getId())
+                .status(ReservationStatus.COMPLETED)
+                .version(1L)
+                .build(); // dominio sin novedades
+        domain.setStatusChangedAt(java.time.Instant.parse("2026-11-01T18:30:00Z")); // hora del cambio
+        domain.setCompletionNotes("Timon desgastado, revisar"); // novedades del cierre (FR-009)
+
+        mapper.applyChanges(domain, entity); // aplica cambios
+
+        assertThat(entity.getStatus()).isEqualTo(ReservationStatus.COMPLETED); // estado actualizado
+        assertThat(entity.getCompletionNotes()).isEqualTo("Timon desgastado, revisar"); // notas persistidas
+        assertThat(entity.getStatusChangedAt()).isEqualTo(java.time.Instant.parse("2026-11-01T18:30:00Z")); // hora del cambio
+    }
+
+    @Test
+    void applyChangesPreservesNullCompletionNotesAndPaymentFields() { // campos no aportados no borran la columna
+        ReservationEntity entity = new ReservationEntity(); // entidad existente
+        entity.setId(UUID.randomUUID()); // id
+        entity.setStatus(ReservationStatus.RESERVED); // estado
+        entity.setPaymentReference("pg-original"); // referencia previa
+        entity.setCompletionNotes("Notas previas"); // notas previas
+
+        Reservation domain = Reservation.builder()
+                .id(entity.getId())
+                .status(ReservationStatus.CANCELLED)
+                .cancellationSubtype(CancellationSubtype.FLEXIBLE)
+                .version(2L)
+                .build(); // dominio sin esos campos (null)
+
+        mapper.applyChanges(domain, entity); // aplica cambios
+
+        assertThat(entity.getPaymentReference()).isEqualTo("pg-original"); // referencia intacta
+        assertThat(entity.getCompletionNotes()).isEqualTo("Notas previas"); // notas intactas
+    }
+
+    @Test
+    void toDomainAndApplyChangesRoundTripRealHours() { // horas reales: lectura y escritura de columnas V1 (T-09)
+        Instant departure = Instant.parse("2026-11-15T09:05:00-05:00"); // hora real de zarpe
+        Instant arrival = Instant.parse("2026-11-18T18:35:00-05:00"); // hora real de desembarque
+        ReservationEntity source = new ReservationEntity(); // entidad origen
+        source.setId(UUID.randomUUID()); // id
+        source.setStatus(ReservationStatus.IN_NAVIGATION); // estado
+        source.setActualDepartureAt(departure); // columna actual_departure_at (V1)
+        source.setActualArrivalAt(arrival); // columna actual_arrival_at (V1)
+
+        Reservation domain = mapper.toDomain(source); // lectura hacia dominio
+
+        assertThat(domain.getActualDepartureAt()).isEqualTo(departure); // leida
+        assertThat(domain.getActualArrivalAt()).isEqualTo(arrival); // leida
+
+        ReservationEntity target = new ReservationEntity(); // entidad destino
+        target.setId(UUID.randomUUID()); // id distinto
+        target.setStatus(ReservationStatus.INITIATED); // estado base
+        mapper.applyChanges(domain, target); // escritura desde dominio
+
+        assertThat(target.getActualDepartureAt()).isEqualTo(departure); // persistida
+        assertThat(target.getActualArrivalAt()).isEqualTo(arrival); // persistida
     }
 }

@@ -11,7 +11,7 @@ class ReservationMapper { // mapeador entre entidad de persistencia y modelo de 
         if (entity == null) { // valida si la entidad es nula
             return null; // retorna nulo
         }
-        return Reservation.builder()
+        Reservation domain = Reservation.builder()
                 .id(entity.getId())
                 .renterId(entity.getRenterId())
                 .ownerId(entity.getOwnerId())
@@ -32,6 +32,13 @@ class ReservationMapper { // mapeador entre entidad de persistencia y modelo de 
                 .cancellationSubtype(entity.getCancellationSubtype())
                 .version(entity.getVersion())
                 .build();
+        domain.setCompletionNotes(entity.getCompletionNotes()); // mapea notas de cierre
+        domain.setPaymentReference(entity.getPaymentReference()); // mapea referencia de pago
+        domain.setPaymentConfirmedAt(entity.getPaymentConfirmedAt()); // mapea confirmacion de pago
+        domain.setStatusChangedAt(entity.getStatusChangedAt()); // mapea hora del cambio de estado
+        domain.setActualDepartureAt(entity.getActualDepartureAt()); // mapea hora real de zarpe (solo persistencia)
+        domain.setActualArrivalAt(entity.getActualArrivalAt()); // mapea hora real de desembarque (solo persistencia)
+        return domain; // retorna agregado completo
     }
 
     public ReservationEntity toNewEntity(Reservation reservation, String reservationCode) { // crea nueva entidad para persistencia
@@ -53,12 +60,31 @@ class ReservationMapper { // mapeador entre entidad de persistencia y modelo de 
         entity.setTtlExpiresAt(reservation.getTtlExpiresAt()); // asigna expiracion de ttl
         entity.setM1Blocked(false); // indica que no bloquea en modulo 1
         entity.setCreatedAt(reservation.getCreatedAt()); // asigna fecha de creacion provista por reloj
+        entity.setStatusChangedAt(reservation.getCreatedAt()); // la creacion es el primer cambio de estado (V4 NOT NULL)
         entity.setHarborTimezone(reservation.getHarborTimezone()); // asigna zona horaria del puerto
         return entity;
     }
 
-    public void applyChanges(Reservation domain, ReservationEntity entity) { // aplica unicamente cambios de estado a la entidad
-        entity.setStatus(domain.getStatus()); // actualiza solo el estado
-        entity.setCancellationSubtype(domain.getCancellationSubtype()); // actualiza solo el subtipo de cancelacion
+    public void applyChanges(Reservation domain, ReservationEntity entity) { // aplica cambios de estado y campos de CU-08 a la entidad
+        entity.setStatus(domain.getStatus()); // actualiza el estado
+        entity.setCancellationSubtype(domain.getCancellationSubtype()); // actualiza el subtipo de cancelacion
+        if (domain.getStatusChangedAt() != null) { // hora del cambio siempre viene del servicio
+            entity.setStatusChangedAt(domain.getStatusChangedAt()); // hora exacta del cambio (V4)
+        }
+        if (domain.getCompletionNotes() != null) { // solo si el dominio aporto novedades
+            entity.setCompletionNotes(domain.getCompletionNotes()); // notas de cierre en COMPLETED
+        }
+        if (domain.getPaymentReference() != null) { // solo si el dominio aporto referencia
+            entity.setPaymentReference(domain.getPaymentReference()); // referencia del cobro en RESERVED
+        }
+        if (domain.getPaymentConfirmedAt() != null) { // solo si el dominio aporto confirmacion
+            entity.setPaymentConfirmedAt(domain.getPaymentConfirmedAt()); // hora de confirmacion del pago
+        }
+        if (domain.getActualDepartureAt() != null) { // round-trip de hora real de zarpe (la fija CU-06)
+            entity.setActualDepartureAt(domain.getActualDepartureAt()); // persiste salida real
+        }
+        if (domain.getActualArrivalAt() != null) { // round-trip de hora real de desembarque (la fija CU-07)
+            entity.setActualArrivalAt(domain.getActualArrivalAt()); // persiste llegada real
+        }
     }
 }

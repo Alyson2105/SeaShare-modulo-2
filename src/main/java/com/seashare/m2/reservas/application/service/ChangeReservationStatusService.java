@@ -71,6 +71,7 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
         validateCommand(reservation, previousStatus, command, changedAt); // valida actor, subtipo, campos condicionales, version y ttl
 
         reservation.changeStatus(command.targetStatus(), command.subtype(), machine); // aplica transicion de estado en el dominio
+        applyCommandFields(reservation, command, changedAt); // fija campos de CU-08 persistidos (T-09)
         Reservation saved = repository.save(reservation); // guarda cambios y retorna la version actualizada
 
         statusAuditPort.record(new StatusAuditEntry( // registra auditoria inmutable
@@ -132,6 +133,19 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
             throw new InvalidTransitionException(from, to,
                     "Solo las reservas en estado RESERVED admiten cancelacion activa; desde " + from
                             + " la reserva debe liberarse pasivamente por el TTL"); // explica el rechazo
+        }
+    }
+
+    private void applyCommandFields(Reservation reservation, ChangeReservationStatusCommand command, Instant changedAt) { // persiste campos de CU-08
+        reservation.setStatusChangedAt(changedAt); // hora exacta del cambio en toda transicion
+        if (command.targetStatus() == ReservationStatus.RESERVED) { // confirmacion de pago
+            reservation.setPaymentConfirmedAt(changedAt); // guarda la hora de confirmacion
+            if (command.paymentReference() != null) { // referencia opcional
+                reservation.setPaymentReference(command.paymentReference()); // persiste la referencia del cobro
+            }
+        }
+        if (command.targetStatus() == ReservationStatus.COMPLETED && command.completionNotes() != null) { // cierre con novedades
+            reservation.setCompletionNotes(command.completionNotes()); // persiste el texto de novedades (FR-009)
         }
     }
 

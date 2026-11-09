@@ -365,4 +365,36 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
         assertThat(result.eventsEnqueued()).isEmpty();
         verify(outboxPort, never()).enqueue(any(StatusChangedEvent.class));
     }
+
+    @Test
+    void persistsPaymentReferenceAndConfirmationOnReserved() { // T-09: referencia y confirmacion de pago persistidas
+        Reservation created = createReservation();
+        changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
+
+        ChangeReservationStatusResult result = changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.RESERVED, null, ActorType.SYSTEM, "Pago confirmado",
+                null, null, null, null, null, "pg-7777"));
+
+        Reservation updated = reservationRepositoryPort.findById(created.getId()).orElseThrow();
+        assertThat(updated.getPaymentReference()).isEqualTo("pg-7777"); // payment_reference persistida
+        assertThat(updated.getPaymentConfirmedAt()).isEqualTo(result.statusChangedAt()); // pago confirmado a la hora del cambio
+        assertThat(updated.getStatusChangedAt()).isEqualTo(result.statusChangedAt()); // status_changed_at (V4) persistida
+    }
+
+    @Test
+    void persistsCompletionNotesOnCompleted() { // T-09: notas de cierre persistidas por puertos
+        Reservation created = createReservation();
+        changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
+        changeStatus(created, ReservationStatus.RESERVED, null, ActorType.SYSTEM);
+        changeStatus(created, ReservationStatus.IN_NAVIGATION, null, ActorType.OWNER);
+
+        changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.COMPLETED, null, ActorType.OWNER, "Check-out",
+                UUID.randomUUID(), null, null, null, "Sin novedades de desembarque", null));
+
+        Reservation updated = reservationRepositoryPort.findById(created.getId()).orElseThrow();
+        assertThat(updated.getCompletionNotes()).isEqualTo("Sin novedades de desembarque"); // notas persistidas
+        assertThat(updated.getPaymentReference()).isNull(); // nada tocado en payment_reference
+        assertThat(updated.getActualDepartureAt()).isNull(); // horas reales fuera del alcance de CU-08 (T-17c/T-17d)
+    }
 }
