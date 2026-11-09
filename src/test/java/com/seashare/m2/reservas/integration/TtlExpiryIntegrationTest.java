@@ -198,4 +198,41 @@ class TtlExpiryIntegrationTest { // pruebas de integracion del scheduler de TTL 
         assertThat(result.status()).isEqualTo(ReservationStatus.RESERVED);
         assertThat(result.eventsEnqueued()).containsExactly("AMQP");
     }
+
+    @Test
+    void expiresPendingPaymentPastTtl() { // T-07: PENDING_PAYMENT vencida pasa a EXPIRED en el corte exacto
+        ReservationView reserva = crearReserva();
+        changeStatusUseCase.execute(new ChangeReservationStatusCommand(
+                reserva.reservationId(), ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER, "Pago iniciado",
+                UUID.randomUUID(), null, null, null, null, null));
+        Mockito.clearInvocations(statusAuditPort, outboxPort);
+
+        when(clockPort.now()).thenReturn(BASE_TIME.plus(TTL_15_MIN)); // justo en now: ttl <= now la recupera
+
+        int procesadas = expireReservationsUseCase.execute();
+
+        assertThat(procesadas).isGreaterThanOrEqualTo(1);
+        Reservation actualizada = reservationRepositoryPort.findById(reserva.reservationId()).orElseThrow();
+        assertThat(actualizada.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
+        verify(statusAuditPort).record(org.mockito.ArgumentMatchers.argThat(entry ->
+                reserva.reservationId().equals(entry.reservationId())
+                        && entry.fromStatus() == ReservationStatus.PENDING_PAYMENT
+                        && entry.toStatus() == ReservationStatus.EXPIRED));
+        verify(outboxPort, never()).enqueue(any(StatusChangedEvent.class)); // EXPIRED no genera evento (T-07 aceptacion: sin outbox)
+    }
+
+    @Test
+    void pendingPaymentBeforeTtlIsNotExpired() { // T-07: 1 segundo antes del corte NO expira
+        ReservationView reserva = crearReserva();
+        changeStatusUseCase.execute(new ChangeReservationStatusCommand(
+                reserva.reservationId(), ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER, "Pago iniciado",
+                UUID.randomUUID(), null, null, null, null, null));
+
+        when(clockPort.now()).thenReturn(BASE_TIME.plus(TTL_15_MIN).minusSeconds(1)); // 1 s antes del corte
+
+        expireReservationsUseCase.execute();
+
+        Reservation vigente = reservationRepositoryPort.findById(reserva.reservationId()).orElseThrow();
+        assertThat(vigente.getStatus()).isEqualTo(ReservationStatus.PENDING_PAYMENT);
+    }
 }

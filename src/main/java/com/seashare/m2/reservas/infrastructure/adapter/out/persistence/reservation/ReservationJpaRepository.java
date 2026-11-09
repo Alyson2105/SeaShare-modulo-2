@@ -33,7 +33,7 @@ interface ReservationJpaRepository extends JpaRepository<ReservationEntity, UUID
 
     boolean existsByIdAndOwnerId(UUID id, UUID ownerId); // verifica pertenencia a propietario
 
-    @Query("select r.id from ReservationEntity r where r.status = 'INITIATED' and r.ttlExpiresAt <= :now order by r.ttlExpiresAt asc")
-    List<UUID> findIdsByStatusInitiatedAndTtlExpiredBefore(@Param("now") Instant now, Pageable pageable); // busca IDs vencidos usando el índice ix_reservation_ttl
+    @Query("select r.id from ReservationEntity r where r.status in ('INITIATED', 'PENDING_PAYMENT') and r.ttlExpiresAt <= :now order by r.ttlExpiresAt asc")
+    List<UUID> findExpiredBefore(@Param("now") Instant now, Pageable pageable); // busca IDs vencidos de ambos estados usando ix_reservation_ttl
 }
 

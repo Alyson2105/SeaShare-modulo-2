@@ -23,7 +23,7 @@ public class ExpireReservationsService implements ExpireReservationsUseCase { //
 
     private static final Logger log = LoggerFactory.getLogger(ExpireReservationsService.class); // logger del servicio de expiracion
 
-    private static final String EXPIRY_REASON = "TTL expirado: reserva en INITIATED no completo el flujo de pago en el tiempo disponible"; // motivo estandar de expiracion por TTL
+    private static final String EXPIRY_REASON = "TTL expirado: reserva en INITIATED o PENDING_PAYMENT no completo el flujo de pago en el tiempo disponible"; // motivo estandar de expiracion por TTL
 
     private final ReservationRepositoryPort repository; // puerto de lectura de IDs vencidos
     private final ChangeReservationStatusUseCase changeStatus; // unico escritor de estado de reservas (CU-08, transaccional)
@@ -41,9 +41,9 @@ public class ExpireReservationsService implements ExpireReservationsUseCase { //
     }
 
     @Override
-    public int execute() { // expira en lote las reservas en INITIATED cuyo TTL ya vencio
+    public int execute() { // expira en lote las reservas en INITIATED o PENDING_PAYMENT cuyo TTL ya vencio
         Instant now = clockPort.now(); // captura el instante actual una sola vez por ejecucion; nunca Instant.now()
-        List<UUID> expiredIds = repository.findInitiatedExpiredBefore(now, batchSize); // recupera IDs vencidos respetando el limite de lote
+        List<UUID> expiredIds = repository.findExpiredBefore(now, batchSize); // recupera IDs vencidos respetando el limite de lote
 
         int processed = 0; // contador de reservas procesadas correctamente
         for (UUID id : expiredIds) { // cada reserva se procesa en su propia transaccion provista por changeStatus
@@ -58,7 +58,7 @@ public class ExpireReservationsService implements ExpireReservationsUseCase { //
                 processed++; // incremento por expiracion exitosa
             } catch (VersionConflictException e) { // conflicto de version: otro proceso ya modifico la reserva (caso normal)
                 log.debug("TTL scheduler: reserva {} omitida por conflicto de version: {}", id, e.getMessage());
-            } catch (InvalidTransitionException e) { // transicion invalida: la reserva ya no esta en INITIATED (caso normal)
+            } catch (InvalidTransitionException e) { // transicion invalida: la reserva ya no esta en INITIATED ni PENDING_PAYMENT (caso normal)
                 log.debug("TTL scheduler: reserva {} omitida por transicion invalida: {}", id, e.getMessage());
             } catch (Exception e) { // cualquier otra excepcion inesperada
                 log.error("TTL scheduler: error inesperado al expirar reserva {}: {}", id, e.getMessage(), e);
