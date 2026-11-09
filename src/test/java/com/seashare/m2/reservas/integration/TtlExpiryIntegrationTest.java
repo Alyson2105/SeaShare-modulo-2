@@ -1,8 +1,12 @@
 package com.seashare.m2.reservas.integration;
 
+import com.seashare.m2.reservas.application.dto.ChangeReservationStatusCommand;
+import com.seashare.m2.reservas.application.dto.ChangeReservationStatusResult;
 import com.seashare.m2.reservas.application.dto.CreateReservationCommand;
 import com.seashare.m2.reservas.application.dto.FleetInfo;
 import com.seashare.m2.reservas.application.dto.ReservationView;
+import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
+import com.seashare.m2.reservas.application.port.in.ChangeReservationStatusUseCase;
 import com.seashare.m2.reservas.application.port.in.CreateReservationUseCase;
 import com.seashare.m2.reservas.application.port.in.ExpireReservationsUseCase;
 import com.seashare.m2.reservas.application.port.out.FleetInfoPort;
@@ -10,6 +14,8 @@ import com.seashare.m2.reservas.application.port.out.FleetOperationalStatusPort;
 import com.seashare.m2.reservas.application.port.out.OutboxPort;
 import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
 import com.seashare.m2.reservas.application.port.out.StatusAuditPort;
+import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
+import com.seashare.m2.reservas.domain.model.ActorType;
 import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import com.seashare.m2.shared.PostgresTestContainers;
@@ -32,8 +38,10 @@ import java.time.LocalTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -47,6 +55,9 @@ class TtlExpiryIntegrationTest { // pruebas de integracion del scheduler de TTL 
 
     @Autowired
     private ExpireReservationsUseCase expireReservationsUseCase; // caso de uso bajo prueba
+
+    @Autowired
+    private ChangeReservationStatusUseCase changeStatusUseCase; // CU-08 para llevar la reserva a estados de prueba
 
     @Autowired
     private ReservationRepositoryPort reservationRepositoryPort; // puerto de lectura para verificar el estado final
@@ -148,5 +159,80 @@ class TtlExpiryIntegrationTest { // pruebas de integracion del scheduler de TTL 
 
         Reservation intacta = reservationRepositoryPort.findById(reserva.reservationId()).orElseThrow();
         assertThat(intacta.getStatus()).isEqualTo(ReservationStatus.INITIATED);
+    }
+
+    @Test
+    void reservedAtExactTtlCutIsRejected() { // guarda CU-08: en el segundo exacto del corte, RESERVED rechazado
+        ReservationView reserva = crearReserva();
+        changeStatusUseCase.execute(new ChangeReservationStatusCommand(
+                reserva.reservationId(), ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER, "Pago iniciado",
+                UUID.randomUUID(), null, null, null, null, null));
+        Mockito.clearInvocations(outboxPort);
+
+        when(clockPort.now()).thenReturn(BASE_TIME.plus(TTL_15_MIN)); // corte exacto: now == ttl_expires_at
+
+        assertThatThrownBy(() -> changeStatusUseCase.execute(new ChangeReservationStatusCommand(
+                reserva.reservationId(), ReservationStatus.RESERVED, null, ActorType.SYSTEM, "Pago confirmado",
+                null, null, null, null, null, "pg-999")))
+                .isInstanceOf(ReservationRuleException.class)
+                .hasFieldOrPropertyWithValue("code", "RESERVATION_EXPIRED");
+
+        Reservation sinCambiar = reservationRepositoryPort.findById(reserva.reservationId()).orElseThrow();
+        assertThat(sinCambiar.getStatus()).isEqualTo(ReservationStatus.PENDING_PAYMENT);
+        verify(outboxPort, never()).enqueue(any(StatusChangedEvent.class));
+    }
+
+    @Test
+    void reservedOneSecondBeforeTtlCutIsAccepted() { // 1 segundo antes del corte, RESERVED valido
+        ReservationView reserva = crearReserva();
+        changeStatusUseCase.execute(new ChangeReservationStatusCommand(
+                reserva.reservationId(), ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER, "Pago iniciado",
+                UUID.randomUUID(), null, null, null, null, null));
+
+        when(clockPort.now()).thenReturn(BASE_TIME.plus(TTL_15_MIN).minusSeconds(1)); // 1 s antes del corte
+
+        ChangeReservationStatusResult result = changeStatusUseCase.execute(new ChangeReservationStatusCommand(
+                reserva.reservationId(), ReservationStatus.RESERVED, null, ActorType.SYSTEM, "Pago confirmado",
+                null, null, null, null, null, "pg-1000"));
+
+        assertThat(result.status()).isEqualTo(ReservationStatus.RESERVED);
+        assertThat(result.eventsEnqueued()).containsExactly("AMQP", "M1_HTTP"); // M3 + bloqueo M1
+    }
+
+    @Test
+    void expiresPendingPaymentPastTtl() { // T-07: PENDING_PAYMENT vencida pasa a EXPIRED en el corte exacto
+        ReservationView reserva = crearReserva();
+        changeStatusUseCase.execute(new ChangeReservationStatusCommand(
+                reserva.reservationId(), ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER, "Pago iniciado",
+                UUID.randomUUID(), null, null, null, null, null));
+        Mockito.clearInvocations(statusAuditPort, outboxPort);
+
+        when(clockPort.now()).thenReturn(BASE_TIME.plus(TTL_15_MIN)); // justo en now: ttl <= now la recupera
+
+        int procesadas = expireReservationsUseCase.execute();
+
+        assertThat(procesadas).isGreaterThanOrEqualTo(1);
+        Reservation actualizada = reservationRepositoryPort.findById(reserva.reservationId()).orElseThrow();
+        assertThat(actualizada.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
+        verify(statusAuditPort).record(org.mockito.ArgumentMatchers.argThat(entry ->
+                reserva.reservationId().equals(entry.reservationId())
+                        && entry.fromStatus() == ReservationStatus.PENDING_PAYMENT
+                        && entry.toStatus() == ReservationStatus.EXPIRED));
+        verify(outboxPort, never()).enqueue(any(StatusChangedEvent.class)); // EXPIRED no genera evento (T-07 aceptacion: sin outbox)
+    }
+
+    @Test
+    void pendingPaymentBeforeTtlIsNotExpired() { // T-07: 1 segundo antes del corte NO expira
+        ReservationView reserva = crearReserva();
+        changeStatusUseCase.execute(new ChangeReservationStatusCommand(
+                reserva.reservationId(), ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER, "Pago iniciado",
+                UUID.randomUUID(), null, null, null, null, null));
+
+        when(clockPort.now()).thenReturn(BASE_TIME.plus(TTL_15_MIN).minusSeconds(1)); // 1 s antes del corte
+
+        expireReservationsUseCase.execute();
+
+        Reservation vigente = reservationRepositoryPort.findById(reserva.reservationId()).orElseThrow();
+        assertThat(vigente.getStatus()).isEqualTo(ReservationStatus.PENDING_PAYMENT);
     }
 }

@@ -152,4 +152,37 @@ class OutboxAdapterTest { // pruebas unitarias del adaptador outbox y formato de
         assertThat(entity.getPublishedAt()).isEqualTo(publishedAt); // published_at marcado
         verify(repository).save(entity); // persiste el cambio
     }
+
+    @Test
+    void enqueuesOperationalStatusToM1HttpWithExactFourFields() throws Exception { // T-08: payload M1 del contrato CU-22
+        UUID eventId = UUID.randomUUID(); // id unico por transicion
+        UUID vesselId = UUID.randomUUID(); // embarcacion
+        Instant occurredAt = Instant.parse("2026-11-09T12:05:00Z"); // hora de la transicion
+
+        com.seashare.m2.reservas.application.dto.OperationalStatusEvent event =
+                new com.seashare.m2.reservas.application.dto.OperationalStatusEvent(
+                        eventId, vesselId, com.seashare.m2.reservas.domain.model.OperationalStatus.RESERVED, occurredAt);
+
+        adapter.enqueue(event); // ejecuta encolado
+
+        ArgumentCaptor<OutboxMessageEntity> captor = ArgumentCaptor.forClass(OutboxMessageEntity.class);
+        verify(repository).save(captor.capture());
+        OutboxMessageEntity saved = captor.getValue();
+
+        assertThat(saved.getDestination()).isEqualTo("M1_HTTP"); // destino http a M1 (D-01)
+        assertThat(saved.getExchange()).isNull(); // sin exchange
+        assertThat(saved.getRoutingKey()).isNull(); // sin routing key
+        assertThat(saved.getNextAttemptAt()).isEqualTo(occurredAt); // primer intento en la hora del evento
+
+        JsonNode json = objectMapper.readTree(saved.getPayload()); // parsea payload
+        assertThat(json.propertyNames()).containsExactlyInAnyOrder( // exactamente los 4 campos del contrato
+                "vessel_id", "operational_status", "occurred_at", "event_id"
+        );
+        assertThat(json.get("vessel_id").asText()).isEqualTo(vesselId.toString()); // embarcacion
+        assertThat(json.get("operational_status").asText()).isEqualTo("RESERVED"); // estado operativo ya mapeado
+        assertThat(json.get("occurred_at").asText()).isEqualTo("2026-11-09T12:05:00Z"); // iso-8601
+        assertThat(json.get("event_id").asText()).isEqualTo(eventId.toString()); // deduplicacion
+        assertThat(json.has("estimated_total")).isFalse(); // sin montos (FR-007)
+        assertThat(json.has("status")).isFalse(); // sin estado crudo de reserva (SC-005)
+    }
 }

@@ -118,6 +118,9 @@ class ReservationEntity { // entidad jpa para la tabla reservation
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt; // marca temporal de ultima actualizacion
 
+    @Column(name = "status_changed_at", nullable = false)
+    private Instant statusChangedAt; // hora exacta del ultimo cambio de estado (V4)
+
     @Version
     @Column(name = "version", nullable = false)
     private Long version; // control de bloqueo optimista
@@ -358,6 +361,14 @@ class ReservationEntity { // entidad jpa para la tabla reservation
 
     public void setUpdatedAt(Instant updatedAt) { // asigna la fecha de actualizacion
         this.updatedAt = updatedAt; // establece updatedAt
+    }
+
+    public Instant getStatusChangedAt() { // obtiene hora del ultimo cambio de estado
+        return statusChangedAt; // retorna statusChangedAt
+    }
+
+    public void setStatusChangedAt(Instant statusChangedAt) { // asigna hora del ultimo cambio de estado
+        this.statusChangedAt = statusChangedAt; // establece statusChangedAt
     }
 
     public Long getVersion() { // obtiene la version

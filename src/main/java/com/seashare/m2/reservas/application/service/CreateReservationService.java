@@ -4,13 +4,16 @@ import com.seashare.m2.reservas.application.dto.CreateReservationCommand;
 import com.seashare.m2.reservas.application.dto.FleetInfo;
 import com.seashare.m2.reservas.application.dto.ReservationInfoProvidedEvent;
 import com.seashare.m2.reservas.application.dto.ReservationView;
+import com.seashare.m2.reservas.application.dto.StatusAuditEntry;
 import com.seashare.m2.reservas.application.port.in.CreateReservationUseCase;
 import com.seashare.m2.reservas.application.port.out.FleetInfoPort;
 import com.seashare.m2.reservas.application.port.out.FleetOperationalStatusPort;
 import com.seashare.m2.reservas.application.port.out.IdempotencyPort;
 import com.seashare.m2.reservas.application.port.out.OutboxPort;
 import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
+import com.seashare.m2.reservas.application.port.out.StatusAuditPort;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
+import com.seashare.m2.reservas.domain.model.ActorType;
 import com.seashare.m2.reservas.domain.model.NewReservation;
 import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
@@ -47,19 +50,22 @@ public class CreateReservationService implements CreateReservationUseCase { // s
     private final FleetOperationalStatusPort fleetOperationalStatusPort; // puerto para consultar disponibilidad operativa en modulo 1
     private final ReservationRepositoryPort reservationRepositoryPort; // puerto para verificacion de solapamiento y persistencia
     private final OutboxPort outboxPort; // puerto para encolar eventos en outbox
+    private final StatusAuditPort statusAuditPort; // T-10: auditoria de la creacion (fila null -> INITIATED)
 
     public CreateReservationService(ClockPort clockPort,
                                     IdempotencyPort idempotencyPort,
                                     FleetInfoPort fleetInfoPort,
                                     FleetOperationalStatusPort fleetOperationalStatusPort,
                                     ReservationRepositoryPort reservationRepositoryPort,
-                                    OutboxPort outboxPort) { // inyeccion de dependencias requeridas
+                                    OutboxPort outboxPort,
+                                    StatusAuditPort statusAuditPort) { // inyeccion de dependencias requeridas
         this.clockPort = clockPort; // asigna puerto de reloj
         this.idempotencyPort = idempotencyPort; // asigna puerto de idempotencia
         this.fleetInfoPort = fleetInfoPort; // asigna puerto de flota
         this.fleetOperationalStatusPort = fleetOperationalStatusPort; // asigna puerto de estado operativo
         this.reservationRepositoryPort = reservationRepositoryPort; // asigna puerto de creacion
         this.outboxPort = outboxPort; // asigna puerto outbox
+        this.statusAuditPort = statusAuditPort; // asigna puerto de auditoria
     }
 
     @Override
@@ -136,6 +142,18 @@ public class CreateReservationService implements CreateReservationUseCase { // s
                 fleetInfo.ownerId(), // propietario provisto por modulo 1
                 fleetInfo.maxCapacity(), // capacidad maxima provista por modulo 1
                 now // marca temporal del evento obtenida de clockPort
+        ));
+
+        statusAuditPort.record(new StatusAuditEntry( // T-10: la creacion es la primera fila del historial (CU-08 plan L198)
+                created.getId(), // id de la reserva
+                null, // sin estado anterior: es la entrada a la maquina
+                ReservationStatus.INITIATED, // estado inicial de toda reserva
+                null, // sin subtipo en la creacion
+                ActorType.RENTER, // el arrendatario inicia la reserva (plan matriz L67)
+                "Reserva creada por CU-02", // motivo de la fila de creacion
+                now, // misma hora que la creacion
+                command.renterId(), // actor_id = arrendatario titular
+                java.util.List.of(eventId) // evento de informacion encolado en esta transaccion
         ));
 
         idempotencyPort.complete(normalizedKey, IDEMPOTENCY_ENDPOINT, created.getId()); // asocia reserva a la clave reclamada

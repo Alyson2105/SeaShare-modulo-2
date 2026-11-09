@@ -23,7 +23,7 @@ Contratos relacionados: [plan de CU-14](../CU-14-recibir-estado-reserva/plan.md)
 
 ### Método HTTP y URL
 
-No aplica. Es un puerto interno (`ApplyReservationTransitionUseCase`); ningún cliente externo lo invoca por HTTP.
+No aplica. Es un puerto interno (`ChangeReservationStatusUseCase`); ningún cliente externo lo invoca por HTTP.
 
 ### Elementos de la Petición (Request)
 
@@ -33,7 +33,7 @@ No aplica. Es un puerto interno (`ApplyReservationTransitionUseCase`); ningún c
 
 **Path Parameters**: No tiene.
 
-**Comando (`TransitionCommand`)**:
+**Comando (`ChangeReservationStatusCommand`)**:
 
 ```json
 {
