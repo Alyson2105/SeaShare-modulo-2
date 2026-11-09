@@ -14,8 +14,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * {@code @ServiceConnection}, con prioridad sobre el datasource de
  * {@code application.yaml}.</p>
  *
- * <p>Los tests existentes NO usan esta base: siguen contra el PostgreSQL de
- * {@code docker-compose.yml}. Ver informe de T-21 sobre el coste de migrarlos.</p>
+ * <p>Todos los tests de integracion con contexto Spring usan esta base
+ * (migracion c6e8ff2); ninguno depende del PostgreSQL de docker-compose.
+ * Ver informe de T-21 sobre el coste de migrarlos.</p>
  */
 @TestConfiguration(proxyBeanMethods = false)
 public class PostgresTestContainers {

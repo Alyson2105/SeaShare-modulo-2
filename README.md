@@ -34,7 +34,7 @@ Servicios:
 | RabbitMQ AMQP | `localhost:5672` | `seashare` / `seashare` |
 | RabbitMQ panel web | http://localhost:15672 | `seashare` / `seashare` |
 
-Flyway gestiona el esquema (`V1`, `V2`, `V3`) y `spring.jpa.hibernate.ddl-auto: validate`
+Flyway gestiona el esquema (`V1` a `V4`) y `spring.jpa.hibernate.ddl-auto: validate`
 verifica que las entidades coincidan con la BD. **Nunca se editan migraciones ya aplicadas.**
 
 ## 3. Correr la aplicación

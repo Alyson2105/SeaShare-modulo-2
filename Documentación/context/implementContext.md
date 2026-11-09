@@ -16,16 +16,16 @@
   - Creación de reservas (`POST /api/v1/reservations`) con idempotencia y TTL de 15 minutos.
   - Motor interno de cambio de estado (`ChangeReservationStatusUseCase`), con matriz de transiciones, auditoría y escritura en outbox.
   - Consultas básicas de reservas (`GET /api/v1/reservations` y `GET /api/v1/reservations/{id}`).
-  - Job programado de expiración por TTL para reservas en `INITIATED`.
+  - Job programado de expiración por TTL para reservas en `INITIATED` y `PENDING_PAYMENT` (T-07, Hito H4).
   - Manejo global de errores `{ code, message }`, identidad temporal por headers, reloj inyectable y reglas base de ArchUnit.
 - **No implementado**:
   - Integración HTTP real con Módulo 1 y Módulo 3; solo existen adaptadores *fake* para flota (incluido el nuevo `FakeFleetStatusNotificationAdapter` de notificación a M1).
   - Consumidores AMQP de producción: la deduplicación por `event_id` solo tiene un consumidor de prueba en `src/test` (T-04); M3 es quien deduplica en producción (D-04).
   - ShedLock, Spring Security y Resilience4j. (springdoc/OpenAPI, Testcontainers, WireMock y Awaitility sí están desde el Hito H1; ver historial.)
   - Contexto `disputa` y contrato interno `shared/contracts`.
-  - Todos los CU salvo los avances parciales de CU-02, CU-08, CU-20 y CU-21.
+  - Todos los CU salvo los avances parciales de CU-02, CU-08, CU-20 y CU-21. **Hito H4 completado (2026-11-09)**: CU-08 quedó completo como motor interno (comando, respuesta, auditoría completa, TTL doble, matriz de notificaciones M3/M1); siguen pendientes de CU-08 solo la creación vía CU-08 (T-24) y el payload final de CU-14 (T-12).
 - **Hito H2 completado (2026-11-07)**: topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` y prueba de deduplicación (T-04) y filtro de correlation id HTTP→AMQP (T-22). Detalle en la sección 4.6.
-- La última ejecución registrada de la suite completa es del **2026-11-07 03:24** (`.\mvnw.cmd verify`): **115 pruebas, 0 fallos, 0 errores** (era de 84 pruebas la mañana del 2026-11-07 antes del Hito H2).
+- La última ejecución registrada de la suite completa es del **2026-11-09** (`.\mvnw.cmd test`, sin docker-compose levantado): **152 pruebas, 0 fallos, 0 errores** (era de 115 pruebas el 2026-11-07 tras el Hito H2; el incremento son los tests del Hito H4).
 
 ---
 
@@ -33,10 +33,10 @@
 
 | Fase | CUs / alcance | Estado | Evidencia y brecha principal |
 | :--- | :--- | :--- | :--- |
-| Fase 1 — Setup | Infraestructura base | **Parcial (Hito H1 completado)** | Existen `pom.xml` con Boot 4.1.2/Java 21, `M2Application`, `docker-compose.yml` y `.gitignore`. Añadidos en el Hito H1: `Dockerfile` multi-stage, `README.md`, perfiles `dev/test/prod`, springdoc-openapi 3.2.0 y Checkstyle (reporte sin fallar). Siguen faltando Resilience4j y `maven-failsafe-plugin`. |
-| Fase 2 — Foundational | Persistencia, errores, reloj, outbox, seguridad, mensajería, testing | **Parcial** | Implementados: errores globales, `ErrorCode`, Flyway V1–V3, `ClockPort`, repositorio de reservas, idempotencia de entrada, escritura en outbox, reglas base de ArchUnit, Testcontainers y WireMock, **topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` + deduplicación probada (T-04) y correlation id HTTP→AMQP (T-22)**. Faltan: seguridad, ShedLock, clientes HTTP salientes, métricas/health y reglas ArchUnit completas. |
+| Fase 1 — Setup | Infraestructura base | **Parcial (Hito H1 completado)** | Existen `pom.xml` con Boot 4.1.2/Java 21, `M2Application`, `docker-compose.yml` y `.gitignore`. Añadidos en el Hito H1: `Dockerfile` multi-stage, `README.md`, perfiles `dev/test/prod`, springdoc-openapi 3.2.0 y Checkstyle (reporte sin fallar). Verificado en vivo el 2026-11-09: `docker build` OK (imagen no-root uid 999), `GET /v3/api-docs` 200 con los 3 endpoints, arranque con `--spring.profiles.active=dev`. Siguen faltando Resilience4j y `maven-failsafe-plugin`. |
+| Fase 2 — Foundational | Persistencia, errores, reloj, outbox, seguridad, mensajería, testing | **Parcial** | Implementados: errores globales, `ErrorCode`, Flyway V1–V4 (V4 añadida en el Hito H4), `ClockPort`, repositorio de reservas, idempotencia de entrada, escritura en outbox, reglas base de ArchUnit, Testcontainers y WireMock, **topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` + deduplicación probada (T-04) y correlation id HTTP→AMQP (T-22)**. Faltan: seguridad, ShedLock, clientes HTTP salientes, métricas/health y reglas ArchUnit completas. |
 | Fase 3 — Adaptadores de lectura | CU-09, CU-10, CU-11, CU-12 | **No iniciada** | Solo existen los puertos `FleetInfoPort` y `FleetOperationalStatusPort` con adaptadores *fake*. No hay clientes reales ni CU-09/10/11/12. |
-| Fase 4 — Núcleo de dominio | CU-08 | **Parcial** | Existe el motor de transiciones, auditoría, outbox y TTL para `INITIATED`. Falta el contrato completo de CU-08, la expiración desde `PENDING_PAYMENT`, `expected_version`/`actor_id`, `events_enqueued`, la guarda `m1_blocked` y los destinos `AMQP` + `M1_HTTP`. |
+| Fase 4 — Núcleo de dominio | CU-08 | **Completada (Hito H4, 2026-11-09)** | Contrato completo de CU-08 (T-06): comando con `actor_id`/`expected_version`/`mechanical_failure`/`anticipation_minutes`/`completion_notes`/`payment_reference`, respuesta con `version` y `events_enqueued`. Persistencia y V4 (T-09): `status_changed_at` y campos de cierre/pago. Auditoría completa (T-10): creación + transiciones con `actor_id`/`event_ids` e inmutabilidad probada. TTL doble (T-07): `INITIATED` y `PENDING_PAYMENT`. Matriz M3/M1 con guarda `m1_blocked` y destinos `AMQP` + `M1_HTTP` (T-08). Detalle en la sección 4.7. Queda fuera de esta fase: creación vía CU-08 (T-24, Fase 7) y payload final de CU-14 (T-12, Fase 5). |
 | Fase 5 — Superficie Módulo 3 | CU-14, CU-15 | **No iniciada** | No hay consumidores, publicadores ni endpoint interno de consulta para Módulo 3. |
 | Fase 6 — Vistas de consulta | CU-19, CU-20, CU-21 | **Parcial** | CU-20 y CU-21 tienen endpoints básicos de listado y detalle. CU-19 no existe y los contratos de CU-20/21 están simplificados. |
 | Fase 7 — Embudo de conversión | CU-01, CU-02, CU-03, CU-13 | **Parcial** | Solo CU-02 tiene una implementación básica. CU-01, CU-03 y CU-13 no existen. |
@@ -57,13 +57,13 @@
 | CU-05 — Marcar inasistencia | **No implementado** | Sin endpoint ni validación de la ventana de 30 min. |
 | CU-06 — Marcar inicio de navegación | **No implementado** | Sin endpoint ni registro de check-in. |
 | CU-07 — Marcar fin de navegación | **No implementado** | Sin endpoint ni registro de check-out. |
-| CU-08 — Actualizar estado de reserva | **Parcial** | Motor interno con matriz de transiciones, auditoría inmutable, outbox y `@Version`. No implementa el contrato completo (`ApplyReservationTransitionUseCase`, `expected_version`, `actor_id`, `events_enqueued`), ni la notificación a M1 (`M1_HTTP`), ni la guarda `m1_blocked`, ni la expiración desde `PENDING_PAYMENT`. |
+| CU-08 — Actualizar estado de reserva | **Parcial (motor completo desde el Hito H4)** | Motor interno con matriz de transiciones, auditoría inmutable, outbox y `@Version`. Contrato completo (T-06): comando con `expected_version`, `actor_id`, `mechanical_failure`, `anticipation_minutes`, `completion_notes`, `payment_reference` y respuesta con `version` + `events_enqueued` (puerto `ChangeReservationStatusUseCase`). Auditoría de creación y de cada transición con `actor_id`/`event_ids` (T-10). TTL desde `INITIATED` y `PENDING_PAYMENT` (T-07). Notificación a M1 (`M1_HTTP`) con guarda `m1_blocked` y matriz M3/M1 (T-08). Pendientes: la creación de reservas aún no pasa por CU-08 (T-24) y el payload de los eventos hacia M3 (T-12). |
 | CU-09 — Proveer información de embarcación | **No implementado** | Solo puerto de salida y adaptador *fake*. |
 | CU-10 — Brindar información de estado operativo | **No implementado** | Solo puerto de salida y adaptador *fake*. |
 | CU-11 — Proveer información de cotización | **No implementado** | Sin cliente de Módulo 3 ni endpoint. |
 | CU-12 — Brindar cálculo total de la reserva | **No implementado** | Sin cliente de Módulo 3 ni endpoint. |
 | CU-13 — Confirmar pago | **No implementado** | Sin canal B activo ni canal A. |
-| CU-14 — Recibir estado de reserva | **Parcial** | El relay publica las filas `AMQP` con `Message-Id` y publisher confirm (T-03/T-04) hacia `finance.reservation-status.v1`. Falta el contrato de payload de T-12; el consumidor real es de M3. |
+| CU-14 — Recibir estado de reserva | **Parcial** | El relay publica las filas `AMQP` con `Message-Id` y publisher confirm (T-03/T-04) hacia `finance.reservation-status.v1`. Desde el Hito H4 el `StatusChangedEvent` transporta `actor`, `anticipation_minutes` y `completion_notes` listos para el payload. Falta el contrato de payload de T-12 (nombres `PENDING`/`CANCELLED_*`, `payment_token_ref`); el consumidor real es de M3. |
 | CU-15 — Solicitar información de la reserva | **No implementado** | Sin endpoint interno para Módulo 3. |
 | CU-16 — Generar disputa de garantía | **No implementado** | Solo tablas en Flyway; sin lógica ni API. |
 | CU-17 — Actualizar estado de disputa | **No implementado** | Solo tablas en Flyway; sin lógica ni API. |
@@ -71,7 +71,7 @@
 | CU-19 — Ver detalle de embarcación | **No implementado** | Sin endpoint ni integración con CU-09/CU-11. |
 | CU-20 — Ver mis reservas | **Parcial** | `GET /api/v1/reservations` con paginación (`page`, `limit`) y filtrado por rol `RENTER`/`OWNER`. Faltan el filtro `filter` y la estructura exacta del contrato (`pagination`, `applied_filter`, `status_badge`). |
 | CU-21 — Ver detalle de reserva | **Parcial** | `GET /api/v1/reservations/{id}` con validación de pertenencia. Faltan campos y estructura del contrato (`status_badge`, datos operativos completos). |
-| CU-22 — Recibir información de estado operativo | **Parcial** | El relay despacha el destino `M1_HTTP` al puerto `FleetStatusNotificationPort` con adaptador fake (loguea y responde OK); sin HTTP real. Falta la matriz de notificaciones de T-08 y el cliente HTTP real (D-01). |
+| CU-22 — Recibir información de estado operativo | **Parcial** | El relay despacha el destino `M1_HTTP` al puerto `FleetStatusNotificationPort` con adaptador fake (loguea y responde OK); sin HTTP real. Desde el Hito H4 la matriz de notificaciones (T-08) está implementada en `ModuleNotificationMatrix` siguiendo la tabla FR-002, con `OperationalStatusEvent` encolado a `M1_HTTP` y payload de 4 campos. Falta el cliente HTTP real (D-01). |
 
 ---
 
@@ -234,8 +234,8 @@ Rama `feature/h4-nucleoDom` (nombre distinto al del enunciado, `feature/h4-nucle
 
 ## 5. Pruebas y verificación
 
-- La suite contiene **115 métodos `@Test` distribuidos en 31 archivos** (eran 84 en 23 archivos antes del Hito H2; 75 en 18 el 2026-11-03).
-- La última ejecución completa registrada en `target/surefire-reports` es del **2026-11-07 03:24**: **115 pruebas ejecutadas, 0 fallos, 0 errores, 0 omitidas**.
+- La suite contiene **152 métodos `@Test` distribuidos en 34 archivos** (eran 115 en 31 archivos tras el Hito H2; 84 en 23 el 2026-11-07 antes del Hito H2; 75 en 18 el 2026-11-03).
+- La última ejecución completa registrada en `target/surefire-reports` es del **2026-11-09**: **152 pruebas ejecutadas, 0 fallos, 0 errores, 0 omitidas** (sin docker-compose levantado; solo Docker + Testcontainers).
 - Comandos de referencia:
   ```bash
   ./mvnw test
@@ -247,6 +247,7 @@ Rama `feature/h4-nucleoDom` (nombre distinto al del enunciado, `feature/h4-nucle
 - **Nota de verificación (2026-11-06)**: no se volvió a ejecutar la suite en esta actualización porque Docker/PostgreSQL no estaban disponibles. El estado se contrastó con el código fuente y con los reportes de Surefire existentes. Los reportes del 2026-11-02 corresponden a una ejecución anterior y no se contabilizan.
 - **Nota de verificación (2026-11-07, Hito H1)**: suite completa en verde con Docker disponible: `.\mvnw.cmd test` → 84 pruebas, 0 fallos; `.\mvnw.cmd verify` → BUILD SUCCESS (incluye Checkstyle en modo reporte). Ver historial para el detalle.
 - **Nota de verificación (2026-11-07, Hito H2)**: baseline en verde antes de empezar (84/0); `.\mvnw.cmd test` → **115 pruebas, 0 fallos**; `.\mvnw.cmd verify` → BUILD SUCCESS (115/0 + Checkstyle: 19 violaciones reportadas sin fallar). El contenedor RabbitMQ de Testcontainers arranca **una vez por corrida** (compartido por JVM, igual que PostgreSQL): **10 arranques confirmados en log** durante la sesión (1 por cada una de las10 corridas de Maven con tests de mensajería que cargaron el contexto completo);2 corridas intermedias fallaron al cargar el contexto por un error de configuración propio (`publisher-confirm-type`) y su arranque no quedó confirmado en log. Ver historial para el detalle.
+- **Nota de verificación (2026-11-09, Hito H4 + limpieza post-auditoría)**: `.\mvnw.cmd test` → **152 pruebas, 0 fallos** con docker-compose **apagado** (dos corridas seguidas y una con `-Dsurefire.runOrder=reversealphabetical`, todas en verde tras el arreglo de `CorrelationIdFilterTest`); `.\mvnw.cmd verify` → BUILD SUCCESS. Arranques de contenedor por corrida: 1 PostgreSQL + 1 RabbitMQ (singleton por JVM).
 - **Migración a Testcontainers (2026-11-07)**: la suite ya **no** necesita docker-compose, solo Docker corriendo; `docker-compose.yml` sigue siendo necesario para la app en desarrollo. Detalle y métricas en el historial. Desde el Hito H2 la suite también usa un contenedor **RabbitMQ** compartido.
 
 ---
