@@ -33,4 +33,15 @@ public class FinanceHttpConfig { // crea los clientes REST de modulo 3 con timeo
                 .requestFactory(factory) // aplica la fabrica con timeouts
                 .build(); // sin token: modulo 3 no usa Authorization
     }
+
+    @Bean
+    public RestClient calculatedValueRestClient(FinanceProperties properties) { // cliente del valor calculado (CU-12)
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory(); // fabrica simple con timeouts
+        factory.setConnectTimeout(Duration.ofMillis(properties.getCalculatedValueConnectTimeoutMs())); // 100 ms por defecto
+        factory.setReadTimeout(Duration.ofMillis(properties.getCalculatedValueReadTimeoutMs())); // 1000 ms por defecto
+        return RestClient.builder() // construye el cliente
+                .baseUrl(properties.getBaseUrl()) // url base desde seashare.finance.base-url
+                .requestFactory(factory) // aplica la fabrica con timeouts
+                .build(); // sin token: modulo 3 no usa Authorization
+    }
 }
