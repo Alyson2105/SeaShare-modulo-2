@@ -53,7 +53,7 @@ m2:
       backoff-multiplier: 5                  # Multiplicador exponencial entre intentos
       jitter-ratio: 0.1                      # Jitter uniforme de +/-10 % sobre cada retardo
 
-seashare:                                  # Integracion con Modulo 1 (CU-09 y CU-10)
+seashare:                                  # Integracion con Modulo 1 y Modulo 3 (CU-09 a CU-12)
   fleet:
     mode: fake                             # fake (default) u http para los adaptadores reales de M1
     base-url: http://localhost:8081        # Url base de M1; solo se usa en modo http (ajustar al puerto real)
