@@ -51,4 +51,12 @@ m2:
       max-attempts: 5                        # Intentos maximos por mensaje antes de marcar dead (T-03)
       backoff-initial-ms: 1000               # Base del backoff: 1/5/25/125 s con backoff-multiplier 5
       backoff-multiplier: 5                  # Multiplicador exponencial entre intentos
-      jitter-ratio: 0.1                      # Jitter uniforme de +/-10 % sobre cada retardo
+      jitter-ratio: 0.1                      # Jitter uniforme de +/-10 % sobre cada retardo
+
+seashare:                                  # Integracion con Modulo 1 (CU-09 y CU-10)
+  fleet:
+    mode: fake                             # fake (default) u http para los adaptadores reales de M1
+    base-url: http://localhost:8081        # Url base de M1; solo se usa en modo http (ajustar al puerto real)
+    token: m2-development-token            # Token de desarrollo; en produccion va por variable de entorno
+    connect-timeout-ms: 100                # Timeout de conexion en milisegundos
+    read-timeout-ms: 300                   # Timeout de lectura en milisegundos
