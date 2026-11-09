@@ -26,10 +26,10 @@ public interface ReservationRepositoryPort { // puerto de persistencia para el a
     ReservationPage findByOwner(UUID ownerId, int page, int limit); // consulta reservas paginadas por propietario
 
     /**
-     * Retorna los IDs de reservas en estado INITIATED cuyo ttl_expires_at sea menor o igual a {@code now},
+     * Retorna los IDs de reservas en estado INITIATED o PENDING_PAYMENT cuyo ttl_expires_at sea menor o igual a {@code now},
      * ordenadas por ttl_expires_at ascendente y limitadas a {@code batchSize}.
-     * Usa el índice ix_reservation_ttl existente.
+     * Usa el índice ix_reservation_ttl existente. El corte es exacto: en el segundo de vencimiento ya se recupera.
      */
-    List<UUID> findInitiatedExpiredBefore(Instant now, int batchSize); // lectura de IDs vencidos para el scheduler de TTL
+    List<UUID> findExpiredBefore(Instant now, int batchSize); // lectura de IDs vencidos (INITIATED o PENDING_PAYMENT) para el scheduler de TTL
 }
 

@@ -57,6 +57,9 @@ class CreateReservationServiceTest { // pruebas unitarias aisladas de create res
     @Mock
     private OutboxPort outboxPort; // simulacion del puerto outbox
 
+    @Mock
+    private com.seashare.m2.reservas.application.port.out.StatusAuditPort statusAuditPort; // simulacion del puerto de auditoria (T-10)
+
     private CreateReservationService service; // servicio bajo prueba
 
     private final Instant fixedNow = Instant.parse("2026-11-06T12:00:00Z"); // instante temporal fijo de prueba
@@ -72,7 +75,8 @@ class CreateReservationServiceTest { // pruebas unitarias aisladas de create res
                 fleetInfoPort,
                 fleetOperationalStatusPort,
                 reservationRepositoryPort,
-                outboxPort
+                outboxPort,
+                statusAuditPort
         );
         when(clockPort.now()).thenReturn(fixedNow); // reloj devuelve instante fijo
     }

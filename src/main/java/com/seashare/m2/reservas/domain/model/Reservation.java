@@ -28,6 +28,13 @@ public class Reservation { // agregado de reserva del dominio
     private final Instant createdAt; // instante de creacion fijado por el reloj
     private ReservationStatus status; // estado actual de la reserva
     private CancellationSubtype cancellationSubtype; // subtipo de cancelacion de la reserva
+    private String completionNotes; // notas de cierre en COMPLETED (CU-08)
+    private String paymentReference; // referencia externa del cobro (CU-08)
+    private Instant paymentConfirmedAt; // hora de confirmacion del pago (CU-08)
+    private Instant statusChangedAt; // hora exacta del ultimo cambio de estado (CU-08)
+    private Instant actualDepartureAt; // hora real de zarpe; la fija CU-06 (T-17c), aqui solo persistencia
+    private Instant actualArrivalAt; // hora real de desembarque; la fija CU-07 (T-17d), aqui solo persistencia
+    private boolean m1Blocked; // true si ya se notifico RESERVED a Modulo 1 (guarda SC-003)
     private final Long version; // version de concurrencia optimista
 
     public Reservation(UUID id, UUID renterId, UUID ownerId, UUID vesselId, LocalDate startDate, LocalDate endDate,
@@ -149,6 +156,62 @@ public class Reservation { // agregado de reserva del dominio
         machine.validate(this.status, to, subtype); // valida transicion segun maquina de estados
         this.status = to; // asigna nuevo estado
         this.cancellationSubtype = (to == ReservationStatus.CANCELLED ? subtype : null); // asigna subtipo solo si el estado es cancelado
+    }
+
+    public String getCompletionNotes() { // obtiene notas de cierre
+        return completionNotes; // retorna completionNotes
+    }
+
+    public void setCompletionNotes(String completionNotes) { // fija notas de cierre (CU-08 COMPLETED)
+        this.completionNotes = completionNotes; // establece completionNotes
+    }
+
+    public String getPaymentReference() { // obtiene referencia de pago
+        return paymentReference; // retorna paymentReference
+    }
+
+    public void setPaymentReference(String paymentReference) { // fija referencia de pago (CU-08 RESERVED)
+        this.paymentReference = paymentReference; // establece paymentReference
+    }
+
+    public Instant getPaymentConfirmedAt() { // obtiene hora de confirmacion de pago
+        return paymentConfirmedAt; // retorna paymentConfirmedAt
+    }
+
+    public void setPaymentConfirmedAt(Instant paymentConfirmedAt) { // fija hora de confirmacion de pago
+        this.paymentConfirmedAt = paymentConfirmedAt; // establece paymentConfirmedAt
+    }
+
+    public Instant getStatusChangedAt() { // obtiene hora del ultimo cambio de estado
+        return statusChangedAt; // retorna statusChangedAt
+    }
+
+    public void setStatusChangedAt(Instant statusChangedAt) { // fija hora del ultimo cambio de estado
+        this.statusChangedAt = statusChangedAt; // establece statusChangedAt
+    }
+
+    public Instant getActualDepartureAt() { // obtiene hora real de zarpe
+        return actualDepartureAt; // retorna actualDepartureAt
+    }
+
+    public void setActualDepartureAt(Instant actualDepartureAt) { // fija hora real de zarpe (la fija CU-06)
+        this.actualDepartureAt = actualDepartureAt; // establece actualDepartureAt
+    }
+
+    public Instant getActualArrivalAt() { // obtiene hora real de desembarque
+        return actualArrivalAt; // retorna actualArrivalAt
+    }
+
+    public void setActualArrivalAt(Instant actualArrivalAt) { // fija hora real de desembarque (la fija CU-07)
+        this.actualArrivalAt = actualArrivalAt; // establece actualArrivalAt
+    }
+
+    public boolean isM1Blocked() { // consulta si Modulo 1 ya fue notificado de RESERVED
+        return m1Blocked; // retorna m1Blocked
+    }
+
+    public void setM1Blocked(boolean m1Blocked) { // fija la guarda de bloqueo en Modulo 1 (T-08)
+        this.m1Blocked = m1Blocked; // establece m1Blocked
     }
 
     public UUID getId() { // obtiene el id

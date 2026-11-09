@@ -56,7 +56,7 @@ class ExpireReservationsServiceTest { // pruebas unitarias de ExpireReservations
     void expiraSoloLasVencidas() { // expira las reservas cuyo TTL ya vencio
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();
-        when(repository.findInitiatedExpiredBefore(FIXED_NOW, BATCH_SIZE)).thenReturn(List.of(id1, id2));
+        when(repository.findExpiredBefore(FIXED_NOW, BATCH_SIZE)).thenReturn(List.of(id1, id2));
 
         int result = service.execute();
 
@@ -72,7 +72,7 @@ class ExpireReservationsServiceTest { // pruebas unitarias de ExpireReservations
 
     @Test
     void noProcesaNadaSiNoHayVencidas() { // no hace nada si la lista retornada por el repositorio esta vacia
-        when(repository.findInitiatedExpiredBefore(FIXED_NOW, BATCH_SIZE)).thenReturn(List.of());
+        when(repository.findExpiredBefore(FIXED_NOW, BATCH_SIZE)).thenReturn(List.of());
 
         int result = service.execute();
 
@@ -83,7 +83,7 @@ class ExpireReservationsServiceTest { // pruebas unitarias de ExpireReservations
     @Test
     void bordeExactoVenceEnNowExpira() { // borde exacto: si vence en now, es recuperada y expirada
         UUID id = UUID.randomUUID();
-        when(repository.findInitiatedExpiredBefore(FIXED_NOW, BATCH_SIZE)).thenReturn(List.of(id));
+        when(repository.findExpiredBefore(FIXED_NOW, BATCH_SIZE)).thenReturn(List.of(id));
 
         int result = service.execute();
 
@@ -93,7 +93,7 @@ class ExpireReservationsServiceTest { // pruebas unitarias de ExpireReservations
 
     @Test
     void bordeUnSegundoAntesNoExpira() { // si el TTL no ha vencido, el repositorio no la retorna y no se expira
-        when(repository.findInitiatedExpiredBefore(FIXED_NOW, BATCH_SIZE)).thenReturn(List.of());
+        when(repository.findExpiredBefore(FIXED_NOW, BATCH_SIZE)).thenReturn(List.of());
 
         int result = service.execute();
 
@@ -104,7 +104,7 @@ class ExpireReservationsServiceTest { // pruebas unitarias de ExpireReservations
     @Test
     void conflictoDeVersionSeOmiteSinError() { // VersionConflictException se omite y no propaga error
         UUID id = UUID.randomUUID();
-        when(repository.findInitiatedExpiredBefore(FIXED_NOW, BATCH_SIZE)).thenReturn(List.of(id));
+        when(repository.findExpiredBefore(FIXED_NOW, BATCH_SIZE)).thenReturn(List.of(id));
         doThrow(new VersionConflictException("conflicto")).when(changeStatus).execute(any());
 
         int result = service.execute(); // no debe lanzar excepcion
@@ -115,7 +115,7 @@ class ExpireReservationsServiceTest { // pruebas unitarias de ExpireReservations
     @Test
     void transicionInvalidaSeOmiteSinError() { // InvalidTransitionException se omite y no propaga error
         UUID id = UUID.randomUUID();
-        when(repository.findInitiatedExpiredBefore(FIXED_NOW, BATCH_SIZE)).thenReturn(List.of(id));
+        when(repository.findExpiredBefore(FIXED_NOW, BATCH_SIZE)).thenReturn(List.of(id));
         doThrow(new InvalidTransitionException(ReservationStatus.EXPIRED, ReservationStatus.EXPIRED, "ya expirada"))
                 .when(changeStatus).execute(any());
 
@@ -129,7 +129,7 @@ class ExpireReservationsServiceTest { // pruebas unitarias de ExpireReservations
         UUID idBueno1 = UUID.randomUUID();
         UUID idFallido = UUID.randomUUID();
         UUID idBueno2 = UUID.randomUUID();
-        when(repository.findInitiatedExpiredBefore(FIXED_NOW, BATCH_SIZE))
+        when(repository.findExpiredBefore(FIXED_NOW, BATCH_SIZE))
                 .thenReturn(List.of(idBueno1, idFallido, idBueno2));
 
         org.mockito.Mockito.doAnswer(invocation -> {
@@ -149,16 +149,16 @@ class ExpireReservationsServiceTest { // pruebas unitarias de ExpireReservations
 
     @Test
     void respetaLimiteDeLote() { // pasa el batchSize configurado al repositorio
-        when(repository.findInitiatedExpiredBefore(eq(FIXED_NOW), eq(BATCH_SIZE))).thenReturn(List.of());
+        when(repository.findExpiredBefore(eq(FIXED_NOW), eq(BATCH_SIZE))).thenReturn(List.of());
 
         service.execute();
 
-        verify(repository).findInitiatedExpiredBefore(FIXED_NOW, BATCH_SIZE);
+        verify(repository).findExpiredBefore(FIXED_NOW, BATCH_SIZE);
     }
 
     @Test
     void nuncaLlamaInstantNowDirectamente() { // usa siempre ClockPort
-        when(repository.findInitiatedExpiredBefore(any(Instant.class), anyInt())).thenReturn(List.of());
+        when(repository.findExpiredBefore(any(Instant.class), anyInt())).thenReturn(List.of());
 
         service.execute();
 

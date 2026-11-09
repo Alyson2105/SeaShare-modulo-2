@@ -243,9 +243,11 @@ class CreateReservationTest { // pruebas funcionales del caso de uso iniciar res
 
         ReservationView blocking = createReservation(userId, vesselId, LocalDate.of(2027, 3, 10), LocalDate.of(2027, 3, 12));
         changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
-                blocking.reservationId(), ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER, "Pago iniciado"));
+                blocking.reservationId(), ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER, "Pago iniciado",
+                userId, null, null, null, null, null));
         changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
-                blocking.reservationId(), ReservationStatus.RESERVED, null, ActorType.RENTER, "Pago confirmado"));
+                blocking.reservationId(), ReservationStatus.RESERVED, null, ActorType.RENTER, "Pago confirmado",
+                userId, null, null, null, null, null));
 
         String overlappingKey = UUID.randomUUID().toString();
         String overlappingBody = buildRequestBody(

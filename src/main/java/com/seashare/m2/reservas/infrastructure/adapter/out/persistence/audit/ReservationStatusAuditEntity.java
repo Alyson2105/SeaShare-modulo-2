@@ -49,6 +49,12 @@ class ReservationStatusAuditEntity { // entidad jpa inmutable para auditoria de 
     @Column(name = "occurred_at", nullable = false)
     private Instant occurredAt; // marca temporal del cambio
 
+    @Column(name = "actor_id")
+    private UUID actorId; // identificador del usuario; nulo si actor = SYSTEM (V4)
+
+    @Column(name = "event_ids")
+    private String eventIds; // JSON array de UUIDs encolados en la transaccion (V4)
+
     public ReservationStatusAuditEntity() { // constructor sin argumentos requerido por jpa
     }
 
@@ -114,5 +120,21 @@ class ReservationStatusAuditEntity { // entidad jpa inmutable para auditoria de 
 
     public void setOccurredAt(Instant occurredAt) { // asigna la fecha y hora
         this.occurredAt = occurredAt; // establece occurredAt
+    }
+
+    public UUID getActorId() { // obtiene el id del actor
+        return actorId; // retorna actorId
+    }
+
+    public void setActorId(UUID actorId) { // asigna el id del actor
+        this.actorId = actorId; // establece actorId
+    }
+
+    public String getEventIds() { // obtiene los event_ids serializados
+        return eventIds; // retorna eventIds
+    }
+
+    public void setEventIds(String eventIds) { // asigna los event_ids serializados
+        this.eventIds = eventIds; // establece eventIds
     }
 }

@@ -108,9 +108,9 @@ public class ReservationRepositoryAdapter implements ReservationRepositoryPort {
 
     @Override
     @Transactional(readOnly = true) // lectura de solo IDs, sin bloqueo de escritura
-    public List<UUID> findInitiatedExpiredBefore(Instant now, int batchSize) { // busca IDs de reservas INITIATED con TTL vencido
+    public List<UUID> findExpiredBefore(Instant now, int batchSize) { // busca IDs vencidos en INITIATED o PENDING_PAYMENT
         Pageable limit = PageRequest.of(0, batchSize); // primer página con el tamaño de lote como límite máximo
-        return repository.findIdsByStatusInitiatedAndTtlExpiredBefore(now, limit); // delega en JPQL que usa el índice ix_reservation_ttl
+        return repository.findExpiredBefore(now, limit); // delega en JPQL que usa el índice ix_reservation_ttl
     }
 }
 

@@ -59,6 +59,7 @@ class ReservationPersistenceTest { // pruebas de persistencia para la entidad re
         entity.setInsuranceAmount(new BigDecimal("1000000.0000")); // monto seguro
         entity.setGuaranteeDepositAmount(new BigDecimal("1000000.0000")); // monto garantia
         entity.setCreatedAt(Instant.now()); // marca temporal de creacion
+        entity.setStatusChangedAt(entity.getCreatedAt()); // V4: NOT NULL, la creacion es el primer cambio
         return entity; // retorna entidad preparada
     }
 
