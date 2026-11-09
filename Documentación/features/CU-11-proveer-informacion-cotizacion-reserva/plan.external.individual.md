@@ -48,7 +48,7 @@ POST /api/v1/estimates/individual
 
 | Nombre | Obligatorio | Descripción |
 |---|---|---|
-| `Authorization` | Sí | `Bearer <token_servicio_m2>` — token de identidad de servicio de Módulo 2 |
+| `Authorization` | No | M2 no lo envía: el servicio de Módulo 3 no exige autenticación (README de contratos de M3, §3.2) |
 | `Content-Type` | Sí | `application/json` |
 | `Accept` | No | `application/json` |
 
@@ -95,7 +95,6 @@ Módulo 3 no recibe `renterId` ni datos de usuario en esta operación de cálcul
 
 ```bash
 curl -X POST "https://finanzas.seashare.internal/api/v1/estimates/individual" \
-  -H "Authorization: Bearer <token_servicio_m2>" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{
