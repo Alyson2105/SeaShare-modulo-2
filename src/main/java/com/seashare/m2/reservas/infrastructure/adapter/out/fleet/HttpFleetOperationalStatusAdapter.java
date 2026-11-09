@@ -1,8 +1,14 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.fleet;
 
+import com.seashare.m2.reservas.application.dto.ExternalQueryLogEntry;
+import com.seashare.m2.reservas.application.dto.ExternalQueryResult;
+import com.seashare.m2.reservas.application.dto.ExternalQueryType;
+import com.seashare.m2.reservas.application.port.out.ExternalQueryLogPort;
 import com.seashare.m2.reservas.application.port.out.FleetOperationalStatusPort;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.shared.domain.ErrorCode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
@@ -21,27 +27,58 @@ import java.util.UUID;
 @ConditionalOnProperty(prefix = "seashare.fleet", name = "mode", havingValue = "http") // activos solo en modo http
 public class HttpFleetOperationalStatusAdapter implements FleetOperationalStatusPort { // cliente HTTP real de estado operativo (CU-10)
 
+    private static final Logger log = LoggerFactory.getLogger(HttpFleetOperationalStatusAdapter.class); // log de advertencias del registro
+
     private static final ObjectMapper MAPPER = new JsonMapper(); // mapeador jackson 3 de la respuesta de M1
+
     private static final String VESSELS_PATH = "/api/v1/vessels/"; // ruta base del contrato CU-10
 
     private final RestClient restClient; // cliente con timeouts y token ya configurados
 
-    public HttpFleetOperationalStatusAdapter(@Qualifier("fleetRestClient") RestClient restClient) { // inyecta el cliente de flota
+    private final ExternalQueryLogPort externalQueryLogPort; // registro de trazabilidad de la consulta (FR-009)
+
+    public HttpFleetOperationalStatusAdapter(@Qualifier("fleetRestClient") RestClient restClient, ExternalQueryLogPort externalQueryLogPort) { // inyecta cliente y registro
         this.restClient = restClient; // asigna cliente
+        this.externalQueryLogPort = externalQueryLogPort; // asigna registro
     }
 
     @Override
     public boolean isAvailable(UUID vesselId) { // consulta el estado operativo en M1
-        String body = get(VESSELS_PATH + vesselId + "/operational-status"); // GET con un solo reintento
-        if (body == null || body.isBlank()) { // sin cuerpo no hay estado que leer
-            return false; // fail-safe: no disponible
-        }
         try {
-            JsonNode root = MAPPER.readTree(body); // parsea la respuesta
-            JsonNode statusNode = root.path("operational_status"); // estado reportado por M1
-            return statusNode.isString() && "AVAILABLE".equals(statusNode.stringValue()); // true solo si AVAILABLE
-        } catch (JacksonException e) {
-            return false; // json ilegible: fail-safe no disponible
+            String body = get(VESSELS_PATH + vesselId + "/operational-status"); // GET con un solo reintento
+            if (body == null || body.isBlank()) { // sin cuerpo no hay estado que leer
+                register(vesselId, ExternalQueryResult.ERROR, null); // 200 sin cuerpo util
+                return false; // fail-safe: no disponible
+            }
+            String rawStatus; // estado crudo devuelto por M1
+            try {
+                JsonNode root = MAPPER.readTree(body); // parsea la respuesta
+                JsonNode statusNode = root.path("operational_status"); // estado reportado por M1
+                rawStatus = statusNode.isString() ? statusNode.stringValue() : null; // null si ausente o no texto
+            } catch (JacksonException e) {
+                register(vesselId, ExternalQueryResult.ERROR, null); // json ilegible
+                return false; // fail-safe no disponible
+            }
+            if (rawStatus == null || rawStatus.isBlank()) { // 200 valido sin operational_status
+                register(vesselId, ExternalQueryResult.ERROR, null); // sin estado que registrar como OK
+                return false; // fail-safe no disponible
+            }
+            register(vesselId, ExternalQueryResult.OK, rawStatus); // valor crudo, incluso si M1 devuelve uno desconocido
+            return "AVAILABLE".equals(rawStatus); // true solo si AVAILABLE
+        } catch (TransientQueryException e) { // timeout, conexion o 503 tras el reintento
+            register(vesselId, ExternalQueryResult.TIMEOUT, null); // resultado final TIMEOUT
+            throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, e.getMessage()); // mismo ErrorCode y mensaje de la parte A
+        } catch (ReservationRuleException e) { // 4xx, 5xx sin reintento u otro fallo
+            register(vesselId, ExternalQueryResult.ERROR, null); // resultado final ERROR
+            throw e; // la consulta a M1 conserva su error original
+        }
+    }
+
+    private void register(UUID vesselId, ExternalQueryResult result, String returnedStatus) { // registra sin romper nada
+        try {
+            externalQueryLogPort.register(new ExternalQueryLogEntry(ExternalQueryType.OPERATIONAL_STATUS, vesselId, result, returnedStatus)); // una fila por consulta
+        } catch (Exception e) { // el registro nunca cambia el resultado de la consulta a M1
+            log.warn("External query log registration failed for vessel {}", vesselId, e); // advertencia y sigue
         }
     }
 
@@ -56,14 +93,17 @@ public class HttpFleetOperationalStatusAdapter implements FleetOperationalStatus
                 if (status == 503 && attempt == 0) { // 503 es transitorio: un solo reintento
                     continue; // reintenta de inmediato sin espera
                 }
-                throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet service returned status " + status); // 5xx u otro estado
+                if (status == 503) { // 503 persistente tras el reintento: transitorio agotado
+                    throw new TransientQueryException("Fleet service returned status 503"); // se registra TIMEOUT con el mensaje de siempre
+                }
+                throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet service returned status " + status); // 5xx u otro estado: ERROR
             } catch (ResourceAccessException e) { // timeout o conexion rechazada (IOException)
                 if (attempt == 1) { // se agoto el reintento
-                    throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet service is unreachable"); // corte seguro
+                    throw new TransientQueryException("Fleet service is unreachable"); // se registra TIMEOUT
                 }
             }
         }
-        throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet service is unreachable"); // no alcanzable
+        throw new TransientQueryException("Fleet service is unreachable"); // no alcanzable, mensaje identico al de antes
     }
 
     private ResponseEntity<String> exchange(String path) { // mapea los estados de error de M1 a excepciones de dominio
