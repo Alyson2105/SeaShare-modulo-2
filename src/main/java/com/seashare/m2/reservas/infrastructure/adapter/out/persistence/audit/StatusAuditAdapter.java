@@ -4,6 +4,10 @@ import com.seashare.m2.reservas.application.dto.StatusAuditEntry;
 import com.seashare.m2.reservas.application.port.out.StatusAuditPort;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 @Component
 public class StatusAuditAdapter implements StatusAuditPort { // adaptador de persistencia para auditoria de estado
 
@@ -23,6 +27,18 @@ public class StatusAuditAdapter implements StatusAuditPort { // adaptador de per
         entity.setActor(entry.actor().name()); // asigna nombre del actor
         entity.setReason(entry.reason()); // asigna motivo
         entity.setOccurredAt(entry.occurredAt()); // asigna marca temporal
+        entity.setActorId(entry.actorId()); // asigna id del usuario (V4)
+        entity.setEventIds(serializeEventIds(entry.eventIds())); // asigna JSON array de eventos (V4)
         repository.save(entity); // persiste unicamente mediante insert
+    }
+
+    private String serializeEventIds(List<UUID> eventIds) { // serializa la lista de eventos a JSON array
+        if (eventIds == null || eventIds.isEmpty()) { // sin eventos
+            return "[]"; // array vacio
+        }
+        return eventIds.stream() // recorre los ids
+                .map(UUID::toString) // convierte a texto
+                .map(id -> "\"" + id + "\"") // entrecomilla para JSON
+                .collect(Collectors.joining(",", "[", "]")); // une como array json
     }
 }

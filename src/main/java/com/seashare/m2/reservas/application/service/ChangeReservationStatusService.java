@@ -74,20 +74,30 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
         applyCommandFields(reservation, command, changedAt); // fija campos de CU-08 persistidos (T-09)
         Reservation saved = repository.save(reservation); // guarda cambios y retorna la version actualizada
 
+        List<String> eventsEnqueued = new ArrayList<>(); // destinos con evento encolado
+        List<UUID> eventIds = new ArrayList<>(); // ids de los eventos de esta transaccion (FR-011)
+        boolean enqueueM3 = OUTBOX_STATUSES.contains(saved.getStatus()); // el destino requiere evento a modulo 3
+        UUID m3EventId = UUID.randomUUID(); // id generado en la misma transaccion antes de auditar
+        if (enqueueM3) { // solo si corresponde
+            eventIds.add(m3EventId); // registra el id para la auditoria
+            eventsEnqueued.add(DESTINATION_AMQP); // registra destino AMQP (modulo 3)
+        }
+
         statusAuditPort.record(new StatusAuditEntry( // registra auditoria inmutable
-                reservation.getId(), // id de la reserva
+                saved.getId(), // id de la reserva
                 previousStatus, // estado de origen
                 saved.getStatus(), // estado de destino
                 saved.getCancellationSubtype(), // subtipo de cancelacion efectivo
                 command.actor(), // actor de la operacion
                 command.reason(), // motivo o justificacion
-                changedAt // marca temporal del cambio
+                changedAt, // marca temporal del cambio
+                command.actorId(), // id del usuario; nulo si actor es SYSTEM
+                List.copyOf(eventIds) // eventos encolados en esta transaccion
         ));
 
-        List<String> eventsEnqueued = new ArrayList<>(); // destinos con evento encolado
-        if (OUTBOX_STATUSES.contains(saved.getStatus())) { // evalua si el destino requiere encolado
+        if (enqueueM3) { // encola el evento con el id ya registrado en auditoria
             outboxPort.enqueue(new StatusChangedEvent( // encola evento outbox
-                    UUID.randomUUID(), // id unico del evento
+                    m3EventId, // id unico generado arriba (mismo para auditoria y outbox)
                     saved.getId(), // id de la reserva
                     saved.getStatus(), // nuevo estado
                     saved.getCancellationSubtype(), // subtipo de cancelacion efectivo
@@ -96,7 +106,6 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
                     command.anticipationMinutes(), // anticipacion al cancelar (CU-14 FR-003)
                     command.completionNotes() // notas de cierre en COMPLETED (CU-14 FR-004)
             ));
-            eventsEnqueued.add(DESTINATION_AMQP); // registra destino AMQP (modulo 3)
         }
 
         return new ChangeReservationStatusResult( // construye el resultado tipado del contrato

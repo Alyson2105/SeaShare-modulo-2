@@ -72,13 +72,13 @@ class CreateReservationValidationTest { // pruebas de validacion, errores y conc
 
     @AfterEach
     void tearDown() { // limpieza con jdbc sin alterar triggers
-        for (UUID vesselId : trackedVessels) { // elimina reservas creadas
-            jdbcTemplate.update("DELETE FROM reservation WHERE vessel_id = ?", vesselId); // borra por embarcacion
-        }
+        // T-10: toda creacion deja una fila en reservation_status_audit (FK) y el trigger
+        // trg_status_audit_immutable impide borrar esa fila; las reservas creadas quedan de forma
+        // permanente. Se limpian solo las claves de idempotencia, que no tienen esa dependencia.
+        trackedVessels.clear(); // limpia lista
         for (String key : trackedKeys) { // elimina claves de idempotencia usadas
             jdbcTemplate.update("DELETE FROM idempotency_key WHERE key = ?", key); // borra por clave
         }
-        trackedVessels.clear(); // limpia lista
         trackedKeys.clear(); // limpia lista
     }
 

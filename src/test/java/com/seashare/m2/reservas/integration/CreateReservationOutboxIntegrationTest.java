@@ -80,10 +80,11 @@ class CreateReservationOutboxIntegrationTest { // pruebas integradas de persiste
     }
 
     @AfterEach
-    void cleanUp() { // limpia solo las filas de outbox y reservation creadas por esta clase de prueba
+    void cleanUp() { // limpia las filas de outbox y claves; las reservas ya no se pueden borrar (T-10)
         for (UUID resId : createdReservationIds) {
             jdbcTemplate.update("DELETE FROM outbox_message WHERE payload LIKE ?", "%" + resId + "%");
-            jdbcTemplate.update("DELETE FROM reservation WHERE id = ?", resId);
+            // T-10: la creacion escribe en reservation_status_audit (FK) y el trigger de inmutabilidad
+            // impide borrar la fila hija; no se elimina la reserva para no violar la FK de esa tabla.
         }
         createdReservationIds.clear();
         Mockito.reset(idempotencyPort);

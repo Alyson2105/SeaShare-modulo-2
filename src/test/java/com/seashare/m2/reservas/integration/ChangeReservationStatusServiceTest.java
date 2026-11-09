@@ -113,6 +113,7 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
     void validChangeSavesStatusAndAudit() { // transicion valida persiste estado, auditoria y outbox
         Reservation created = createReservation();
         Long originalVersion = created.getVersion();
+        clearInvocations(statusAuditPort, outboxPort); // aísla de la auditoria de creacion (T-10)
 
         changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
 
@@ -127,6 +128,7 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
     void invalidChangeWritesNothing() { // transicion invalida no modifica estado ni escribe auditoria ni outbox
         Reservation created = createReservation();
         Long originalVersion = created.getVersion();
+        clearInvocations(statusAuditPort, outboxPort); // aísla de la auditoria de creacion (T-10)
 
         assertThatThrownBy(() -> changeStatus(created, ReservationStatus.COMPLETED, null, ActorType.RENTER))
                 .isInstanceOf(InvalidTransitionException.class);
@@ -396,5 +398,43 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
         assertThat(updated.getCompletionNotes()).isEqualTo("Sin novedades de desembarque"); // notas persistidas
         assertThat(updated.getPaymentReference()).isNull(); // nada tocado en payment_reference
         assertThat(updated.getActualDepartureAt()).isNull(); // horas reales fuera del alcance de CU-08 (T-17c/T-17d)
+    }
+
+    @Test
+    void creationWritesAuditRow() { // T-10: la creacion genera la primera fila del historial
+        Reservation created = createReservation(); // la creacion llama a statusAuditPort
+
+        verify(statusAuditPort).record(org.mockito.ArgumentMatchers.argThat(entry ->
+                created.getId().equals(entry.reservationId())
+                        && entry.fromStatus() == null // sin estado anterior
+                        && entry.toStatus() == ReservationStatus.INITIATED // entra a la maquina
+                        && entry.actor() == ActorType.RENTER // el arrendatario inicia
+                        && entry.actorId() != null // actor_id = renter
+                        && entry.eventIds() != null && entry.eventIds().size() == 1)); // evento info.provided registrado
+    }
+
+    @Test
+    void transitionAuditCarriesActorIdAndEventIds() { // T-10: cada transicion audita actor_id y event_ids
+        Reservation created = createReservation();
+        UUID renterActor = UUID.randomUUID();
+        clearInvocations(statusAuditPort, outboxPort);
+
+        ChangeReservationStatusResult result = changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER, "Pago iniciado",
+                renterActor, null, null, null, null, null));
+
+        verify(statusAuditPort).record(org.mockito.ArgumentMatchers.argThat(entry ->
+                renterActor.equals(entry.actorId()) // actor_id registrado
+                        && entry.eventIds().size() == 1 // un evento AMQP encolado
+                        && result.eventsEnqueued().contains("AMQP"))); // el destino coincide
+
+        // sin eventos encolados -> event_ids vacio
+        clearInvocations(statusAuditPort, outboxPort);
+        changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.EXPIRED, null, ActorType.SYSTEM, "TTL expirado"));
+
+        verify(statusAuditPort).record(org.mockito.ArgumentMatchers.argThat(entry ->
+                entry.actorId() == null // SYSTEM sin usuario
+                        && entry.eventIds().isEmpty())); // ningun evento para EXPIRED
     }
 }
