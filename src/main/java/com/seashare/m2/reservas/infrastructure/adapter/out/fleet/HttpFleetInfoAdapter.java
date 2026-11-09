@@ -1,9 +1,15 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.fleet;
 
+import com.seashare.m2.reservas.application.dto.ExternalQueryLogEntry;
+import com.seashare.m2.reservas.application.dto.ExternalQueryResult;
+import com.seashare.m2.reservas.application.dto.ExternalQueryType;
 import com.seashare.m2.reservas.application.dto.FleetInfo;
+import com.seashare.m2.reservas.application.port.out.ExternalQueryLogPort;
 import com.seashare.m2.reservas.application.port.out.FleetInfoPort;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.shared.domain.ErrorCode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
@@ -24,41 +30,65 @@ import java.util.UUID;
 @ConditionalOnProperty(prefix = "seashare.fleet", name = "mode", havingValue = "http") // activos solo en modo http
 public class HttpFleetInfoAdapter implements FleetInfoPort { // cliente HTTP real de consulta de flota (CU-09)
 
+    private static final Logger log = LoggerFactory.getLogger(HttpFleetInfoAdapter.class); // log de advertencias del registro
+
     private static final ObjectMapper MAPPER = new JsonMapper(); // mapeador jackson 3 de la respuesta de M1
+
     private static final String VESSELS_PATH = "/api/v1/vessels/"; // ruta base del contrato CU-09
 
     private final RestClient restClient; // cliente con timeouts y token ya configurados
 
-    public HttpFleetInfoAdapter(@Qualifier("fleetRestClient") RestClient restClient) { // inyecta el cliente de flota
+    private final ExternalQueryLogPort externalQueryLogPort; // registro de trazabilidad de la consulta (FR-010)
+
+    public HttpFleetInfoAdapter(@Qualifier("fleetRestClient") RestClient restClient, ExternalQueryLogPort externalQueryLogPort) { // inyecta cliente y registro
         this.restClient = restClient; // asigna cliente
+        this.externalQueryLogPort = externalQueryLogPort; // asigna registro
     }
 
     @Override
     public FleetInfo getVesselInfo(UUID vesselId) { // consulta la ficha de la embarcacion en M1
-        String body = get(VESSELS_PATH + vesselId); // GET con un solo reintento y mapeo de errores
-        JsonNode root = parse(body); // cuerpo vacio o roto corta sin valores por defecto
-        JsonNode ownerIdNode = root.path("owner").path("owner_id"); // nodo owner.owner_id
-        UUID ownerId; // identificador del propietario
         try {
-            ownerId = UUID.fromString(ownerIdNode.isString() ? ownerIdNode.stringValue() : ""); // ausente vuelve cadena vacia
-        } catch (IllegalArgumentException e) {
-            throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet response owner_id is not a valid uuid"); // owner_id ilegible
+            String body = get(VESSELS_PATH + vesselId); // GET con un solo reintento y mapeo de errores
+            JsonNode root = parse(body); // cuerpo vacio o roto corta sin valores por defecto
+            JsonNode ownerIdNode = root.path("owner").path("owner_id"); // nodo owner.owner_id
+            UUID ownerId; // identificador del propietario
+            try {
+                ownerId = UUID.fromString(ownerIdNode.isString() ? ownerIdNode.stringValue() : ""); // ausente vuelve cadena vacia
+            } catch (IllegalArgumentException e) {
+                throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet response owner_id is not a valid uuid"); // owner_id ilegible
+            }
+            JsonNode capacityNode = root.path("max_capacity"); // nodo max_capacity
+            if (!capacityNode.isNumber()) { // sin capacidad no se reserva a ciegas
+                throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet response is missing max_capacity"); // payload incompleto
+            }
+            JsonNode timezoneNode = root.path("port").path("timezone"); // nodo port.timezone
+            String harborTimezone = timezoneNode.isString() ? timezoneNode.stringValue() : null; // null si ausente o no texto
+            if (harborTimezone == null || harborTimezone.isBlank()) { // la zona horaria es obligatoria para CU-04 y CU-05
+                throw new ReservationRuleException(ErrorCode.HARBOR_TIMEZONE_UNAVAILABLE, "Harbor timezone is missing"); // sin zona no hay plazos
+            }
+            try {
+                ZoneId.of(harborTimezone); // valida el formato IANA sin conservar el objeto
+            } catch (DateTimeException e) {
+                throw new ReservationRuleException(ErrorCode.HARBOR_TIMEZONE_UNAVAILABLE, "Harbor timezone is invalid"); // zona rechazada
+            }
+            FleetInfo info = new FleetInfo(ownerId, capacityNode.intValue(), harborTimezone); // los tres campos requeridos
+            register(ExternalQueryType.VESSEL_INFO, vesselId, ExternalQueryResult.OK, null); // una sola fila por consulta
+            return info; // devuelve la ficha
+        } catch (TransientQueryException e) { // timeout, conexion o 503 tras el reintento
+            register(ExternalQueryType.VESSEL_INFO, vesselId, ExternalQueryResult.TIMEOUT, null); // resultado final TIMEOUT
+            throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, e.getMessage()); // mismo ErrorCode y mensaje de la parte A
+        } catch (ReservationRuleException e) { // 4xx, 5xx sin reintento o payload invalido
+            register(ExternalQueryType.VESSEL_INFO, vesselId, ExternalQueryResult.ERROR, null); // resultado final ERROR
+            throw e; // la consulta a M1 conserva su error original
         }
-        JsonNode capacityNode = root.path("max_capacity"); // nodo max_capacity
-        if (!capacityNode.isNumber()) { // sin capacidad no se reserva a ciegas
-            throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet response is missing max_capacity"); // payload incompleto
-        }
-        JsonNode timezoneNode = root.path("port").path("timezone"); // nodo port.timezone
-        String harborTimezone = timezoneNode.isString() ? timezoneNode.stringValue() : null; // null si ausente o no texto
-        if (harborTimezone == null || harborTimezone.isBlank()) { // la zona horaria es obligatoria para CU-04 y CU-05
-            throw new ReservationRuleException(ErrorCode.HARBOR_TIMEZONE_UNAVAILABLE, "Harbor timezone is missing"); // sin zona no hay plazos
-        }
+    }
+
+    private void register(ExternalQueryType type, UUID vesselId, ExternalQueryResult result, String returnedStatus) { // registra sin romper nada
         try {
-            ZoneId.of(harborTimezone); // valida el formato IANA sin conservar el objeto
-        } catch (DateTimeException e) {
-            throw new ReservationRuleException(ErrorCode.HARBOR_TIMEZONE_UNAVAILABLE, "Harbor timezone is invalid"); // zona rechazada
+            externalQueryLogPort.register(new ExternalQueryLogEntry(type, vesselId, result, returnedStatus)); // una fila por consulta
+        } catch (Exception e) { // el registro nunca cambia el resultado de la consulta a M1
+            log.warn("External query log registration failed for vessel {}", vesselId, e); // advertencia y sigue
         }
-        return new FleetInfo(ownerId, capacityNode.intValue(), harborTimezone); // devuelve los tres campos requeridos
     }
 
     private static JsonNode parse(String body) { // convierte el cuerpo a arbol json con corte seguro
@@ -83,14 +113,17 @@ public class HttpFleetInfoAdapter implements FleetInfoPort { // cliente HTTP rea
                 if (status == 503 && attempt == 0) { // 503 es transitorio: un solo reintento
                     continue; // reintenta de inmediato sin espera
                 }
-                throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet service returned status " + status); // 5xx u otro estado
+                if (status == 503) { // 503 persistente tras el reintento: transitorio agotado
+                    throw new TransientQueryException("Fleet service returned status 503"); // se registra TIMEOUT con el mensaje de siempre
+                }
+                throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet service returned status " + status); // 5xx u otro estado: ERROR
             } catch (ResourceAccessException e) { // timeout o conexion rechazada (IOException)
                 if (attempt == 1) { // se agoto el reintento
-                    throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet service is unreachable"); // corte seguro
+                    throw new TransientQueryException("Fleet service is unreachable"); // se registra TIMEOUT
                 }
             }
         }
-        throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet service is unreachable"); // no alcanzable
+        throw new TransientQueryException("Fleet service is unreachable"); // no alcanzable, mensaje identico al de antes
     }
 
     private ResponseEntity<String> exchange(String path) { // mapea los estados de error de M1 a excepciones de dominio
