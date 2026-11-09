@@ -547,7 +547,7 @@ Esta sección **no resuelve** las inconsistencias: las señala para que se cierr
 > 2. **Jackson 3**: los paquetes de codigo son `tools.jackson.*`; solo las anotaciones siguen en `com.fasterxml.jackson.annotation`.
 > 3. **Flyway** requiere `spring-boot-starter-flyway` + `flyway-database-postgresql`; sin el starter las migraciones no corren y no avisa.
 > 4. **Versiones por confirmar** (no usar las de este plan sin verificar): ShedLock, Resilience4j, Testcontainers, WireMock, ArchUnit, Springdoc.
-> 5. **Migraciones aplicadas**: V1 y V2. Nunca se editan; todo cambio va en V3, V4...
+> 5. **Migraciones aplicadas**: V1, V2 y V3. Nunca se editan; todo cambio nuevo va en V4...
 > 6. **Estado inicial de la reserva**: `INITIATED` (en los specs en espanol se llama "Iniciada"; el equivalente en codigo es INITIATED).
 > 7. **Idioma**: identificadores en ingles; prosa y documentacion en espanol.
 >

@@ -145,6 +145,7 @@ class CreateReservationTest { // pruebas funcionales del caso de uso iniciar res
         assertThat(new BigDecimal(json.get("estimated_total").asText())).isEqualByComparingTo(new BigDecimal("9600000.00"));
 
         UUID reservationId = UUID.fromString(json.get("reservation_id").asText());
+        assertThat(result.getResponse().getHeader("Location")).isEqualTo("/api/v1/reservations/" + reservationId); // el 201 apunta al recurso creado
         Reservation persisted = reservationRepositoryPort.findById(reservationId).orElseThrow();
         assertThat(persisted.getHarborTimezone()).isEqualTo("America/Bogota");
         assertThat(persisted.getOwnerId()).isEqualTo(defaultOwnerId);
