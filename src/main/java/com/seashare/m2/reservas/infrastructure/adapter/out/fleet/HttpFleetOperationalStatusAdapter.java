@@ -47,8 +47,7 @@ public class HttpFleetOperationalStatusAdapter implements FleetOperationalStatus
         try {
             String body = get(VESSELS_PATH + vesselId + "/operational-status"); // GET con un solo reintento
             if (body == null || body.isBlank()) { // sin cuerpo no hay estado que leer
-                register(vesselId, ExternalQueryResult.ERROR, null); // 200 sin cuerpo util
-                return false; // fail-safe: no disponible
+                throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet response body is empty"); // igual estilo que CU-09
             }
             String rawStatus; // estado crudo devuelto por M1
             try {
@@ -56,12 +55,10 @@ public class HttpFleetOperationalStatusAdapter implements FleetOperationalStatus
                 JsonNode statusNode = root.path("operational_status"); // estado reportado por M1
                 rawStatus = statusNode.isString() ? statusNode.stringValue() : null; // null si ausente o no texto
             } catch (JacksonException e) {
-                register(vesselId, ExternalQueryResult.ERROR, null); // json ilegible
-                return false; // fail-safe no disponible
+                throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet response body is not valid json"); // igual estilo que CU-09
             }
-            if (rawStatus == null || rawStatus.isBlank()) { // 200 valido sin operational_status
-                register(vesselId, ExternalQueryResult.ERROR, null); // sin estado que registrar como OK
-                return false; // fail-safe no disponible
+            if (rawStatus == null || rawStatus.isBlank()) { // ausente, vacio o no texto
+                throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet response is missing operational_status"); // el catch registra ERROR
             }
             register(vesselId, ExternalQueryResult.OK, rawStatus); // valor crudo, incluso si M1 devuelve uno desconocido
             return "AVAILABLE".equals(rawStatus); // true solo si AVAILABLE

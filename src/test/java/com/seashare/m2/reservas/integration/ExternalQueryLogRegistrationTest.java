@@ -262,38 +262,46 @@ class ExternalQueryLogRegistrationTest { // registro de consultas a M1 en extern
     }
 
     @Test
-    void statusEmptyBodyRegistersErrorAndReturnsFalse() { // 200 sin cuerpo -> false y fila ERROR
+    void statusEmptyBodyThrowsAndRegistersSingleErrorRow() { // 200 sin cuerpo -> FLEET_SERVICE_UNAVAILABLE y una fila ERROR
         wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse().withStatus(200))); // cuerpo vacio
 
-        assertThat(statusAdapter.isAvailable(VESSEL_ID)).isFalse(); // sigue devolviendo false
+        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID)) // corte de siempre
+                .isInstanceOfSatisfying(ReservationRuleException.class, e ->
+                        assertThat(e.getCode()).isEqualTo(ErrorCode.FLEET_SERVICE_UNAVAILABLE.getCode())); // codigo esperado
 
-        Map<String, Object> row = singleRow(); // una sola fila
+        Map<String, Object> row = singleRow(); // una sola fila por consulta
         assertThat(row.get("result")).isEqualTo("ERROR"); // sin cuerpo util es ERROR
         assertThat(row.get("returned_status")).isNull(); // sin estado crudo
     }
 
     @Test
-    void statusInvalidJsonRegistersErrorAndReturnsFalse() { // 200 ilegible -> false y fila ERROR
+    void statusInvalidJsonThrowsAndRegistersSingleErrorRow() { // 200 ilegible -> FLEET_SERVICE_UNAVAILABLE y una fila ERROR
         wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse().withStatus(200) // json roto
                 .withHeader("Content-Type", "application/json")
                 .withBody("{ not-json")));
 
-        assertThat(statusAdapter.isAvailable(VESSEL_ID)).isFalse(); // fail-safe
+        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID)) // corte de siempre
+                .isInstanceOfSatisfying(ReservationRuleException.class, e ->
+                        assertThat(e.getCode()).isEqualTo(ErrorCode.FLEET_SERVICE_UNAVAILABLE.getCode())); // codigo esperado
 
-        Map<String, Object> row = singleRow(); // una sola fila
+        Map<String, Object> row = singleRow(); // una sola fila por consulta
         assertThat(row.get("result")).isEqualTo("ERROR"); // cuerpo ilegible es ERROR
         assertThat(row.get("returned_status")).isNull(); // sin estado crudo
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM external_query_log", Integer.class)) // conteo explicito
+                .isEqualTo(1); // la fila del registro es unica
     }
 
     @Test
-    void statusMissingFieldRegistersErrorAndReturnsFalse() { // 200 sin operational_status -> false y fila ERROR
+    void statusMissingFieldThrowsAndRegistersSingleErrorRow() { // 200 sin operational_status -> FLEET_SERVICE_UNAVAILABLE y una fila ERROR
         wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse().withStatus(200) // cuerpo sin el campo
                 .withHeader("Content-Type", "application/json")
                 .withBody("{\"vessel_id\":\"" + VESSEL_ID + "\"}")));
 
-        assertThat(statusAdapter.isAvailable(VESSEL_ID)).isFalse(); // fail-safe
+        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID)) // corte de siempre
+                .isInstanceOfSatisfying(ReservationRuleException.class, e ->
+                        assertThat(e.getCode()).isEqualTo(ErrorCode.FLEET_SERVICE_UNAVAILABLE.getCode())); // codigo esperado
 
-        Map<String, Object> row = singleRow(); // una sola fila
+        Map<String, Object> row = singleRow(); // una sola fila por consulta
         assertThat(row.get("result")).isEqualTo("ERROR"); // sin campo es ERROR
         assertThat(row.get("returned_status")).isNull(); // sin estado crudo
     }
