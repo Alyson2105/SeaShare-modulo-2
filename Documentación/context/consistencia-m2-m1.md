@@ -6,7 +6,7 @@
 | Módulo consumidor | Módulo 1 – Gestión de Flota y Activos P2P (`Asignar estado operativo`) |
 | Caso de uso de M2 que lo emite | CU-22 Recibir información estado operativo (invocado por CU-08 Actualizar estado reserva mediante `<<include>>`) |
 | Spec de referencia | CU-22-recibir-informacion-estado-operativo/spec.md y CU-08-actualizar-estado-reserva/spec.md |
-| Tipo | Asíncrono, unidireccional (AMQP / RabbitMQ). Módulo 1 no responde |
+| Tipo | Salida asíncrona por outbox (HTTP PATCH, destino M1_HTTP). Módulo 1 responde de forma síncrona (pendiente de confirmar con M1) |
 | Fecha | 2026-10-22 |
 
 ## 1. Propósito
@@ -163,7 +163,7 @@ Cancelada por avería mecánica (señal hacia Mantenimiento/Limpieza; sólo si y
 
 Pendientes con Módulo 1:
 1. Definir el nombre del exchange, la routing key y la cola de Módulo 1 (sección 3).
-2. Confirmar que Módulo 1 consume la cola directamente (último salto por AMQP) y no mediante un relay HTTP.
+2. Confirmar que Módulo 1 recibe el último salto por HTTP PATCH (M1_HTTP), no por AMQP (pendiente de confirmar con M1).
 3. Confirmar las garantías de orden entre eventos de la misma embarcación (el edge case "Entrega fuera de orden" de CU-22 sigue como `[NEEDS CLARIFICATION]`).
 4. Acordar el tratamiento de los 4xx del consumidor (qué códigos se consideran permanentes).
 

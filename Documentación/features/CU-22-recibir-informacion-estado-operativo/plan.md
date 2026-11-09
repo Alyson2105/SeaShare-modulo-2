@@ -4,7 +4,7 @@
 
 - **Identificador del Contrato**: `ASYNC-M2-CU22-NOTIFICACION-ESTADO-OPERATIVO`
 - **Módulo Responsable**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones
-- **Tipo de Interfaz**: Asíncrono, unidireccional (AMQP / RabbitMQ), saliente hacia Módulo 1
+- **Tipo de Interfaz**: Salida asíncrona por outbox (HTTP PATCH, destino M1_HTTP), saliente hacia Módulo 1, que responde de forma síncrona (pendiente de confirmar con M1)
 - **Actor / Consumidor Autorizado**: 
   - `Módulo 1 – Gestión de Flota y Activos P2P` (consume la cola de Módulo 1 y materializa `Asignar estado operativo`)
 - **Caso de Uso Base / Relaciones**: 
@@ -45,7 +45,7 @@ Esta interfaz asíncrona permite a Módulo 2 informar a Módulo 1 el **estado op
 
 ## 3. Definición de la Interfaz
 
-- **Protocolo**: AMQP 0-9-1 (RabbitMQ), publicación unidireccional
+- **Protocolo**: HTTP PATCH (M1_HTTP) enviado desde el outbox; Módulo 1 responde de forma síncrona (pendiente de confirmar con M1)
 - **Operación**: `publish` a un exchange de tipo `topic`
 - **Formato de Mensaje**: `application/json`
 - **Codificación**: `UTF-8`
