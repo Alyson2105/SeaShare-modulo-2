@@ -1,6 +1,7 @@
 package com.seashare.m2.reservas.application.service;
 
 import com.seashare.m2.reservas.application.dto.ChangeReservationStatusCommand;
+import com.seashare.m2.reservas.application.dto.ChangeReservationStatusResult;
 import com.seashare.m2.reservas.application.dto.StatusAuditEntry;
 import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
 import com.seashare.m2.reservas.application.port.in.ChangeReservationStatusUseCase;
@@ -9,17 +10,23 @@ import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
 import com.seashare.m2.reservas.application.port.out.StatusAuditPort;
 import com.seashare.m2.reservas.domain.exception.InvalidTransitionException;
 import com.seashare.m2.reservas.domain.exception.ReservationNotFoundException;
+import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
+import com.seashare.m2.reservas.domain.exception.VersionConflictException;
 import com.seashare.m2.reservas.domain.model.ActorType;
 import com.seashare.m2.reservas.domain.model.CancellationSubtype;
 import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import com.seashare.m2.reservas.domain.state.ReservationStateMachine;
 import com.seashare.m2.shared.domain.ClockPort;
+import com.seashare.m2.shared.domain.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -27,7 +34,9 @@ import java.util.UUID;
 @Transactional
 public class ChangeReservationStatusService implements ChangeReservationStatusUseCase { // servicio transaccional para cambio de estado
 
-    private static final Set<ReservationStatus> OUTBOX_STATUSES = EnumSet.of(
+    static final String DESTINATION_AMQP = "AMQP"; // destino outbox hacia modulo 3 (CU-14)
+
+    private static final Set<ReservationStatus> OUTBOX_STATUSES = EnumSet.of( // estados destino que generan evento outbox
             ReservationStatus.PENDING_PAYMENT,
             ReservationStatus.RESERVED,
             ReservationStatus.IN_NAVIGATION,
@@ -52,36 +61,77 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
     }
 
     @Override
-    public void execute(ChangeReservationStatusCommand command) { // ejecuta el flujo transaccional de cambio de estado
+    public ChangeReservationStatusResult execute(ChangeReservationStatusCommand command) { // ejecuta el flujo transaccional de cambio de estado
         Instant changedAt = clockPort.now(); // captura instante actual provisto por el puerto de reloj
 
         Reservation reservation = repository.findById(command.reservationId()) // busca reserva por id
                 .orElseThrow(() -> new ReservationNotFoundException(command.reservationId())); // lanza excepcion si no existe
 
-        validateActorForSubtype(reservation.getStatus(), command.targetStatus(), command.subtype(), command.actor()); // valida actor segun subtipo
-
         ReservationStatus previousStatus = reservation.getStatus(); // guarda estado anterior
+        validateCommand(reservation, previousStatus, command, changedAt); // valida actor, subtipo, campos condicionales, version y ttl
+
         reservation.changeStatus(command.targetStatus(), command.subtype(), machine); // aplica transicion de estado en el dominio
-        repository.save(reservation); // guarda cambios en la reserva
+        Reservation saved = repository.save(reservation); // guarda cambios y retorna la version actualizada
 
         statusAuditPort.record(new StatusAuditEntry( // registra auditoria inmutable
                 reservation.getId(), // id de la reserva
                 previousStatus, // estado de origen
-                reservation.getStatus(), // estado de destino
-                reservation.getCancellationSubtype(), // subtipo de cancelacion efectivo
+                saved.getStatus(), // estado de destino
+                saved.getCancellationSubtype(), // subtipo de cancelacion efectivo
                 command.actor(), // actor de la operacion
                 command.reason(), // motivo o justificacion
                 changedAt // marca temporal del cambio
         ));
 
-        if (OUTBOX_STATUSES.contains(reservation.getStatus())) { // evalua si el destino requiere encolado
+        List<String> eventsEnqueued = new ArrayList<>(); // destinos con evento encolado
+        if (OUTBOX_STATUSES.contains(saved.getStatus())) { // evalua si el destino requiere encolado
             outboxPort.enqueue(new StatusChangedEvent( // encola evento outbox
                     UUID.randomUUID(), // id unico del evento
-                    reservation.getId(), // id de la reserva
-                    reservation.getStatus(), // nuevo estado
-                    reservation.getCancellationSubtype(), // subtipo de cancelacion efectivo
-                    changedAt // marca temporal del cambio
+                    saved.getId(), // id de la reserva
+                    saved.getStatus(), // nuevo estado
+                    saved.getCancellationSubtype(), // subtipo de cancelacion efectivo
+                    changedAt, // marca temporal del cambio
+                    command.actor(), // actor que disparo la transicion (CU-14 FR-002)
+                    command.anticipationMinutes(), // anticipacion al cancelar (CU-14 FR-003)
+                    command.completionNotes() // notas de cierre en COMPLETED (CU-14 FR-004)
             ));
+            eventsEnqueued.add(DESTINATION_AMQP); // registra destino AMQP (modulo 3)
+        }
+
+        return new ChangeReservationStatusResult( // construye el resultado tipado del contrato
+                saved.getId(), // id de la reserva
+                saved.getStatus(), // estado resultante
+                saved.getCancellationSubtype(), // subtipo resultante o null
+                changedAt, // hora exacta del cambio
+                saved.getTtlExpiresAt(), // expiracion del ttl sin cambios
+                saved.getVersion(), // version incrementada tras el guardado
+                List.copyOf(eventsEnqueued) // lista inmutable de destinos encolados
+        );
+    }
+
+    private void validateCommand(Reservation reservation,
+                                 ReservationStatus from,
+                                 ChangeReservationStatusCommand command,
+                                 Instant changedAt) { // valida el comando completo contra el contrato de CU-08
+        validateCancellationOrigin(from, command.targetStatus()); // cancelacion activa solo desde RESERVED (spec L156-L159)
+        if (!machine.canTransition(from, command.targetStatus())) { // transicion fuera de la matriz o estado terminal
+            throw new InvalidTransitionException(from, command.targetStatus(),
+                    "Cannot transition from " + from + " to " + command.targetStatus()); // rechaza transicion no permitida
+        }
+        validateSubtypeTargetCombination(from, command.targetStatus(), command.subtype()); // subtipo obligatorio con CANCELLED y prohibido fuera
+        validateActorForSubtype(from, command.targetStatus(), command.subtype(), command.actor()); // valida actor segun subtipo
+        validateActorIdentity(command); // actor_id obligatorio si actor no es SYSTEM
+        validateFieldPerTarget(command); // completion_notes solo COMPLETED; payment_reference solo RESERVED
+        validateCancellationData(command); // anticipacion al cancelar RENTER; averia al cancelar OWNER
+        validateExpectedVersion(reservation, command); // expected_version opcional vs version actual
+        validateTtlForReserved(reservation, command.targetStatus(), changedAt); // RESERVED exige ttl vigente (corte exacto)
+    }
+
+    private void validateCancellationOrigin(ReservationStatus from, ReservationStatus to) { // cancelacion activa solo desde RESERVED
+        if (to == ReservationStatus.CANCELLED && from != ReservationStatus.RESERVED) { // cancelacion fuera de RESERVED (spec L156-L159)
+            throw new InvalidTransitionException(from, to,
+                    "Solo las reservas en estado RESERVED admiten cancelacion activa; desde " + from
+                            + " la reserva debe liberarse pasivamente por el TTL"); // explica el rechazo
         }
     }
 
@@ -101,6 +151,62 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
         };
         if (!allowed) { // actor no autorizado para el subtipo
             throw new InvalidTransitionException(from, to, "Actor " + actor + " is not allowed for subtype " + subtype); // rechaza combinacion invalida
+        }
+    }
+
+    private void validateSubtypeTargetCombination(ReservationStatus from,
+                                                  ReservationStatus to,
+                                                  CancellationSubtype subtype) { // subtipo obligatorio con CANCELLED y prohibido con los demas estados
+        if (to == ReservationStatus.CANCELLED && subtype == null) { // cancelacion sin subtipo
+            throw new InvalidTransitionException(from, to, "Cancellation subtype is required when transitioning to CANCELLED"); // exige subtipo
+        }
+        if (to != ReservationStatus.CANCELLED && subtype != null) { // subtipo con estado que no es cancelacion
+            throw new InvalidTransitionException(from, to, "Cancellation subtype is only allowed when transitioning to CANCELLED"); // rechaza subtipo indebido
+        }
+    }
+
+    private void validateActorIdentity(ChangeReservationStatusCommand command) { // actor_id obligatorio si actor no es SYSTEM
+        if (command.actor() != ActorType.SYSTEM && command.actorId() == null) { // actor humano sin identidad
+            throw new ReservationRuleException(ErrorCode.INVALID_PARAMETERS, "actor_id is required when actor is not SYSTEM"); // rechaza comando incompleto
+        }
+    }
+
+    private void validateFieldPerTarget(ChangeReservationStatusCommand command) { // campos opcionales restringidos a un destino
+        if (command.completionNotes() != null && command.targetStatus() != ReservationStatus.COMPLETED) { // notas fuera de COMPLETED
+            throw new ReservationRuleException(ErrorCode.INVALID_PARAMETERS, "completion_notes is only allowed when transitioning to COMPLETED"); // rechaza
+        }
+        if (command.paymentReference() != null && command.targetStatus() != ReservationStatus.RESERVED) { // referencia fuera de RESERVED
+            throw new ReservationRuleException(ErrorCode.INVALID_PARAMETERS, "payment_reference is only allowed when transitioning to RESERVED"); // rechaza
+        }
+    }
+
+    private void validateCancellationData(ChangeReservationStatusCommand command) { // campos obligatorios al cancelar segun actor
+        if (command.targetStatus() != ReservationStatus.CANCELLED) { // fuera de cancelacion no aplica
+            return; // sin validacion
+        }
+        if (command.actor() == ActorType.RENTER && command.anticipationMinutes() == null) { // arrendatario cancela sin anticipacion
+            throw new ReservationRuleException(ErrorCode.INVALID_PARAMETERS, "anticipation_minutes is required when a renter cancels"); // exige anticipacion
+        }
+        if (command.actor() == ActorType.OWNER && command.mechanicalFailure() == null) { // propietario cancela sin indicador de averia
+            throw new ReservationRuleException(ErrorCode.INVALID_PARAMETERS, "mechanical_failure is required when an owner cancels"); // exige averia
+        }
+    }
+
+    private void validateExpectedVersion(Reservation reservation, ChangeReservationStatusCommand command) { // expected_version opcional
+        if (command.expectedVersion() != null && !Objects.equals(command.expectedVersion(), reservation.getVersion())) { // version distinta a la vista
+            throw new VersionConflictException("Expected version " + command.expectedVersion()
+                    + " does not match current version " + reservation.getVersion() + " for reservation " + reservation.getId()); // conflicto de concurrencia
+        }
+    }
+
+    private void validateTtlForReserved(Reservation reservation, ReservationStatus target, Instant changedAt) { // RESERVED exige ttl vigente
+        if (target != ReservationStatus.RESERVED) { // la guarda solo aplica a RESERVED
+            return; // sin validacion
+        }
+        Instant ttlExpiresAt = reservation.getTtlExpiresAt(); // expiracion de la reserva
+        if (ttlExpiresAt != null && !changedAt.isBefore(ttlExpiresAt)) { // corte exacto: en el segundo del vencimiento ya expiro
+            throw new ReservationRuleException(ErrorCode.RESERVATION_EXPIRED,
+                    "The 15 minute time limit of the reservation has expired"); // rechaza RESERVED con ttl vencido
         }
     }
 }

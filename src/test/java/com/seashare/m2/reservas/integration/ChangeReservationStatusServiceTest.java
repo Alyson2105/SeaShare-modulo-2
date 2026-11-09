@@ -1,6 +1,7 @@
 package com.seashare.m2.reservas.integration;
 
 import com.seashare.m2.reservas.application.dto.ChangeReservationStatusCommand;
+import com.seashare.m2.reservas.application.dto.ChangeReservationStatusResult;
 import com.seashare.m2.reservas.application.dto.CreateReservationCommand;
 import com.seashare.m2.reservas.application.dto.FleetInfo;
 import com.seashare.m2.reservas.application.dto.ReservationView;
@@ -13,6 +14,7 @@ import com.seashare.m2.reservas.application.port.out.OutboxPort;
 import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
 import com.seashare.m2.reservas.application.port.out.StatusAuditPort;
 import com.seashare.m2.reservas.domain.exception.InvalidTransitionException;
+import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.reservas.domain.exception.VersionConflictException;
 import com.seashare.m2.reservas.domain.model.ActorType;
 import com.seashare.m2.reservas.domain.model.CancellationSubtype;
@@ -23,6 +25,7 @@ import com.seashare.m2.shared.PostgresTestContainers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -102,7 +105,8 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
 
     private void changeStatus(Reservation reservation, ReservationStatus target, CancellationSubtype subtype, ActorType actor) { // ejecuta una transicion
         changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
-                reservation.getId(), target, subtype, actor, "Transicion de prueba"));
+                reservation.getId(), target, subtype, actor, "Transicion de prueba",
+                actor == ActorType.SYSTEM ? null : reservation.getRenterId(), null, null, null, null, null)); // actor_id humano para cumplir CU-08
     }
 
     @Test
@@ -178,6 +182,187 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
         Reservation unchanged = reservationRepositoryPort.findById(created.getId()).orElseThrow();
         assertThat(unchanged.getStatus()).isEqualTo(ReservationStatus.RESERVED);
         verify(statusAuditPort, never()).record(any());
+        verify(outboxPort, never()).enqueue(any(StatusChangedEvent.class));
+    }
+
+    @Test
+    void reservedFromPendingPaymentWithPaymentReference() { // escenario 3 del spec: pago confirmado guarda la referencia
+        Reservation created = createReservation();
+        changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
+        clearInvocations(statusAuditPort, outboxPort);
+
+        ChangeReservationStatusResult result = changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.RESERVED, null, ActorType.SYSTEM, "Pago confirmado",
+                null, null, null, null, null, "pg-8841"));
+
+        assertThat(result.status()).isEqualTo(ReservationStatus.RESERVED);
+        assertThat(result.cancellationSubtype()).isNull();
+        assertThat(result.version()).isGreaterThan(created.getVersion());
+        assertThat(result.ttlExpiresAt()).isEqualTo(created.getTtlExpiresAt());
+        assertThat(result.statusChangedAt()).isNotNull();
+        assertThat(result.eventsEnqueued()).containsExactly("AMQP");
+        Reservation updated = reservationRepositoryPort.findById(created.getId()).orElseThrow();
+        assertThat(updated.getStatus()).isEqualTo(ReservationStatus.RESERVED);
+        verify(statusAuditPort).record(any());
+    }
+
+    @Test
+    void cancelledByRenterStoresSubtypeAndAnticipation() { // escenario 6 del spec: cancelacion con subtipo y anticipacion
+        Reservation created = createReservation();
+        changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
+        changeStatus(created, ReservationStatus.RESERVED, null, ActorType.SYSTEM);
+        clearInvocations(outboxPort);
+
+        ChangeReservationStatusResult result = changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.CANCELLED, CancellationSubtype.FLEXIBLE, ActorType.RENTER, "Viaje cancelado",
+                UUID.randomUUID(), null, null, 4320, null, null));
+
+        assertThat(result.status()).isEqualTo(ReservationStatus.CANCELLED);
+        assertThat(result.cancellationSubtype()).isEqualTo(CancellationSubtype.FLEXIBLE);
+        Reservation updated = reservationRepositoryPort.findById(created.getId()).orElseThrow();
+        assertThat(updated.getCancellationSubtype()).isEqualTo(CancellationSubtype.FLEXIBLE);
+        ArgumentCaptor<StatusChangedEvent> captor = ArgumentCaptor.forClass(StatusChangedEvent.class);
+        verify(outboxPort).enqueue(captor.capture());
+        assertThat(captor.getValue().anticipationMinutes()).isEqualTo(4320); // anticipacion transportada al evento (CU-14 FR-003)
+        assertThat(captor.getValue().actor()).isEqualTo(ActorType.RENTER);
+    }
+
+    @Test
+    void cancelledByOwnerRequiresMechanicalFailure() { // mecanica obligatoria al cancelar OWNER (plan L46)
+        Reservation created = createReservation();
+        changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
+        changeStatus(created, ReservationStatus.RESERVED, null, ActorType.SYSTEM);
+        UUID ownerId = UUID.randomUUID();
+
+        assertThatThrownBy(() -> changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.CANCELLED, CancellationSubtype.BY_OWNER, ActorType.OWNER, "Averia",
+                ownerId, null, null, null, null, null)))
+                .isInstanceOf(ReservationRuleException.class)
+                .hasFieldOrPropertyWithValue("code", "INVALID_PARAMETERS");
+
+        Reservation unchanged = reservationRepositoryPort.findById(created.getId()).orElseThrow();
+        assertThat(unchanged.getStatus()).isEqualTo(ReservationStatus.RESERVED);
+    }
+
+    @Test
+    void pendingPaymentToPaymentFailedStoresReason() { // escenario 8 del spec: motivo de rechazo en la auditoria
+        Reservation created = createReservation();
+        changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
+        clearInvocations(statusAuditPort, outboxPort);
+
+        ChangeReservationStatusResult result = changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.PAYMENT_FAILED, null, ActorType.SYSTEM, "REJECTED: fondos insuficientes",
+                null, null, null, null, null, null));
+
+        assertThat(result.status()).isEqualTo(ReservationStatus.PAYMENT_FAILED);
+        assertThat(result.eventsEnqueued()).isEmpty(); // PAYMENT_FAILED no se publica (CU-14 FR-001)
+        verify(statusAuditPort).record(org.mockito.ArgumentMatchers.argThat(entry ->
+                "REJECTED: fondos insuficientes".equals(entry.reason())));
+        verify(outboxPort, never()).enqueue(any(StatusChangedEvent.class));
+    }
+
+    @Test
+    void cancelFromPendingPaymentIsRejected() { // spec L156-L159: cancelacion activa rechazada con explicacion
+        Reservation created = createReservation();
+        changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
+        clearInvocations(statusAuditPort, outboxPort);
+
+        assertThatThrownBy(() -> changeStatus(created, ReservationStatus.CANCELLED, CancellationSubtype.FLEXIBLE, ActorType.RENTER))
+                .isInstanceOf(InvalidTransitionException.class)
+                .hasMessageContaining("RESERVED");
+
+        Reservation unchanged = reservationRepositoryPort.findById(created.getId()).orElseThrow();
+        assertThat(unchanged.getStatus()).isEqualTo(ReservationStatus.PENDING_PAYMENT);
+        verify(statusAuditPort, never()).record(any());
+        verify(outboxPort, never()).enqueue(any(StatusChangedEvent.class));
+    }
+
+    @Test
+    void checkInAndCheckOutTransitionsWork() { // escenarios 4 y 5 del spec: check-in y cierre con novedades
+        Reservation created = createReservation();
+        changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
+        changeStatus(created, ReservationStatus.RESERVED, null, ActorType.SYSTEM);
+
+        ChangeReservationStatusResult inNavigation = changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.IN_NAVIGATION, null, ActorType.OWNER, "Check-in",
+                UUID.randomUUID(), null, null, null, null, null));
+        assertThat(inNavigation.status()).isEqualTo(ReservationStatus.IN_NAVIGATION);
+        assertThat(inNavigation.eventsEnqueued()).containsExactly("AMQP");
+
+        ChangeReservationStatusResult completed = changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.COMPLETED, null, ActorType.OWNER, "Check-out",
+                UUID.randomUUID(), null, null, null, "Novedades del cierre", null));
+        assertThat(completed.status()).isEqualTo(ReservationStatus.COMPLETED);
+        ArgumentCaptor<StatusChangedEvent> captor = ArgumentCaptor.forClass(StatusChangedEvent.class);
+        verify(outboxPort, org.mockito.Mockito.atLeastOnce()).enqueue(captor.capture());
+        assertThat(captor.getAllValues().get(captor.getAllValues().size() - 1).completionNotes())
+                .isEqualTo("Novedades del cierre"); // ultimo evento encolado lleva las novedades (FR-009)
+    }
+
+    @Test
+    void expectedVersionMismatchIsRejected() { // expected_version del invocador no coincide -> VERSION_CONFLICT
+        Reservation created = createReservation();
+
+        assertThatThrownBy(() -> changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER, "Pago iniciado",
+                UUID.randomUUID(), 99L, null, null, null, null)))
+                .isInstanceOf(VersionConflictException.class)
+                .hasFieldOrPropertyWithValue("code", "VERSION_CONFLICT");
+
+        Reservation unchanged = reservationRepositoryPort.findById(created.getId()).orElseThrow();
+        assertThat(unchanged.getStatus()).isEqualTo(ReservationStatus.INITIATED);
+    }
+
+    @Test
+    void missingActorIdForHumanActorIsRejected() { // actor_id obligatorio si actor no es SYSTEM (plan L44)
+        Reservation created = createReservation();
+
+        assertThatThrownBy(() -> changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER, "Pago iniciado",
+                null, null, null, null, null, null)))
+                .isInstanceOf(ReservationRuleException.class)
+                .hasFieldOrPropertyWithValue("code", "INVALID_PARAMETERS");
+
+        verify(outboxPort, never()).enqueue(any(StatusChangedEvent.class));
+    }
+
+    @Test
+    void paymentReferenceOnlyOnReservedAndCompletionNotesOnlyOnCompleted() { // campos restringidos a su destino
+        Reservation created = createReservation();
+
+        assertThatThrownBy(() -> changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER, "Pago iniciado",
+                UUID.randomUUID(), null, null, null, null, "pg-123")))
+                .isInstanceOf(ReservationRuleException.class)
+                .hasFieldOrPropertyWithValue("code", "INVALID_PARAMETERS");
+
+        changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
+        changeStatus(created, ReservationStatus.RESERVED, null, ActorType.SYSTEM);
+
+        assertThatThrownBy(() -> changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.IN_NAVIGATION, null, ActorType.OWNER, "Check-in",
+                UUID.randomUUID(), null, null, null, "notas indebidas", null)))
+                .isInstanceOf(ReservationRuleException.class)
+                .hasFieldOrPropertyWithValue("code", "INVALID_PARAMETERS");
+    }
+
+    @Test
+    void subtypeProhibitedOutsideCancelled() { // cancellation_subtype prohibido con los demas estados (plan L58)
+        Reservation created = createReservation();
+
+        assertThatThrownBy(() -> changeStatus(created, ReservationStatus.PENDING_PAYMENT, CancellationSubtype.LATE, ActorType.RENTER))
+                .isInstanceOf(InvalidTransitionException.class);
+    }
+
+    @Test
+    void expiredTransitionDoesNotEnqueueEvents() { // EXPIRED no genera evento (matriz de efectos)
+        Reservation created = createReservation();
+
+        ChangeReservationStatusResult result = changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.EXPIRED, null, ActorType.SYSTEM, "TTL expirado"));
+
+        assertThat(result.status()).isEqualTo(ReservationStatus.EXPIRED);
+        assertThat(result.eventsEnqueued()).isEmpty();
         verify(outboxPort, never()).enqueue(any(StatusChangedEvent.class));
     }
 }
