@@ -6,15 +6,15 @@ import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.shared.domain.ErrorCode;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.time.LocalTime;
 import java.util.UUID;
 
@@ -29,8 +29,7 @@ public class ReservationController { // controlador rest para operaciones sobre 
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ReservationResponse createReservation(
+    public ResponseEntity<ReservationResponse> createReservation(
             CallerIdentity identity, // identidad extraida antes del cuerpo para validar autenticacion
             @RequestHeader("Idempotency-Key") String idempotencyKey, // clave de idempotencia obligatoria
             @Valid @RequestBody CreateReservationRequest request // cuerpo de solicitud sujeto a validacion de jakarta
@@ -61,6 +60,8 @@ public class ReservationController { // controlador rest para operaciones sobre 
         );
 
         ReservationView view = createReservationUseCase.execute(command); // delega en el caso de uso
-        return ReservationResponse.from(view); // transforma vista de dominio a payload http 201
+        ReservationResponse response = ReservationResponse.from(view); // transforma la vista a payload http
+        URI location = URI.create("/api/v1/reservations/" + response.reservationId()); // ruta del recurso creado
+        return ResponseEntity.created(location).body(response); // 201 con header Location
     }
 }
