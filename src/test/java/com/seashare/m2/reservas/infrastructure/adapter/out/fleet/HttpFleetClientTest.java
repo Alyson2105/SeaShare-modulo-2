@@ -3,6 +3,7 @@ package com.seashare.m2.reservas.infrastructure.adapter.out.fleet;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.seashare.m2.reservas.application.dto.FleetInfo;
+import com.seashare.m2.reservas.application.port.out.ExternalQueryLogPort;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,8 +45,9 @@ class HttpFleetClientTest { // pruebas de exito de los adaptadores HTTP reales d
         properties.setBaseUrl("http://localhost:" + wireMock.port()); // apunta al WireMock
         properties.setToken(TOKEN); // token de prueba
         RestClient client = new FleetHttpConfig().fleetRestClient(properties); // cliente real con timeouts
-        infoAdapter = new HttpFleetInfoAdapter(client); // adaptador de ficha
-        statusAdapter = new HttpFleetOperationalStatusAdapter(client); // adaptador de estado
+        ExternalQueryLogPort noopLog = entry -> { }; // el registro no se prueba aqui
+        infoAdapter = new HttpFleetInfoAdapter(client, noopLog); // adaptador de ficha
+        statusAdapter = new HttpFleetOperationalStatusAdapter(client, noopLog); // adaptador de estado
     }
 
     @AfterEach

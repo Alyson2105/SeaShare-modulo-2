@@ -2,6 +2,7 @@ package com.seashare.m2.reservas.infrastructure.adapter.out.fleet;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.seashare.m2.reservas.application.port.out.ExternalQueryLogPort;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.shared.domain.ErrorCode;
 import org.junit.jupiter.api.AfterEach;
@@ -43,8 +44,9 @@ class FleetUnavailableTest { // pruebas de cortes seguros y errores de M1 con Wi
         properties.setBaseUrl("http://localhost:" + wireMock.port()); // apunta al WireMock
         properties.setToken(TOKEN); // token de prueba
         RestClient client = new FleetHttpConfig().fleetRestClient(properties); // cliente real con timeouts
-        infoAdapter = new HttpFleetInfoAdapter(client); // adaptador de ficha
-        statusAdapter = new HttpFleetOperationalStatusAdapter(client); // adaptador de estado
+        ExternalQueryLogPort noopLog = entry -> { }; // el registro no se prueba aqui
+        infoAdapter = new HttpFleetInfoAdapter(client, noopLog); // adaptador de ficha
+        statusAdapter = new HttpFleetOperationalStatusAdapter(client, noopLog); // adaptador de estado
     }
 
     @AfterEach
@@ -127,7 +129,7 @@ class FleetUnavailableTest { // pruebas de cortes seguros y errores de M1 con Wi
         FleetProperties closed = new FleetProperties(); // propiedades hacia un puerto muerto
         closed.setBaseUrl("http://127.0.0.1:1"); // puerto 1 siempre cerrado en local
         closed.setToken(TOKEN); // token de prueba
-        HttpFleetInfoAdapter closedAdapter = new HttpFleetInfoAdapter(new FleetHttpConfig().fleetRestClient(closed)); // adaptador aislado
+        HttpFleetInfoAdapter closedAdapter = new HttpFleetInfoAdapter(new FleetHttpConfig().fleetRestClient(closed), entry -> { }); // adaptador aislado
 
         assertThatThrownBy(() -> closedAdapter.getVesselInfo(VESSEL_ID)) // conexion rechazada dos veces
                 .isInstanceOfSatisfying(ReservationRuleException.class, e ->
