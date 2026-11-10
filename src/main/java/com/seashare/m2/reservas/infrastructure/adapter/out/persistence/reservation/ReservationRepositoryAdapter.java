@@ -91,17 +91,37 @@ public class ReservationRepositoryAdapter implements ReservationRepositoryPort {
     }
 
     @Override
-    public ReservationPage findByRenter(UUID renterId, int page, int limit) { // consulta reservas de arrendatario con paginacion
-        Pageable pageable = PageRequest.of(page - 1, limit, Sort.by(Sort.Direction.DESC, "createdAt")); // convierte a indice basado en cero con orden descendente
-        Page<ReservationEntity> entityPage = repository.findByRenterId(renterId, pageable); // ejecuta consulta paginada en base de datos
+    public ReservationPage findByRenter(UUID renterId, int page, int limit) { // consulta sin filtro de estado
+        return findByRenter(renterId, page, limit, null); // delega en la consulta filtrada
+    }
+
+    @Override
+    public ReservationPage findByOwner(UUID ownerId, int page, int limit) { // consulta sin filtro de estado
+        return findByOwner(ownerId, page, limit, null); // delega en la consulta filtrada
+    }
+
+    @Override
+    public ReservationPage findByRenter(UUID renterId,
+                                        int page,
+                                        int limit,
+                                        Set<ReservationStatus> statuses) { // consulta reservas de arrendatario con paginacion y filtro
+        Pageable pageable = PageRequest.of(page - 1, limit, Sort.by(Sort.Direction.DESC, "createdAt")); // indice base cero y orden descendente
+        Page<ReservationEntity> entityPage = statuses == null || statuses.isEmpty()
+                ? repository.findByRenterId(renterId, pageable) // sin restriccion de estado
+                : repository.findByRenterIdAndStatusIn(renterId, statuses, pageable); // restringida al filtro
         List<Reservation> items = entityPage.getContent().stream().map(mapper::toDomain).toList(); // mapea entidades a dominio
         return new ReservationPage(items, entityPage.getTotalElements()); // retorna resultado con total de filas
     }
 
     @Override
-    public ReservationPage findByOwner(UUID ownerId, int page, int limit) { // consulta reservas de propietario con paginacion
-        Pageable pageable = PageRequest.of(page - 1, limit, Sort.by(Sort.Direction.DESC, "createdAt")); // convierte a indice basado en cero con orden descendente
-        Page<ReservationEntity> entityPage = repository.findByOwnerId(ownerId, pageable); // ejecuta consulta paginada en base de datos
+    public ReservationPage findByOwner(UUID ownerId,
+                                       int page,
+                                       int limit,
+                                       Set<ReservationStatus> statuses) { // consulta reservas de propietario con paginacion y filtro
+        Pageable pageable = PageRequest.of(page - 1, limit, Sort.by(Sort.Direction.DESC, "createdAt")); // indice base cero y orden descendente
+        Page<ReservationEntity> entityPage = statuses == null || statuses.isEmpty()
+                ? repository.findByOwnerId(ownerId, pageable) // sin restriccion de estado
+                : repository.findByOwnerIdAndStatusIn(ownerId, statuses, pageable); // restringida al filtro
         List<Reservation> items = entityPage.getContent().stream().map(mapper::toDomain).toList(); // mapea entidades a dominio
         return new ReservationPage(items, entityPage.getTotalElements()); // retorna resultado con total de filas
     }

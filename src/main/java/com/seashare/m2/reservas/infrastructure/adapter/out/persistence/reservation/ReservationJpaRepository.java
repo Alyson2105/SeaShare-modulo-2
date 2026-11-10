@@ -29,6 +29,10 @@ interface ReservationJpaRepository extends JpaRepository<ReservationEntity, UUID
 
     Page<ReservationEntity> findByOwnerId(UUID ownerId, Pageable pageable); // consulta paginada por propietario
 
+    Page<ReservationEntity> findByRenterIdAndStatusIn(UUID renterId, Collection<ReservationStatus> statuses, Pageable pageable); // consulta filtrada por arrendatario
+
+    Page<ReservationEntity> findByOwnerIdAndStatusIn(UUID ownerId, Collection<ReservationStatus> statuses, Pageable pageable); // consulta filtrada por propietario
+
     boolean existsByIdAndRenterId(UUID id, UUID renterId); // verifica pertenencia a arrendatario
 
     boolean existsByIdAndOwnerId(UUID id, UUID ownerId); // verifica pertenencia a propietario

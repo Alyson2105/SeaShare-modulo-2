@@ -1,5 +1,6 @@
 package com.seashare.m2.reservas.application.dto;
 
+import com.seashare.m2.reservas.domain.model.CancellationSubtype;
 import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 
@@ -11,7 +12,11 @@ import java.util.UUID;
 
 public record ReservationView(
         UUID reservationId, // identificador unico de la reserva
+        String reservationCode, // codigo visible persistido
         ReservationStatus status, // estado actual de la reserva
+        CancellationSubtype cancellationSubtype, // subestado de cancelacion
+        UUID renterId, // identificador del arrendatario
+        UUID ownerId, // identificador del propietario
         UUID vesselId, // identificador de la embarcacion
         LocalDate startDate, // fecha inicial de la reserva
         LocalDate endDate, // fecha final de la reserva
@@ -30,7 +35,11 @@ public record ReservationView(
     public static ReservationView from(Reservation reservation) {
         return new ReservationView(
                 reservation.getId(),
+                reservation.getReservationCode(),
                 reservation.getStatus(),
+                reservation.getCancellationSubtype(),
+                reservation.getRenterId(),
+                reservation.getOwnerId(),
                 reservation.getVesselId(),
                 reservation.getStartDate(),
                 reservation.getEndDate(),
@@ -47,4 +56,3 @@ public record ReservationView(
         );
     }
 }
-

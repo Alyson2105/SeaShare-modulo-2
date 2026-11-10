@@ -36,6 +36,7 @@ public class Reservation { // agregado de reserva del dominio
     private Instant actualArrivalAt; // hora real de desembarque; la fija CU-07 (T-17d), aqui solo persistencia
     private boolean m1Blocked; // true si ya se notifico RESERVED a Modulo 1 (guarda SC-003)
     private final Long version; // version de concurrencia optimista
+    private String reservationCode; // codigo visible persistido; solo lectura para las vistas
 
     public Reservation(UUID id, UUID renterId, UUID ownerId, UUID vesselId, LocalDate startDate, LocalDate endDate,
                        int passengers, String holderName, String holderPhone, String holderEmail,
@@ -212,6 +213,14 @@ public class Reservation { // agregado de reserva del dominio
 
     public void setM1Blocked(boolean m1Blocked) { // fija la guarda de bloqueo en Modulo 1 (T-08)
         this.m1Blocked = m1Blocked; // establece m1Blocked
+    }
+
+    public String getReservationCode() { // obtiene el codigo visible
+        return reservationCode; // retorna reservationCode
+    }
+
+    public void setReservationCode(String reservationCode) { // asigna el codigo visible desde persistencia
+        this.reservationCode = reservationCode; // establece reservationCode
     }
 
     public UUID getId() { // obtiene el id

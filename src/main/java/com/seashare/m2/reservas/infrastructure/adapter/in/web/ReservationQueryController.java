@@ -1,6 +1,6 @@
 package com.seashare.m2.reservas.infrastructure.adapter.in.web;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.seashare.m2.reservas.application.dto.ReservationListFilter;
 import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.application.dto.ReservationViewPage;
 import com.seashare.m2.reservas.application.port.in.ReservationQueryUseCase;
@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -25,32 +24,17 @@ public class ReservationQueryController { // controlador rest para consultas pag
         this.queryService = queryService; // asigna servicio de consultas
     }
 
-    public record ReservationListResponse(
-            @JsonProperty("items")
-            List<ReservationResponse> items, // coleccion de reservas en la pagina actual
-
-            @JsonProperty("page")
-            int page, // numero de pagina consultada
-
-            @JsonProperty("limit")
-            int limit, // cantidad maxima de elementos por pagina
-
-            @JsonProperty("total_items")
-            long totalItems // total general de elementos coincidentes
-    ) { // estructura de respuesta para lista paginada en snake_case
-    }
-
     @GetMapping
     public ReservationListResponse listReservations(
             CallerIdentity identity, // identidad extraida de encabezados http
             @RequestParam(name = "page", defaultValue = "1") int page, // pagina solicitada por defecto uno
-            @RequestParam(name = "limit", defaultValue = "10") int limit // tamano solicitado por defecto diez
+            @RequestParam(name = "limit", defaultValue = "10") int limit, // tamano solicitado por defecto diez
+            @RequestParam(name = "filter", defaultValue = "all") String filter // pestana all/history/cancelled
     ) { // endpoint para listar reservas propias de forma paginada
-        ReservationViewPage result = queryService.findReservations(identity.userId(), identity.role(), page, limit); // ejecuta consulta en servicio
-        List<ReservationResponse> items = result.items().stream() // procesa lista de vistas obtenidas
-                .map(ReservationResponse::from) // transforma cada vista a respuesta web
-                .toList(); // recopila lista inmutable
-        return new ReservationListResponse(items, page, limit, result.totalItems()); // construye payload paginado
+        ReservationListFilter parsedFilter = ReservationListFilter.from(filter); // valida y traduce el filtro
+        ReservationViewPage result = queryService.findReservations(
+                identity.userId(), identity.role(), page, limit, parsedFilter); // ejecuta consulta con filtro
+        return ReservationListResponse.from(result); // construye el payload del contrato CU-20
     }
 
     @GetMapping("/{id}")

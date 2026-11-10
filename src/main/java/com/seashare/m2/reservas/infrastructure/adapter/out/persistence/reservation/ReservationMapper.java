@@ -39,6 +39,7 @@ class ReservationMapper { // mapeador entre entidad de persistencia y modelo de 
         domain.setActualDepartureAt(entity.getActualDepartureAt()); // mapea hora real de zarpe (solo persistencia)
         domain.setActualArrivalAt(entity.getActualArrivalAt()); // mapea hora real de desembarque (solo persistencia)
         domain.setM1Blocked(entity.isM1Blocked()); // mapea la guarda de bloqueo en M1
+        domain.setReservationCode(entity.getReservationCode()); // mapea el codigo visible persistido
         return domain; // retorna agregado completo
     }
 
