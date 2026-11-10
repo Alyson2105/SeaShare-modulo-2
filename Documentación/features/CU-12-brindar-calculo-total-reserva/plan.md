@@ -21,7 +21,7 @@ Módulo 3 calcula alquiler, seguro y depósito de garantía de una reserva ya re
 
 | Header | Obligatorio | Valor |
 |---|---|---|
-| `Authorization` | Sí | `Bearer <token>` — JWT de servicio de Módulo 2 [PEND] OQ-01 |
+| `Authorization` | No | M2 no lo envía: el servicio de Módulo 3 no exige autenticación (README de contratos de M3, §3.2) |
 | `Accept` | No | `application/json` |
 | `X-Correlation-Id` | No | El de la petición de origen |
 

@@ -32,7 +32,7 @@ GET /api/v1/reservations/{reservation_id}/payment-confirmation
 
 | Header | Obligatorio | Valor |
 |---|---|---|
-| `Authorization` | Sí | `Bearer <token>` — JWT de servicio de Módulo 2 [PEND] OQ-01 |
+| `Authorization` | No | M2 no lo envía: el servicio de Módulo 3 no exige autenticación (README de contratos de M3, §3.2) |
 | `Accept` | No | `application/json` |
 | `X-Correlation-Id` | No | Cadena libre para trazabilidad distribuida |
 
@@ -150,7 +150,7 @@ Los errores de Módulo 3 llegan como `application/problem+json` con `type`, `tit
 
 ## 8. Seguridad
 
-Módulo 2 llama con la identidad de servicio `Sistema de Reservas y Operaciones`. Mecanismo [PEND] OQ-01.
+Módulo 2 no envía credenciales a Módulo 3: los contratos de Módulo 3 dejan la seguridad fuera de alcance (README de contratos de M3, §3.2). Si Módulo 3 la incorpora, se agregará el header Authorization.
 
 ## 9. Pendientes
 

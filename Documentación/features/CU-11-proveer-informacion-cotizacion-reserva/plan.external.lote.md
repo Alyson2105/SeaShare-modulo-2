@@ -38,7 +38,7 @@ POST /api/v1/estimates/batch
 
 |Nombre|Obligatorio|Descripción|
 |-|-|-|
-|`Authorization`|Sí|`Bearer <token>` — JWT de identidad de servicio expedido para Módulo 2|
+|`Authorization`|No|M2 no lo envía: el servicio de Módulo 3 no exige autenticación (README de contratos de M3, §3.2)|
 |`Content-Type`|Sí|`application/json`|
 |`Accept`|No|`application/json`|
 
@@ -109,11 +109,10 @@ Módulo 2 parsea `estimated_total` como `BigDecimal`, sin redondeo ni operacione
 
 ```bash
 curl -X POST "https://finanzas.seashare.internal/api/v1/estimates/batch" \\
-  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.serviceTokenM2" \\" \\
   -H "Content-Type: application/json" \\
   -H "Accept: application/json" \\
   -d '{
-    "boat\_ids": \[
+    "boat_ids": [
       "d3b07384-d113-49cd-a5d6-812e9bcfc101",
       "8f4b2319-58b9-4c8d-b0a3-9e41f7d12a99"
     ]
@@ -147,7 +146,6 @@ curl -X POST "https://finanzas.seashare.internal/api/v1/estimates/batch" \\
 
 ```bash
 curl -X POST "https://finanzas.seashare.internal/api/v1/estimates/batch" \\
-  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.serviceTokenM2" \\" \\
   -H "Content-Type: application/json" \\
   -d '{
     "boat_ids": [
