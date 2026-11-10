@@ -3,6 +3,7 @@ package com.seashare.m2.reservas.infrastructure.adapter.in.web;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.seashare.m2.reservas.application.dto.VesselSummary;
 import com.seashare.m2.reservas.application.dto.ReservationView;
+import com.seashare.m2.reservas.application.service.HarborTime;
 import com.seashare.m2.reservas.domain.model.CancellationSubtype;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 
@@ -114,7 +115,7 @@ public record ReservationListItemResponse( // tarjeta de reserva del listado de 
     }
 
     public static ReservationListItemResponse from(ReservationView view, VesselSummary summary, String role) { // arma la tarjeta
-        ZoneId zone = ReservationTimeMapper.zoneOf(view.harborTimezone()); // zona del puerto
+        ZoneId zone = HarborTime.zoneOf(view.harborTimezone()); // zona del puerto
         VesselResponse vessel = new VesselResponse( // datos de embarcacion con fail-safe
                 view.vesselId(),
                 summary == null ? null : summary.name(),
@@ -129,10 +130,10 @@ public record ReservationListItemResponse( // tarjeta de reserva del listado de 
                 view.cancellationSubtype(),
                 vessel,
                 new DatesResponse(
-                        ReservationTimeMapper.at(view.startDate(), view.departureTime(), zone),
-                        ReservationTimeMapper.at(view.endDate(), view.departureTime(), zone),
-                        ReservationTimeMapper.durationDays(view.startDate(), view.endDate()),
-                        ReservationTimeMapper.durationNights(view.startDate(), view.endDate())),
+                        HarborTime.at(view.startDate(), view.departureTime(), zone),
+                        HarborTime.at(view.endDate(), view.departureTime(), zone),
+                        HarborTime.durationDays(view.startDate(), view.endDate()),
+                        HarborTime.durationNights(view.startDate(), view.endDate())),
                 view.passengers(),
                 new TotalPriceResponse(view.estimatedTotal(), view.currency(), true),
                 renter,

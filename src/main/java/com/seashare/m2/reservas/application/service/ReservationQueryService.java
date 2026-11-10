@@ -1,9 +1,11 @@
 package com.seashare.m2.reservas.application.service;
 
+import com.seashare.m2.reservas.application.dto.ReservationDetailView;
 import com.seashare.m2.reservas.application.dto.ReservationListFilter;
 import com.seashare.m2.reservas.application.dto.ReservationPage;
 import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.application.dto.ReservationViewPage;
+import com.seashare.m2.reservas.application.dto.VesselDetail;
 import com.seashare.m2.reservas.application.dto.VesselSummary;
 import com.seashare.m2.reservas.application.port.in.ReservationQueryUseCase;
 import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
@@ -11,10 +13,14 @@ import com.seashare.m2.reservas.application.port.out.VesselReadPort;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
+import com.seashare.m2.shared.domain.ClockPort;
 import com.seashare.m2.shared.domain.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -31,9 +37,14 @@ public class ReservationQueryService implements ReservationQueryUseCase { // ser
 
     private final VesselReadPort vesselReadPort; // puerto de solo lectura de datos de flota (CU-20 y CU-21)
 
-    public ReservationQueryService(ReservationRepositoryPort queryPort, VesselReadPort vesselReadPort) { // inyeccion de puertos de consulta
+    private final ClockPort clockPort; // reloj unico para contadores y flags temporales
+
+    public ReservationQueryService(ReservationRepositoryPort queryPort,
+                                   VesselReadPort vesselReadPort,
+                                   ClockPort clockPort) { // inyeccion de puertos de consulta
         this.queryPort = queryPort; // asigna puerto de consulta
         this.vesselReadPort = vesselReadPort; // asigna lectura de flota
+        this.clockPort = clockPort; // asigna reloj
     }
 
     @Override
@@ -67,26 +78,96 @@ public class ReservationQueryService implements ReservationQueryUseCase { // ser
     }
 
     @Override
-    public ReservationView getReservationDetail(UUID reservationId, UUID userId, String role) { // consulta detalle de reserva propia
+    public ReservationView getReservationDetail(UUID reservationId, UUID userId, String role) { // proyeccion basica del detalle
+        return ReservationView.from(requireOwnedReservation(reservationId, userId, role)); // valida pertenencia y proyecta
+    }
+
+    @Override
+    public ReservationDetailView getReservationDetailView(UUID reservationId, UUID userId, String role) { // detalle completo de CU-21
+        ReservationView view = ReservationView.from(requireOwnedReservation(reservationId, userId, role)); // valida pertenencia
+        ZoneId zone = HarborTime.zoneOf(view.harborTimezone()); // zona del puerto
+        OffsetDateTime scheduledDeparture = HarborTime.at(view.startDate(), view.departureTime(), zone); // zarpe pactado
+        OffsetDateTime scheduledArrival = HarborTime.at(view.endDate(), view.departureTime(), zone); // llegada pactada (D7)
+        OffsetDateTime actualDeparture = toOffset(view.actualDepartureAt(), zone); // zarpe real
+        OffsetDateTime actualArrival = toOffset(view.actualArrivalAt(), zone); // llegada real
+        Instant now = clockPort.now(); // instante unico de la consulta
+
+        VesselDetail vessel = resolveVesselDetail(view); // ficha con degradacion si M1 falla
+        long previousTrips = queryPort.countCompletedByRenterExcluding(view.renterId(), view.reservationId()); // D8: viajes completados en M2
+
+        ReservationDetailView.Itinerary itinerary = new ReservationDetailView.Itinerary(
+                scheduledDeparture,
+                scheduledArrival,
+                actualDeparture,
+                actualArrival,
+                new ReservationDetailView.DeparturePort(
+                        vessel.portName(),
+                        vessel.portCity(),
+                        view.harborTimezone() != null ? view.harborTimezone() : vessel.timezone()),
+                HarborTime.durationDays(view.startDate(), view.endDate()),
+                HarborTime.durationNights(view.startDate(), view.endDate()),
+                view.passengers());
+
+        ReservationDetailView.Party renter = new ReservationDetailView.Party(
+                view.renterId(), view.holderName(), previousTrips); // D9: nombre del titular persistido
+        ReservationDetailView.Party owner = new ReservationDetailView.Party(
+                view.ownerId(), vessel.ownerName(), null); // el conteo solo aplica al arrendatario
+
+        return new ReservationDetailView(
+                view.reservationId(),
+                view.reservationCode(),
+                view.status(),
+                view.cancellationSubtype(),
+                vessel,
+                itinerary,
+                renter,
+                owner,
+                ReservationDetailPolicy.paymentSummary(view), // desglose adaptado al estado
+                ReservationDetailPolicy.actions(view, role, scheduledDeparture, now), // flags por rol/estado
+                ReservationDetailPolicy.timeIndicators(view, scheduledDeparture, now), // contadores
+                ReservationDetailPolicy.banner(view, actualDeparture), // banner contextual
+                view.createdAt().atZone(zone).toOffsetDateTime());
+    }
+
+    private Reservation requireOwnedReservation(UUID reservationId, UUID userId, String role) { // valida existencia y pertenencia
         validateRole(role); // valida que el rol tenga permisos de consulta
-
-        Optional<Reservation> reservationOpt = queryPort.findById(reservationId); // busca reserva por su identificador unico
-        if (reservationOpt.isEmpty()) { // comprueba si la reserva existe
-            throw new ReservationRuleException(ErrorCode.RESERVATION_NOT_FOUND, "Reservation not found"); // rechaza reserva no encontrada
+        Reservation reservation = queryPort.findById(reservationId) // busca la reserva
+                .orElseThrow(() -> new ReservationRuleException(ErrorCode.RESERVATION_NOT_FOUND, "Reservation not found"));
+        boolean owned = "RENTER".equalsIgnoreCase(role.trim())
+                ? reservation.isRenter(userId)
+                : reservation.isOwner(userId); // pertenencia segun rol
+        if (!owned) { // acceso de terceros
+            throw new ReservationRuleException(ErrorCode.RESERVATION_NOT_OWNED, "Reservation does not belong to user");
         }
-        Reservation reservation = reservationOpt.get();
+        return reservation; // reserva autorizada
+    }
 
-        boolean owned = false;
-        if ("RENTER".equalsIgnoreCase(role.trim())) {
-            owned = reservation.isRenter(userId);
-        } else if ("OWNER".equalsIgnoreCase(role.trim())) {
-            owned = reservation.isOwner(userId);
+    private VesselDetail resolveVesselDetail(ReservationView view) { // ficha completa con fail-safe
+        try {
+            VesselDetail detail = vesselReadPort.getDetail(view.vesselId()); // consulta estricta
+            if (detail != null) {
+                return detail; // ficha disponible
+            }
+        } catch (RuntimeException e) {
+            // M1 no disponible: se intenta el resumen y, si tambien falla, se devuelve la ficha minima
         }
-        if (!owned) { // valida pertenencia de la reserva segun rol
-            throw new ReservationRuleException(ErrorCode.RESERVATION_NOT_OWNED, "Reservation does not belong to user"); // rechaza acceso no autorizado
+        try {
+            Map<UUID, VesselSummary> summaries = vesselReadPort.getSummaries(Set.of(view.vesselId())); // resumen como respaldo
+            VesselSummary summary = summaries == null ? null : summaries.get(view.vesselId());
+            if (summary != null) {
+                return new VesselDetail(view.vesselId(), summary.name(), null, summary.imageUrl(),
+                        summary.portName(), null, view.harborTimezone(), List.of(),
+                        summary.ownerId(), summary.ownerName()); // ficha parcial
+            }
+        } catch (RuntimeException e) {
+            // sin datos de flota: se devuelve la ficha minima
         }
+        return new VesselDetail(view.vesselId(), null, null, null, null, null,
+                view.harborTimezone(), List.of(), view.ownerId(), null); // ficha minima con el id persistido
+    }
 
-        return ReservationView.from(reservation); // retorna proyeccion inmutable de la reserva
+    private static OffsetDateTime toOffset(Instant instant, ZoneId zone) { // convierte instante opcional a offset del puerto
+        return instant == null ? null : instant.atZone(zone).toOffsetDateTime();
     }
 
     private void validatePagination(int page, int limit) { // valida page >= 1 y 1 <= limit <= 50

@@ -1,7 +1,7 @@
 package com.seashare.m2.reservas.infrastructure.adapter.in.web;
 
+import com.seashare.m2.reservas.application.dto.ReservationDetailView;
 import com.seashare.m2.reservas.application.dto.ReservationListFilter;
-import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.application.dto.ReservationViewPage;
 import com.seashare.m2.reservas.application.port.in.ReservationQueryUseCase;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
@@ -38,7 +38,7 @@ public class ReservationQueryController { // controlador rest para consultas pag
     }
 
     @GetMapping("/{id}")
-    public ReservationResponse getReservation(
+    public ReservationDetailResponse getReservation(
             CallerIdentity identity, // identidad extraida de encabezados http
             @PathVariable("id") String id // identificador recibido como texto en la ruta
     ) { // endpoint para consultar el detalle de una reserva especifica
@@ -49,7 +49,8 @@ public class ReservationQueryController { // controlador rest para consultas pag
             throw new ReservationRuleException(ErrorCode.INVALID_UUID, "Invalid UUID format in reservation path"); // rechaza ruta con formato invalido
         }
 
-        ReservationView view = queryService.getReservationDetail(reservationId, identity.userId(), identity.role()); // consulta detalle en servicio
-        return ReservationResponse.from(view); // transforma vista a respuesta web
+        ReservationDetailView view = queryService.getReservationDetailView(
+                reservationId, identity.userId(), identity.role()); // consulta detalle completo
+        return ReservationDetailResponse.from(view); // transforma vista a respuesta web
     }
 }

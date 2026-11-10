@@ -43,5 +43,11 @@ public interface ReservationRepositoryPort { // puerto de persistencia para el a
      * Usa el índice ix_reservation_ttl existente. El corte es exacto: en el segundo de vencimiento ya se recupera.
      */
     List<UUID> findExpiredBefore(Instant now, int batchSize); // lectura de IDs vencidos (INITIATED o PENDING_PAYMENT) para el scheduler de TTL
+
+    /**
+     * Cuenta las reservas COMPLETED del arrendatario, excluyendo la reserva que se
+     * esta consultando. Es un conteo de calendario, no un calculo monetario (CU-21 FR-009).
+     */
+    long countCompletedByRenterExcluding(UUID renterId, UUID excludeReservationId); // viajes completados registrados en M2
 }
 

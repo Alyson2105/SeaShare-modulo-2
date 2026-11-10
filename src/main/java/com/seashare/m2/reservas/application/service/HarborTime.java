@@ -1,4 +1,4 @@
-package com.seashare.m2.reservas.infrastructure.adapter.in.web;
+package com.seashare.m2.reservas.application.service;
 
 import java.time.DateTimeException;
 import java.time.LocalDate;
@@ -8,12 +8,12 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 
-final class ReservationTimeMapper { // utilidades de fechas y zona horaria para las vistas de consulta
+public final class HarborTime { // utilidades de fecha y zona horaria del puerto
 
-    private ReservationTimeMapper() { // clase de utilidades
+    private HarborTime() { // clase de utilidades
     }
 
-    static ZoneId zoneOf(String timezone) { // resuelve la zona del puerto con fail-safe de presentacion
+    public static ZoneId zoneOf(String timezone) { // resuelve la zona del puerto con fail-safe de presentacion
         if (timezone == null || timezone.isBlank()) { // reservas antiguas pueden no tener zona
             return ZoneOffset.UTC; // zona neutra documentada
         }
@@ -24,16 +24,16 @@ final class ReservationTimeMapper { // utilidades de fechas y zona horaria para 
         }
     }
 
-    static OffsetDateTime at(LocalDate date, LocalTime time, ZoneId zone) { // combina fecha y hora en la zona del puerto
+    public static OffsetDateTime at(LocalDate date, LocalTime time, ZoneId zone) { // combina fecha y hora en la zona del puerto
         LocalTime effectiveTime = time == null ? LocalTime.MIDNIGHT : time; // sin hora pactada se usa medianoche
         return date.atTime(effectiveTime).atZone(zone).toOffsetDateTime(); // timestamp con offset
     }
 
-    static int durationDays(LocalDate startDate, LocalDate endDate) { // dias inclusivos del rango
+    public static int durationDays(LocalDate startDate, LocalDate endDate) { // dias inclusivos del rango
         return (int) ChronoUnit.DAYS.between(startDate, endDate) + 1; // aritmetica de calendario, no monetaria
     }
 
-    static int durationNights(LocalDate startDate, LocalDate endDate) { // noches del rango
+    public static int durationNights(LocalDate startDate, LocalDate endDate) { // noches del rango
         return (int) ChronoUnit.DAYS.between(startDate, endDate); // diferencia de fechas, no monetaria
     }
 }

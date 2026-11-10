@@ -40,6 +40,10 @@ class ReservationMapper { // mapeador entre entidad de persistencia y modelo de 
         domain.setActualArrivalAt(entity.getActualArrivalAt()); // mapea hora real de desembarque (solo persistencia)
         domain.setM1Blocked(entity.isM1Blocked()); // mapea la guarda de bloqueo en M1
         domain.setReservationCode(entity.getReservationCode()); // mapea el codigo visible persistido
+        domain.setRentalAmount(entity.getRentalAmount()); // mapea alquiler liquidado (solo lectura)
+        domain.setInsuranceAmount(entity.getInsuranceAmount()); // mapea seguro liquidado (solo lectura)
+        domain.setGuaranteeDepositAmount(entity.getGuaranteeDepositAmount()); // mapea deposito liquidado (solo lectura)
+        domain.setTotalAmount(entity.getTotalAmount()); // mapea total liquidado (solo lectura)
         return domain; // retorna agregado completo
     }
 

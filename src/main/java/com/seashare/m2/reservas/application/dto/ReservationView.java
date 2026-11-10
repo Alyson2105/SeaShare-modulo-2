@@ -25,10 +25,17 @@ public record ReservationView(
         String holderPhone, // telefono de contacto del titular
         String holderEmail, // correo electronico del titular
         BigDecimal estimatedTotal, // monto estimado persistido sin operaciones
+        BigDecimal rentalAmount, // alquiler liquidado por M3, si existe
+        BigDecimal insuranceAmount, // seguro liquidado por M3, si existe
+        BigDecimal guaranteeDepositAmount, // deposito liquidado por M3, si existe
+        BigDecimal totalAmount, // total liquidado por M3, si existe
         String currency, // codigo de moneda
         LocalTime departureTime, // hora programada de zarpe
         String harborTimezone, // zona horaria del puerto
         Instant ttlExpiresAt, // marca temporal de expiracion de la reserva
+        Instant statusChangedAt, // hora del ultimo cambio de estado
+        Instant actualDepartureAt, // hora real de zarpe, si existe
+        Instant actualArrivalAt, // hora real de desembarque, si existe
         Instant createdAt // marca temporal de creacion del registro
 ) { // proyeccion inmutable de lectura de la reserva
 
@@ -48,10 +55,17 @@ public record ReservationView(
                 reservation.getHolderPhone(),
                 reservation.getHolderEmail(),
                 reservation.getEstimatedTotal(),
+                reservation.getRentalAmount(),
+                reservation.getInsuranceAmount(),
+                reservation.getGuaranteeDepositAmount(),
+                reservation.getTotalAmount(),
                 reservation.getCurrency(),
                 reservation.getDepartureTime(),
                 reservation.getHarborTimezone(),
                 reservation.getTtlExpiresAt(),
+                reservation.getStatusChangedAt(),
+                reservation.getActualDepartureAt(),
+                reservation.getActualArrivalAt(),
                 reservation.getCreatedAt()
         );
     }

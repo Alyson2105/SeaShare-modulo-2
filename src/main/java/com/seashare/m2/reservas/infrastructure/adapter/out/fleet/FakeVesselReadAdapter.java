@@ -1,5 +1,6 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.fleet;
 
+import com.seashare.m2.reservas.application.dto.VesselDetail;
 import com.seashare.m2.reservas.application.dto.VesselSummary;
 import com.seashare.m2.reservas.application.port.out.VesselReadPort;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -37,5 +39,22 @@ public class FakeVesselReadAdapter implements VesselReadPort { // resumen simula
                     "Propietario demo"));
         }
         return Map.copyOf(summaries); // mapa inmutable
+    }
+
+    @Override
+    public VesselDetail getDetail(UUID vesselId) { // ficha simulada determinista
+        String shortId = vesselId == null ? "desconocida" : vesselId.toString().substring(0, 8); // fragmento estable
+        UUID ownerId = vesselId == null ? null : UUID.nameUUIDFromBytes(vesselId.toString().getBytes(StandardCharsets.UTF_8)); // propietario deterministico
+        return new VesselDetail(
+                vesselId,
+                "Embarcacion demo " + shortId,
+                "CATAMARAN",
+                null,
+                "Marina demo",
+                null,
+                "America/Bogota",
+                List.of("GPS Nautico", "Chalecos salvavidas"),
+                ownerId,
+                "Propietario demo");
     }
 }

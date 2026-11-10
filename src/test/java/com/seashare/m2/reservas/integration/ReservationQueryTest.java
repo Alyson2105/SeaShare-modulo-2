@@ -97,6 +97,33 @@ class ReservationQueryTest { // pruebas de integracion de endpoints de consulta 
                 "Cancelacion voluntaria", renterId, null, null, 5000, null, null));
     }
 
+    private void toInNavigation(UUID reservationId, UUID ownerId) { // transicion valida RESERVED -> IN_NAVIGATION
+        changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                reservationId, ReservationStatus.IN_NAVIGATION, null, ActorType.OWNER,
+                "Inicio de navegacion", ownerId, null, null, null, null, null));
+    }
+
+    private void toCompleted(UUID reservationId, UUID ownerId) { // transicion valida IN_NAVIGATION -> COMPLETED
+        changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                reservationId, ReservationStatus.COMPLETED, null, ActorType.OWNER,
+                "Fin de navegacion", ownerId, null, null, null, "Viaje completado", null));
+    }
+
+    private void toNoShow(UUID reservationId, UUID ownerId) { // transicion valida RESERVED -> CANCELLED NO_SHOW
+        changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                reservationId, ReservationStatus.CANCELLED, CancellationSubtype.NO_SHOW, ActorType.OWNER,
+                "Inasistencia", ownerId, null, false, null, null, null));
+    }
+
+    private ReservationView completedReservation(UUID renterId) { // siembra una reserva COMPLETED
+        ReservationView created = createReservation(renterId, UUID.randomUUID());
+        toPendingPayment(created.reservationId(), renterId);
+        toReserved(created.reservationId(), renterId);
+        toInNavigation(created.reservationId(), ownerId);
+        toCompleted(created.reservationId(), ownerId);
+        return created;
+    }
+
     @Test
     void listsOnlyOwnReservations() throws Exception { // consulta paginada retorna exclusivamente reservas propias del llamador
         UUID userRenter = UUID.randomUUID();
@@ -212,6 +239,81 @@ class ReservationQueryTest { // pruebas de integracion de endpoints de consulta 
                         .param("filter", "bogus"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_PARAMETERS"));
+    }
+
+    @Test
+    void detailIncludesContractFields() throws Exception { // detalle enriquecido de CU-21 segun el contrato
+        UUID renter = UUID.randomUUID();
+        ReservationView created = createReservation(renter, UUID.randomUUID());
+        toPendingPayment(created.reservationId(), renter);
+        toReserved(created.reservationId(), renter);
+
+        mockMvc.perform(get("/api/v1/reservations/" + created.reservationId())
+                        .header("X-User-Id", renter.toString())
+                        .header("X-User-Role", "RENTER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reservation_id").value(created.reservationId().toString()))
+                .andExpect(jsonPath("$.reservation_code").isNotEmpty())
+                .andExpect(jsonPath("$.status").value("RESERVED"))
+                .andExpect(jsonPath("$.vessel.vessel_id").isNotEmpty())
+                .andExpect(jsonPath("$.vessel.name").value(org.hamcrest.Matchers.startsWith("Embarcacion demo")))
+                .andExpect(jsonPath("$.vessel.type").value("CATAMARAN"))
+                .andExpect(jsonPath("$.vessel.included_services[0]").value("GPS Nautico"))
+                .andExpect(jsonPath("$.itinerary.scheduled_departure").isNotEmpty())
+                .andExpect(jsonPath("$.itinerary.departure_port.timezone").value("America/Bogota"))
+                .andExpect(jsonPath("$.itinerary.duration_days").value(3))
+                .andExpect(jsonPath("$.itinerary.duration_nights").value(2))
+                .andExpect(jsonPath("$.itinerary.passengers").value(2))
+                .andExpect(jsonPath("$.renter.name").value("Juan Perez"))
+                .andExpect(jsonPath("$.renter.previous_trips").value(0))
+                .andExpect(jsonPath("$.owner.name").value("Propietario demo"))
+                .andExpect(jsonPath("$.payment_summary.section_title").value("Resumen de pago"))
+                .andExpect(jsonPath("$.payment_summary.currency").value("COP"))
+                .andExpect(jsonPath("$.payment_summary.total_paid").isNumber())
+                .andExpect(jsonPath("$.payment_summary.rental_amount").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.payment_summary.insurance_amount").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.available_actions.can_cancel").value(true))
+                .andExpect(jsonPath("$.available_actions.can_initiate_payment").value(false))
+                .andExpect(jsonPath("$.contextual_banner.title").value("Reserva confirmada"))
+                .andExpect(jsonPath("$.status_badge").doesNotExist());
+    }
+
+    @Test
+    void detailOfNoShowUsesCompensation() throws Exception { // NO_SHOW cambia el bloque a Compensacion (FR-014)
+        UUID renter = UUID.randomUUID();
+        ReservationView created = createReservation(renter, UUID.randomUUID());
+        toPendingPayment(created.reservationId(), renter);
+        toReserved(created.reservationId(), renter);
+        toNoShow(created.reservationId(), ownerId);
+
+        mockMvc.perform(get("/api/v1/reservations/" + created.reservationId())
+                        .header("X-User-Id", ownerId.toString())
+                        .header("X-User-Role", "OWNER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.cancellation_subtype").value("NO_SHOW"))
+                .andExpect(jsonPath("$.payment_summary.section_title").value("Compensación"))
+                .andExpect(jsonPath("$.payment_summary.guarantee_deposit_amount").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.payment_summary.clarifying_note")
+                        .value("El sistema de pagos gestionará la compensación al propietario."))
+                .andExpect(jsonPath("$.available_actions.can_cancel").value(false))
+                .andExpect(jsonPath("$.contextual_banner.type").value("alert"));
+    }
+
+    @Test
+    void detailCountsCompletedTripsForRenter() throws Exception { // D8: viajes COMPLETED registrados en M2
+        UUID renter = UUID.randomUUID();
+        completedReservation(renter);
+        completedReservation(renter);
+
+        ReservationView target = createReservation(renter, UUID.randomUUID()); // reserva consultada (INITIATED)
+
+        mockMvc.perform(get("/api/v1/reservations/" + target.reservationId())
+                        .header("X-User-Id", ownerId.toString())
+                        .header("X-User-Role", "OWNER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.renter.previous_trips").value(2))
+                .andExpect(jsonPath("$.available_actions.can_initiate_payment").value(false));
     }
 
     @Test

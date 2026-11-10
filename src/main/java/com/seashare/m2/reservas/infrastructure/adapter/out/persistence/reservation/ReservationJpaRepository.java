@@ -39,5 +39,7 @@ interface ReservationJpaRepository extends JpaRepository<ReservationEntity, UUID
 
     @Query("select r.id from ReservationEntity r where r.status in ('INITIATED', 'PENDING_PAYMENT') and r.ttlExpiresAt <= :now order by r.ttlExpiresAt asc")
     List<UUID> findExpiredBefore(@Param("now") Instant now, Pageable pageable); // busca IDs vencidos de ambos estados usando ix_reservation_ttl
+
+    long countByRenterIdAndStatusAndIdNot(UUID renterId, ReservationStatus status, UUID id); // viajes completados del arrendatario excluyendo la reserva actual
 }
 

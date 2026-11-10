@@ -1,21 +1,28 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.fleet;
 
+import com.seashare.m2.reservas.application.dto.VesselDetail;
 import com.seashare.m2.reservas.application.dto.VesselSummary;
 import com.seashare.m2.reservas.application.port.out.VesselReadPort;
+import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
+import com.seashare.m2.shared.domain.ErrorCode;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -90,6 +97,64 @@ public class HttpVesselReadAdapter implements VesselReadPort { // lectura de res
             }
         }
         return Map.copyOf(resolved); // mapa inmutable con lo resuelto
+    }
+
+    @Override
+    public VesselDetail getDetail(UUID vesselId) { // consulta estricta de la ficha completa
+        String body;
+        try {
+            body = restClient.get().uri(VESSELS_PATH + vesselId).retrieve().body(String.class); // GET del contrato CU-09
+        } catch (HttpClientErrorException.NotFound e) {
+            throw new ReservationRuleException(ErrorCode.VESSEL_NOT_FOUND, "Vessel not found in fleet module"); // 404 sin reintento
+        } catch (HttpClientErrorException.BadRequest e) {
+            throw new ReservationRuleException(ErrorCode.INVALID_UUID, "Vessel id rejected by fleet module"); // 400 sin reintento
+        } catch (HttpClientErrorException.Unauthorized | HttpClientErrorException.Forbidden e) {
+            throw new ReservationRuleException(ErrorCode.INTERNAL_ERROR, "Fleet module rejected the service token"); // alerta interna
+        } catch (HttpClientErrorException e) {
+            throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet service returned status " + e.getStatusCode().value());
+        } catch (RestClientException e) {
+            throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet service is unreachable"); // timeout, conexion o 5xx
+        }
+        return parseDetail(vesselId, body); // payload validado
+    }
+
+    private static VesselDetail parseDetail(UUID vesselId, String body) { // extrae la ficha completa sin valores por defecto
+        if (body == null || body.isBlank()) {
+            throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet response body is empty"); // fail-safe
+        }
+        JsonNode root;
+        try {
+            root = MAPPER.readTree(body); // arbol json
+        } catch (JacksonException e) {
+            throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet response body is not valid json"); // ilegible
+        }
+        String name = text(root, "name"); // nombre comercial obligatorio para la vista
+        if (name == null) {
+            throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet response is missing name"); // payload incompleto
+        }
+        String imageUrl = text(root, "image_url"); // contrato individual puede no traer imagen
+        if (imageUrl == null) {
+            imageUrl = text(root, "photo_url"); // respaldo del contrato de catalogo
+        }
+        JsonNode port = root.path("port"); // objeto puerto
+        List<String> amenities = new ArrayList<>(); // servicios incluidos
+        for (JsonNode amenity : root.path("amenities")) { // recorre el arreglo
+            if (amenity.isString() && !amenity.stringValue().isBlank()) {
+                amenities.add(amenity.stringValue()); // agrega textos utiles
+            }
+        }
+        JsonNode owner = root.path("owner"); // objeto propietario
+        return new VesselDetail(
+                vesselId,
+                name,
+                text(root, "type"),
+                imageUrl,
+                text(port, "name"),
+                null, // la ciudad no existe en el contrato de M1
+                text(port, "timezone"),
+                List.copyOf(amenities),
+                uuid(text(owner, "owner_id")),
+                text(owner, "validated_name"));
     }
 
     @PreDestroy

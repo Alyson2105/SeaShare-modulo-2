@@ -132,5 +132,10 @@ public class ReservationRepositoryAdapter implements ReservationRepositoryPort {
         Pageable limit = PageRequest.of(0, batchSize); // primer página con el tamaño de lote como límite máximo
         return repository.findExpiredBefore(now, limit); // delega en JPQL que usa el índice ix_reservation_ttl
     }
+
+    @Override
+    public long countCompletedByRenterExcluding(UUID renterId, UUID excludeReservationId) { // conteo de viajes completados en M2
+        return repository.countByRenterIdAndStatusAndIdNot(renterId, ReservationStatus.COMPLETED, excludeReservationId); // excluye la reserva consultada
+    }
 }
 
