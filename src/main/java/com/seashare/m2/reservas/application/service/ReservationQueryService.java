@@ -156,14 +156,14 @@ public class ReservationQueryService implements ReservationQueryUseCase { // ser
             VesselSummary summary = summaries == null ? null : summaries.get(view.vesselId());
             if (summary != null) {
                 return new VesselDetail(view.vesselId(), summary.name(), null, summary.imageUrl(),
-                        summary.portName(), null, view.harborTimezone(), List.of(),
-                        summary.ownerId(), summary.ownerName()); // ficha parcial
+                        null, null, null, null, summary.portName(), null, null, null,
+                        view.harborTimezone(), List.of(), summary.ownerId(), summary.ownerName(), null); // ficha parcial
             }
         } catch (RuntimeException e) {
             // sin datos de flota: se devuelve la ficha minima
         }
-        return new VesselDetail(view.vesselId(), null, null, null, null, null,
-                view.harborTimezone(), List.of(), view.ownerId(), null); // ficha minima con el id persistido
+        return new VesselDetail(view.vesselId(), null, null, null, null, null, null, null,
+                null, null, null, null, view.harborTimezone(), List.of(), view.ownerId(), null, null); // ficha minima
     }
 
     private static OffsetDateTime toOffset(Instant instant, ZoneId zone) { // convierte instante opcional a offset del puerto

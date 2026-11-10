@@ -149,12 +149,34 @@ public class HttpVesselReadAdapter implements VesselReadPort { // lectura de res
                 name,
                 text(root, "type"),
                 imageUrl,
+                integer(root, "max_capacity"),
+                decimal(root, "length_feet"),
+                integer(root, "cabin_count"),
+                bool(root, "captain_included"),
                 text(port, "name"),
                 null, // la ciudad no existe en el contrato de M1
+                decimal(port, "latitude"),
+                decimal(port, "longitude"),
                 text(port, "timezone"),
                 List.copyOf(amenities),
                 uuid(text(owner, "owner_id")),
-                text(owner, "validated_name"));
+                text(owner, "validated_name"),
+                bool(owner, "verified"));
+    }
+
+    private static Integer integer(JsonNode node, String field) { // lee un entero opcional
+        JsonNode value = node.path(field); // nodo del campo
+        return value.isNumber() ? value.intValue() : null; // null si ausente o tipo inesperado
+    }
+
+    private static Double decimal(JsonNode node, String field) { // lee un decimal opcional
+        JsonNode value = node.path(field); // nodo del campo
+        return value.isNumber() ? value.doubleValue() : null; // null si ausente o tipo inesperado
+    }
+
+    private static Boolean bool(JsonNode node, String field) { // lee un booleano opcional
+        JsonNode value = node.path(field); // nodo del campo
+        return value.isBoolean() ? value.booleanValue() : null; // null si ausente o tipo inesperado
     }
 
     @PreDestroy

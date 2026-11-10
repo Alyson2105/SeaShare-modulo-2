@@ -50,11 +50,18 @@ public class FakeVesselReadAdapter implements VesselReadPort { // resumen simula
                 "Embarcacion demo " + shortId,
                 "CATAMARAN",
                 null,
+                12,
+                48.5,
+                3,
+                true,
                 "Marina demo",
                 null,
+                11.2443,
+                -74.2125,
                 "America/Bogota",
                 List.of("GPS Nautico", "Chalecos salvavidas"),
                 ownerId,
-                "Propietario demo");
+                "Propietario demo",
+                true);
     }
 }

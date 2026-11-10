@@ -124,7 +124,8 @@ class ReservationQueryServiceTest { // pruebas unitarias del filtrado, detalle y
         when(repository.findById(reservation.getId())).thenReturn(Optional.of(reservation));
         when(repository.countCompletedByRenterExcluding(renter, reservation.getId())).thenReturn(2L);
         when(vesselReadPort.getDetail(vesselId)).thenReturn(new VesselDetail(vesselId, "Catamaran", "CATAMARAN",
-                "https://img", "Marina", null, "America/Bogota", List.of("GPS"), UUID.randomUUID(), "Dueno"));
+                "https://img", 12, 48.5, 3, true, "Marina", null, 11.0, -74.0,
+                "America/Bogota", List.of("GPS"), UUID.randomUUID(), "Dueno", true));
 
         ReservationDetailView view = service.getReservationDetailView(reservation.getId(), renter, "RENTER");
 

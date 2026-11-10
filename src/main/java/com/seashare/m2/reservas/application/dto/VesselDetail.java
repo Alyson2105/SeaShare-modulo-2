@@ -13,9 +13,21 @@ public record VesselDetail( // ficha tecnica de embarcacion para el detalle de C
 
         String imageUrl, // imagen principal; null si el contrato no la entrega
 
+        Integer maxCapacity, // capacidad maxima de pasajeros
+
+        Double lengthFeet, // eslora en pies
+
+        Integer cabinCount, // numero de camarotes
+
+        Boolean captainIncluded, // capitan incluido
+
         String portName, // nombre del puerto de salida
 
         String portCity, // ciudad del puerto; no existe en el contrato de M1
+
+        Double portLatitude, // latitud del puerto
+
+        Double portLongitude, // longitud del puerto
 
         String timezone, // zona IANA del puerto
 
@@ -23,6 +35,8 @@ public record VesselDetail( // ficha tecnica de embarcacion para el detalle de C
 
         UUID ownerId, // propietario segun M1
 
-        String ownerName // nombre validado del propietario
+        String ownerName, // nombre validado del propietario
+
+        Boolean ownerVerified // propietario verificado por M1
 ) {
 }
