@@ -19,13 +19,13 @@
   - Job programado de expiración por TTL para reservas en `INITIATED` y `PENDING_PAYMENT` (T-07, Hito H4).
   - Manejo global de errores `{ code, message }`, identidad temporal por headers, reloj inyectable y reglas base de ArchUnit.
 - **No implementado**:
-  - Integración HTTP real con Módulo 1 y Módulo 3; solo existen adaptadores *fake* para flota (incluido el nuevo `FakeFleetStatusNotificationAdapter` de notificación a M1).
+  - Integración HTTP real con Módulo 3 (CU-11 y CU-12); con Módulo 1 existen clientes HTTP reales para CU-09 y CU-10 (activos con `seashare.fleet.mode=http`) y adaptadores *fake* por defecto; falta el cliente de aviso de estado (CU-22) (incluido el nuevo `FakeFleetStatusNotificationAdapter` de notificación a M1).
   - Consumidores AMQP de producción: la deduplicación por `event_id` solo tiene un consumidor de prueba en `src/test` (T-04); M3 es quien deduplica en producción (D-04).
   - ShedLock, Spring Security y Resilience4j. (springdoc/OpenAPI, Testcontainers, WireMock y Awaitility sí están desde el Hito H1; ver historial.)
   - Contexto `disputa` y contrato interno `shared/contracts`.
   - Todos los CU salvo los avances parciales de CU-02, CU-08, CU-20 y CU-21. **Hito H4 completado (2026-11-09)**: CU-08 quedó completo como motor interno (comando, respuesta, auditoría completa, TTL doble, matriz de notificaciones M3/M1); siguen pendientes de CU-08 solo la creación vía CU-08 (T-24) y el payload final de CU-14 (T-12).
 - **Hito H2 completado (2026-11-07)**: topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` y prueba de deduplicación (T-04) y filtro de correlation id HTTP→AMQP (T-22). Detalle en la sección 4.6.
-- La última ejecución registrada de la suite completa es del **2026-11-09** (`.\mvnw.cmd test`, sin docker-compose levantado): **152 pruebas, 0 fallos, 0 errores** (era de 115 pruebas el 2026-11-07 tras el Hito H2; el incremento son los tests del Hito H4).
+- La última ejecución registrada de la suite completa es del **2026-11-09** (`.\mvnw.cmd test`): **234 pruebas, 0 fallos, 0 errores, 0 omitidas** (eran 115 el 2026-11-07, tras el Hito H2).
 
 ---
 
@@ -34,8 +34,8 @@
 | Fase | CUs / alcance | Estado | Evidencia y brecha principal |
 | :--- | :--- | :--- | :--- |
 | Fase 1 — Setup | Infraestructura base | **Parcial (Hito H1 completado)** | Existen `pom.xml` con Boot 4.1.2/Java 21, `M2Application`, `docker-compose.yml` y `.gitignore`. Añadidos en el Hito H1: `Dockerfile` multi-stage, `README.md`, perfiles `dev/test/prod`, springdoc-openapi 3.2.0 y Checkstyle (reporte sin fallar). Verificado en vivo el 2026-11-09: `docker build` OK (imagen no-root uid 999), `GET /v3/api-docs` 200 con los 3 endpoints, arranque con `--spring.profiles.active=dev`. Siguen faltando Resilience4j y `maven-failsafe-plugin`. |
-| Fase 2 — Foundational | Persistencia, errores, reloj, outbox, seguridad, mensajería, testing | **Parcial** | Implementados: errores globales, `ErrorCode`, Flyway V1–V4 (V4 añadida en el Hito H4), `ClockPort`, repositorio de reservas, idempotencia de entrada, escritura en outbox, reglas base de ArchUnit, Testcontainers y WireMock, **topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` + deduplicación probada (T-04) y correlation id HTTP→AMQP (T-22)**. Faltan: seguridad, ShedLock, clientes HTTP salientes, métricas/health y reglas ArchUnit completas. |
-| Fase 3 — Adaptadores de lectura | CU-09, CU-10, CU-11, CU-12 | **No iniciada** | Solo existen los puertos `FleetInfoPort` y `FleetOperationalStatusPort` con adaptadores *fake*. No hay clientes reales ni CU-09/10/11/12. |
+| Fase 2 — Foundational | Persistencia, errores, reloj, outbox, seguridad, mensajería, testing | **Parcial** | Implementados: errores globales, `ErrorCode`, Flyway V1 a V5, `ClockPort`, repositorio de reservas, idempotencia de entrada, escritura en outbox, reglas base de ArchUnit, Testcontainers y WireMock, **topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` + deduplicación probada (T-04) y correlation id HTTP→AMQP (T-22)**. Faltan: seguridad, ShedLock, métricas/health y reglas ArchUnit completas. Los clientes HTTP salientes de M1 y M3 ya existen (Hito H3), pero siguen en modo `fake` por defecto. |
+| Fase 3 — Adaptadores de lectura | CU-09, CU-10, CU-11, CU-12 | **En curso** | T-14 hecha: clientes HTTP reales de M1 para CU-09 y CU-10 con registro de consultas (ver 4.8); activos con `seashare.fleet.mode=http`, los *fake* siguen por defecto. T-15 hecha: clientes HTTP de M3 para CU-11 y CU-12 (ver 4.9), activos con `seashare.finance.mode=http`. |
 | Fase 4 — Núcleo de dominio | CU-08 | **Completada (Hito H4, 2026-11-09)** | Contrato completo de CU-08 (T-06): comando con `actor_id`/`expected_version`/`mechanical_failure`/`anticipation_minutes`/`completion_notes`/`payment_reference`, respuesta con `version` y `events_enqueued`. Persistencia y V4 (T-09): `status_changed_at` y campos de cierre/pago. Auditoría completa (T-10): creación + transiciones con `actor_id`/`event_ids` e inmutabilidad probada. TTL doble (T-07): `INITIATED` y `PENDING_PAYMENT`. Matriz M3/M1 con guarda `m1_blocked` y destinos `AMQP` + `M1_HTTP` (T-08). Detalle en la sección 4.7. Queda fuera de esta fase: creación vía CU-08 (T-24, Fase 7) y payload final de CU-14 (T-12, Fase 5). |
 | Fase 5 — Superficie Módulo 3 | CU-14, CU-15 | **No iniciada** | No hay consumidores, publicadores ni endpoint interno de consulta para Módulo 3. |
 | Fase 6 — Vistas de consulta | CU-19, CU-20, CU-21 | **Parcial** | CU-20 y CU-21 tienen endpoints básicos de listado y detalle. CU-19 no existe y los contratos de CU-20/21 están simplificados. |
@@ -58,10 +58,10 @@
 | CU-06 — Marcar inicio de navegación | **No implementado** | Sin endpoint ni registro de check-in. |
 | CU-07 — Marcar fin de navegación | **No implementado** | Sin endpoint ni registro de check-out. |
 | CU-08 — Actualizar estado de reserva | **Parcial (motor completo desde el Hito H4)** | Motor interno con matriz de transiciones, auditoría inmutable, outbox y `@Version`. Contrato completo (T-06): comando con `expected_version`, `actor_id`, `mechanical_failure`, `anticipation_minutes`, `completion_notes`, `payment_reference` y respuesta con `version` + `events_enqueued` (puerto `ChangeReservationStatusUseCase`). Auditoría de creación y de cada transición con `actor_id`/`event_ids` (T-10). TTL desde `INITIATED` y `PENDING_PAYMENT` (T-07). Notificación a M1 (`M1_HTTP`) con guarda `m1_blocked` y matriz M3/M1 (T-08). Pendientes: la creación de reservas aún no pasa por CU-08 (T-24) y el payload de los eventos hacia M3 (T-12). |
-| CU-09 — Proveer información de embarcación | **No implementado** | Solo puerto de salida y adaptador *fake*. |
-| CU-10 — Brindar información de estado operativo | **No implementado** | Solo puerto de salida y adaptador *fake*. |
-| CU-11 — Proveer información de cotización | **No implementado** | Sin cliente de Módulo 3 ni endpoint. |
-| CU-12 — Brindar cálculo total de la reserva | **No implementado** | Sin cliente de Módulo 3 ni endpoint. |
+| CU-09 — Proveer información de embarcación | **Parcial** | Cliente HTTP real (`HttpFleetInfoAdapter`) con timeouts, un reintento y registro de consultas; se activa con `seashare.fleet.mode=http`. Contrato con M1 sin firmar. |
+| CU-10 — Brindar información de estado operativo | **Parcial** | Cliente HTTP real (`HttpFleetOperationalStatusAdapter`) con registro de consultas; solo `AVAILABLE` es disponible y una respuesta ilegible da 503. Contrato con M1 sin firmar. |
+| CU-11 — Proveer información de cotización | **Parcial** | Clientes HTTP reales de M3 para estimación individual y en lote (`HttpIndividualEstimateAdapter`, `HttpBatchEstimateAdapter`) con puertos, fakes y pruebas WireMock; se activan con `seashare.finance.mode=http`. Falta `base-url` de M3 y que algún caso de uso los llame (CU-01 usará el lote en H7). |
+| CU-12 — Brindar cálculo total de la reserva | **Parcial** | Cliente HTTP real (`HttpCalculatedValueAdapter`) con reintento del 404 y tope total de 800 ms; se activa con `seashare.finance.mode=http`. Falta `base-url` de M3, la auditoría de CU-12 (FR-010) y que CU-03 lo llame (H7). |
 | CU-13 — Confirmar pago | **No implementado** | Sin canal B activo ni canal A. |
 | CU-14 — Recibir estado de reserva | **Parcial** | El relay publica las filas `AMQP` con `Message-Id` y publisher confirm (T-03/T-04) hacia `finance.reservation-status.v1`. Desde el Hito H4 el `StatusChangedEvent` transporta `actor`, `anticipation_minutes` y `completion_notes` listos para el payload. Falta el contrato de payload de T-12 (nombres `PENDING`/`CANCELLED_*`, `payment_token_ref`); el consumidor real es de M3. |
 | CU-15 — Solicitar información de la reserva | **No implementado** | Sin endpoint interno para Módulo 3. |
@@ -80,10 +80,12 @@
 ### 4.1 Fundaciones y configuración
 
 - Proyecto Spring Boot 4.1.2 con Java 21 y Maven. Dependencias presentes: Web MVC, Validation, Data JPA, AMQP, Actuator, Flyway (`spring-boot-starter-flyway` + `flyway-database-postgresql`), PostgreSQL y ArchUnit para pruebas.
-- Flyway administra el esquema con `spring.jpa.hibernate.ddl-auto: validate`. Existen las migraciones **V1, V2 y V3**.
+- Flyway administra el esquema con `spring.jpa.hibernate.ddl-auto: validate`. Existen las migraciones **V1 a V5**.
   - V1 crea `reservation`, `reservation_status_audit` y `outbox_message`, con `btree_gist`, restricción `EXCLUDE` de solapamiento e índice `ix_reservation_ttl`.
   - V2 crea tablas de funcionalidades aún no implementadas (`payment_attempt`, eventos de cancelación/inasistencia/check-in/check-out, `external_query_log`, `dispute_*`, `operational_failure`, `idempotency_key`, `shedlock`). **Estas tablas son estructura de datos, no funcionalidad implementada.**
   - V3 agrega campos de reserva y columnas de control del outbox.
+  - V4 agrega `reservation.status_changed_at` y, en `reservation_status_audit`, `actor_id` y `event_ids`.
+  - V5 agrega `returned_status` a `external_query_log`.
 - `docker-compose.yml` define PostgreSQL en `localhost:5433` y RabbitMQ en `5672`/`15672`.
 - Manejo global de errores con cuerpo `{ code, message }` y catálogo `ErrorCode`, incluyendo la traducción de errores internos a códigos públicos.
 - Identidad temporal por headers `X-User-Id` y `X-User-Role`; no hay Spring Security.
@@ -230,12 +232,64 @@ Rama `feature/h4-nucleoDom` (nombre distinto al del enunciado, `feature/h4-nucle
 
 **Pendientes tras H4**: T-24 (creación vía CU-08 + `Location`), T-12 (payload CU-14: `PENDING` vs `PENDING_PAYMENT`, `actor`/anticipación/novedades — `StatusChangedEvent` ya los transporta), adaptador HTTP real de M1, T-05 (ShedLock), `MoneyArchitectureTest`. Mención `ApplyReservationTransitionUseCase` corregida en `CU-08/plan.md` L26 (y `TransitionCommand` → `ChangeReservationStatusCommand` L36); las menciones en `implementContext.md` L60/L230 y `plan-trabajo-backend.md` L92 quedan fuera de esta sección por propiedad de frentes.
 
+### 4.8 Clientes HTTP de M1 y registro de consultas: Hito H3 (2026-11-09)
+
+Rama `feature/fase3-adaptadores-lectura` (creada desde develop; se le fusionó develop con H4 antes del registro de consultas). T-14 completa: clientes HTTP reales de M1 para CU-09 y CU-10 y registro de consultas (CU-09 FR-010, CU-10 FR-009).
+
+**Commits**: `6665507`, `0792fd3`, `912e961`, `7778a7b` (adaptadores, configuracion y pruebas WireMock); `d685305`, `9c79976`, `1cb39e2`, `8cd8a11`, `a289741`, `9d47663` (registro de consultas); `48bb289` (CU-10 lanza 503 ante respuesta ilegible).
+
+**Clientes HTTP (CU-09 y CU-10)**
+- `RestClient` con `SimpleClientHttpRequestFactory`: connect timeout 100 ms y read timeout 300 ms. Un solo reintento inmediato ante timeout, IOException o 503; nunca ante 4xx. Sin cache ni valores por defecto.
+- Errores: 404 `VESSEL_NOT_FOUND`; 400 `INVALID_UUID`; 401 o 403 `INTERNAL_ERROR`; timeout, conexion o 5xx `FLEET_SERVICE_UNAVAILABLE`; `port.timezone` ausente o invalida `HARBOR_TIMEZONE_UNAVAILABLE`.
+- Los adaptadores falsos siguen por defecto (`seashare.fleet.mode=fake`); los HTTP se activan con `seashare.fleet.mode=http`.
+- Decision tomada el 2026-11-09: en CU-10, cuerpo vacio, JSON ilegible o `operational_status` ausente lanzan `FLEET_SERVICE_UNAVAILABLE` (503), igual que CU-09. Solo un valor desconocido (por ejemplo `WEIRD_STATE`) da `false`, con fila `OK` y el valor crudo. Esto reemplaza la regla anterior de que "ausente es false".
+
+**Registro de consultas**
+- Migracion `V5__external_query_log_returned_status.sql`: agrega `returned_status VARCHAR(30)` a `external_query_log` (la tabla viene de V2).
+- Puerto `ExternalQueryLogPort`, adaptador JPA con `Propagation.REQUIRES_NEW` (la fila sobrevive al rollback de la reserva) y una fila por consulta con el resultado final: `OK`, `TIMEOUT` o `ERROR`. Si guardar el registro falla, solo se escribe un aviso en el log y la consulta a M1 no cambia.
+
+**Limites conocidos y dudas abiertas**
+- `REQUIRES_NEW` abre una segunda conexion mientras `CreateReservationService` (que es `@Transactional`) mantiene la suya. Bajo concurrencia alta con el pool por defecto, el registro puede perderse por falta de conexiones. La solucion de fondo es sacar las llamadas a M1 de la transaccion de CU-02; no se hizo en este hito.
+- Un 503 persistente tras el reintento se registra como `TIMEOUT`, aunque M1 si respondio. Nombre no exacto; duda para el grupo.
+- Los metodos `get`, `exchange` y `register` estan duplicados en los dos adaptadores HTTP. Refactor pendiente.
+- Contrato con M1 no firmado: rutas, header `X-Internal-Service-Token`, valores de `operational_status` y esquema de errores siguen por confirmar.
+
+---
+
+### 4.9 Clientes HTTP de M3: estimaciones y valor calculado, Hito H3 (2026-11-09)
+
+Misma rama `feature/fase3-adaptadores-lectura`. T-15 completa: clientes HTTP de M3 para CU-11 (estimacion individual y en lote) y CU-12 (valor calculado de la reserva). Contratos de M3 usados: UC01 individual, UC01 lote y UC04.
+
+**Commits**: `f30b5dc`, `4ab85ec`, `f5cbb5d`, `4330d7d` (CU-11); `af81673`, `3877e16`, `5518aa7`, `107a238` (CU-12).
+
+**Estructura**
+- Puertos `IndividualEstimatePort`, `BatchEstimatePort` y `CalculatedValuePort`; adaptadores `Http...` y `Fake...` en `infrastructure/adapter/out/finance`.
+- `seashare.finance.mode`: `fake` por defecto, `http` activa los clientes reales. Tres `RestClient` con su `@Qualifier` y sin header `Authorization` (el README de contratos de M3 dice que su servicio no exige autenticacion).
+- Timeouts: individual connect 100 ms y read 1000 ms; lote connect 150 ms y read 1000 ms; valor calculado connect 100 ms y read 1000 ms.
+
+**Reglas por caso de uso**
+- Individual: 400 `INVALID_PARAMETERS`; 401 o 403 `INTERNAL_ERROR`; el resto de fallos, timeout, cuerpo vacio o ilegible y precio invalido `QUOTATION_UNAVAILABLE`. Un reintento solo ante `ConnectException`, nunca ante timeout.
+- Lote: bloques de 50 en secuencia y sin reintentos. Un bloque que falla deja sus ids como no disponibles y los demas siguen. Un id que M3 no devuelve o con total invalido tambien queda no disponible.
+- Valor calculado: 400, 401 y 403 `INTERNAL_ERROR`; 404 se reintenta hasta 3 veces cada 300 ms con tope total de 800 ms medido con `ClockPort` (en la practica son 2 reintentos); el resto de fallos `CALCULATION_UNAVAILABLE`. Mismo reintento por socket que el individual.
+- Dinero opaco: `BigDecimal` sin sumas ni redondeos. Decision 2026-11-09: en el valor calculado, alquiler y total se rechazan si son cero o negativos; seguro y deposito se rechazan solo si son negativos.
+
+**Pruebas**: 25 de CU-11 y 23 de CU-12 con WireMock; suite completa en 234 pruebas, 0 fallos.
+
+**Limites conocidos y dudas abiertas (no bloqueantes, sin confirmar con M3)**
+- [NEEDS CLARIFICATION] `seashare.finance.base-url` no esta definida (puerto de M3 desconocido); hace falta antes de usar `mode=http`.
+- Timeouts y SLA (800 ms individual y valor calculado, 1500 ms lote) son valores provisionales de M2. El ejemplo de M3 menciona un timeout de 1 s hacia Flota, igual a nuestro read timeout.
+- Un evento `reservation.info.provided` duplicado puede invalidar el calculo ya hecho (UC03 hace upsert y el `Message-Id` es fijo por reserva). El riesgo se acepta; volver a pedir CU-12 recalcula.
+- La auditoria de CU-12 (FR-010) no esta implementada: no se reutilizo `ExternalQueryLogPort`.
+- Ningun caso de uso llama aun a los puertos nuevos: CU-01 usara el lote y CU-03 el calculo (H7); quien consume el individual esta por definir.
+- Metodos `post` y `exchange` duplicados entre los adaptadores de M3 y los de M1. Refactor pendiente.
+- Huecos de pruebas: body del individual, ausencia de `Authorization` en individual y lote, y `X-Correlation-Id` del valor calculado.
+
 ---
 
 ## 5. Pruebas y verificación
 
-- La suite contiene **152 métodos `@Test` distribuidos en 34 archivos** (eran 115 en 31 archivos tras el Hito H2; 84 en 23 el 2026-11-07 antes del Hito H2; 75 en 18 el 2026-11-03).
-- La última ejecución completa registrada en `target/surefire-reports` es del **2026-11-09**: **152 pruebas ejecutadas, 0 fallos, 0 errores, 0 omitidas** (sin docker-compose levantado; solo Docker + Testcontainers).
+- La suite ejecuta **234 pruebas** (eran 115 tras el Hito H2, 84 antes y 75 el 2026-11-03).
+- La última ejecución completa es del **2026-11-09** (`.\mvnw.cmd test`): **234 pruebas ejecutadas, 0 fallos, 0 errores, 0 omitidas**.
 - Comandos de referencia:
   ```bash
   ./mvnw test
@@ -265,8 +319,8 @@ Rama `feature/h4-nucleoDom` (nombre distinto al del enunciado, `feature/h4-nucle
 
 ### 6.1 Integraciones externas
 
-1. Implementar los clientes HTTP reales de Módulo 1 para CU-09 y CU-10, con timeouts, reintento rápido y *fail-safe*; retirar los adaptadores *fake* como comportamiento por defecto.
-2. Implementar los clientes de Módulo 3 para CU-11 y CU-12.
+1. ~~Implementar los clientes HTTP reales de Módulo 1 para CU-09 y CU-10~~ **Hecho (Hito H3, T-14)**, ver 4.8. Falta retirar los adaptadores *fake* como comportamiento por defecto (hoy `seashare.fleet.mode=fake`) cuando M1 firme el contrato.
+2. ~~Implementar los clientes de Módulo 3 para CU-11 y CU-12~~ **Hecho (Hito H3, T-15)**, ver 4.9. Falta definir `seashare.finance.base-url` (puerto de M3) y que algun caso de uso llame a los puertos nuevos.
 3. Implementar CU-22 y la notificación de estado operativo hacia Módulo 1 por `M1_HTTP`.
 
 ### 6.2 Mensajería y outbox
@@ -353,3 +407,12 @@ Rama `feature/h4-nucleoDom` (nombre distinto al del enunciado, `feature/h4-nucle
   **Pruebas y verificación**: baseline `.\mvnw.cmd test` =84/0 antes de empezar; verde tras cada tarea (89/0,109/0,110/0,115/0); `.\mvnw.cmd verify` final = **115 pruebas,0 fallos**, BUILD SUCCESS con Checkstyle (19 violaciones, reporte sin fallar). Contenedor RabbitMQ: **1 arranque por corrida** de Maven (compartido por JVM); **10 arranques confirmados en log** en la sesión (las2 corridas con fallo temprano de `publisher-confirm-type` no lo confirmaron). Contenedor PostgreSQL:1 por corrida. Sin `Thread.sleep` (Awaitility en los reintentos).
 
   **Pendientes dejados**: T-05 (ShedLock), T-12 (contrato de payload de CU-14), adaptador HTTP real de M1 (`FakeFleetStatusNotificationAdapter` → `Http*`), consumidores AMQP de producción, republicación a DLQ, cola de disputa (T-18c), `MoneyArchitectureTest` y métricas/health.
+
+
+- **2026-11-09 — Hito H3 (Fase 3: Adaptadores de lectura)**, rama `feature/fase3-adaptadores-lectura`, subida a origin, sin PR abierto. Commits de T-14 (CU-09 y CU-10, clientes de M1): `6665507`, `0792fd3`, `912e961`, `7778a7b`, `229df4e` (merge), `d685305` (V5), `9c79976`, `1cb39e2`, `8cd8a11`, `a289741`, `9d47663`, `48bb289`, `a7d5a4f`. Commits de T-15: CU-11 `f30b5dc`, `4ab85ec`, `f5cbb5d`, `4330d7d`; CU-12 `af81673`, `3877e16`, `5518aa7`, `107a238`. Documentación: `6d6d72b` y `39d88b5`; comentario de `application.yaml`: `2927d9c`.
+
+  **Decisiones**: no se envía `Authorization` a M3 (el README de contratos de M3 lo confirma); reintento por socket una vez y solo ante `ConnectException`; precio inválido = cotización no disponible; en CU-12, alquiler y total en cero se rechazan y seguro y depósito en cero se aceptan. Detalle en las secciones 4.8 y 4.9.
+
+  **Pruebas y verificación**: `.\mvnw.cmd test` el 2026-11-09 = **234 pruebas, 0 fallos, 0 errores, 0 omitidas**, BUILD SUCCESS (antes 115).
+
+  **Pendientes dejados**: `base-url` de M3, que algún caso de uso llame a los puertos de M3 (H7), auditoría de CU-12 (FR-010), refactor del código duplicado en los adaptadores de M1 y M3, y tests opcionales (body del individual, ausencia de `Authorization`, `X-Correlation-Id` del valor calculado).
