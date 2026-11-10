@@ -286,6 +286,85 @@ Misma rama `feature/fase3-adaptadores-lectura`. T-15 completa: clientes HTTP de 
 
 ---
 
+### 4.10 Vistas de consulta CU-19, CU-20 y CU-21 — Hito H6 (2026-11-10)
+
+Rama `feature/h6-vistas-consulta` (creada desde `develop`). Trabajo en paralelo con H5 (T-12/T-13); no se tocaron `OutboxAdapter`, `FinanceStatusMapper` ni `InternalReservationController` (este último aún no existe en `develop`).
+
+**Decisiones cerradas con el usuario**
+
+| ID | Decisión | Efecto |
+|---|---|---|
+| D1 | Reemplazar el cuerpo de `GET /api/v1/reservations` por el contrato de CU-20 | Nuevo envoltorio `pagination`, `applied_filter`, `user_role`, `view_title`, `reservations[]`; se actualizó `ReservationQueryTest` |
+| D2 | Nuevo `ReservationDetailResponse` para CU-21 | `ReservationResponse` queda intacta para el `POST` de CU-02 |
+| D3 | Puertos/adaptadores nuevos de solo lectura de flota | No se modificaron `FleetInfoPort`, `FleetInfo` ni los adaptadores HTTP de H3 |
+| D4 | `total_days` calculado desde fechas; `quotation_id`/`expires_at` nulos | Sin tocar `HttpIndividualEstimateAdapter`; no se inventan identificadores |
+| D5 | Fail-safe por elemento en listas | Si M1 falla, la lista responde 200 con datos de embarcación nulos |
+| D6 | `payment_summary` solo con lo persistido | Sin sumas; rubros no persistidos salen `null` |
+| D7 | `start_at`/`end_at` y `scheduled_arrival` con `departure_time` | Se documenta la falta de hora de llegada |
+| D8 | `previous_trips` = `COUNT` de reservas `COMPLETED` del arrendatario en M2 | Excluye la reserva consultada; no es cálculo monetario |
+| D9 | `renter.name = holder_name` | Documentado como provisional |
+| D10 | No devolver `status_badge` | El front mapea textos/colores desde `status` y `cancellation_subtype`; desviación consciente de FR-008 (CU-20) y FR-015 (CU-21) |
+
+**T-11b — CU-20 (commit `0358009`)**
+
+- `ReservationQueryController.listReservations` acepta `filter` (`all`, `history`, `cancelled`) y devuelve `ReservationListResponse`.
+- `ReservationListFilter` traduce el filtro a estados: `history` = `INITIATED`, `PENDING_PAYMENT`, `RESERVED`, `IN_NAVIGATION`, `COMPLETED`; `cancelled` = `CANCELLED`, `EXPIRED`, `PAYMENT_FAILED`.
+- `ReservationRepositoryPort`/`ReservationRepositoryAdapter`/`ReservationJpaRepository` añaden consultas paginadas por estado, manteniendo las anteriores para compatibilidad.
+- `ReservationListItemResponse` expone: `reservation_id`, `reservation_code`, `status`, `cancellation_subtype`, `vessel` (id, nombre, imagen, puerto), `dates` (inicio, fin, días, noches), `passengers`, `total_price` (monto persistido, moneda, `is_frozen`), `renter`, `owner`, `contextual_label`, `detail_url`, `created_at`.
+- `ReservationMapper.toDomain` ahora mapea `reservation_code`; `ReservationView` incorpora código, partes y subestado.
+- Flota: nuevo `VesselReadPort` con `getSummaries(ids)`; `HttpVesselReadAdapter` consulta en paralelo (4 hilos, presupuesto 700 ms), deduplica y omite elementos fallidos; `FakeVesselReadAdapter` cubre desarrollo y tests. Sin caché entre peticiones ni copia de datos de M1.
+- `contextual_label` solo para `RENTER`: textos cualitativos por subestado de cancelación y "Reembolso gestionado por Módulo 3" en `COMPLETED`; no se afirma "sin disputa" porque H9 no existe.
+- Paginación: `page >= 1`, `1 <= limit <= 50`, `limit` por defecto 10, orden `created_at DESC`, `total_pages` calculado sin montos.
+- Tests: `ReservationQueryTest` (9) y `ReservationQueryServiceTest` (6).
+
+**T-11c — CU-21 (commit `844a089`)**
+
+- `ReservationQueryController.getReservation` devuelve `ReservationDetailResponse`; el método básico `getReservationDetail` se conserva para no romper a H5.
+- `ReservationQueryService.getReservationDetailView` compone: ficha de embarcación, itinerario, partes, `payment_summary`, `available_actions`, `time_indicators` y `contextual_banner`.
+- `ReservationDetailPolicy` (puro) implementa:
+  - `RESERVED`/`IN_NAVIGATION`: tres rubros persistidos y total liquidado (o estimado literal si `total_amount` es nulo).
+  - `COMPLETED`: oculta alquiler y seguro, mantiene depósito y nota de ventana de 24 h.
+  - `CANCELLED(NO_SHOW)`: título "Compensación", rubros nulos y nota exacta de FR-014.
+  - Acciones: `can_cancel` en `RESERVED`; `can_initiate_payment` en `INITIATED` para arrendatario; `can_mark_trip_start`/`can_mark_no_show` para propietario desde la hora de zarpe y tras 30 min; `can_mark_trip_end` en `IN_NAVIGATION`.
+  - Contadores: TTL, minutos al zarpe, cortesía y ventana de disputa (24 h desde llegada real o último cambio de estado).
+- `ReservationMapper`/`Reservation`/`ReservationView` exponen `rental_amount`, `insurance_amount`, `guarantee_deposit_amount`, `total_amount`, horas reales y `status_changed_at` (solo lectura).
+- `previous_trips` (D8): `countCompletedByRenterExcluding`, excluyendo la reserva consultada.
+- Flota: `VesselReadPort.getDetail` con parseo completo del contrato CU-09; si M1 falla, el detalle degrada a resumen o ficha mínima sin romper la vista.
+- Tests: `ReservationDetailPolicyTest` (6), `ReservationQueryServiceTest` (9), `ReservationQueryTest` (12).
+
+**T-11a — CU-19 (commit `388591a`)**
+
+- `VesselDetailController`:
+  - `GET /api/v1/vessels/{vessel_id}`: ficha técnica completa desde M1, con `Cache-Control: no-store` y sin persistencia.
+  - `GET /api/v1/vessels/{vessel_id}/quotations?start_date&end_date&passengers`: revalida capacidad contra `FleetInfoPort` (409 `CAPACITY_EXCEEDED`) y cotiza con `IndividualEstimatePort`; monto y `warning` literales de M3, moneda COP constante.
+- `VesselDetailService` (caso de uso `VesselDetailUseCase`) restringe el acceso a `RENTER`, valida UUID/fechas/pasajeros y conserva los códigos `VESSEL_NOT_FOUND` y `QUOTATION_UNAVAILABLE` de H3.
+- `total_days` se calcula como días inclusivos (coherente con `duration_days` de M3); `quotation_id` y `quotation_expires_at` se devuelven `null` porque M3 no los entrega (D4).
+- `VesselDetail`/`VesselDetailResponse` amplían la ficha con capacidad, eslora, camarotes, capitán, coordenadas y verificación del propietario.
+- Tests: `VesselDetailServiceTest` (8), `HttpVesselReadAdapterTest` (3, WireMock) y `VesselDetailControllerTest` (7, MockMvc con adaptadores fake).
+- **Suite completa del hito (2026-11-10)**: `.\mvnw.cmd test` → **273 pruebas, 0 fallos, 0 errores, 0 omitidas** (eran 234 al inicio de H6). Commits: T-11b `0358009`, T-11c `844a089`, T-11a `388591a`.
+
+**Cambios de contrato HTTP**
+
+- `GET /api/v1/reservations`: reemplazo del envoltorio (`items/page/limit/total_items` → `pagination/applied_filter/user_role/view_title/reservations[]`). Decisión D1.
+- `GET /api/v1/reservations/{id}`: reemplazo por la estructura de CU-21. Decisión D2. `POST /api/v1/reservations` no cambia.
+- Nuevos: `GET /api/v1/vessels/{id}` y `GET /api/v1/vessels/{id}/quotations`.
+
+**Pendientes y deudas de H6**
+
+1. `payment_summary` completo depende de que CU-03/CU-12 persistan `rental_amount`, `insurance_amount`, `guarantee_deposit_amount` y `total_amount` (H7). Hoy las columnas existen pero están nulas; no se suman ni se inventan.
+2. El nombre del propietario y los datos de embarcación provienen de M1 en cada consulta (D3). No hay caché ni copia. Para listas de 50 se deduplica y se acota el presupuesto; falta un endpoint de M1 por lote de IDs.
+3. `vessel.image_url` no existe en la operación individual de CU-09; se intenta `image_url` y, si no, `photo_url`; si tampoco, se devuelve `null`.
+4. `departure_port.city` no existe en el contrato de M1: se devuelve `null`.
+5. No se persiste hora de llegada programada; `scheduled_arrival` usa `end_date + departure_time` (D7).
+6. `status_badge` no se expone (D10); queda cubierto por el front.
+7. `courtesy_elapsed_minutes` en `CANCELLED(NO_SHOW)` no se persiste; se devuelve `null` (el ejemplo del plan mostraba 30).
+8. `COMPLETED` no distingue "sin incidentes" porque el contexto de disputa (H9) no existe.
+9. El nuevo `HttpVesselReadAdapter` no escribe `external_query_log` para las fichas; la revalidación de capacidad de CU-19 sí pasa por `FleetInfoPort`, que ya registra CU-09 FR-010.
+10. `seashare.finance.base-url` sigue sin definirse; con `mode=http` la cotización individual no es usable todavía.
+11. Riesgo de solape con H5 si T-13 reutiliza `ReservationQueryService`/`ReservationView`: se conservaron los métodos previos y `ReservationResponse` para minimizarlo.
+
+---
+
 ## 5. Pruebas y verificación
 
 - La suite ejecuta **234 pruebas** (eran 115 tras el Hito H2, 84 antes y 75 el 2026-11-03).
