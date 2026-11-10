@@ -21,6 +21,10 @@ public class Reservation { // agregado de reserva del dominio
     private final String holderPhone; // telefono de contacto del titular
     private final String holderEmail; // correo electronico del titular
     private final BigDecimal estimatedTotal; // total estimado persistido literalmente
+    private BigDecimal rentalAmount; // monto de alquiler liquidado por M3 (solo persistencia)
+    private BigDecimal insuranceAmount; // monto del seguro liquidado por M3 (solo persistencia)
+    private BigDecimal guaranteeDepositAmount; // deposito de garantia liquidado por M3 (solo persistencia)
+    private BigDecimal totalAmount; // monto total liquidado por M3 (solo persistencia)
     private final String currency; // codigo de moneda
     private final LocalTime departureTime; // hora programada de zarpe
     private final String harborTimezone; // zona horaria del puerto
@@ -36,6 +40,7 @@ public class Reservation { // agregado de reserva del dominio
     private Instant actualArrivalAt; // hora real de desembarque; la fija CU-07 (T-17d), aqui solo persistencia
     private boolean m1Blocked; // true si ya se notifico RESERVED a Modulo 1 (guarda SC-003)
     private final Long version; // version de concurrencia optimista
+    private String reservationCode; // codigo visible persistido; solo lectura para las vistas
 
     public Reservation(UUID id, UUID renterId, UUID ownerId, UUID vesselId, LocalDate startDate, LocalDate endDate,
                        int passengers, String holderName, String holderPhone, String holderEmail,
@@ -214,6 +219,14 @@ public class Reservation { // agregado de reserva del dominio
         this.m1Blocked = m1Blocked; // establece m1Blocked
     }
 
+    public String getReservationCode() { // obtiene el codigo visible
+        return reservationCode; // retorna reservationCode
+    }
+
+    public void setReservationCode(String reservationCode) { // asigna el codigo visible desde persistencia
+        this.reservationCode = reservationCode; // establece reservationCode
+    }
+
     public UUID getId() { // obtiene el id
         return id; // retorna id
     }
@@ -256,6 +269,38 @@ public class Reservation { // agregado de reserva del dominio
 
     public BigDecimal getEstimatedTotal() { // obtiene el total estimado
         return estimatedTotal; // retorna estimatedTotal
+    }
+
+    public BigDecimal getRentalAmount() { // obtiene el monto de alquiler persistido
+        return rentalAmount; // retorna rentalAmount
+    }
+
+    public void setRentalAmount(BigDecimal rentalAmount) { // asigna el monto de alquiler desde persistencia
+        this.rentalAmount = rentalAmount; // establece rentalAmount
+    }
+
+    public BigDecimal getInsuranceAmount() { // obtiene el monto del seguro persistido
+        return insuranceAmount; // retorna insuranceAmount
+    }
+
+    public void setInsuranceAmount(BigDecimal insuranceAmount) { // asigna el monto del seguro desde persistencia
+        this.insuranceAmount = insuranceAmount; // establece insuranceAmount
+    }
+
+    public BigDecimal getGuaranteeDepositAmount() { // obtiene el deposito de garantia persistido
+        return guaranteeDepositAmount; // retorna guaranteeDepositAmount
+    }
+
+    public void setGuaranteeDepositAmount(BigDecimal guaranteeDepositAmount) { // asigna el deposito de garantia desde persistencia
+        this.guaranteeDepositAmount = guaranteeDepositAmount; // establece guaranteeDepositAmount
+    }
+
+    public BigDecimal getTotalAmount() { // obtiene el monto total persistido
+        return totalAmount; // retorna totalAmount
+    }
+
+    public void setTotalAmount(BigDecimal totalAmount) { // asigna el monto total desde persistencia
+        this.totalAmount = totalAmount; // establece totalAmount
     }
 
     public String getCurrency() { // obtiene la moneda

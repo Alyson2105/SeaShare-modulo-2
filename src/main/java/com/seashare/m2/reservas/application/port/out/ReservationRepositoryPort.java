@@ -26,10 +26,28 @@ public interface ReservationRepositoryPort { // puerto de persistencia para el a
     ReservationPage findByOwner(UUID ownerId, int page, int limit); // consulta reservas paginadas por propietario
 
     /**
+     * Consulta paginada por arrendatario restringida a los estados indicados.
+     * Un conjunto nulo o vacio equivale a no filtrar por estado.
+     */
+    ReservationPage findByRenter(UUID renterId, int page, int limit, Set<ReservationStatus> statuses); // consulta filtrada del arrendatario
+
+    /**
+     * Consulta paginada por propietario restringida a los estados indicados.
+     * Un conjunto nulo o vacio equivale a no filtrar por estado.
+     */
+    ReservationPage findByOwner(UUID ownerId, int page, int limit, Set<ReservationStatus> statuses); // consulta filtrada del propietario
+
+    /**
      * Retorna los IDs de reservas en estado INITIATED o PENDING_PAYMENT cuyo ttl_expires_at sea menor o igual a {@code now},
      * ordenadas por ttl_expires_at ascendente y limitadas a {@code batchSize}.
      * Usa el índice ix_reservation_ttl existente. El corte es exacto: en el segundo de vencimiento ya se recupera.
      */
     List<UUID> findExpiredBefore(Instant now, int batchSize); // lectura de IDs vencidos (INITIATED o PENDING_PAYMENT) para el scheduler de TTL
+
+    /**
+     * Cuenta las reservas COMPLETED del arrendatario, excluyendo la reserva que se
+     * esta consultando. Es un conteo de calendario, no un calculo monetario (CU-21 FR-009).
+     */
+    long countCompletedByRenterExcluding(UUID renterId, UUID excludeReservationId); // viajes completados registrados en M2
 }
 

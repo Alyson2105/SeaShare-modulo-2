@@ -29,11 +29,17 @@ interface ReservationJpaRepository extends JpaRepository<ReservationEntity, UUID
 
     Page<ReservationEntity> findByOwnerId(UUID ownerId, Pageable pageable); // consulta paginada por propietario
 
+    Page<ReservationEntity> findByRenterIdAndStatusIn(UUID renterId, Collection<ReservationStatus> statuses, Pageable pageable); // consulta filtrada por arrendatario
+
+    Page<ReservationEntity> findByOwnerIdAndStatusIn(UUID ownerId, Collection<ReservationStatus> statuses, Pageable pageable); // consulta filtrada por propietario
+
     boolean existsByIdAndRenterId(UUID id, UUID renterId); // verifica pertenencia a arrendatario
 
     boolean existsByIdAndOwnerId(UUID id, UUID ownerId); // verifica pertenencia a propietario
 
     @Query("select r.id from ReservationEntity r where r.status in ('INITIATED', 'PENDING_PAYMENT') and r.ttlExpiresAt <= :now order by r.ttlExpiresAt asc")
     List<UUID> findExpiredBefore(@Param("now") Instant now, Pageable pageable); // busca IDs vencidos de ambos estados usando ix_reservation_ttl
+
+    long countByRenterIdAndStatusAndIdNot(UUID renterId, ReservationStatus status, UUID id); // viajes completados del arrendatario excluyendo la reserva actual
 }
 
