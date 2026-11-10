@@ -5,6 +5,7 @@ import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
 import com.seashare.m2.reservas.application.dto.OperationalStatusEvent;
 import com.seashare.m2.reservas.application.dto.PendingOutboxMessage;
 import com.seashare.m2.reservas.application.port.out.OutboxPort;
+import com.seashare.m2.reservas.infrastructure.adapter.out.messaging.FinanceStatusMapper;
 import com.seashare.m2.reservas.infrastructure.adapter.out.messaging.config.MessagingProperties;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
@@ -38,13 +39,15 @@ public class OutboxAdapter implements OutboxPort { // adaptador de persistencia 
 
     @Override
     public void enqueue(StatusChangedEvent event) { // encola evento de cambio de estado
+        String status = FinanceStatusMapper.toFinanceStatus(event.status(), event.subtype()); // traduce al nombre del contrato UC07
         Map<String, Object> payloadMap = new LinkedHashMap<>(); // mapa ordenado para claves json
         payloadMap.put("reservation_id", event.reservationId().toString()); // clave reservation_id
-        payloadMap.put("status", event.status().name()); // clave status con nombre interno
-        if (event.subtype() != null) { // incluye clave solo si el subtipo no es nulo
-            payloadMap.put("cancellation_subtype", event.subtype().name()); // clave cancellation_subtype
-        }
+        payloadMap.put("status", status); // clave status con el nombre que espera M3
         payloadMap.put("status_changed_at", event.changedAt().toString()); // clave status_changed_at en formato iso-8601
+        String paymentTokenRef = event.paymentTokenRef(); // token opaco hacia M3
+        if ("PENDING".equals(status) && paymentTokenRef != null && !paymentTokenRef.isBlank()) { // solo el evento pendiente lleva token
+            payloadMap.put(PAYMENT_TOKEN_FIELD, paymentTokenRef); // campo con token agregado al final
+        }
 
         String payload; // variable para almacenar texto json serializado
         try { // serializacion segura con jackson 3

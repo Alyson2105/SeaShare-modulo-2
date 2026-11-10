@@ -114,7 +114,8 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
                     changedAt, // marca temporal del cambio
                     command.actor(), // actor que disparo la transicion (CU-14 FR-002)
                     command.anticipationMinutes(), // anticipacion al cancelar (CU-14 FR-003)
-                    command.completionNotes() // notas de cierre en COMPLETED (CU-14 FR-004)
+                    command.completionNotes(), // notas de cierre en COMPLETED (CU-14 FR-004)
+                    command.paymentTokenRef() // token de pago opaco hacia M3 (solo PENDING_PAYMENT)
             ));
         }
         if (decision.moduleOneStatus() != null) { // encola el evento M1 con el id ya registrado en auditoria
@@ -212,12 +213,15 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
         }
     }
 
-    private void validateFieldPerTarget(ChangeReservationStatusCommand command) { // campos opcionales restringidos a un destino
+    private void validateFieldPerTarget(ChangeReservationStatusCommand command) { // campos opcionales restringidos a un destino (notas, referencia y token)
         if (command.completionNotes() != null && command.targetStatus() != ReservationStatus.COMPLETED) { // notas fuera de COMPLETED
             throw new ReservationRuleException(ErrorCode.INVALID_PARAMETERS, "completion_notes is only allowed when transitioning to COMPLETED"); // rechaza
         }
         if (command.paymentReference() != null && command.targetStatus() != ReservationStatus.RESERVED) { // referencia fuera de RESERVED
             throw new ReservationRuleException(ErrorCode.INVALID_PARAMETERS, "payment_reference is only allowed when transitioning to RESERVED"); // rechaza
+        }
+        if (command.paymentTokenRef() != null && command.targetStatus() != ReservationStatus.PENDING_PAYMENT) { // token fuera de PENDING_PAYMENT
+            throw new ReservationRuleException(ErrorCode.INVALID_PARAMETERS, "payment_token_ref is only allowed when transitioning to PENDING_PAYMENT"); // rechaza
         }
     }
 
