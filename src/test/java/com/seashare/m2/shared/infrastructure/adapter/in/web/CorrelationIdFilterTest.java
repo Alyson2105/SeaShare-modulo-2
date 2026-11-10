@@ -30,16 +30,20 @@ class CorrelationIdFilterTest { // prueba del filtro X-Correlation-Id con MockMv
 
     @Test
     void respetaElCorrelationIdEntrante() throws Exception { // la cabecera del cliente se refleja en la respuesta
-        mockMvc.perform(get("/actuator/health") // peticion con correlation id propio
-                        .header(CorrelationIdFilter.HEADER, "corr-123"))
+        mockMvc.perform(get("/api/v1/reservations") // endpoint de negocio: no toca Actuator ni RabbitMQ
+                        .header(CorrelationIdFilter.HEADER, "corr-123")
+                        .header("X-User-Id", UUID.randomUUID().toString()) // identidad temporal requerida
+                        .header("X-User-Role", "RENTER")) // rol temporal requerido
                 .andExpect(status().isOk()) // el endpoint responde 200
                 .andExpect(header().string(CorrelationIdFilter.HEADER, "corr-123")); // id identico en la respuesta
     }
 
     @Test
     void generaCorrelationIdCuandoNoLlega() throws Exception { // sin cabecera se genera un UUID
-        MvcResult result = mockMvc.perform(get("/actuator/health")) // peticion sin cabecera
-                .andExpect(status().isOk()) // el endpoint responde 200
+        MvcResult result = mockMvc.perform(get("/api/v1/reservations") // sin cabecera de correlation
+                        .header("X-User-Id", UUID.randomUUID().toString()) // identidad temporal requerida
+                        .header("X-User-Role", "RENTER")) // rol temporal requerido
+                .andExpect(status().isOk()) // el endpoint responde 200 sin depender del health de Rabbit
                 .andReturn(); // captura la respuesta
 
         String generated = result.getResponse().getHeader(CorrelationIdFilter.HEADER); // cabecera reflejada
