@@ -224,14 +224,19 @@ class PaymentIntegrationTest { // CU-03: inicio de pago de punta a punta con ada
     }
 
     @Test
-    void ttlIsNotRestarted() throws Exception { // FR-007
+    void ttlIsNotRestarted() throws Exception { // FR-007 y SC-001
         ReservationView reservation = createInitiated(LocalDate.of(2027, 6, 1), LocalDate.of(2027, 6, 3));
 
-        long before = java.time.Duration.between(java.time.Instant.now(), reservation.ttlExpiresAt()).getSeconds();
+        String body = pay(reservation.reservationId(), VALID_BODY)
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
 
-        pay(reservation.reservationId(), VALID_BODY).andExpect(status().isOk());
+        java.time.OffsetDateTime returnedTtl = java.time.OffsetDateTime.parse(
+                tools.jackson.databind.json.JsonMapper.builder().build()
+                        .readTree(body).path("ttl_expires_at").stringValue());
 
-        assertThat(before).isLessThanOrEqualTo(900L); // el TTL nace en CU-02 y no se reinicia
-        assertThat(reservation.ttlExpiresAt()).isNotNull();
+        assertThat(returnedTtl.toInstant()).isEqualTo(reservation.ttlExpiresAt()); // mismo vencimiento original
+        assertThat(reservation.ttlExpiresAt())
+                .isBeforeOrEqualTo(java.time.Instant.now().plusSeconds(900)); // nace en CU-02
     }
 }
