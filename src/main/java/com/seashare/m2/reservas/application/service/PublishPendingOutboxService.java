@@ -56,13 +56,16 @@ public class PublishPendingOutboxService implements PublishPendingOutboxUseCase 
 
     private final int batchSize; // maximo de mensajes por ciclo
 
+    private final long leaseMillis; // tiempo que un mensaje queda reclamado antes de reintentarse
+
     public PublishPendingOutboxService(OutboxPort outboxPort, // constructor con inyeccion de puertos
                                        EventPublisherPort eventPublisherPort,
                                        FleetStatusNotificationPort fleetStatusNotificationPort,
                                        ClockPort clockPort,
                                        TransactionTemplate transactionTemplate,
                                        BackoffPolicy backoffPolicy,
-                                       @Value("${m2.scheduler.outbox.batch-size:50}") int batchSize) {
+                                       @Value("${m2.scheduler.outbox.batch-size:50}") int batchSize,
+                                       @Value("${m2.scheduler.outbox.lease-ms:30000}") long leaseMillis) {
         this.outboxPort = outboxPort; // asigna puerto outbox
         this.eventPublisherPort = eventPublisherPort; // asigna publicador amqp
         this.fleetStatusNotificationPort = fleetStatusNotificationPort; // asigna notificador de M1
@@ -70,21 +73,27 @@ public class PublishPendingOutboxService implements PublishPendingOutboxUseCase 
         this.transactionTemplate = transactionTemplate; // asigna plantilla transaccional
         this.backoffPolicy = backoffPolicy; // asigna politica de backoff
         this.batchSize = batchSize; // asigna tamano del lote
+        this.leaseMillis = leaseMillis; // asigna duracion del lease
     }
 
     @Override
-    public int execute() { // procesa hasta batchSize mensajes, uno por transaccion
+    public int execute() { // procesa hasta batchSize mensajes: reclama en una TX y llama fuera de ella
         int processed = 0; // contador de mensajes intentados
-        for (int i = 0; i < batchSize; i++) { // cada mensaje se reclama y procesa en su propia transaccion
-            boolean claimed; // indica si habia un mensaje pendiente en este ciclo
+        for (int i = 0; i < batchSize; i++) { // cada mensaje se reclama y procesa por separado
+            PendingOutboxMessage message; // mensaje reclamado
             try {
-                claimed = Boolean.TRUE.equals(transactionTemplate.execute(status -> processNext())); // reclama y procesa dentro de la TX
+                message = claimNext(); // TX corta: bloquea y arrienda el mensaje
             } catch (Exception e) { // nunca propaga al job
-                log.error("Outbox relay: fallo inesperado en el ciclo sin propagar: {}", e.getMessage(), e); // alerta y corta el ciclo
+                log.error("Outbox relay: fallo inesperado al reclamar: {}", e.getMessage(), e); // alerta y corta el ciclo
                 break; // deja el resto para el siguiente ciclo
             }
-            if (!claimed) { // no quedan pendientes
+            if (message == null) { // no quedan pendientes
                 break; // termina el ciclo
+            }
+            try {
+                processOne(message); // llamada externa FUERA de la transaccion
+            } catch (Exception e) { // un fallo de marcado no frena a los demas mensajes
+                log.error("Outbox relay: fallo inesperado al procesar {}: {}", message.eventId(), e.getMessage(), e);
             }
             processed++; // cuenta el mensaje como intentado
         }
@@ -94,48 +103,53 @@ public class PublishPendingOutboxService implements PublishPendingOutboxUseCase 
         return processed; // retorna cuantos mensajes se intentaron
     }
 
-    private boolean processNext() { // reclama un mensaje y lo despacha en la misma transaccion
-        List<PendingOutboxMessage> pending = outboxPort.findPending(clockPort.now(), 1); // claim unitario con SKIP LOCKED
-        if (pending.isEmpty()) { // sin mensajes vencidos
-            return false; // no hay nada que procesar
-        }
-        processOne(pending.get(0)); // el bloqueo se mantiene hasta el commit de markPublished/markFailed
-        return true; // mensaje intentado
+    private PendingOutboxMessage claimNext() { // reclama y arrienda un mensaje en una transaccion corta
+        return transactionTemplate.execute(status -> {
+            Instant now = clockPort.now(); // hora unica del reclamo
+            List<PendingOutboxMessage> pending = outboxPort.findPending(now, 1); // SKIP LOCKED: un mensaje por instancia
+            if (pending.isEmpty()) { // sin mensajes vencidos
+                return null; // no hay nada que procesar
+            }
+            PendingOutboxMessage message = pending.get(0); // mensaje reclamado
+            outboxPort.lease(message.id(), now.plusMillis(leaseMillis)); // lo oculta de otras instancias hasta el lease
+            return message; // el bloqueo se libera al commit de esta transaccion
+        });
     }
 
-    private void processOne(PendingOutboxMessage message) { // despacho por destino dentro de la TX del mensaje
+    private void processOne(PendingOutboxMessage message) { // despacho por destino, fuera de la transaccion
         if (DESTINATION_AMQP.equals(message.destination())) { // destino amqp hacia M3
             publishAmqp(message); // publica con confirm
         } else if (DESTINATION_M1_HTTP.equals(message.destination())) { // destino http hacia M1
             notifyModuleOne(message); // delega en el puerto de flota, sin http en el relay
         } else { // destino fuera del catalogo: nunca tendra exito
-            markDead(message, message.attempts() + 1, "Destino desconocido: " + message.destination()); // dead directo
+            inTransaction(() -> markDead(message, message.attempts() + 1, "Destino desconocido: " + message.destination())); // dead directo
         }
     }
 
     private void publishAmqp(PendingOutboxMessage message) { // publicacion amqp con esperas de confirm
         try {
-            eventPublisherPort.publish(message); // publica y espera el confirm del broker
-            outboxPort.markPublished(message.id(), clockPort.now()); // recien aqui marca published_at
+            eventPublisherPort.publish(message); // publica y espera el confirm del broker (sin transaccion abierta)
+            inTransaction(() -> outboxPort.markPublished(message.id(), clockPort.now())); // TX corta: marca published_at
             log.debug("Outbox relay: evento {} publicado y confirmado por el broker", message.eventId()); // traza
         } catch (RuntimeException e) { // broker sin confirm (nack, timeout o caida): reintento (M3)
             registerFailure(message, "AMQP sin confirmacion: " + errorMessage(e)); // agenda reintento o dead
         }
     }
 
-    private void notifyModuleOne(PendingOutboxMessage message) { // notificacion a M1 via puerto fake
+    private void notifyModuleOne(PendingOutboxMessage message) { // notificacion a M1 via puerto
         try {
-            FleetNotificationOutcome outcome = fleetStatusNotificationPort.notifyStatus(message); // llama al puerto
+            FleetNotificationOutcome outcome = fleetStatusNotificationPort.notifyStatus(message); // llamada fuera de transaccion
             switch (outcome) { // clasifica el resultado
                 case DELIVERED -> { // 2xx: M1 acepto
-                    outboxPort.markPublished(message.id(), clockPort.now()); // marca publicado
+                    inTransaction(() -> outboxPort.markPublished(message.id(), clockPort.now())); // TX corta: marca publicado
                     log.debug("Outbox relay: notificacion M1 {} entregada", message.eventId()); // traza
                 }
                 case RETRYABLE_FAILURE -> registerFailure(message, "M1_HTTP fallo transitorio (5xx o timeout)"); // reintento
-                case PERMANENT_FAILURE -> markDead(message, message.attempts() + 1, "M1_HTTP 4xx permanente (D-05)"); // dead directo
+                case PERMANENT_FAILURE -> inTransaction(() -> markDead( // TX corta
+                        message, message.attempts() + 1, "M1_HTTP 4xx permanente (D-05)")); // dead directo
             }
         } catch (RuntimeException e) { // excepcion del adaptador: se trata como fallo transitorio
-            registerFailure(message, "M1_HTTP error inesperado: " + errorMessage(e)); // agenda reintento o dead
+            registerFailure(message, "M1_HTTP error inesperado: " + errorMessage(e)); // agenda reintento
         }
     }
 
@@ -143,12 +157,12 @@ public class PublishPendingOutboxService implements PublishPendingOutboxUseCase 
         int attempts = message.attempts() + 1; // primer fallo -> intento 1
         String detail = truncate(error); // recorta el error para last_error
         if (backoffPolicy.exhausted(attempts)) { // 5º fallo agotado
-            markDead(message, attempts, detail); // dead + alerta
+            inTransaction(() -> markDead(message, attempts, detail)); // dead + alerta
             return; // sin proximo intento
         }
         Duration delay = backoffPolicy.delayFor(attempts); // backoff 1/5/25/125 s con jitter
         Instant nextAttemptAt = clockPort.now().plus(delay); // hora del proximo intento desde el reloj
-        outboxPort.markFailed(message.id(), attempts, nextAttemptAt, detail, false); // persiste el intento
+        inTransaction(() -> outboxPort.markFailed(message.id(), attempts, nextAttemptAt, detail, false)); // TX corta
         log.warn("Outbox relay: evento {} fallo {}/{}; reintento en {} ms: {}",
                 message.eventId(), attempts, backoffPolicy.maxAttempts(), delay.toMillis(), detail); // aviso
     }
@@ -157,6 +171,13 @@ public class PublishPendingOutboxService implements PublishPendingOutboxUseCase 
         outboxPort.markFailed(message.id(), attempts, null, truncate(error), true); // dead=true sin proximo intento
         log.error("ALERTA outbox relay: evento {} marcado dead tras {} intento(s): {}",
                 message.eventId(), attempts, truncate(error)); // alerta critica
+    }
+
+    private void inTransaction(Runnable action) { // ejecuta una escritura corta en su propia transaccion
+        transactionTemplate.execute(status -> {
+            action.run(); // marca el resultado del mensaje
+            return null;
+        });
     }
 
     private String errorMessage(Exception e) { // mensaje de error seguro para el log y last_error

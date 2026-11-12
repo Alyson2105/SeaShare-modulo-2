@@ -19,6 +19,8 @@ public interface OutboxPort { // puerto para encolar eventos en outbox
 
     List<PendingOutboxMessage> findPending(Instant now, int batchSize); // T-03: pendientes vencidos ordenados, hasta batchSize
 
+    void lease(UUID messageId, Instant leasedUntil); // reclama el mensaje hasta la hora indicada (llamada externa fuera de la TX)
+
     void markPublished(UUID messageId, Instant publishedAt); // T-03: marca published_at tras el confirm; purga payload con token (D-09)
 
     void markFailed(UUID messageId, int attempts, Instant nextAttemptAt, String lastError, boolean dead); // T-03: registra fallo, reintento o dead

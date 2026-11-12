@@ -129,6 +129,13 @@ public class OutboxAdapter implements OutboxPort { // adaptador de persistencia 
     }
 
     @Override
+    public void lease(UUID messageId, Instant leasedUntil) { // oculta el mensaje de otras instancias durante el lease
+        OutboxMessageEntity entity = load(messageId); // carga la fila reclamada
+        entity.setNextAttemptAt(leasedUntil); // hasta entonces no vuelve a estar pendiente
+        repository.save(entity); // persiste el arriendo en la transaccion del reclamo
+    }
+
+    @Override
     public void markPublished(UUID messageId, Instant publishedAt) { // marca publicado tras el confirm
         OutboxMessageEntity entity = load(messageId); // carga la fila
         entity.setPublishedAt(publishedAt); // fija published_at

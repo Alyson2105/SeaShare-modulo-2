@@ -78,7 +78,7 @@ class PublishPendingOutboxServiceTest { // pruebas unitarias del servicio relay 
         BackoffPolicy backoffPolicy = new BackoffPolicy(5, 1000, 5, 0.1, random); // politica de prueba
         service = new PublishPendingOutboxService( // construye el servicio con puertos simulados
                 outboxPort, eventPublisherPort, fleetStatusNotificationPort,
-                clockPort, transactionTemplate, backoffPolicy, 10); // lote de 10
+                clockPort, transactionTemplate, backoffPolicy, 10, 30000); // lote de 10 y lease de 30 s
     }
 
     @Test
