@@ -92,6 +92,18 @@ class ReservationMapper { // mapeador entre entidad de persistencia y modelo de 
         if (domain.getActualArrivalAt() != null) { // round-trip de hora real de desembarque (la fija CU-07)
             entity.setActualArrivalAt(domain.getActualArrivalAt()); // persiste llegada real
         }
+        if (domain.getRentalAmount() != null) { // CU-03: desglose literal de M3
+            entity.setRentalAmount(domain.getRentalAmount()); // alquiler sin recalcular
+        }
+        if (domain.getInsuranceAmount() != null) { // CU-03: seguro literal de M3
+            entity.setInsuranceAmount(domain.getInsuranceAmount()); // seguro sin recalcular
+        }
+        if (domain.getGuaranteeDepositAmount() != null) { // CU-03: deposito literal de M3
+            entity.setGuaranteeDepositAmount(domain.getGuaranteeDepositAmount()); // deposito sin recalcular
+        }
+        if (domain.getTotalAmount() != null) { // CU-03: total liquidado literal de M3
+            entity.setTotalAmount(domain.getTotalAmount()); // total sin recalcular
+        }
         entity.setM1Blocked(domain.isM1Blocked()); // persiste la guarda de notificacion a M1 (T-08)
     }
 }

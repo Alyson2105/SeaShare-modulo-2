@@ -19,6 +19,8 @@ public interface ReservationRepositoryPort { // puerto de persistencia para el a
 
     Optional<Reservation> findById(UUID id); // recupera una reserva por identificador
 
+    Optional<Reservation> findByIdForUpdate(UUID id); // CU-03: recupera y bloquea la fila hasta el commit
+
     boolean existsOverlap(UUID vesselId, LocalDate start, LocalDate end, Set<ReservationStatus> blockingStatuses); // evalua solapamiento temporal con reservas bloqueantes
 
     ReservationPage findByRenter(UUID renterId, int page, int limit); // consulta reservas paginadas por arrendatario

@@ -10,6 +10,8 @@ public enum ErrorCode { // catalogo de codigos de error con mapeo http
     UNAUTHENTICATED("UNAUTHENTICATED", 401), // usuario no autenticado
     PROFILE_NOT_AUTHORIZED("PROFILE_NOT_AUTHORIZED", 403), // perfil sin autorizacion
     RESERVATION_NOT_OWNED("RESERVATION_NOT_OWNED", 403), // reserva no pertenece al usuario
+    POLICY_NOT_ACCEPTED("POLICY_NOT_ACCEPTED", 400), // falta aceptar la politica de cancelacion (CU-03 FR-014)
+    PAYMENT_DATA_INCOMPLETE("PAYMENT_DATA_INCOMPLETE", 400), // faltan datos del medio de pago (CU-03)
     RESERVATION_NOT_FOUND("RESERVATION_NOT_FOUND", 404), // reserva no encontrada
     VESSEL_NOT_FOUND("VESSEL_NOT_FOUND", 404), // embarcacion no encontrada
     INVALID_RESERVATION_STATE("INVALID_RESERVATION_STATE", 409), // estado de reserva invalido

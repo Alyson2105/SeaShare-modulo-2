@@ -1,9 +1,11 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.persistence.reservation;
 
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -11,11 +13,16 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 interface ReservationJpaRepository extends JpaRepository<ReservationEntity, UUID> { // repositorio jpa para la entidad reservation
 
     boolean existsByReservationCode(String code); // verifica si ya existe una reserva con el codigo provisto
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE) // CU-03 FR-005: bloqueo pesimista de la fila
+    @Query("select r from ReservationEntity r where r.id = :id")
+    Optional<ReservationEntity> findByIdForUpdate(@Param("id") UUID id); // reserva bloqueada hasta el commit
 
     @Query("select count(r) > 0 from ReservationEntity r where r.vesselId = :vesselId and r.status in :statuses and r.startDate <= :endDate and r.endDate >= :startDate")
     boolean existsOverlapping(

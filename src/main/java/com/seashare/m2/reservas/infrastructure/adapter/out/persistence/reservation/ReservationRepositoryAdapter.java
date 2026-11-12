@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -16,6 +17,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.sql.SQLException;
 
 import com.seashare.m2.reservas.application.dto.ReservationPage;
 import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
@@ -56,14 +59,36 @@ public class ReservationRepositoryAdapter implements ReservationRepositoryPort {
             throw new VersionConflictException("Version conflict for reservation " + reservation.getId()); // lanza conflicto de version
         }
 
-        mapper.applyChanges(reservation, entity); // aplica unicamente status y subtipo a la entidad
+        mapper.applyChanges(reservation, entity); // aplica estado y campos persistibles
 
         try { // bloque protegido contra concurrencia de base de datos
             ReservationEntity saved = repository.saveAndFlush(entity); // guarda y fuerza flush inmediato
             return mapper.toDomain(saved); // retorna dominio con version actualizada
         } catch (OptimisticLockingFailureException e) { // captura colision optimista de base de datos
             throw new VersionConflictException("Version conflict while saving reservation " + reservation.getId(), e); // traduce a excepcion de dominio
+        } catch (DataIntegrityViolationException e) { // posible violacion de la exclusion GiST (23P01)
+            if (isExclusionViolation(e)) { // dos reservas retuvieron las mismas fechas
+                throw new ReservationRuleException(ErrorCode.CONCURRENCY_CONFLICT,
+                        "La embarcacion ya no se encuentra disponible para las fechas seleccionadas"); // 409 FCFS
+            }
+            throw e; // otra violacion de integridad no se enmascara
         }
+    }
+
+    private boolean isExclusionViolation(Throwable error) { // busca el SQLState de exclusion de PostgreSQL
+        Throwable current = error; // recorre la cadena de causas
+        while (current != null) { // hasta el fondo
+            if (current instanceof SQLException sql && "23P01".equals(sql.getSQLState())) { // exclusion_violation
+                return true; // es la restriccion EXCLUDE de solapamiento
+            }
+            current = current.getCause(); // sube una causa
+        }
+        return false; // cualquier otro error de integridad
+    }
+
+    @Override
+    public Optional<Reservation> findByIdForUpdate(UUID id) { // CU-03: lectura con bloqueo pesimista
+        return repository.findByIdForUpdate(id).map(mapper::toDomain); // fila bloqueada hasta el commit
     }
 
     @Override
