@@ -19,13 +19,12 @@
   - Job programado de expiración por TTL para reservas en `INITIATED` y `PENDING_PAYMENT` (T-07, Hito H4).
   - Manejo global de errores `{ code, message }`, identidad temporal por headers, reloj inyectable y reglas base de ArchUnit.
 - **No implementado**:
-  - Integración HTTP real con Módulo 3 (CU-11 y CU-12); con Módulo 1 existen clientes HTTP reales para CU-09 y CU-10 (activos con `seashare.fleet.mode=http`) y adaptadores *fake* por defecto; falta el cliente de aviso de estado (CU-22) (incluido el nuevo `FakeFleetStatusNotificationAdapter` de notificación a M1).
   - Consumidores AMQP de producción: la deduplicación por `event_id` solo tiene un consumidor de prueba en `src/test` (T-04); M3 es quien deduplica en producción (D-04).
-  - ShedLock, Spring Security y Resilience4j. (springdoc/OpenAPI, Testcontainers, WireMock y Awaitility sí están desde el Hito H1; ver historial.)
+  - Spring Security y Resilience4j (ShedLock sí está implementado desde el 2026-11-12; ver 4.11).
   - Contexto `disputa` y contrato interno `shared/contracts`.
-  - Todos los CU salvo los avances parciales de CU-02, CU-08, CU-20 y CU-21. **Hito H4 completado (2026-11-09)**: CU-08 quedó completo como motor interno (comando, respuesta, auditoría completa, TTL doble, matriz de notificaciones M3/M1); siguen pendientes de CU-08 solo la creación vía CU-08 (T-24); el payload final de CU-14 (T-12) se cerró en el Hito H5.
-- **Hito H2 completado (2026-11-07)**: topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` y prueba de deduplicación (T-04) y filtro de correlation id HTTP→AMQP (T-22). Detalle en la sección 4.6.
-- La última ejecución registrada de la suite completa es del **2026-11-10** (`.\mvnw.cmd test`): **271 pruebas, 0 fallos, 0 errores, 0 omitidas** (eran 115 el 2026-11-07, tras el Hito H2).
+  - Todos los CU salvo los avances parciales de CU-02, CU-08, CU-20 y CU-21. **Hito H4 completado (2026-11-09)**: CU-08 quedó completo como motor interno (comando, respuesta, auditoría completa, TTL doble, matriz de notificaciones M3/M1); **desde el 2026-11-12 la creación pasa por CU-08 (T-24, ver 4.11)**, por lo que ya no queda escritura de estado fuera del motor.
+- **Hito H2 completado (2026-11-07)**: topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` y prueba de deduplicación (T-04), filtro de correlation id HTTP→AMQP (T-22) y **ShedLock en TTL y relay (T-05, 2026-11-12)**. Detalle en la sección 4.6.
+- La última ejecución registrada de la suite completa es del **2026-11-12** (`.\mvnw.cmd test`): **332 pruebas, 0 fallos, 0 errores, 0 omitidas** (eran 115 el 2026-11-07, 271 el 2026-11-10 y 331 antes del cierre de T-24).
 
 ---
 
@@ -37,9 +36,9 @@
 | Fase 2 — Foundational | Persistencia, errores, reloj, outbox, seguridad, mensajería, testing | **Parcial** | Implementados: errores globales, `ErrorCode`, Flyway V1 a V5, `ClockPort`, repositorio de reservas, idempotencia de entrada, escritura en outbox, reglas base de ArchUnit, Testcontainers y WireMock, **topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` + deduplicación probada (T-04) y correlation id HTTP→AMQP (T-22)**. Faltan: seguridad, ShedLock, métricas/health y reglas ArchUnit completas. Los clientes HTTP salientes de M1 y M3 ya existen (Hito H3), pero siguen en modo `fake` por defecto. |
 | Fase 3 — Adaptadores de lectura | CU-09, CU-10, CU-11, CU-12 | **En curso** | T-14 hecha: clientes HTTP reales de M1 para CU-09 y CU-10 con registro de consultas (ver 4.8); activos con `seashare.fleet.mode=http`, los *fake* siguen por defecto. T-15 hecha: clientes HTTP de M3 para CU-11 y CU-12 (ver 4.9), activos con `seashare.finance.mode=http`. |
 | Fase 4 — Núcleo de dominio | CU-08 | **Completada (Hito H4, 2026-11-09)** | Contrato completo de CU-08 (T-06): comando con `actor_id`/`expected_version`/`mechanical_failure`/`anticipation_minutes`/`completion_notes`/`payment_reference`, respuesta con `version` y `events_enqueued`. Persistencia y V4 (T-09): `status_changed_at` y campos de cierre/pago. Auditoría completa (T-10): creación + transiciones con `actor_id`/`event_ids` e inmutabilidad probada. TTL doble (T-07): `INITIATED` y `PENDING_PAYMENT`. Matriz M3/M1 con guarda `m1_blocked` y destinos `AMQP` + `M1_HTTP` (T-08). Detalle en la sección 4.7. Queda fuera de esta fase: creación vía CU-08 (T-24, Fase 7) y payload final de CU-14 (T-12, Fase 5). |
-| Fase 5 — Superficie Módulo 3 | CU-14, CU-15 | **Código terminado (Hito H5, rama feature/fase5-superficie-m3, PR pendiente)** | T-12: payload de CU-14 según UC07 de M3 (mapeador de estados y token de pago opcional). T-13: endpoint interno de consulta para CU-15, solo lectura. Detalle en el historial (entrada del Hito H5). Los consumidores AMQP de producción son de M3. |
-| Fase 6 — Vistas de consulta | CU-19, CU-20, CU-21 | **Parcial** | CU-20 y CU-21 tienen endpoints básicos de listado y detalle. CU-19 no existe y los contratos de CU-20/21 están simplificados. |
-| Fase 7 — Embudo de conversión | CU-01, CU-02, CU-03, CU-13 | **Parcial** | Solo CU-02 tiene una implementación básica. CU-01, CU-03 y CU-13 no existen. |
+| Fase 5 — Superficie Módulo 3 | CU-14, CU-15 | **Completada (Hito H5, integrada por PR #28)** | T-12: payload de CU-14 según UC07 de M3 (mapeador de estados y token de pago opcional). T-13: endpoint interno de consulta para CU-15, solo lectura; **desde el 2026-11-12 exige rol `FINANCE` y devuelve 403**. Detalle en el historial (entrada del Hito H5) y en 4.11. Los consumidores AMQP de producción son de M3. |
+| Fase 6 — Vistas de consulta | CU-19, CU-20, CU-21 | **Completada en código (Hito H6, PR #29)** | CU-19, CU-20 y CU-21 existen. **Desde el 2026-11-12 exponen `status_badge` y el listado usa el mismo total que el detalle (ver 4.11).** |
+| Fase 7 — Embudo de conversión | CU-01, CU-02, CU-03, CU-13 | **Parcial** | CU-02 completo con creación vía CU-08 (T-24, 2026-11-12). CU-01, CU-03 y CU-13 no existen. |
 | Fase 8 — Operaciones en muelle | CU-04, CU-05, CU-06, CU-07 | **No iniciada** | Sin endpoints, servicios ni eventos de cancelación, inasistencia, check-in o check-out. |
 | Fase 9 — Disputa de garantía | CU-16, CU-17, CU-18 | **No iniciada** | Las tablas `dispute_*` existen en V2, pero no hay contexto `disputa`, lógica, endpoints ni publicación de eventos. |
 | Fase 10 — Polish | Transversal | **No iniciada** | Sin pruebas de carga, resiliencia, observabilidad operativa, cierre de `[NEEDS CLARIFICATION]` ni documentación de arranque. |
@@ -57,20 +56,20 @@
 | CU-05 — Marcar inasistencia | **No implementado** | Sin endpoint ni validación de la ventana de 30 min. |
 | CU-06 — Marcar inicio de navegación | **No implementado** | Sin endpoint ni registro de check-in. |
 | CU-07 — Marcar fin de navegación | **No implementado** | Sin endpoint ni registro de check-out. |
-| CU-08 — Actualizar estado de reserva | **Parcial (motor completo desde el Hito H4)** | Motor interno con matriz de transiciones, auditoría inmutable, outbox y `@Version`. Contrato completo (T-06): comando con `expected_version`, `actor_id`, `mechanical_failure`, `anticipation_minutes`, `completion_notes`, `payment_reference` y respuesta con `version` + `events_enqueued` (puerto `ChangeReservationStatusUseCase`). Auditoría de creación y de cada transición con `actor_id`/`event_ids` (T-10). TTL desde `INITIATED` y `PENDING_PAYMENT` (T-07). Notificación a M1 (`M1_HTTP`) con guarda `m1_blocked` y matriz M3/M1 (T-08). Pendientes: la creación de reservas aún no pasa por CU-08 (T-24); el payload de los eventos hacia M3 (T-12) se cerró en el Hito H5. |
+| CU-08 — Actualizar estado de reserva | **Parcial (motor completo desde el Hito H4)** | Motor interno con matriz de transiciones, auditoría inmutable, outbox y `@Version`. Contrato completo (T-06): comando con `expected_version`, `actor_id`, `mechanical_failure`, `anticipation_minutes`, `completion_notes`, `payment_reference` y respuesta con `version` + `events_enqueued` (puerto `ChangeReservationStatusUseCase`). Auditoría de creación y de cada transición con `actor_id`/`event_ids` (T-10). TTL desde `INITIATED` y `PENDING_PAYMENT` (T-07). Notificación a M1 (`M1_HTTP`) con guarda `m1_blocked` y matriz M3/M1 (T-08). **La creación pasa por CU-08 con `InitiateReservationUseCase.initiate` (T-24, 2026-11-12)**: la reserva, la auditoría `null → INITIATED` y `reservation.info.provided` se escriben en la misma transacción con el mismo `event_id`. El payload de los eventos hacia M3 (T-12) se cerró en el Hito H5. |
 | CU-09 — Proveer información de embarcación | **Parcial** | Cliente HTTP real (`HttpFleetInfoAdapter`) con timeouts, un reintento y registro de consultas; se activa con `seashare.fleet.mode=http`. Contrato con M1 sin firmar. |
 | CU-10 — Brindar información de estado operativo | **Parcial** | Cliente HTTP real (`HttpFleetOperationalStatusAdapter`) con registro de consultas; solo `AVAILABLE` es disponible y una respuesta ilegible da 503. Contrato con M1 sin firmar. |
 | CU-11 — Proveer información de cotización | **Parcial** | Clientes HTTP reales de M3 para estimación individual y en lote (`HttpIndividualEstimateAdapter`, `HttpBatchEstimateAdapter`) con puertos, fakes y pruebas WireMock; se activan con `seashare.finance.mode=http`. Falta `base-url` de M3 y que algún caso de uso los llame (CU-01 usará el lote en H7). |
 | CU-12 — Brindar cálculo total de la reserva | **Parcial** | Cliente HTTP real (`HttpCalculatedValueAdapter`) con reintento del 404 y tope total de 800 ms; se activa con `seashare.finance.mode=http`. Falta `base-url` de M3, la auditoría de CU-12 (FR-010) y que CU-03 lo llame (H7). |
 | CU-13 — Confirmar pago | **No implementado** | Sin canal B activo ni canal A. |
 | CU-14 — Recibir estado de reserva | **Parcial** | El relay publica las filas `AMQP` con `Message-Id` y publisher confirm (T-03/T-04) hacia `finance.reservation-status.v1`. Desde el Hito H4 el `StatusChangedEvent` transporta `actor`, `anticipation_minutes` y `completion_notes` listos para el payload. Hito H5 (T-12): el payload sigue el contrato UC07 de M3 con `reservation_id`, `status` (`PENDING`, `RESERVED`, `IN_NAVIGATION`, `COMPLETED`, `CANCELLED_FLEXIBLE`, `CANCELLED_MODERATE`, `CANCELLED_STRICT`, `CANCELLED_BY_HOST`), `status_changed_at` y `payment_token_ref` solo en `PENDING`. Pendiente: CU-03 debe hacer obligatorio el token (H7). [NEEDS CLARIFICATION] la spec de CU-14 (FR-002 a FR-004) pide actor, sub-estado, anticipación y notas en el payload y el plan no; se siguió el plan. El consumidor real es de M3. |
-| CU-15 — Solicitar información de la reserva | **Implementado (Hito H5, T-13; PR pendiente)** | `GET /api/v1/internal/reservations/{reservation_id}`, solo lectura y sin dinero. [NEEDS CLARIFICATION] sin chequeo de rol (no se devuelve 403), `damage_detected` y `cancellation_anticipation_hours` siempre nulos, `scheduled_arrival` provisional y formato de `reservation_code` sin definir. Detalle en el historial. |
+| CU-15 — Solicitar información de la reserva | **Implementado (Hito H5, T-13; integrado por PR #28)** | `GET /api/v1/internal/reservations/{reservation_id}`, solo lectura y sin dinero. **T-13 cerrado el 2026-11-12**: exige `X-User-Role: FINANCE` y devuelve 403 `PROFILE_NOT_AUTHORIZED` con cualquier otro perfil. [NEEDS CLARIFICATION] `damage_detected` y `cancellation_anticipation_hours` siguen nulos porque CU-07 y CU-04 aún no los persisten; se documenta el motivo y no se inventan valores. `scheduled_arrival` provisional y formato de `reservation_code` sin definir. Detalle en el historial. |
 | CU-16 — Generar disputa de garantía | **No implementado** | Solo tablas en Flyway; sin lógica ni API. |
 | CU-17 — Actualizar estado de disputa | **No implementado** | Solo tablas en Flyway; sin lógica ni API. |
 | CU-18 — Recibir información de disputa | **No implementado** | Sin contexto `disputa` ni publicación AMQP. |
-| CU-19 — Ver detalle de embarcación | **No implementado** | Sin endpoint ni integración con CU-09/CU-11. |
-| CU-20 — Ver mis reservas | **Parcial** | `GET /api/v1/reservations` con paginación (`page`, `limit`) y filtrado por rol `RENTER`/`OWNER`. Faltan el filtro `filter` y la estructura exacta del contrato (`pagination`, `applied_filter`, `status_badge`). |
-| CU-21 — Ver detalle de reserva | **Parcial** | `GET /api/v1/reservations/{id}` con validación de pertenencia. Faltan campos y estructura del contrato (`status_badge`, datos operativos completos). |
+| CU-19 — Ver detalle de embarcación | **Implementado (Hito H6, T-11a)** | `GET /api/v1/vessels/{id}` y `/quotations` con datos de M1 y cotización individual de M3; `Cache-Control: no-store` y sin persistencia. |
+| CU-20 — Ver mis reservas | **Completada en código (Hito H6)** | `GET /api/v1/reservations` con paginación y filtro `filter`; `pagination`, `applied_filter` y `status_badge` implementados. `total_price.amount` usa `total_amount` con respaldo en `estimated_total` (misma regla que CU-21, 2026-11-12). |
+| CU-21 — Ver detalle de reserva | **Completada en código (Hito H6)** | `GET /api/v1/reservations/{id}` con validación de pertenencia, `status_badge` y datos operativos. Los rubros de `payment_summary` siguen nulos hasta que CU-03/CU-12 los persistan (H7). |
 | CU-22 — Recibir información de estado operativo | **Parcial** | El relay despacha el destino `M1_HTTP` al puerto `FleetStatusNotificationPort` con adaptador fake (loguea y responde OK); sin HTTP real. Desde el Hito H4 la matriz de notificaciones (T-08) está implementada en `ModuleNotificationMatrix` siguiendo la tabla FR-002, con `OperationalStatusEvent` encolado a `M1_HTTP` y payload de 4 campos. Falta el cliente HTTP real (D-01). |
 
 ---
@@ -360,15 +359,51 @@ Rama `feature/h6-vistas-consulta` (creada desde `develop`). Trabajo en paralelo 
 7. `courtesy_elapsed_minutes` en `CANCELLED(NO_SHOW)` no se persiste; se devuelve `null` (el ejemplo del plan mostraba 30).
 8. `COMPLETED` no distingue "sin incidentes" porque el contexto de disputa (H9) no existe.
 9. El nuevo `HttpVesselReadAdapter` no escribe `external_query_log` para las fichas; la revalidación de capacidad de CU-19 sí pasa por `FleetInfoPort`, que ya registra CU-09 FR-010.
-10. `seashare.finance.base-url` sigue sin definirse; con `mode=http` la cotización individual no es usable todavía.
+10. ~~`seashare.finance.base-url` sigue sin definirse~~ **Resuelto el 2026-11-12**: `application.yaml` define `${SEASHARE_FINANCE_BASE_URL:http://localhost:8083}` y `application-prod.yaml` lo exige por variable de entorno.
 11. Riesgo de solape con H5 si T-13 reutiliza `ReservationQueryService`/`ReservationView`: se conservaron los métodos previos y `ReservationResponse` para minimizarlo.
+
+---
+
+### 4.11 Remediación de la auditoría H1–H6 y cierre de T-24 (2026-11-12)
+
+Trabajo posterior al merge de H6 (`1e49661`) para desbloquear la Fase 7. Los commits `fde70f9` (ShedLock), `853756b` (SKIP LOCKED), `fe9ef7b` (purga del token), `79c1cd4` (`MoneyArchitectureTest`), `fdd47bd` (`base-url` de M3), `79117fe` (Java 21 y docstring TTL) y `5c25b97` (`.idea`) ya estaban en la rama; esta entrada recoge la remediación adicional.
+
+**T-24 — creación vía CU-08**
+- Nuevo puerto `InitiateReservationUseCase` y comando `InitiateReservationCommand` (`NewReservation` + `maxCapacity`).
+- `ChangeReservationStatusService.initiate` valida `ReservationStateMachine.validateCreation(INITIATED)`, persiste, encola `reservation.info.provided` y registra la auditoría `null → INITIATED` con el **mismo `event_id`** determinista, todo en la misma transacción.
+- `CreateReservationService` ya **no** persiste, audita ni encola: valida, consulta M1 y delega en `CreateReservationWriter` (nueva frontera transaccional que reclama idempotencia, invoca `initiate` y completa la clave).
+- `ReservationStateMachine.canTransition(null, ...)` sigue devolviendo `false`: la creación no se abre a la matriz genérica.
+- Nueva regla ArchUnit `SingleWriterArchitectureTest`: ninguna clase de aplicación fuera de `ChangeReservationStatusService` puede llamar a `ReservationRepositoryPort.create`.
+
+**Llamadas externas fuera de transacción**
+- `CreateReservationService` deja de ser `@Transactional`: las consultas a M1 ocurren antes de abrir la transacción de escritura.
+- El relay del outbox usa un *lease* (`OutboxPort.lease`, `m2.scheduler.outbox.lease-ms`, 30 s): reclama el mensaje en una transacción corta, publica o notifica **fuera** de la transacción y marca el resultado en otra transacción corta. Si el proceso cae, el mensaje vuelve a estar pendiente al vencer el lease; el receptor deduplica por `event_id`.
+
+**T-13 — autorización de CU-15**
+- El endpoint interno exige `X-User-Role: FINANCE`; cualquier otro perfil recibe 403 `PROFILE_NOT_AUTHORIZED`. Los campos que dependen de CU-04/CU-07 siguen nulos y documentados.
+
+**Vistas CU-20/CU-21**
+- `status_badge` (`text`, `semantic_color`, `description`) en listado y detalle, con mapeo puro en `StatusBadge` y cobertura de todos los estados y subtipos.
+- El listado usa `total_amount` con respaldo en `estimated_total`, igual que el detalle. `estimated_total` sigue siendo el monto de creación en CU-02 y el que usará CU-01 para cotizar.
+
+**CU-12 sin esperas**
+- Se elimina el reintento con `Thread.sleep` del valor calculado: una sola llamada; un 404 devuelve `CALCULATION_UNAVAILABLE` de inmediato y el cliente reintenta más tarde. Se conserva un reintento inmediato solo ante conexión rechazada. Se retiran `max-404-retries`, `retry-delay-ms` y `max-total-ms`.
+
+**Perfiles y secretos**
+- `seashare.fleet.mode`, `seashare.finance.mode` y el token de M1 se leen de variables de entorno. En `dev`/`test` el modo por defecto es `fake` (M2 corre aislado); en `prod` deben declararse explícitamente (`SEASHARE_FLEET_MODE`, `SEASHARE_FINANCE_MODE`, `SEASHARE_FINANCE_BASE_URL` y `SEASHARE_FLEET_TOKEN` cuando el modo sea `http`) o la aplicación no arranca. El token de desarrollo ya no está en la configuración compartida.
+- `FleetProperties` y `FinanceProperties` validan el modo y, en `http`, el destino (y el token en M1); al arrancar con fakes se registra un aviso.
+
+**Pruebas de contenedores en Windows**
+- `PostgresTestContainers` y `RabbitTestContainers` aceptan puertos fijos por entorno (`SEASHARE_TEST_POSTGRES_PORT`, `SEASHARE_TEST_RABBIT_PORT`, `SEASHARE_TEST_RABBIT_MANAGEMENT_PORT`) para equipos donde Windows reserva rangos efímeros. RabbitMQ amplía la espera de arranque a 3 minutos.
+
+**Verificación**: `.\mvnw.cmd test` del 2026-11-12 con Docker operativo → **332 pruebas, 0 fallos, 0 errores, 0 omitidas**.
 
 ---
 
 ## 5. Pruebas y verificación
 
-- La suite ejecuta **271 pruebas** (eran 234 tras el Hito H3, 115 tras el Hito H2, 84 antes y 75 el 2026-11-03).
-- La última ejecución completa es del **2026-11-10** (`.\mvnw.cmd test`): **271 pruebas ejecutadas, 0 fallos, 0 errores, 0 omitidas**.
+- La suite ejecuta **332 pruebas** (eran 273 al cierre de H6, 234 tras el Hito H3, 115 tras el Hito H2, 84 antes y 75 el 2026-11-03).
+- La última ejecución completa es del **2026-11-12** (`.\mvnw.cmd test` con Docker): **332 pruebas ejecutadas, 0 fallos, 0 errores, 0 omitidas** (331 antes de añadir la regla ArchUnit de único escritor).
 - Comandos de referencia:
   ```bash
   ./mvnw test
@@ -407,15 +442,16 @@ Rama `feature/h6-vistas-consulta` (creada desde `develop`). Trabajo en paralelo 
 4. ~~Definir la topología RabbitMQ (exchange, colas, *bindings*, DLQ y retención).~~ **Completado (Hito H2, T-02)**: exchange topic,2 colas de M3 con sus DLQ y bindings. **Pendiente**: la cola de disputa `finance.guarantee-dispute.v1` queda para T-18c (decisión: no crearla en T-02).
 5. ~~Implementar el relay del outbox con *publisher confirms*, reintentos con *backoff* y marcado de publicación.~~ **Completado (Hito H2, T-03)**.
 6. Implementar los **consumidores AMQP de producción** (el publicador y la deduplicación por `event_id` ya están: T-03/T-04; la deduplicación solo tiene consumidor de prueba en `src/test`). **Pendiente también**: republicar a DLQ desde el relay tras el5º fallo (decisión del Hito H2: por ahora solo `dead=true` + log de alerta, sin consumidores aún).
-7. Incorporar ShedLock y el bloqueo de jobs. La tabla `shedlock` existe en V2, pero la dependencia y su uso **no** están implementados.
+7. ~~Incorporar ShedLock y el bloqueo de jobs.~~ **Completado el 2026-11-12 (T-05)**: `shedlock-spring` 7.11.0 + provider JDBC sobre la tabla `shedlock` de V2; `TtlExpiryJob` y `OutboxRelayJob` usan `@SchedulerLock`, y el relay reclama con `FOR UPDATE SKIP LOCKED` y *lease* por mensaje.
 
 ### 6.3 Núcleo CU-08
 
-8. Completar el contrato interno de CU-08: `ApplyReservationTransitionUseCase`, `expected_version`, `actor_id`, `events_enqueued` y validación de versión.
-9. Implementar la expiración por TTL también desde `PENDING_PAYMENT`.
-10. Implementar la matriz completa de notificaciones a Módulo 1 y Módulo 3, incluida la guarda `m1_blocked` y los destinos `AMQP`/`M1_HTTP`.
-11. Persistir los campos de CU-08 que hoy no mapea `ReservationMapper.applyChanges` (horas reales, notas de finalización, referencia de pago, etcétera).
-12. Verificar y completar la inmutabilidad de estados terminales y la auditoría con todos los campos del plan.
+8. ~~Completar el contrato interno de CU-08: `ApplyReservationTransitionUseCase`, `expected_version`, `actor_id`, `events_enqueued` y validación de versión.~~ **Completado en H4.**
+9. ~~Implementar la expiración por TTL también desde `PENDING_PAYMENT`.~~ **Completado en H4 (T-07).**
+10. ~~Implementar la matriz completa de notificaciones a Módulo 1 y Módulo 3, incluida la guarda `m1_blocked` y los destinos `AMQP`/`M1_HTTP`.~~ **Completado en H4 (T-08).**
+11. ~~Persistir los campos de CU-08 que hoy no mapea `ReservationMapper.applyChanges`.~~ **Completado en H4 (T-09).**
+12. ~~Verificar y completar la inmutabilidad de estados terminales y la auditoría.~~ **Completado en H4 (T-10).**
+13. ~~Creación vía CU-08 (T-24).~~ **Completado el 2026-11-12**, ver 4.11.
 
 ### 6.4 Casos de uso y contextos faltantes
 
@@ -508,3 +544,13 @@ Rama `feature/h6-vistas-consulta` (creada desde `develop`). Trabajo en paralelo 
   **Pruebas y verificación**: `FinanceStatusMapperTest` (13), `OutboxAdapterTest` (12, 7 nuevos), 1 prueba nueva en `ChangeReservationStatusServiceTest`, y las pruebas de CU-15 (servicio, controlador e integración). `.\mvnw.cmd test` el 2026-11-10 = **271 pruebas, 0 fallos, 0 errores**, BUILD SUCCESS.
 
   **Pendientes dejados**: al fusionarse H6 (mi compañero), pasar `reservation_code` al agregado `Reservation`; CU-03 debe hacer obligatorio el token de pago (H7); `payment_method_type` y `payment_metadata` quedan para H7; avisar al grupo del borrado de `.idea/modules.xml` y del cambio de `.idea/misc.xml` que entraron en develop con el PR #27 ([NEEDS CLARIFICATION] si fue intencional); la rama `feature/fase3-adaptadores-lectura` no se borra hasta avisar al grupo.
+
+- **2026-11-12 — Remediación de la auditoría H1–H6 y cierre de T-24**, rama `feature/h7-embudo-conversion`. Detalle técnico en la sección 4.11. Resumen:
+
+  **Correcciones de la auditoría que ya estaban en la rama**: ShedLock (T-05), `FOR UPDATE SKIP LOCKED` en el outbox, purga selectiva de `payment_token_ref`, `MoneyArchitectureTest`, `base-url` de M3 con fail-fast, `source/target` 21 y `.idea` fuera del repositorio.
+
+  **Cambios de esta entrada**: creación vía CU-08 (T-24) con `InitiateReservationUseCase`; `CreateReservationWriter` como frontera transaccional; consultas a M1 fuera de la transacción de CU-02; *lease* en el relay del outbox; 403 `FINANCE` en CU-15; `status_badge` en CU-20 y CU-21; total unificado (`total_amount` con respaldo `estimated_total`); CU-12 sin `Thread.sleep` ni reintentos del 404; perfiles con modos y token por variable de entorno y arranque fallido si faltan en `prod`; puertos fijos opcionales en los contenedores de prueba para entornos con rangos reservados.
+
+  **Pruebas y verificación**: `.\mvnw.cmd test` con Docker = **332 pruebas, 0 fallos, 0 errores, 0 omitidas**, BUILD SUCCESS. El entorno exige `SEASHARE_TEST_POSTGRES_PORT`, `SEASHARE_TEST_RABBIT_PORT` y `SEASHARE_TEST_RABBIT_MANAGEMENT_PORT` en esta máquina por los rangos de puertos reservados de Windows.
+
+  **Pendientes para cerrar H7**: T-16a (CU-01), T-16b (CU-03) y T-16c (CU-13). T-16c sigue bloqueada por la decisión de producto/M3 sobre la salida de `EXPIRED` (C1–C10 de `diseno-h7-previo.md`): la máquina de estados mantiene `EXPIRED` y `PAYMENT_FAILED` como terminales.
