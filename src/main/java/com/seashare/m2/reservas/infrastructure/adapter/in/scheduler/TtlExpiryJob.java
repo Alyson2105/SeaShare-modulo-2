@@ -8,8 +8,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Adaptador de entrada que dispara la expiración por TTL de reservas en INITIATED.
- * Solo invoca el caso de uso; sin lógica de negocio aquí.
+ * Adaptador de entrada que dispara la expiración por TTL de reservas en INITIATED
+ * y PENDING_PAYMENT. Solo invoca el caso de uso; sin lógica de negocio aquí.
  */
 @Component
 public class TtlExpiryJob { // adaptador de entrada: job programado de expiración por TTL
