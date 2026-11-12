@@ -62,7 +62,8 @@ seashare:                                  # Integracion con Modulo 1 y Modulo 3
     read-timeout-ms: 300                   # Timeout de lectura en milisegundos
 
   finance:
-    mode: fake                             # fake (default) u http para los adaptadores reales de M3; en http definir base-url (puerto por confirmar)
+    mode: fake                             # fake (default) u http para los adaptadores reales de M3
+    base-url: ${SEASHARE_FINANCE_BASE_URL:http://localhost:8083}  # [NEEDS CLARIFICATION: puerto real de M3]; en prod solo por variable de entorno
     individual-connect-timeout-ms: 100     # Timeout de conexion de la estimacion individual
     individual-read-timeout-ms: 1000       # Timeout de lectura de la estimacion individual
     batch-connect-timeout-ms: 150          # Timeout de conexion de la estimacion en lote

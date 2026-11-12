@@ -3,6 +3,8 @@ package com.seashare.m2.reservas.infrastructure.adapter.out.finance;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PostConstruct;
+
 @Component
 @ConfigurationProperties(prefix = "seashare.finance") // propiedades leidas desde application.yaml
 public class FinanceProperties { // configuracion de conexion con modulo 3 (CU-11)
@@ -10,6 +12,14 @@ public class FinanceProperties { // configuracion de conexion con modulo 3 (CU-1
     private String mode = "fake"; // fake (default) o http; define que adaptadores se cargan
 
     private String baseUrl; // url base de modulo 3; requerida solo en modo http
+
+    @PostConstruct
+    void validateBaseUrl() { // P-5: fail-fast solo cuando se usan los adaptadores HTTP
+        if ("http".equalsIgnoreCase(mode) && (baseUrl == null || baseUrl.isBlank())) { // modo http sin url
+            throw new IllegalStateException(
+                    "seashare.finance.base-url is required when seashare.finance.mode=http"); // impide arrancar sin destino
+        }
+    }
 
     private long individualConnectTimeoutMs = 100; // timeout de conexion de la estimacion individual
 

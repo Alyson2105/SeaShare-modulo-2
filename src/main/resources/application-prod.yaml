@@ -25,3 +25,7 @@ m2:
       enabled: true                  # Job TTL activo (unica instancia o ShedLock, T-05)
     outbox:
       enabled: true                  # Relay del outbox activo (publica con publisher confirms)
+
+seashare:
+  finance:
+    base-url: ${SEASHARE_FINANCE_BASE_URL:}  # sin valor por defecto: fail-fast lo exige solo en mode=http
