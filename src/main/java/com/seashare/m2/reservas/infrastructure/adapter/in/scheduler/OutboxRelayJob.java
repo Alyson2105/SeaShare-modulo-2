@@ -1,6 +1,7 @@
 package com.seashare.m2.reservas.infrastructure.adapter.in.scheduler;
 
 import com.seashare.m2.reservas.application.port.in.PublishPendingOutboxUseCase;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -15,8 +16,6 @@ import org.springframework.stereotype.Component;
  * desactivado en application.yaml; activo en los perfiles dev y prod). El job
  * nunca propaga excepciones: cualquier fallo se registra y se reintenta en el
  * siguiente ciclo.</p>
- *
- * // TODO (T-05): agregar ShedLock antes de desplegar con mas de una réplica.
  */
 @Component
 @ConditionalOnProperty(name = "m2.scheduler.outbox.enabled", havingValue = "true") // desactivable por propiedad
@@ -31,6 +30,7 @@ public class OutboxRelayJob { // adaptador de entrada: job programado del relay 
     }
 
     @Scheduled(fixedDelayString = "${m2.scheduler.outbox.fixed-delay-ms:5000}") // intervalo configurable; default 5 s
+    @SchedulerLock(name = "outboxRelayJob", lockAtMostFor = "PT5M", lockAtLeastFor = "PT1S") // T-05: evita relays simultaneos
     public void run() { // dispara el relay delegando en el caso de uso
         try {
             publishPendingOutboxUseCase.execute(); // delega todo el trabajo en el caso de uso

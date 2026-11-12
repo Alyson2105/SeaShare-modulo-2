@@ -1,6 +1,7 @@
 package com.seashare.m2.reservas.infrastructure.adapter.in.scheduler;
 
 import com.seashare.m2.reservas.application.port.in.ExpireReservationsUseCase;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -9,9 +10,6 @@ import org.springframework.stereotype.Component;
 /**
  * Adaptador de entrada que dispara la expiración por TTL de reservas en INITIATED.
  * Solo invoca el caso de uso; sin lógica de negocio aquí.
- *
- * // TODO (D-15): agregar ShedLock antes de desplegar con más de una réplica para evitar
- * //              ejecuciones concurrentes del mismo job en un entorno multi-instancia.
  */
 @Component
 public class TtlExpiryJob { // adaptador de entrada: job programado de expiración por TTL
@@ -25,6 +23,7 @@ public class TtlExpiryJob { // adaptador de entrada: job programado de expiraci�
     }
 
     @Scheduled(fixedDelayString = "${m2.scheduler.ttl.fixed-delay-ms:30000}") // intervalo configurable entre ejecuciones; default 30 s
+    @SchedulerLock(name = "ttlExpiryJob", lockAtMostFor = "PT10M", lockAtLeastFor = "PT5S") // T-05: una sola instancia ejecuta el ciclo
     public void run() { // dispara la expiración delegando en el caso de uso
         log.debug("TTL scheduler: iniciando ciclo de expiración"); // traza de inicio del ciclo
         int expired = expireReservationsUseCase.execute(); // ejecuta el caso de uso y obtiene el número procesado

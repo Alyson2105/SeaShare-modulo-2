@@ -39,6 +39,7 @@
 		<wiremock.version>3.13.2</wiremock.version>
 		<awaitility.version>4.3.0</awaitility.version>
 		<testcontainers.version>2.0.5</testcontainers.version>
+		<shedlock.version>7.11.0</shedlock.version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
@@ -126,6 +127,19 @@
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>${springdoc.version}</version>
+		</dependency>
+
+		<!-- T-05: ShedLock 7.11.0 declara Spring 7.0.10 y Boot 4.1.2 como baseline;
+		     el provider JDBC reutiliza la tabla shedlock creada en V2. -->
+		<dependency>
+			<groupId>net.javacrumbs.shedlock</groupId>
+			<artifactId>shedlock-spring</artifactId>
+			<version>${shedlock.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>net.javacrumbs.shedlock</groupId>
+			<artifactId>shedlock-provider-jdbc-template</artifactId>
+			<version>${shedlock.version}</version>
 		</dependency>
 
 		<!-- T-21: infraestructura de pruebas. Versiones gestionadas por el BOM de
