@@ -77,9 +77,10 @@ class OutboxRelayIntegrationTest { // integracion del relay del outbox con postg
     private final List<UUID> createdEventIds = new ArrayList<>(); // eventos creados por la prueba
 
     @BeforeEach
-    void purgeQueues() { // deja las colas vacias para contar mensajes de este test
+    void purgeQueues() { // deja las colas y el outbox limpios para aislar cada prueba
         amqpAdmin.purgeQueue(messagingProperties.getQueueStatus(), false); // cola de estado
         amqpAdmin.purgeQueue(messagingProperties.getQueueInfo(), false); // cola de informacion
+        jdbcTemplate.update("DELETE FROM outbox_message"); // elimina pendientes de pruebas anteriores
     }
 
     @AfterEach
