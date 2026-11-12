@@ -4,7 +4,6 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.seashare.m2.reservas.application.dto.CalculatedValue;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
-import com.seashare.m2.shared.domain.ClockPort;
 import com.seashare.m2.shared.domain.ErrorCode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +17,6 @@ import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URLConnection;
-import java.time.Instant;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
@@ -27,7 +25,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
-import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -51,9 +48,9 @@ class HttpCalculatedValueAdapterTest { // pruebas del adaptador HTTP del valor c
 
     private WireMockServer wireMock; // servidor falso de M3
 
-    private FinanceProperties properties; // propiedades de prueba con espera en 0
+    private FinanceProperties properties; // propiedades de prueba
 
-    private HttpCalculatedValueAdapter adapter; // adaptador bajo prueba con reloj fijo
+    private HttpCalculatedValueAdapter adapter; // adaptador bajo prueba
 
     @BeforeEach
     void setUp() { // levanta WireMock y construye el adaptador
@@ -62,8 +59,7 @@ class HttpCalculatedValueAdapterTest { // pruebas del adaptador HTTP del valor c
         warmUpServer(); // la primera respuesta del servidor nuevo tarda; se calienta antes
         properties = new FinanceProperties(); // propiedades de prueba
         properties.setBaseUrl("http://localhost:" + wireMock.port()); // apunta al WireMock
-        properties.setRetryDelayMs(0); // espera en 0 para que los tests no duren
-        adapter = buildAdapter(properties, new SteppingClock(0)); // reloj sin avance: el tope no corta
+        adapter = buildAdapter(properties); // adaptador sin esperas
     }
 
     @AfterEach
@@ -184,47 +180,25 @@ class HttpCalculatedValueAdapterTest { // pruebas del adaptador HTTP del valor c
     }
 
     @Test
-    void notFoundRetriesAndResolvesOnSecondAttempt() { // 404 y luego 200: resuelve en el segundo intento
-        wireMock.stubFor(post(urlPathEqualTo(CALCULATED_PATH)).inScenario("retry404") // primer intento sin informar
-                .whenScenarioStateIs(STARTED)
-                .willReturn(aResponse().withStatus(404))
-                .willSetStateTo("INFORMED"));
-        wireMock.stubFor(post(urlPathEqualTo(CALCULATED_PATH)).inScenario("retry404") // segundo intento con datos
-                .whenScenarioStateIs("INFORMED")
-                .willReturn(aResponse().withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody(FULL_BODY)));
+    void notFoundFailsImmediatelyWithoutRetry() { // 404: no se espera en el hilo; el cliente reintenta despues
+        wireMock.stubFor(post(urlPathEqualTo(CALCULATED_PATH)).willReturn(aResponse().withStatus(404))); // aun sin informar
 
-        CalculatedValue value = adapter.getCalculatedValue(RESERVATION_ID); // reintento exitoso
+        assertThatThrownBy(() -> adapter.getCalculatedValue(RESERVATION_ID)) // corte inmediato
+                .isInstanceOfSatisfying(ReservationRuleException.class, e ->
+                        assertThat(e.getCode()).isEqualTo(ErrorCode.CALCULATION_UNAVAILABLE.getCode())); // codigo esperado
 
-        assertThat(value.totalAmount()).isEqualByComparingTo("10040000.00"); // monto tal cual
-        wireMock.verify(2, postRequestedFor(urlPathEqualTo(CALCULATED_PATH))); // dos intentos
+        wireMock.verify(1, postRequestedFor(urlPathEqualTo(CALCULATED_PATH))); // una sola llamada, sin reintentos
     }
 
     @Test
-    void persistentNotFoundThrowsCalculationUnavailable() { // 404 persistente: agota los 3 reintentos
+    void persistentNotFoundThrowsCalculationUnavailable() { // 404 persistente: una sola llamada
         wireMock.stubFor(post(urlPathEqualTo(CALCULATED_PATH)).willReturn(aResponse().withStatus(404))); // siempre sin informar
 
         assertThatThrownBy(() -> adapter.getCalculatedValue(RESERVATION_ID)) // corte seguro
                 .isInstanceOfSatisfying(ReservationRuleException.class, e ->
                         assertThat(e.getCode()).isEqualTo(ErrorCode.CALCULATION_UNAVAILABLE.getCode())); // codigo esperado
 
-        wireMock.verify(4, postRequestedFor(urlPathEqualTo(CALCULATED_PATH))); // intento inicial mas 3 reintentos
-    }
-
-    @Test
-    void notFoundCutByTotalBudget() { // el tope total corta antes de agotar los reintentos
-        FinanceProperties budgetProperties = new FinanceProperties(); // mismos valores por defecto
-        budgetProperties.setBaseUrl("http://localhost:" + wireMock.port()); // apunta al WireMock
-        budgetProperties.setRetryDelayMs(0); // espera en 0; el corte lo provoca el reloj
-        HttpCalculatedValueAdapter budgetAdapter = buildAdapter(budgetProperties, new SteppingClock(500)); // avanza 500 ms por consulta
-        wireMock.stubFor(post(urlPathEqualTo(CALCULATED_PATH)).willReturn(aResponse().withStatus(404))); // siempre sin informar
-
-        assertThatThrownBy(() -> budgetAdapter.getCalculatedValue(RESERVATION_ID)) // corta por tope de 800 ms
-                .isInstanceOfSatisfying(ReservationRuleException.class, e ->
-                        assertThat(e.getCode()).isEqualTo(ErrorCode.CALCULATION_UNAVAILABLE.getCode())); // codigo esperado
-
-        wireMock.verify(2, postRequestedFor(urlPathEqualTo(CALCULATED_PATH))); // segundo reintento ya no cabe en el tope
+        wireMock.verify(1, postRequestedFor(urlPathEqualTo(CALCULATED_PATH))); // sin bucle de reintentos
     }
 
     @Test
@@ -277,8 +251,7 @@ class HttpCalculatedValueAdapterTest { // pruebas del adaptador HTTP del valor c
     void connectionRefusedRetriesOnceThenFails() { // conexion rechazada: un reintento y luego CALCULATION_UNAVAILABLE
         FinanceProperties closed = new FinanceProperties(); // propiedades hacia un puerto muerto
         closed.setBaseUrl("http://127.0.0.1:1"); // puerto 1 siempre cerrado en local
-        closed.setRetryDelayMs(0); // sin espera
-        HttpCalculatedValueAdapter closedAdapter = buildAdapter(closed, new SteppingClock(0)); // adaptador aislado
+        HttpCalculatedValueAdapter closedAdapter = buildAdapter(closed); // adaptador aislado
 
         assertThatThrownBy(() -> closedAdapter.getCalculatedValue(RESERVATION_ID)) // dos intentos fallidos
                 .isInstanceOfSatisfying(ReservationRuleException.class, e ->
@@ -340,26 +313,9 @@ class HttpCalculatedValueAdapterTest { // pruebas del adaptador HTTP del valor c
         assertThat(value.totalAmount()).isEqualByComparingTo("1.00"); // total tal cual
     }
 
-    private static HttpCalculatedValueAdapter buildAdapter(FinanceProperties props, ClockPort clock) { // construye el adaptador con reloj propio
+    private static HttpCalculatedValueAdapter buildAdapter(FinanceProperties props) { // construye el adaptador aislado
         RestClient client = new FinanceHttpConfig().calculatedValueRestClient(props); // cliente real con timeouts
-        return new HttpCalculatedValueAdapter(client, props, clock); // adaptador aislado
-    }
-
-    private static final class SteppingClock implements ClockPort { // reloj de prueba que avanza un paso fijo por consulta
-        private final long stepMs; // avance en milisegundos por llamada
-
-        private Instant current = Instant.parse("2026-01-01T00:00:00.00Z"); // instante inicial fijo
-
-        private SteppingClock(long stepMs) { // paso configurable
-            this.stepMs = stepMs; // guarda el avance
-        }
-
-        @Override
-        public Instant now() { // devuelve el instante actual y avanza para la proxima consulta
-            Instant value = current; // instante en curso
-            current = current.plusMillis(stepMs); // avanza el reloj
-            return value; // retorna el valor leido
-        }
+        return new HttpCalculatedValueAdapter(client); // adaptador aislado
     }
 
     private void warmUpServer() { // el primer intercambio con un servidor nuevo tarda; se calienta sin el SLA

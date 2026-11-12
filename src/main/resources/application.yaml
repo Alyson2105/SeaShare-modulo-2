@@ -52,17 +52,18 @@ m2:
       backoff-initial-ms: 1000               # Base del backoff: 1/5/25/125 s con backoff-multiplier 5
       backoff-multiplier: 5                  # Multiplicador exponencial entre intentos
       jitter-ratio: 0.1                      # Jitter uniforme de +/-10 % sobre cada retardo
+      lease-ms: 30000                        # Arriendo de un mensaje reclamado: cubre el timeout de publicacion y M1
 
 seashare:                                  # Integracion con Modulo 1 y Modulo 3 (CU-09 a CU-12)
   fleet:
-    mode: fake                             # fake (default) u http para los adaptadores reales de M1
-    base-url: http://localhost:8081        # Url base de M1; solo se usa en modo http (ajustar al puerto real)
-    token: m2-development-token            # Token de desarrollo; en produccion va por variable de entorno
+    mode: ${SEASHARE_FLEET_MODE:fake}      # fake (default, M2 corre aislado) u http para los adaptadores reales de M1
+    base-url: ${SEASHARE_FLEET_BASE_URL:http://localhost:8081}  # Url base de M1; solo se usa en modo http
+    token: ${SEASHARE_FLEET_TOKEN:}        # Token de servicio de M1; obligatorio en modo http (solo en dev/prod se define)
     connect-timeout-ms: 100                # Timeout de conexion en milisegundos
     read-timeout-ms: 300                   # Timeout de lectura en milisegundos
 
   finance:
-    mode: fake                             # fake (default) u http para los adaptadores reales de M3
+    mode: ${SEASHARE_FINANCE_MODE:fake}    # fake (default, M2 corre aislado) u http para los adaptadores reales de M3
     base-url: ${SEASHARE_FINANCE_BASE_URL:http://localhost:8083}  # [NEEDS CLARIFICATION: puerto real de M3]; en prod solo por variable de entorno
     individual-connect-timeout-ms: 100     # Timeout de conexion de la estimacion individual
     individual-read-timeout-ms: 1000       # Timeout de lectura de la estimacion individual
@@ -70,6 +71,3 @@ seashare:                                  # Integracion con Modulo 1 y Modulo 3
     batch-read-timeout-ms: 1000            # Timeout de lectura de la estimacion en lote
     calculated-value-connect-timeout-ms: 100   # Timeout de conexion del valor calculado (CU-12)
     calculated-value-read-timeout-ms: 1000     # Timeout de lectura del valor calculado (CU-12)
-    max-404-retries: 3                     # Reintentos del 404 del valor calculado (mensaje async de M3)
-    retry-delay-ms: 300                    # Espera entre reintentos del 404; en tests se pone en 0
-    max-total-ms: 800                      # Tope total de tiempo para reintentar el 404

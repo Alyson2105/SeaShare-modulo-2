@@ -27,5 +27,10 @@ m2:
       enabled: true                  # Relay del outbox activo (publica con publisher confirms)
 
 seashare:
+  fleet:
+    mode: ${SEASHARE_FLEET_MODE:}    # sin valor por defecto: prod debe declarar fake o http explicitamente
+    base-url: ${SEASHARE_FLEET_BASE_URL:}   # obligatoria solo en mode=http
+    token: ${SEASHARE_FLEET_TOKEN:}  # sin valor por defecto: nunca se hereda el token de desarrollo
   finance:
+    mode: ${SEASHARE_FINANCE_MODE:}  # sin valor por defecto: prod debe declarar fake o http explicitamente
     base-url: ${SEASHARE_FINANCE_BASE_URL:}  # sin valor por defecto: fail-fast lo exige solo en mode=http
