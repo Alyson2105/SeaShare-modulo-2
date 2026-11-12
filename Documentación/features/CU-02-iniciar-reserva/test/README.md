@@ -75,3 +75,20 @@ Contexto de implementación: [implementContext](../../../context/implementContex
 - **In Process**: contrato suficiente para ejecutarlo contra la implementación actual; aún no aprobado.
 - **Approved**: caso aprobado tras el proceso correspondiente, nunca por esta validación documental.
 - **Blocked**: depende de una funcionalidad pendiente.
+
+## Ejecución automatizada — 2026-11-10
+
+Se ejecutó `mvn clean test` en una copia aislada del commit `3e4e6a4`, con JDK 25 y compilación configurada para Java 21. El conjunto completo registró **234 pruebas: 132 exitosas, 0 fallos de aserción y 102 errores** al iniciar contextos que requieren Docker/Testcontainers. Maven terminó con `BUILD FAILURE`. Las pruebas con WireMock usaron dobles locales, no los servicios reales.
+
+Los resultados siguientes corresponden a clases automatizadas vinculadas a este CU, no a la ejecución íntegra de cada caso documental. Los pasos y el checklist de cada TC permanecen pendientes cuando requieren acciones o comprobaciones adicionales; ningún caso se aprueba por esta ejecución.
+
+| Clase automatizada | Pruebas | Fallos | Errores | Resultado |
+|---|---:|---:|---:|---|
+| [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java) | 3 | 0 | 3 | Bloqueada por Docker/Testcontainers |
+| [CreateReservationServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/CreateReservationServiceTest.java) | 3 | 0 | 0 | Exitosa |
+| [CreateReservationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java) | 5 | 0 | 5 | Bloqueada por Docker/Testcontainers |
+| [CreateReservationValidationTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java) | 13 | 0 | 13 | Bloqueada por Docker/Testcontainers |
+| [IdempotencyAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/integration/IdempotencyAdapterTest.java) | 5 | 0 | 5 | Bloqueada por Docker/Testcontainers |
+| [IdempotencyClaimConcurrencyTest](../../../../src/test/java/com/seashare/m2/reservas/integration/IdempotencyClaimConcurrencyTest.java) | 1 | 0 | 1 | Bloqueada por Docker/Testcontainers |
+| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | Exitosa |
+| [TtlPolicyTest](../../../../src/test/java/com/seashare/m2/reservas/domain/service/TtlPolicyTest.java) | 3 | 0 | 0 | Exitosa |

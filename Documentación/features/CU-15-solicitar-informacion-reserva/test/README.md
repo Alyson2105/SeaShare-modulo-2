@@ -59,3 +59,11 @@ Casos para el GET interno propuesto a M3. CU-15 no está implementado; las vista
 - **In Process**: ejecutable con implementación actual.
 - **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
 - **Blocked**: depende de funcionalidad pendiente.
+
+## Ejecución automatizada — 2026-11-10
+
+Se ejecutó `mvn clean test` en una copia aislada del commit `3e4e6a4`, con JDK 25 y compilación configurada para Java 21. El conjunto completo registró **234 pruebas: 132 exitosas, 0 fallos de aserción y 102 errores** al iniciar contextos que requieren Docker/Testcontainers. Maven terminó con `BUILD FAILURE`. Las pruebas con WireMock usaron dobles locales, no los servicios reales.
+
+Los resultados siguientes corresponden a clases automatizadas vinculadas a este CU, no a la ejecución íntegra de cada caso documental. Los pasos y el checklist de cada TC permanecen pendientes cuando requieren acciones o comprobaciones adicionales; ningún caso se aprueba por esta ejecución.
+
+No hay clases automatizadas vinculadas en los casos documentados de este CU.
