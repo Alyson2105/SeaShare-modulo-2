@@ -51,4 +51,24 @@ class ReservationStateMachineTest { // pruebas unitarias de la maquina de estado
         assertThatCode(() -> stateMachine.validate(ReservationStatus.RESERVED, ReservationStatus.CANCELLED, CancellationSubtype.FLEXIBLE)) // cancelacion correcta
                 .doesNotThrowAnyException(); // no lanza ninguna excepcion
     }
+
+    @Test
+    void creationOnlyAcceptsInitiated() { // T-24: la creacion solo puede nacer en INITIATED
+        assertThatCode(() -> stateMachine.validateCreation(ReservationStatus.INITIATED)) // unico destino valido
+                .doesNotThrowAnyException(); // no lanza
+
+        for (ReservationStatus target : ReservationStatus.values()) { // cualquier otro destino se rechaza
+            if (target != ReservationStatus.INITIATED) {
+                assertThatThrownBy(() -> stateMachine.validateCreation(target))
+                        .isInstanceOf(InvalidTransitionException.class); // la creacion no salta etapas
+            }
+        }
+    }
+
+    @Test
+    void genericCanTransitionStillRejectsNullOrigin() { // la creacion no abre la matriz generica
+        assertThat(stateMachine.canTransition(null, ReservationStatus.INITIATED)).isFalse(); // null sigue sin transicion
+        assertThatThrownBy(() -> stateMachine.validate(null, ReservationStatus.INITIATED, null))
+                .isInstanceOf(InvalidTransitionException.class); // el execute generico no crea reservas
+    }
 }

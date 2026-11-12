@@ -2,18 +2,14 @@ package com.seashare.m2.reservas.application.service;
 
 import com.seashare.m2.reservas.application.dto.CreateReservationCommand;
 import com.seashare.m2.reservas.application.dto.FleetInfo;
-import com.seashare.m2.reservas.application.dto.ReservationInfoProvidedEvent;
+import com.seashare.m2.reservas.application.dto.InitiateReservationCommand;
 import com.seashare.m2.reservas.application.dto.ReservationView;
-import com.seashare.m2.reservas.application.dto.StatusAuditEntry;
 import com.seashare.m2.reservas.application.port.in.CreateReservationUseCase;
 import com.seashare.m2.reservas.application.port.out.FleetInfoPort;
 import com.seashare.m2.reservas.application.port.out.FleetOperationalStatusPort;
 import com.seashare.m2.reservas.application.port.out.IdempotencyPort;
-import com.seashare.m2.reservas.application.port.out.OutboxPort;
 import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
-import com.seashare.m2.reservas.application.port.out.StatusAuditPort;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
-import com.seashare.m2.reservas.domain.model.ActorType;
 import com.seashare.m2.reservas.domain.model.NewReservation;
 import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
@@ -21,9 +17,7 @@ import com.seashare.m2.reservas.domain.service.TtlPolicy;
 import com.seashare.m2.shared.domain.ClockPort;
 import com.seashare.m2.shared.domain.ErrorCode;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
 import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
@@ -33,10 +27,9 @@ import java.util.Set;
 import java.util.UUID;
 
 @Service
-@Transactional
-public class CreateReservationService implements CreateReservationUseCase { // servicio de aplicacion para creacion formal de reservas
+public class CreateReservationService implements CreateReservationUseCase { // caso de uso de creacion; sin transaccion para no retener conexion ante M1
 
-    public static final String IDEMPOTENCY_ENDPOINT = "CREATE_RESERVATION"; // identificador del endpoint para control de idempotencia
+    public static final String IDEMPOTENCY_ENDPOINT = CreateReservationWriter.IDEMPOTENCY_ENDPOINT; // identificador del endpoint
     public static final Duration IDEMPOTENCY_WINDOW = Duration.ofSeconds(60); // ventana temporal de expiracion de clave de idempotencia
     public static final Set<ReservationStatus> BLOCKING_STATUSES = EnumSet.of( // estados que bloquean disponibilidad de fechas
             ReservationStatus.PENDING_PAYMENT,
@@ -45,31 +38,25 @@ public class CreateReservationService implements CreateReservationUseCase { // s
     );
 
     private final ClockPort clockPort; // puerto de reloj para marca temporal unica
-    private final IdempotencyPort idempotencyPort; // puerto para garantizar atomicidad e idempotencia
     private final FleetInfoPort fleetInfoPort; // puerto para consulta de informacion de flota en modulo 1
     private final FleetOperationalStatusPort fleetOperationalStatusPort; // puerto para consultar disponibilidad operativa en modulo 1
-    private final ReservationRepositoryPort reservationRepositoryPort; // puerto para verificacion de solapamiento y persistencia
-    private final OutboxPort outboxPort; // puerto para encolar eventos en outbox
-    private final StatusAuditPort statusAuditPort; // T-10: auditoria de la creacion (fila null -> INITIATED)
+    private final ReservationRepositoryPort reservationRepositoryPort; // puerto para verificacion de solapamiento
+    private final CreateReservationWriter writer; // frontera transaccional de la escritura
 
     public CreateReservationService(ClockPort clockPort,
-                                    IdempotencyPort idempotencyPort,
                                     FleetInfoPort fleetInfoPort,
                                     FleetOperationalStatusPort fleetOperationalStatusPort,
                                     ReservationRepositoryPort reservationRepositoryPort,
-                                    OutboxPort outboxPort,
-                                    StatusAuditPort statusAuditPort) { // inyeccion de dependencias requeridas
+                                    CreateReservationWriter writer) { // inyeccion de dependencias requeridas
         this.clockPort = clockPort; // asigna puerto de reloj
-        this.idempotencyPort = idempotencyPort; // asigna puerto de idempotencia
         this.fleetInfoPort = fleetInfoPort; // asigna puerto de flota
         this.fleetOperationalStatusPort = fleetOperationalStatusPort; // asigna puerto de estado operativo
-        this.reservationRepositoryPort = reservationRepositoryPort; // asigna puerto de creacion
-        this.outboxPort = outboxPort; // asigna puerto outbox
-        this.statusAuditPort = statusAuditPort; // asigna puerto de auditoria
+        this.reservationRepositoryPort = reservationRepositoryPort; // asigna repositorio
+        this.writer = writer; // asigna escritura transaccional
     }
 
     @Override
-    public ReservationView execute(CreateReservationCommand command) { // ejecuta el flujo de creacion bajo transaccion
+    public ReservationView execute(CreateReservationCommand command) { // valida, consulta M1 fuera de transaccion y delega la escritura
         Instant now = clockPort.now(); // captura instante actual del sistema una sola vez
 
         if (command.endDate().isBefore(command.startDate())) { // valida consistencia de rango de fechas
@@ -78,15 +65,7 @@ public class CreateReservationService implements CreateReservationUseCase { // s
 
         String normalizedKey = UUID.fromString(command.idempotencyKey()).toString(); // normaliza representacion canonica del uuid
 
-        if (!idempotencyPort.tryClaim(normalizedKey, IDEMPOTENCY_ENDPOINT, now, IDEMPOTENCY_WINDOW)) { // intenta reclamar clave dentro de la ventana
-            UUID reservationId = idempotencyPort.findReservationId(normalizedKey, IDEMPOTENCY_ENDPOINT) // consulta id de reserva existente
-                    .orElseThrow(() -> new ReservationRuleException(ErrorCode.INTERNAL_ERROR, "Existing idempotent reservation id not found")); // falla si no hay id
-            Reservation existing = reservationRepositoryPort.findById(reservationId) // recupera la reserva original
-                    .orElseThrow(() -> new ReservationRuleException(ErrorCode.INTERNAL_ERROR, "Existing idempotent reservation not found")); // retorna reserva original sin duplicar
-            return ReservationView.from(existing);
-        }
-
-        FleetInfo fleetInfo = fleetInfoPort.getVesselInfo(command.vesselId()); // consulta datos de flota propagando posibles excepciones
+        FleetInfo fleetInfo = fleetInfoPort.getVesselInfo(command.vesselId()); // consulta M1 fuera de la transaccion
 
         if (fleetInfo.harborTimezone() == null || fleetInfo.harborTimezone().isBlank()) { // valida presencia de zona horaria
             throw new ReservationRuleException(ErrorCode.HARBOR_TIMEZONE_UNAVAILABLE, "Harbor timezone is invalid or unavailable"); // rechaza zona horaria ausente
@@ -128,36 +107,8 @@ public class CreateReservationService implements CreateReservationUseCase { // s
                 ttlExpiresAt // marca temporal de expiracion
         );
 
-        Reservation created = reservationRepositoryPort.create(Reservation.initiate(newReservation)); // persiste registro formalmente
-        ReservationView createdReservation = ReservationView.from(created); // mapea a vista
-
-        UUID eventId = UUID.nameUUIDFromBytes(("reservation.info.provided:" + created.getId()).getBytes(StandardCharsets.UTF_8)); // event_id deterministico segun especificacion
-        outboxPort.enqueue(new ReservationInfoProvidedEvent( // encola evento de informacion de reserva para modulo 3
-                eventId, // identificador deterministico del evento
-                created.getId(), // id de la reserva
-                created.getVesselId(), // id interno de la embarcacion
-                created.getStartDate(), // fecha de inicio
-                created.getEndDate(), // fecha de fin
-                created.getPassengers(), // cantidad de pasajeros
-                fleetInfo.ownerId(), // propietario provisto por modulo 1
-                fleetInfo.maxCapacity(), // capacidad maxima provista por modulo 1
-                now // marca temporal del evento obtenida de clockPort
-        ));
-
-        statusAuditPort.record(new StatusAuditEntry( // T-10: la creacion es la primera fila del historial (CU-08 plan L198)
-                created.getId(), // id de la reserva
-                null, // sin estado anterior: es la entrada a la maquina
-                ReservationStatus.INITIATED, // estado inicial de toda reserva
-                null, // sin subtipo en la creacion
-                ActorType.RENTER, // el arrendatario inicia la reserva (plan matriz L67)
-                "Reserva creada por CU-02", // motivo de la fila de creacion
-                now, // misma hora que la creacion
-                command.renterId(), // actor_id = arrendatario titular
-                java.util.List.of(eventId) // evento de informacion encolado en esta transaccion
-        ));
-
-        idempotencyPort.complete(normalizedKey, IDEMPOTENCY_ENDPOINT, created.getId()); // asocia reserva a la clave reclamada
-
-        return createdReservation; // retorna vista inmutable de la reserva creada
+        Reservation created = writer.createOrReturnExisting( // reclama idempotencia y escribe en una sola transaccion
+                normalizedKey, now, IDEMPOTENCY_WINDOW, new InitiateReservationCommand(newReservation, fleetInfo.maxCapacity())); // CU-08 crea, audita y encola
+        return ReservationView.from(created); // retorna vista inmutable de la reserva creada
     }
 }

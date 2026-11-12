@@ -2,10 +2,13 @@ package com.seashare.m2.reservas.application.service;
 
 import com.seashare.m2.reservas.application.dto.ChangeReservationStatusCommand;
 import com.seashare.m2.reservas.application.dto.ChangeReservationStatusResult;
+import com.seashare.m2.reservas.application.dto.InitiateReservationCommand;
 import com.seashare.m2.reservas.application.dto.OperationalStatusEvent;
+import com.seashare.m2.reservas.application.dto.ReservationInfoProvidedEvent;
 import com.seashare.m2.reservas.application.dto.StatusAuditEntry;
 import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
 import com.seashare.m2.reservas.application.port.in.ChangeReservationStatusUseCase;
+import com.seashare.m2.reservas.application.port.in.InitiateReservationUseCase;
 import com.seashare.m2.reservas.application.port.out.OutboxPort;
 import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
 import com.seashare.m2.reservas.application.port.out.StatusAuditPort;
@@ -23,6 +26,7 @@ import com.seashare.m2.shared.domain.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,11 +35,13 @@ import java.util.UUID;
 
 @Service
 @Transactional
-public class ChangeReservationStatusService implements ChangeReservationStatusUseCase { // servicio transaccional para cambio de estado
+public class ChangeReservationStatusService implements ChangeReservationStatusUseCase, InitiateReservationUseCase { // motor unico de estado: creacion y transiciones
 
     static final String DESTINATION_AMQP = "AMQP"; // destino outbox hacia modulo 3 (CU-14)
 
     static final String DESTINATION_M1_HTTP = "M1_HTTP"; // destino outbox hacia modulo 1 (CU-22, D-01)
+
+    static final String CREATION_REASON = "Reserva creada por CU-02"; // motivo de la fila de creacion (CU-08 plan L198)
 
     private final ReservationRepositoryPort repository; // puerto de persistencia de reservas
     private final StatusAuditPort statusAuditPort; // puerto de auditoria de estados
@@ -54,6 +60,40 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
         this.outboxPort = outboxPort; // asigna outbox
         this.clockPort = clockPort; // asigna reloj
         this.notificationMatrix = notificationMatrix; // asigna matriz de notificaciones
+    }
+
+    @Override
+    public Reservation initiate(InitiateReservationCommand command) { // T-24: creacion dentro del motor CU-08
+        machine.validateCreation(ReservationStatus.INITIATED); // la creacion solo puede nacer en INITIATED
+        java.time.Instant createdAt = command.newReservation().createdAt(); // instante unico fijado por CU-02
+
+        Reservation created = repository.create(Reservation.initiate(command.newReservation())); // persiste la reserva
+        UUID eventId = UUID.nameUUIDFromBytes( // mismo event_id para auditoria y outbox (FR-011)
+                ("reservation.info.provided:" + created.getId()).getBytes(StandardCharsets.UTF_8)); // id deterministico por reserva
+
+        outboxPort.enqueue(new ReservationInfoProvidedEvent( // evento de informacion hacia modulo 3
+                eventId, // id deterministico
+                created.getId(), // reserva creada
+                created.getVesselId(), // embarcacion
+                created.getStartDate(), // inicio
+                created.getEndDate(), // fin
+                created.getPassengers(), // pasajeros
+                created.getOwnerId(), // propietario provisto por M1
+                command.maxCapacity(), // capacidad maxima provista por M1
+                createdAt)); // misma marca temporal que la creacion
+
+        statusAuditPort.record(new StatusAuditEntry( // primera fila inmutable del historial
+                created.getId(), // reserva
+                null, // sin estado anterior: entrada a la maquina
+                ReservationStatus.INITIATED, // estado inicial
+                null, // sin subtipo
+                ActorType.RENTER, // el arrendatario inicia la reserva
+                CREATION_REASON, // motivo de la fila de creacion
+                createdAt, // misma hora que la creacion
+                created.getRenterId(), // actor_id del titular
+                List.of(eventId))); // el mismo evento encolado en outbox
+
+        return created; // devuelve el agregado persistido
     }
 
     @Override
