@@ -7,7 +7,6 @@ import com.seashare.m2.reservas.application.dto.PendingOutboxMessage;
 import com.seashare.m2.reservas.application.port.out.OutboxPort;
 import com.seashare.m2.reservas.infrastructure.adapter.out.messaging.FinanceStatusMapper;
 import com.seashare.m2.reservas.infrastructure.adapter.out.messaging.config.MessagingProperties;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -123,7 +122,7 @@ public class OutboxAdapter implements OutboxPort { // adaptador de persistencia 
 
     @Override
     public List<PendingOutboxMessage> findPending(Instant now, int batchSize) { // lee pendientes para el relay
-        return repository.findPending(now, PageRequest.of(0, batchSize)) // lote ordenado y limitado
+        return repository.findPending(now, batchSize) // reclama el lote con FOR UPDATE SKIP LOCKED
                 .stream()
                 .map(this::toPending) // convierte entidad a vista publica
                 .toList(); // retorna lista inmutable

@@ -73,15 +73,18 @@ public class PublishPendingOutboxService implements PublishPendingOutboxUseCase 
     }
 
     @Override
-    public int execute() { // procesa el lote pendiente completo
-        List<PendingOutboxMessage> pending = outboxPort.findPending(clockPort.now(), batchSize); // lee pendientes ordenados
+    public int execute() { // procesa hasta batchSize mensajes, uno por transaccion
         int processed = 0; // contador de mensajes intentados
-        for (PendingOutboxMessage message : pending) { // cada mensaje en su propia transaccion
+        for (int i = 0; i < batchSize; i++) { // cada mensaje se reclama y procesa en su propia transaccion
+            boolean claimed; // indica si habia un mensaje pendiente en este ciclo
             try {
-                transactionTemplate.executeWithoutResult(status -> processOne(message)); // TX aislada por mensaje
-            } catch (Exception e) { // nunca propaga: un fallo no detiene el lote
-                log.error("Outbox relay: fallo inesperado procesando evento {} sin propagar: {}",
-                        message.eventId(), e.getMessage(), e); // log de alerta y sigue
+                claimed = Boolean.TRUE.equals(transactionTemplate.execute(status -> processNext())); // reclama y procesa dentro de la TX
+            } catch (Exception e) { // nunca propaga al job
+                log.error("Outbox relay: fallo inesperado en el ciclo sin propagar: {}", e.getMessage(), e); // alerta y corta el ciclo
+                break; // deja el resto para el siguiente ciclo
+            }
+            if (!claimed) { // no quedan pendientes
+                break; // termina el ciclo
             }
             processed++; // cuenta el mensaje como intentado
         }
@@ -89,6 +92,15 @@ public class PublishPendingOutboxService implements PublishPendingOutboxUseCase 
             log.info("Outbox relay: ciclo completado, {} mensaje(s) procesado(s)", processed); // resumen del ciclo
         }
         return processed; // retorna cuantos mensajes se intentaron
+    }
+
+    private boolean processNext() { // reclama un mensaje y lo despacha en la misma transaccion
+        List<PendingOutboxMessage> pending = outboxPort.findPending(clockPort.now(), 1); // claim unitario con SKIP LOCKED
+        if (pending.isEmpty()) { // sin mensajes vencidos
+            return false; // no hay nada que procesar
+        }
+        processOne(pending.get(0)); // el bloqueo se mantiene hasta el commit de markPublished/markFailed
+        return true; // mensaje intentado
     }
 
     private void processOne(PendingOutboxMessage message) { // despacho por destino dentro de la TX del mensaje

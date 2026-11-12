@@ -1,6 +1,5 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.messaging.outbox;
 
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,12 +10,14 @@ import java.util.UUID;
 
 interface OutboxMessageJpaRepository extends JpaRepository<OutboxMessageEntity, UUID> { // repositorio jpa para mensajes outbox
 
-    @Query("""
-            select m from OutboxMessageEntity m
-            where m.publishedAt is null
+    @Query(value = """
+            select * from outbox_message m
+            where m.published_at is null
               and m.dead = false
-              and m.nextAttemptAt <= :now
-            order by m.nextAttemptAt asc, m.createdAt asc
-            """) // pendientes del relay: sin publicar, vivos y con el proximo intento vencido
-    List<OutboxMessageEntity> findPending(@Param("now") Instant now, Pageable pageable); // lote ordenado por vencimiento
+              and m.next_attempt_at <= :now
+            order by m.next_attempt_at asc, m.created_at asc
+            limit :batchSize
+            for update skip locked
+            """, nativeQuery = true) // reclama el lote dentro de la transaccion que lo procesa
+    List<OutboxMessageEntity> findPending(@Param("now") Instant now, @Param("batchSize") int batchSize); // filas bloqueadas hasta el commit
 }

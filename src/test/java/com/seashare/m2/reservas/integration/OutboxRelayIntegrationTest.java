@@ -28,10 +28,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -135,6 +142,39 @@ class OutboxRelayIntegrationTest { // integracion del relay del outbox con postg
         Map<String, Object> row = outboxRow(eventId); // lee la fila
         assertThat(row.get("published_at")).isNotNull(); // el fake responde OK -> publicado
         verify(eventPublisherPort, never()).publish(any()); // jamas publico en amqp
+    }
+
+    @Test
+    void dosRelaysConcurrentesNoPublicanDosVeces() throws Exception { // el claim con SKIP LOCKED evita la doble publicacion
+        UUID eventId = enqueueStatusChanged(); // crea el unico pendiente
+        CountDownLatch firstPublishStarted = new CountDownLatch(1); // avisa que el primer relay tomo el mensaje
+        CountDownLatch releaseFirstPublish = new CountDownLatch(1); // mantiene abierta la TX del primer relay
+        AtomicInteger publishCalls = new AtomicInteger(); // cuenta publicaciones reales
+
+        doAnswer(invocation -> { // bloquea la primera publicacion para forzar la concurrencia
+            publishCalls.incrementAndGet(); // cuenta el intento de publicacion
+            firstPublishStarted.countDown(); // el primer relay ya reclamo la fila
+            releaseFirstPublish.await(10, TimeUnit.SECONDS); // espera mientras el segundo relay intenta reclamar
+            return null; // publicacion simulada exitosa
+        }).when(eventPublisherPort).publish(any()); // spy del publicador
+
+        ExecutorService pool = Executors.newFixedThreadPool(2); // dos relays simultaneos
+        try {
+            Future<Integer> first = pool.submit(useCase::execute); // primer relay: toma el mensaje y se bloquea publicando
+            assertThat(firstPublishStarted.await(10, TimeUnit.SECONDS)).isTrue(); // confirma que el lock esta tomado
+
+            Future<Integer> second = pool.submit(useCase::execute); // segundo relay: no debe ver la fila bloqueada
+            assertThat(second.get(10, TimeUnit.SECONDS)).isZero(); // SKIP LOCKED devuelve vacio
+
+            releaseFirstPublish.countDown(); // deja terminar al primer relay
+            assertThat(first.get(10, TimeUnit.SECONDS)).isEqualTo(1); // solo el primero proceso el mensaje
+        } finally {
+            releaseFirstPublish.countDown(); // libera el latch aunque falle una asercion
+            pool.shutdownNow(); // corta los hilos de prueba
+        }
+
+        assertThat(publishCalls).hasValue(1); // el mensaje se publico exactamente una vez
+        assertThat(outboxRow(eventId).get("published_at")).isNotNull(); // la fila quedo marcada como publicada
     }
 
     private UUID enqueueStatusChanged() { // encola un evento AMQP vencido via puerto publico
