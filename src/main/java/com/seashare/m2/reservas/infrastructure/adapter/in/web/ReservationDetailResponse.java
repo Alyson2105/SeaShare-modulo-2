@@ -25,6 +25,9 @@ public record ReservationDetailResponse( // contrato de respuesta del detalle de
         @JsonProperty("cancellation_subtype")
         CancellationSubtype cancellationSubtype, // subestado de cancelacion
 
+        @JsonProperty("status_badge")
+        StatusBadge statusBadge, // texto y color semantico del estado (CU-21 FR-015)
+
         @JsonProperty("vessel")
         VesselResponse vessel, // ficha de la embarcacion
 
@@ -207,6 +210,7 @@ public record ReservationDetailResponse( // contrato de respuesta del detalle de
                 view.reservationCode(),
                 view.status(),
                 view.cancellationSubtype(),
+                StatusBadge.from(view.status(), view.cancellationSubtype()),
                 new VesselResponse(vessel.vesselId(), vessel.name(), vessel.type(), vessel.imageUrl(),
                         vessel.amenities() == null ? List.of() : vessel.amenities()),
                 new ItineraryResponse(

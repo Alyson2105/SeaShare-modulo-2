@@ -26,6 +26,9 @@ public record ReservationListItemResponse( // tarjeta de reserva del listado de 
         @JsonProperty("cancellation_subtype")
         CancellationSubtype cancellationSubtype, // subestado de cancelacion, si aplica
 
+        @JsonProperty("status_badge")
+        StatusBadge statusBadge, // texto y color semantico del estado (CU-20 FR-008)
+
         @JsonProperty("vessel")
         VesselResponse vessel, // datos referenciales de la embarcacion
 
@@ -36,7 +39,7 @@ public record ReservationListItemResponse( // tarjeta de reserva del listado de 
         int passengers, // ocupantes autorizados
 
         @JsonProperty("total_price")
-        TotalPriceResponse totalPrice, // monto original congelado
+        TotalPriceResponse totalPrice, // monto liquidado o estimado literal, nunca recalculado
 
         @JsonProperty("renter")
         RenterResponse renter, // arrendatario titular
@@ -128,6 +131,7 @@ public record ReservationListItemResponse( // tarjeta de reserva del listado de 
                 view.reservationCode(),
                 view.status(),
                 view.cancellationSubtype(),
+                StatusBadge.from(view.status(), view.cancellationSubtype()),
                 vessel,
                 new DatesResponse(
                         HarborTime.at(view.startDate(), view.departureTime(), zone),
@@ -135,12 +139,16 @@ public record ReservationListItemResponse( // tarjeta de reserva del listado de 
                         HarborTime.durationDays(view.startDate(), view.endDate()),
                         HarborTime.durationNights(view.startDate(), view.endDate())),
                 view.passengers(),
-                new TotalPriceResponse(view.estimatedTotal(), view.currency(), true),
+                new TotalPriceResponse(totalPrice(view), view.currency(), true),
                 renter,
                 owner,
                 contextualLabel(role, view.status(), view.cancellationSubtype()),
                 "/api/v1/reservations/" + view.reservationId(),
                 view.createdAt().atZone(zone).toOffsetDateTime());
+    }
+
+    static BigDecimal totalPrice(ReservationView view) { // misma regla que CU-21: liquidado o estimado literal
+        return view.totalAmount() != null ? view.totalAmount() : view.estimatedTotal(); // sin aritmetica monetaria
     }
 
     static String contextualLabel(String role, ReservationStatus status, CancellationSubtype subtype) { // etiqueta cualitativa sin montos

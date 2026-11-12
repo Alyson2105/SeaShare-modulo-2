@@ -126,12 +126,14 @@ public record InternalReservationResponse(
                 view.status(), // estado interno
                 view.cancellationSubtype(), // subtipo
                 view.cancellationActor(), // actor de cancelacion
-                null, // anticipacion siempre nula hasta CU-04
+                // [NEEDS CLARIFICATION] CU-04 (cancelacion) aun no persiste cancellation_event: no hay dato que inventar.
+                null, // cancellation_anticipation_hours: nulo hasta que CU-04 registre la anticipacion real
                 new CheckinCheckout(
                         instantText(view.actualDepartureAt()), // check-in real
                         instantText(view.actualArrivalAt()), // check-out real
                         view.completionNotes(), // novedades
-                        null), // damage_detected siempre nulo por decision del equipo
+                        // CU-07 (fin de navegacion) aun no persiste damage_detected: se informa nulo, nunca un valor supuesto.
+                        null), // damage_detected: nulo hasta que CU-07 lo capture
                 new TtlTimer(
                         view.ttlApplies(), // aplica o no
                         view.ttlApplies() ? instantText(view.ttlExpiresAt()) : null, // vencimiento solo si aplica
