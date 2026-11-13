@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU01-005 — Degradación de cotizaciones
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar degradación de cotizaciones. Requisitos: FR-003, FR-004. Criterios: S
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-01 y su endpoint aún no existen; los resultados son expectativas del contrato. La visualización de etiquetas es UI; el adaptador lote actual cubre parcialmente la degradación.
+La visualización de etiquetas es UI; el adaptador lote actual cubre parcialmente la degradación.
 
 ##### Dependencies & Assumptions
 Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java); no demuestran el flujo completo de CU-01.
@@ -39,7 +39,7 @@ Catálogo M1 disponible y proveedor M3 simulado falla o no cotiza algunos IDs.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar catálogo. | Datos de las precondiciones | El plan prevé 200 con embarcaciones, quotation_available false y estimated_total null para IDs sin precio. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Consultar catálogo. | Datos de las precondiciones | El plan prevé 200 con embarcaciones, quotation_available false y estimated_total null para IDs sin precio. | Pendiente | Unitario: VesselSearchServiceTest#quotationUnavailableDegradesWithoutFailing pasó: una embarcación, estimaciones vacías y etiqueta de contingencia. Falta verificar HTTP 200 y los campos quotation_available y estimated_total. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ La visualización de etiquetas es UI; el adaptador lote actual cubre parcialment
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Cobertura parcial; faltan las comprobaciones indicadas en el flujo.
 
 #### Traceability
-FR-003, FR-004 | SC-001 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Blocked
+FR-003, FR-004 | SC-001 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java#quotationUnavailableDegradesWithoutFailing | In Process
