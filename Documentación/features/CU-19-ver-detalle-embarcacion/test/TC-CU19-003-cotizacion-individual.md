@@ -57,7 +57,7 @@ Plan incluye quotation_id y expiración que CU-11 indica que M3 no devuelve; acl
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Draft; MockMvc verifica importe literal y tres días con adaptadores falsos; plan exige quotation_id y vencimiento que CU-11 indica que M3 no devuelve.
+Corrida 2026-11-13: Draft; MockMvc verifica importe literal y tres días con adaptadores falsos; plan exige quotation_id y vencimiento que CU-11 indica que M3 no devuelve.
 
 #### Traceability
 FR-005, FR-006 | SC-001 | [cotizacion](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java)  | src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselDetailControllerTest.java#quotationReturnsLiteralValuesAndInclusiveDays | Draft

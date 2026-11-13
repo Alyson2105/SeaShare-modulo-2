@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU07-001 — Cierre de navegación
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar cierre de navegación. Requisitos: FR-001, FR-003, FR-004, FR-005. Cri
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-07 y su endpoint aún no existen; los resultados son expectativas del contrato. Regreso temprano o tardío conserva la hora real sin cálculo monetario.
+Verifica HTTP, llegada y checkout persistido; no prueba todas las variantes ni entrega externa. El endpoint y servicio existen. Regreso temprano o tardío conserva la hora real sin cálculo monetario.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-07.
+Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-07.
 
 ##### Preconditions & Default Setup
 Reserva IN_NAVIGATION y solicitante propietario registrado.
@@ -38,9 +38,9 @@ Reserva IN_NAVIGATION y solicitante propietario registrado.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Registrar fin con y sin novedades en reservas separadas. | Datos de las precondiciones | Según el plan, 200 y COMPLETED; hora real y novedades se registran mediante CU-08 y check-out. | Pendiente | ChangeReservationStatusServiceTest#checkInAndCheckOutTransitionsWork pasó: motor transiciona a COMPLETED y captura novedades en evento simulado; faltan endpoint y hora real. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NavigationEndIntegrationTest#successfulEndPersistsArrivalCompletedStateAndCheckoutEvent: verde. Verifica HTTP, llegada y checkout persistido; no prueba todas las variantes ni entrega externa. |
+| 2 | Ejecutar | Registrar fin con y sin novedades en reservas separadas. | Datos de las precondiciones | Según el plan, 200 y COMPLETED; hora real y novedades se registran mediante CU-08 y check-out. | Pendiente | NavigationEndIntegrationTest#successfulEndPersistsArrivalCompletedStateAndCheckoutEvent: verde. Verifica HTTP, llegada y checkout persistido; no prueba todas las variantes ni entrega externa. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NavigationEndIntegrationTest#successfulEndPersistsArrivalCompletedStateAndCheckoutEvent: verde. Verifica HTTP, llegada y checkout persistido; no prueba todas las variantes ni entrega externa. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Regreso temprano o tardío conserva la hora real sin cálculo monetario.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Blocked; la evidencia solo cubre el componente compartido, el flujo está bloqueado.
+Corrida 2026-11-13: Partial; evidencia parcial.
 
 #### Traceability
-FR-001, FR-003, FR-004, FR-005 | SC-002, SC-004 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#checkInAndCheckOutTransitionsWork | Blocked
+FR-001, FR-003, FR-004, FR-005 | SC-002, SC-004 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NavigationEndIntegrationTest.java#successfulEndPersistsArrivalCompletedStateAndCheckoutEvent | In Process

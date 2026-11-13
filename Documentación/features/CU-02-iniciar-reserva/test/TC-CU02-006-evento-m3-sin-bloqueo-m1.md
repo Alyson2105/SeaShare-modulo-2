@@ -26,7 +26,7 @@ Verificar el destino de información de creación y la ausencia de notificación
 El relay efectivo requiere servicios y queda fuera; la matriz verifica ausencia de notificación M1 para INITIATED.
 
 ##### Dependencies & Assumptions
-Backend y base de datos de pruebas disponibles para una ejecución futura; identidad temporal por headers sin Spring Security. [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java); [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java).
+La corrida utilizó backend y base de datos de pruebas; identidad temporal por headers sin Spring Security. [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java); [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java).
 
 ##### Preconditions & Default Setup
 Solicitud válida: `POST /api/v1/reservations`, `Content-Type: application/json`, `X-User-Id: <UUID>`, `X-User-Role: RENTER`, `Idempotency-Key: <UUID>`. Cuerpo: `{"vessel_id":"d3b07384-d113-49cd-a5d6-812e9bcfc101","start_date":"2027-03-10","end_date":"2027-03-12","passengers":2,"departure_time":"08:30","estimated_total":"9600000.00","holder":{"full_name":"Carlos Gomez","phone":"+573001234567","email":"carlos@example.com"}}`. Usar identificadores únicos y flota disponible con capacidad suficiente.
@@ -52,7 +52,7 @@ Evento AMQP para M3 y notificación HTTP a M1 son mecanismos distintos.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Evidencia parcial; los resultados pendientes se detallan en el flujo.
+Corrida 2026-11-13: Partial. Evidencia parcial; los resultados pendientes se detallan en el flujo.
 
 #### Traceability
-FR-013 | SC-001 | [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java); [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java#createsOutboxMessageWithExactSevenFieldsAndBoatId; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#initiatedAndPendingPaymentNotifyNobody | In Process
+FR-013 | SC-001 | [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java); [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java#createsOutboxMessageWithExactSevenFieldsAndBoatId; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#initiatedAndPendingPaymentNotifyNobody (clase ModuleOneNotificationMatrixTest) | In Process

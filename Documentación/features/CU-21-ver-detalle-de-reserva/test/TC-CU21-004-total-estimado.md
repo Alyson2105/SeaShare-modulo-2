@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU21-004 — Total estimado persistido
-**Status**: In Process
+**Status**: Draft
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -46,6 +46,8 @@ Reserva propia con estimated_total conocido.
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
+El paso exige estimated_total como cadena; plan.md describe payment_summary.total_paid numérico y la política usa monto liquidado cuando existe.
+
 Es estimación recibida del cliente, no demuestra desglose oficial de M3.
 
 #### Defect Severity Reference
@@ -57,7 +59,7 @@ Es estimación recibida del cliente, no demuestra desglose oficial de M3.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; Comprueba que total_paid es numérico; no compara el valor persistido ni verifica ausencia de cálculos.
+Corrida 2026-11-13: Draft; Comprueba que total_paid es numérico; no compara el valor persistido ni verifica ausencia de cálculos.
 
 #### Traceability
-FR-003, FR-004 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#detailIncludesContractFields | In Process
+FR-003, FR-004 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#detailIncludesContractFields | Draft

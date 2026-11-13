@@ -58,7 +58,7 @@ La idempotencia de creación CU-02 no cubre confirmación; canal A y B comparten
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Blocked; evidencia parcial, consultar el flujo.
+Corrida 2026-11-13: Blocked; evidencia parcial, consultar el flujo.
 
 #### Traceability
 FR-007 | SC-004 | Lógica de confirmación probada | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java#duplicateApprovalDoesNotRepeatTransitions | Blocked

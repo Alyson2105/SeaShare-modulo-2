@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU05-004 — Rechazo de solicitante ajeno
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar rechazo de solicitante ajeno. Requisitos: FR-002. Criterios: SC-006.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-05 y su endpoint aún no existen; los resultados son expectativas del contrato. JWT es contrato propuesto; no hay autenticación completa implementada.
+Comprueba ambos 403; identidad por cabeceras, no JWT ni persistencia posterior al rechazo. El endpoint y servicio existen. JWT es contrato propuesto; no hay autenticación completa implementada.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-05; no demuestran el flujo completo de CU-05.
+Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: La prueba citada cubre solo parte del escenario; no demuestra el flujo completo de CU-05.
 
 ##### Preconditions & Default Setup
 Reserva RESERVED cumplida la tolerancia; solicitante distinto del propietario registrado.
@@ -38,9 +38,9 @@ Reserva RESERVED cumplida la tolerancia; solicitante distinto del propietario re
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar el reporte. | Datos de las precondiciones | Según el plan, 403 PROFILE_NOT_AUTHORIZED; reserva sin cambios. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NoShowIntegrationTest#renterAndForeignOwnerAreForbiddenAndUnknownIs404: verde. Comprueba ambos 403; identidad por cabeceras, no JWT ni persistencia posterior al rechazo. |
+| 2 | Ejecutar | Solicitar el reporte. | Datos de las precondiciones | Según el plan, 403 PROFILE_NOT_AUTHORIZED; reserva sin cambios. | Pendiente | NoShowIntegrationTest#renterAndForeignOwnerAreForbiddenAndUnknownIs404: verde. Comprueba ambos 403; identidad por cabeceras, no JWT ni persistencia posterior al rechazo. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NoShowIntegrationTest#renterAndForeignOwnerAreForbiddenAndUnknownIs404: verde. Comprueba ambos 403; identidad por cabeceras, no JWT ni persistencia posterior al rechazo. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ JWT es contrato propuesto; no hay autenticación completa implementada.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
+Corrida 2026-11-13: Partial; evidencia parcial.
 
 #### Traceability
-FR-002 | SC-006 | Sin prueba de CU-05 | Blocked
+FR-002 | SC-006 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NoShowIntegrationTest.java#renterAndForeignOwnerAreForbiddenAndUnknownIs404 | In Process

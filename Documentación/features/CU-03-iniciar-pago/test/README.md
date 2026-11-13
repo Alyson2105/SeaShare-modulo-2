@@ -16,7 +16,7 @@ Casos documentales para `POST /api/v1/reservations/{reservation_id}/payments`. E
 | [TC-CU03-006](TC-CU03-006-datos-medio-pago.md) | Datos obligatorios de pago | FR-009, FR-014 | SC-004 | [PaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java) | In Process |
 | [TC-CU03-007](TC-CU03-007-reserva-no-admisible.md) | Estado o TTL no admisible | FR-002, FR-007 | SC-001 | [ttl](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java) [StartPaymentServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java) | In Process |
 | [TC-CU03-008](TC-CU03-008-evento-m3-sin-notificacion-m1.md) | Evento M3 sin bloqueo M1 | FR-006, FR-009 | SC-001 | [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); [estado](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) [PaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java) | In Process |
-| [TC-CU03-009](TC-CU03-009-acceso-reserva.md) | Autorización del titular | FR-001, FR-002 | SC-001 | [StartPaymentServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java) | In Process |
+| [TC-CU03-009](TC-CU03-009-acceso-reserva.md) | Autorización del titular | FR-001, FR-002 | SC-001 | [StartPaymentServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java) | Blocked |
 | [TC-CU03-010](TC-CU03-010-reintento-pago.md) | Reintento de pago rechazado | FR-002, FR-009 | SC-001, SC-003 | [StartPaymentServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java) | Draft |
 
 ## Cobertura de requisitos
@@ -60,7 +60,7 @@ Casos documentales para `POST /api/v1/reservations/{reservation_id}/payments`. E
 | TC-CU03-006 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: PaymentIntegrationTest#missingPaymentTokenIs400 pasó: 400 PAYMENT_DATA_INCOMPLETE. Faltan variantes y comprobación de estado y outbox. |
 | TC-CU03-007 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Unitario: StartPaymentServiceTest#nonInitiatedReservationIsConflict y #expiredTtlIsConflict pasaron con los códigos de dominio esperados. Falta comprobar HTTP 409 y ausencia de efectos persistidos. |
 | TC-CU03-008 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración con outbox simulado: PaymentIntegrationTest#pendingEventCarriesPaymentToken pasó para estado interno y token; unitario: ModuleOneNotificationMatrixTest#initiatedAndPendingPaymentNotifyNobody pasó sin destino M1. Falta inspección de payload y ausencia de M1 en flujo integrado. |
-| TC-CU03-009 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Unitario: StartPaymentServiceTest#otherRenterIsForbidden pasó con RESERVATION_NOT_OWNED. Falta comprobar HTTP 403 y ausencia de transición persistida para otro arrendatario. |
+| TC-CU03-009 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | Unitario: StartPaymentServiceTest#otherRenterIsForbidden pasó con RESERVATION_NOT_OWNED. Falta autenticación Bearer; 403 HTTP y ausencia de transición persistida siguen sin prueba. |
 | TC-CU03-010 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | Contrato contradictorio: spec limita a INITIATED y plan permite reintento tras REJECTED. StartPaymentServiceTest#retryAfterRejectedReusesThePersistedCalculation pasó: intento 2 y reutilización; no resuelve el contrato ni verifica el evento. |
 
 ## Brechas detectadas
@@ -69,6 +69,7 @@ Casos documentales para `POST /api/v1/reservations/{reservation_id}/payments`. E
 5. Spring Security y JWT están pendientes; no confundir la autenticación propuesta con la identidad temporal de CU-02.
 6. M1 opera con adaptadores fake por defecto; las pruebas UI y los servicios externos necesitan cobertura separada.
 7. El plan plantea lock de fila de reserva y GiST para la carrera; se debe comprobar la exclusividad real entre reservas distintas.
+8. `plan.md` plantea consultar M1 bajo el lock; StartPaymentService#execute consulta disponibilidad antes de la transacción del escritor.
 
 ## Convenciones de estado
 
@@ -79,13 +80,13 @@ Casos documentales para `POST /api/v1/reservations/{reservation_id}/payments`. E
 
 ## Ejecución automatizada — 2026-11-13
 
-`./mvnw -B clean test`: 395 pruebas, 0 fallos, 0 errores, 0 omitidas; BUILD SUCCESS. Las pruebas de pago emplean dobles externos y no demuestran cobro real.
+`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-03. Las pruebas citadas usan las dependencias indicadas en cada caso; no acreditan servicios externos reales.
 
 | Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| [PaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java) | 9 | 0 | 0 | 0 | Exitosa |
-| [StartPaymentServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java) | 10 | 0 | 0 | 0 | Exitosa |
-| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Exitosa |
-| [ChangeReservationStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | 28 | 0 | 0 | 0 | Exitosa |
-| [TtlExpiryIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java) | 8 | 0 | 0 | 0 | Exitosa |
-| [ReservationStateMachineTest](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java) | 7 | 0 | 0 | 0 | Exitosa |
+| [PaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java) | 9 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [StartPaymentServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java) | 10 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [ChangeReservationStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | 28 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [TtlExpiryIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java) | 8 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [ReservationStateMachineTest](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |

@@ -57,7 +57,7 @@ El consumidor real pertenece a M3 y no se demuestra su deduplicación.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Passed. La evidencia cubre el consumidor de prueba.
+Corrida 2026-11-13: Partial. Se cubre el consumidor de prueba, pero no los efectos persistidos del paso 3 ni el consumidor M3.
 
 #### Traceability
 FR-005 | SC-001 | [deduplicacion](../../../../src/test/java/com/seashare/m2/reservas/integration/EventDeduplicationTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/EventDeduplicationTest.java#publicarElMismoEventoDosVecesSeProcesaUnaSolaVez | In Process

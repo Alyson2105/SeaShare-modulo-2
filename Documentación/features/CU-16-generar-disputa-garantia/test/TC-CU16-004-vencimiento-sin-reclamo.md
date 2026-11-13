@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU16-004 — Cierre sin reclamo
-**Status**: Blocked
+**Status**: Draft
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar cierre sin reclamo. Requisitos: FR-007, FR-008, FR-011. Criterios: SC-
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-16 y su endpoint aún no existen; los resultados son expectativas del contrato. Política de reintentos del job sin definir; en PENDING no se publica.
+El spec CU-16 FR-011 exige REJECTED → APPROVED, pero plan CU-18 y DisputeEventMapper#finalEvent usan REJECTED → REJECTED; resolver contrato. El barrido de vencimiento sí existe.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-16; no demuestran el flujo completo de CU-16.
+La prueba usa componentes controlados; no demuestra el flujo completo.
 
 ##### Preconditions & Default Setup
 Disputa PENDING sin reclamo, con texto informativo de check-out y reloj controlado.
@@ -38,9 +38,9 @@ Disputa PENDING sin reclamo, con texto informativo de check-out y reloj controla
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Al vencer 24 horas ejecutar cierre automático. | Datos de las precondiciones | Por CU-17 pasa a REJECTED con motivo de sistema; novedades de check-out no cuentan como reclamo; evento final se deriva a CU-18. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd: verde con PostgreSQL; no parte de CU-07 ni de novedades de check-out. |
+| 2 | Ejecutar | Al vencer 24 horas ejecutar cierre automático. | Datos de las precondiciones | Por CU-17 pasa a REJECTED con motivo de sistema; novedades de check-out no cuentan como reclamo; evento final se deriva a CU-18. | Pendiente | DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd: verde con PostgreSQL; no parte de CU-07 ni de novedades de check-out. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd: verde con PostgreSQL; no parte de CU-07 ni de novedades de check-out. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Política de reintentos del job sin definir; en PENDING no se publica.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada.
+Corrida 2026-11-13: Draft; evidencia parcial, pasos completos pendientes.
 
 #### Traceability
-FR-007, FR-008, FR-011 | SC-003 | Sin prueba de CU-16 | Blocked
+FR-007, FR-008, FR-011 | SC-003 | src/test/java/com/seashare/m2/disputa/integration/DisputeWindowCloseIntegrationTest.java#closesAtExactWindowEnd | Draft

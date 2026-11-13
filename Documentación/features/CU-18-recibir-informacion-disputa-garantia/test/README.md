@@ -1,57 +1,57 @@
 # CU-18 — Pruebas backend de eventos de disputa
 
-Casos del evento asíncrono de resolución de disputa hacia M3. El contexto de disputa y su publicación aún no están implementados.
+Casos del evento asíncrono de resolución de disputa hacia M3. El contexto de disputa y la publicación mediante outbox y RabbitMQ están implementados.
 
-**Estado global**: Draft; el contexto de disputas no está implementado y hay casos con contrato por aclarar. Evaluado el 2026-11-13.
+**Estado global**: Draft; persisten contradicciones contractuales. Evaluado el 2026-11-13.
 
 ## Trazabilidad
 
 | TC | Escenario | FR | SC | Test automatizado parcial | Status |
 |---|---|---|---|---|---|
-| [TC-CU18-001](TC-CU18-001-estados-finales.md) | Publicación de estado final | FR-001, FR-002 | SC-001 | Sin prueba de CU-18 | Draft |
-| [TC-CU18-002](TC-CU18-002-pending-interno.md) | Ausencia de evento PENDING | FR-001 | SC-001 | Sin prueba de CU-18 | Blocked |
-| [TC-CU18-003](TC-CU18-003-privacidad-evento.md) | Contenido del evento | FR-002, FR-003, FR-006 | SC-002 | Sin prueba de CU-18 | Draft |
-| [TC-CU18-004](TC-CU18-004-identidad-evento.md) | Identificador y reenvío | FR-004, FR-005 | SC-003, SC-004 | Sin prueba de CU-18 | Blocked |
-| [TC-CU18-005](TC-CU18-005-fallo-outbox.md) | Atomicidad de transición y outbox | FR-001, FR-005 | SC-001, SC-004 | Sin prueba de CU-18 | Blocked |
+| [TC-CU18-001](TC-CU18-001-estados-finales.md) | Publicación de estado final | FR-001, FR-002 | SC-001 | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts y #expiryRejectionIsPublishedAsRejected (parcial) | Draft |
+| [TC-CU18-002](TC-CU18-002-pending-interno.md) | Ausencia de evento PENDING | FR-001 | SC-001 | DisputePublishingIntegrationTest#pendingDisputeNeverPublishes (parcial) | In Process |
+| [TC-CU18-003](TC-CU18-003-privacidad-evento.md) | Contenido del evento | FR-002, FR-003, FR-006 | SC-002 | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts (parcial) | Draft |
+| [TC-CU18-004](TC-CU18-004-identidad-evento.md) | Identificador y reenvío | FR-004, FR-005 | SC-003, SC-004 | DisputeEventMapperTest#eventIdIsDeterministicPerDisputeAndStatus; OutboxRelayIntegrationTest#falloSimuladoReintentaHastaPublicar (relay genérico) (parcial) | In Process |
+| [TC-CU18-005](TC-CU18-005-fallo-outbox.md) | Atomicidad de transición y outbox | FR-001, FR-005 | SC-001, SC-004 | Sin prueba de fallo al insertar outbox de disputa | In Process |
 
 ## Cobertura de requisitos
 
 | FR | Cobertura | TC | Alcance | Motivo / Observación |
 |---|---|---|---|---|
-| FR-001 | Bloqueado — CU-18 pendiente | 001, 002, 005 | Backend | Estados finales |
-| FR-002 | Bloqueado — CU-18 pendiente | 001, 003 | Backend | Mapeo y motivo contradictorios |
-| FR-003 | Bloqueado — CU-18 pendiente | 003 | Backend | Sin datos financieros |
-| FR-004 | Bloqueado — CU-18 pendiente | 004 | Backend | Identificador |
-| FR-005 | Bloqueado — CU-18 pendiente | 004, 005 | Backend | Reintento y atomicidad |
-| FR-006 | Bloqueado — CU-18 pendiente | 003 | Backend | Sin dinero |
-| FR-007 | Bloqueado — CU-18 pendiente | — | Backend | SLA de 24 horas requiere medición |
+| FR-001 | Parcial | 001, 002, 005 | Backend | Publicación de finales y ausencia de mensaje PENDING probadas; mapeo en conflicto. |
+| FR-002 | Draft | 001, 003 | Backend | Spec CU-18 y plan difieren en ACCEPTED y posibilidad de incluir motivo. |
+| FR-003 | Parcial | 003 | Backend | Payload ACCEPTED de prueba tiene cinco campos y no incluye montos ni owner_id. |
+| FR-004 | Parcial | 004 | Backend | Mapper produce ID determinista; falta prueba de deduplicación de M3. |
+| FR-005 | Parcial | 004, 005 | Backend | Relay genérico reintenta; falta rollback y reenvío de disputa; spec y plan discrepan sobre agotamiento. |
+| FR-006 | Sin evidencia integral | 003 | Backend | Payload ACCEPTED carece de monto; no se demuestra ausencia integral de operaciones financieras. |
+| FR-007 | Sin evidencia | — | Backend | No hay medición del SLA de 24 horas. |
 
 
 ## Criterios de éxito
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Bloqueado | TC-001, 002 y 005; contrato de mapeo en revisión. |
-| SC-002 | Bloqueado | TC-003; privacidad y ausencia de montos. |
-| SC-003 | Bloqueado | TC-004; identificadores para deduplicación. |
-| SC-004 | Bloqueado | TC-004 y 005; política de agotamiento requiere aclaración. |
+| SC-001 | Parcial | Publicación y PENDING probados parcialmente; mapeo contractual en conflicto. |
+| SC-002 | Parcial | Payload ACCEPTED inspeccionado; falta rechazo administrativo. |
+| SC-003 | Parcial | ID determinista en unidad y mensaje de prueba; deduplicación en M3 sin comprobar. |
+| SC-004 | Parcial | Reintento genérico probado; rollback y ausencia de pérdida no demostrados. |
 
 ## Checklist de ejecución
 
 | TC | Documentado | Ejecutado | Resultado | Ejecutado por | Fecha | Observaciones |
 |---|---|---|---|---|---|---|
-| TC-CU18-001 | Sí | No | Draft | Agente automatizado | — | Contrato por aclarar; sin implementación ni test ejecutado del escenario. |
-| TC-CU18-002 | Sí | No | Blocked | Agente automatizado | — | sin implementación ni test ejecutado del escenario. |
-| TC-CU18-003 | Sí | No | Draft | Agente automatizado | — | Contrato por aclarar; sin implementación ni test ejecutado del escenario. |
-| TC-CU18-004 | Sí | No | Blocked | Agente automatizado | — | sin implementación ni test ejecutado del escenario. |
-| TC-CU18-005 | Sí | No | Blocked | Agente automatizado | — | sin implementación ni test ejecutado del escenario. |
+| TC-CU18-001 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | publicación en RabbitMQ; mapeos incompatibles. |
+| TC-CU18-002 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | cola sin mensaje PENDING tras relay; no se inspeccionó outbox al crear. |
+| TC-CU18-003 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | cinco campos en ACCEPTED; política de motivo contradictoria. |
+| TC-CU18-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | identidad determinista y reintento genérico; no reenvío específico de disputa. |
+| TC-CU18-005 | Sí | No | Pendiente | — | — | sin prueba de rollback de disputa y outbox. |
 
 ## Brechas detectadas
 
-1. [Contexto](../../../context/implementContext.md): contexto de disputa, publicación y cola de disputa T-18c pendientes.
+1. [Contexto](../../../context/implementContext.md): contexto, outbox y cola de disputa existen; las pruebas alcanzan RabbitMQ de prueba, no un consumidor M3 real.
 2. Spec CU-18 usa ACCEPTED/REJECTED, su plan usa COMPLETED/REJECTED y CU-16 usa COMPLETADO/APPROVED.
 3. FR-002 permite motivo opcional, pero plan CU-18 y specs CU-16/CU-17 prohíben transmitirlo.
-4. Spec dice reintentar hasta confirmar; plan limita a cinco intentos. Política de agotamiento y DLQ necesita acuerdo.
+4. Spec dice reintentar hasta confirmar; plan limita a cinco intentos. PublishPendingOutboxService#registerFailure marca dead en el quinto fallo; política de agotamiento y DLQ necesita acuerdo.
 5. Identidad, orden y versión del evento requieren definición con M3; publisher confirm no demuestra consumo.
 6. SLA de 24 horas requiere medición y responsabilidades concretas.
 
@@ -64,8 +64,12 @@ Casos del evento asíncrono de resolución de disputa hacia M3. El contexto de d
 
 ## Ejecución automatizada — 2026-11-13
 
-`./mvnw -B clean test`: 395 pruebas, 0 fallos, 0 errores, 0 omitidas; BUILD SUCCESS. No se localizaron clases que ejecuten los escenarios de CU-18; la suite no aporta cobertura directa de estos casos.
+`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes; el fallo no se atribuye a CU-18. Integración usa PostgreSQL y RabbitMQ de prueba; el reintento de OutboxRelayIntegrationTest es genérico, no específico de disputa.
 
 | Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| Ninguna vinculada | — | — | — | — | Sin ejecución automatizada del CU |
+| com.seashare.m2.disputa.integration.DisputePublishingIntegrationTest | 4 | 0 | 0 | 0 | Verde; alcance según TC |
+| com.seashare.m2.disputa.application.service.DisputeEventMapperTest | 4 | 0 | 0 | 0 | Verde; alcance según TC |
+| com.seashare.m2.disputa.application.service.UpdateDisputeStatusServiceTest | 9 | 0 | 0 | 0 | Verde; alcance según TC |
+| com.seashare.m2.reservas.integration.OutboxRelayIntegrationTest | 4 | 0 | 0 | 0 | Verde; alcance según TC |
+| com.seashare.m2.reservas.application.service.PublishPendingOutboxServiceTest | 10 | 0 | 0 | 0 | Verde; alcance según TC |

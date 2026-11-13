@@ -57,7 +57,7 @@ FR-005 exige identificador de cálculo pero el plan dice que M3 no lo envía; DT
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Draft; evidencia parcial, consultar el flujo.
+Corrida 2026-11-13: Draft; evidencia parcial, consultar el flujo.
 
 #### Traceability
 FR-002, FR-003, FR-004, FR-005 | SC-001, SC-002 | [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#correct200ReturnsBreakdown | Draft

@@ -22,7 +22,7 @@ Casos para GET /api/v1/reservations, con identidad temporal por headers y contra
 | FR-001 | Parcial — ver caso y brechas | 001, 002 | Backend | Roles RENTER y OWNER |
 | FR-002 | Parcial — ver caso y brechas | 001, 002 | Backend | Aislamiento por identificador |
 | FR-003 | Parcial — ver caso y brechas | 001, 004 | Backend | Datos básicos; nombre de barco pendiente |
-| FR-004 | Parcial — ver caso y brechas | 004 | Backend | Estimated total sin deducción |
+| FR-004 | Pendiente | 004 | Backend | Sin aserción del importe original de una reserva cancelada |
 | FR-005 | Parcial — ver caso y brechas | 006 | Backend | Subestado FLEXIBLE verificado; otros subtipos no comprobados |
 | FR-006 | Sin cobertura backend | — | UI | Selección UI |
 | FR-007 | Parcial — ver caso y brechas | 005 | Backend | Filtro backend probado con algunos estados; encabezados UI sin prueba |
@@ -36,7 +36,7 @@ Casos para GET /api/v1/reservations, con identidad temporal por headers y contra
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Parcial | TC-004; no demuestra ausencia global de cálculos. |
+| SC-001 | Pendiente | TC-004 carece de aserción del importe original en una reserva cancelada; no se demuestra ausencia global de cálculos. |
 | SC-002 | Parcial | TC-001 a 003; identidad por headers es temporal y no autenticada por JWT. |
 
 ## Checklist de ejecución
@@ -46,7 +46,7 @@ Casos para GET /api/v1/reservations, con identidad temporal por headers y contra
 | TC-CU20-001 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Comprueba dos reservas propias frente a una ajena y campos de respuesta con headers; no verifica JWT ni todos los campos del paso. |
 | TC-CU20-002 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Comprueba tres reservas del propietario; no incluye otro propietario para comprobar exclusión. |
 | TC-CU20-003 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | Comprueba page=0 y limit=51; no comprueba orden ni segunda página. FR-012 fija 10 y plan permite hasta 50. |
-| TC-CU20-004 | Sí | No | Pendiente | Agente automatizado | — | No se encontró aserción del importe original en una reserva cancelada. |
+| TC-CU20-004 | Sí | No | Pendiente | — | — | No se encontró aserción del importe original en una reserva cancelada. |
 | TC-CU20-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Comprueba subconjuntos history y cancelled, contadores y estado CANCELLED; no todos los estados del contrato. |
 | TC-CU20-006 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Comprueba subtipo FLEXIBLE y etiqueta contextual; no compara el importe ni otros subtipos. |
 
@@ -68,8 +68,8 @@ Casos para GET /api/v1/reservations, con identidad temporal por headers y contra
 
 ## Ejecución automatizada — 2026-11-13
 
-La suite terminó con 395 pruebas, 0 fallos, 0 errores y 0 omitidas. La clase usa PostgreSQL de Testcontainers, MockMvc y dependencias de flota simuladas.
+`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-20. Los dobles y simulaciones no acreditan servicios externos reales.
 
 | Clase | Tests | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| ReservationQueryTest | 12 | 0 | 0 | 0 | Exitosa |
+| [ReservationQueryTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java) | 12 | 0 | 0 | 0 | Verde; cobertura según TC |

@@ -57,7 +57,7 @@ CU-02 sí encola evento AMQP de información a M3 al crear; es distinto.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; Matriz unitaria comprueba ausencia de destino M1; no comprueba cada transición en outbox real.
+Corrida 2026-11-13: Partial; Matriz unitaria comprueba ausencia de destino M1; no comprueba cada transición en outbox real.
 
 #### Traceability
 FR-001, FR-002 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java)  | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#initiatedAndPendingPaymentNotifyNobody | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#expiredAndPaymentFailedNotifyNobody | In Process

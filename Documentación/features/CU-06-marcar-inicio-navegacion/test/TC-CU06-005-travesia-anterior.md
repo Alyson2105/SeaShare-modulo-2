@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU06-005 — Travesía anterior sin cerrar
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar travesía anterior sin cerrar. Requisitos: FR-001, FR-004. Criterios: 
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-06 y su endpoint aún no existen; los resultados son expectativas del contrato. La validación del endpoint depende de CU-06 y la finalización de CU-07.
+Verifica dos reservas secuenciales y rechazo; no demuestra inicios simultáneos. El endpoint y servicio existen. La validación del endpoint depende de CU-06 y la finalización de CU-07.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-06; no demuestran el flujo completo de CU-06.
+Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: La prueba citada cubre solo parte del escenario; no demuestra el flujo completo de CU-06.
 
 ##### Preconditions & Default Setup
 Otra reserva de la misma embarcación permanece IN_NAVIGATION sin check-out.
@@ -38,9 +38,9 @@ Otra reserva de la misma embarcación permanece IN_NAVIGATION sin check-out.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar inicio de la reserva RESERVED. | Datos de las precondiciones | Según el plan, 409 VESSEL_CURRENTLY_IN_NAVIGATION sin transición. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NavigationStartIntegrationTest#anotherReservationOfSameVesselInNavigationIsRejected: verde. Verifica dos reservas secuenciales y rechazo; no demuestra inicios simultáneos. |
+| 2 | Ejecutar | Solicitar inicio de la reserva RESERVED. | Datos de las precondiciones | Según el plan, 409 VESSEL_CURRENTLY_IN_NAVIGATION sin transición. | Pendiente | NavigationStartIntegrationTest#anotherReservationOfSameVesselInNavigationIsRejected: verde. Verifica dos reservas secuenciales y rechazo; no demuestra inicios simultáneos. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NavigationStartIntegrationTest#anotherReservationOfSameVesselInNavigationIsRejected: verde. Verifica dos reservas secuenciales y rechazo; no demuestra inicios simultáneos. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ La validación del endpoint depende de CU-06 y la finalización de CU-07.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
+Corrida 2026-11-13: Partial; evidencia parcial.
 
 #### Traceability
-FR-001, FR-004 | SC-001 | Sin prueba de CU-06 | Blocked
+FR-001, FR-004 | SC-001 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NavigationStartIntegrationTest.java#anotherReservationOfSameVesselInNavigationIsRejected | In Process

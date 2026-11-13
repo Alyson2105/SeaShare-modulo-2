@@ -1,7 +1,7 @@
 # Implementation Plan: Módulo 2 — Operación de Reservas, Tiempos y Cancelaciones (SEA-SHARE)
 
 **Date**: 2026-09-27 · **Revisión**: 2026-10-10
-**Spec**: [`features/CU-01..CU-22/spec.md`](features/) — **única fuente de verdad**. [`context/sea-share.md`](../context/sea-share.md) y [`context/consistencia-m2-m3.md`](../context/consistencia-m2-m3.md) son referencia secundaria; ante discrepancia prevalece el spec.
+**Spec**: [`features/CU-01..CU-22/spec.md`](../features/) — **única fuente de verdad**. [`context/sea-share.md`](../context/sea-share.md) y [`context/consistencia-m2-m3.md`](../context/consistencia-m2-m3.md) son referencia secundaria; ante discrepancia prevalece el spec.
 **Contratos**: [`features/`](../features/) — un `plan.md` (o `plan.external.md` / `plan.event.md`) por contrato dentro de la carpeta de su caso de uso (REST expuesto, eventos publicados e integraciones externas consumidas).
 **Alcance**: Plan **general** del módulo backend. Los planes técnicos detallados de cada caso de uso se redactarán en una tarea posterior, uno por CU.
 

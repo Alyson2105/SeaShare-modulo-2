@@ -29,7 +29,7 @@ Verificar reintento de pago rechazado. Requisitos: FR-002, FR-009. Criterios rel
 No se realiza publicación real ni cobro externo en esta tarea. Spec limita el inicio a INITIATED, pero el plan permite reintento desde PENDING_PAYMENT; confirmar contrato y clave de idempotencia con M3.
 
 ##### Dependencies & Assumptions
-Entorno futuro con CU-03 implementado, repositorio de reservas y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: Sin prueba de CU-03; no demuestra el flujo completo de CU-03.
+CU-03 está implementado; la evidencia usa repositorio y dobles controlados de M1 y M3. Las pruebas citadas aportan evidencia parcial, no demuestran el flujo completo de CU-03.
 
 ##### Preconditions & Default Setup
 Reserva PENDING_PAYMENT con cobro REJECTED y TTL vigente, conforme a la nota del plan.
@@ -57,7 +57,7 @@ Spec limita el inicio a INITIATED, pero el plan permite reintento desde PENDING_
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Draft. Contrato pendiente de aclaración.
+Corrida 2026-11-13: Draft. Contrato pendiente de aclaración.
 
 #### Traceability
-FR-002, FR-009 | SC-001, SC-003 | Sin prueba de CU-03 | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#retryAfterRejectedReusesThePersistedCalculation | Draft
+FR-002, FR-009 | SC-001, SC-003 | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#retryAfterRejectedReusesThePersistedCalculation | Draft

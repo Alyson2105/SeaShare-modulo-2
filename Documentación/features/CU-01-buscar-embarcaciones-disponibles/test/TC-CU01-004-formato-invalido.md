@@ -57,7 +57,7 @@ Spec excluye reglas de negocio de fechas; no asumir rechazo por fecha pasada o r
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Cobertura parcial; faltan las comprobaciones indicadas en el flujo.
+Corrida 2026-11-13: Partial. Cobertura parcial; faltan las comprobaciones indicadas en el flujo.
 
 #### Traceability
-FR-001, FR-010 | SC-004 | Sin prueba de CU-01 | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java#invalidDateIsRejectedWithoutCallingModuleOne; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java#invalidTypeIsRejected; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java#invalidPassengersIsRejected | In Process
+FR-001, FR-010 | SC-004 | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java#invalidDateIsRejectedWithoutCallingModuleOne; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java#invalidTypeIsRejected; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java#invalidPassengersIsRejected | In Process

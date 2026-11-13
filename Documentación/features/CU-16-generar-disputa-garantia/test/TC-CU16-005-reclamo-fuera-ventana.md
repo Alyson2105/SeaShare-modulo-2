@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU16-005 — Reclamo fuera de ventana
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar reclamo fuera de ventana. Requisitos: FR-005, FR-009. Criterios: SC-00
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-16 y su endpoint aún no existen; los resultados son expectativas del contrato. El job puede ejecutarse con retraso: no asumir que ya se consolidó REJECTED.
+El endpoint y la regla temporal existen. El job puede ejecutarse con retraso: no asumir que ya se consolidó REJECTED.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-16; no demuestran el flujo completo de CU-16.
+La prueba usa componentes controlados; no demuestra el flujo completo.
 
 ##### Preconditions & Default Setup
 Disputa PENDING sin reclamo y reloj exactamente en window_end o posterior.
@@ -38,9 +38,9 @@ Disputa PENDING sin reclamo y reloj exactamente en window_end o posterior.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Intentar registrar reclamo. | Datos de las precondiciones | El plan exige now < window_end y prevé 409 WINDOW_EXPIRED; no se acepta reclamo ni se altera la disputa por la solicitud. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | RegisterDisputeClaimIntegrationTest#rejectsClaimAtExactWindowEnd: verde con PostgreSQL; comprueba rechazo y ausencia de reclamo, no el estado completo ni HTTP real. |
+| 2 | Ejecutar | Intentar registrar reclamo. | Datos de las precondiciones | El plan exige now < window_end y prevé 409 WINDOW_EXPIRED; no se acepta reclamo ni se altera la disputa por la solicitud. | Pendiente | RegisterDisputeClaimIntegrationTest#rejectsClaimAtExactWindowEnd: verde con PostgreSQL; comprueba rechazo y ausencia de reclamo, no el estado completo ni HTTP real. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | RegisterDisputeClaimIntegrationTest#rejectsClaimAtExactWindowEnd: verde con PostgreSQL; comprueba rechazo y ausencia de reclamo, no el estado completo ni HTTP real. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ El job puede ejecutarse con retraso: no asumir que ya se consolidó REJECTED.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada.
+Corrida 2026-11-13: Partial; evidencia parcial, pasos completos pendientes.
 
 #### Traceability
-FR-005, FR-009 | SC-005 | Sin prueba de CU-16 | Blocked
+FR-005, FR-009 | SC-005 | src/test/java/com/seashare/m2/disputa/integration/RegisterDisputeClaimIntegrationTest.java#rejectsClaimAtExactWindowEnd | In Process

@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU07-003 — Autorización del propietario
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar autorización del propietario. Requisitos: FR-002. Criterios: SC-005.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-07 y su endpoint aún no existen; los resultados son expectativas del contrato. JWT es propuesto y aún no está implementado.
+Verifica ambos 403; usa identidad por cabeceras, sin comprobar JWT ni efectos posteriores. El endpoint y servicio existen. JWT es propuesto y aún no está implementado.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-07; no demuestran el flujo completo de CU-07.
+Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: La prueba citada cubre solo parte del escenario; no demuestra el flujo completo de CU-07.
 
 ##### Preconditions & Default Setup
 Reserva IN_NAVIGATION; solicitante distinto del propietario registrado.
@@ -38,9 +38,9 @@ Reserva IN_NAVIGATION; solicitante distinto del propietario registrado.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar cierre. | Datos de las precondiciones | Según el plan, 403 PROFILE_NOT_AUTHORIZED; sin transición. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NavigationEndIntegrationTest#renterRoleAndForeignOwnerAreForbidden: verde. Verifica ambos 403; usa identidad por cabeceras, sin comprobar JWT ni efectos posteriores. |
+| 2 | Ejecutar | Solicitar cierre. | Datos de las precondiciones | Según el plan, 403 PROFILE_NOT_AUTHORIZED; sin transición. | Pendiente | NavigationEndIntegrationTest#renterRoleAndForeignOwnerAreForbidden: verde. Verifica ambos 403; usa identidad por cabeceras, sin comprobar JWT ni efectos posteriores. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NavigationEndIntegrationTest#renterRoleAndForeignOwnerAreForbidden: verde. Verifica ambos 403; usa identidad por cabeceras, sin comprobar JWT ni efectos posteriores. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ JWT es propuesto y aún no está implementado.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
+Corrida 2026-11-13: Partial; evidencia parcial.
 
 #### Traceability
-FR-002 | SC-005 | Sin prueba de CU-07 | Blocked
+FR-002 | SC-005 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NavigationEndIntegrationTest.java#renterRoleAndForeignOwnerAreForbidden | In Process

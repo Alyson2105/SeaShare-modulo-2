@@ -57,7 +57,7 @@ La discrepancia afecta resultados y debe resolverse antes de fijar expectativa e
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Draft. El contrato requiere aclaración.
+Corrida 2026-11-13: Draft. Existe evidencia parcial; el contrato requiere aclaración.
 
 #### Traceability
-FR-002 | SC-003 | Sin prueba de CU-01 | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java#overlappingReservationHidesVessel; src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java#excludesVesselsWithOverlappingReservations | Draft
+FR-002 | SC-003 | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java#overlappingReservationHidesVessel; src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java#excludesVesselsWithOverlappingReservations | Draft
