@@ -57,7 +57,7 @@ CU-03 invoca el puerto y asocia los montos; las pruebas usan cálculo simulado.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; evidencia parcial, consultar el flujo.
+Corrida 2026-11-13: Partial; evidencia parcial, consultar el flujo.
 
 #### Traceability
 FR-001, FR-006, FR-009 | SC-001, SC-003 | Pruebas de pago ejecutadas | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#startPaymentTransitionsAndReturnsBreakdown; src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#breakdownIsPersistedForDetailView; src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#validPaymentDelegatesToTransactionalWriter | In Process
