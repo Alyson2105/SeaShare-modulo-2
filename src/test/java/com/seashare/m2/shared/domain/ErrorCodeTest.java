@@ -36,14 +36,21 @@ class ErrorCodeTest { // pruebas unitarias del catalogo de errores
     }
 
     @Test
+    void translatesTripAlreadyCompleted() { // CU-07: viaje ya completado
+        assertThat(ErrorCode.TRIP_ALREADY_COMPLETED.getCode()).isEqualTo("TRIP_ALREADY_COMPLETED"); // codigo publico
+        assertThat(ErrorCode.TRIP_ALREADY_COMPLETED.getHttpStatus()).isEqualTo(409); // codigo http 409
+        assertThat(ErrorCode.fromInternal("TRIP_ALREADY_COMPLETED")).isEqualTo(ErrorCode.TRIP_ALREADY_COMPLETED); // traduccion interna
+    }
+
+    @Test
     void noDuplicateCodes() { // valida cantidad exacta y ausencia de duplicados
         ErrorCode[] values = ErrorCode.values(); // todos los valores del enum
-        assertThat(values).hasSize(24); // 21 originales + CU-03 (POLICY_NOT_ACCEPTED, PAYMENT_DATA_INCOMPLETE, RETRY_NOT_ALLOWED)
+        assertThat(values).hasSize(25); // 24 previos + TRIP_ALREADY_COMPLETED de CU-07
 
         Set<String> codes = Arrays.stream(values) // flujo de valores
                 .map(ErrorCode::getCode) // extrae cada codigo
                 .collect(Collectors.toSet()); // recolecta en conjunto unico
 
-        assertThat(codes).hasSize(24); // conjunto tiene tamano 24
+        assertThat(codes).hasSize(25); // conjunto tiene tamano 25
     }
 }
