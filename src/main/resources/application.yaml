@@ -58,6 +58,10 @@ m2:
       fixed-delay-ms: 5000                   # Ciclo de consulta a modulo 3
       batch-size: 50                         # Reservas consultadas por ciclo
       recent-window-minutes: 30              # Ventana para detectar cobros huerfanos tras EXPIRED/PAYMENT_FAILED
+    dispute:
+      enabled: false                         # Cierre automatico de la ventana de disputa (H9): false en la suite
+      fixed-delay-ms: 30000                  # Intervalo entre barridos de disputas vencidas (default: 30 s)
+      batch-size: 100                        # Maximo de disputas cerradas por ciclo
 
 seashare:                                  # Integracion con Modulo 1 y Modulo 3 (CU-09 a CU-12)
   fleet:

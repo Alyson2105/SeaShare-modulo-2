@@ -21,3 +21,5 @@ m2:
       enabled: true                  # Relay del outbox activo en local (T-03)
     payments:
       enabled: true                  # Canal B de CU-13 activo en local
+    dispute:
+      enabled: true                  # Cierre automatico de la ventana de disputa activo en local (H9)

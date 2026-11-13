@@ -73,12 +73,12 @@ class ErrorCodeTest { // pruebas unitarias del catalogo de errores
     @Test
     void noDuplicateCodes() { // valida cantidad exacta y ausencia de duplicados
         ErrorCode[] values = ErrorCode.values(); // todos los valores del enum
-        assertThat(values).hasSize(29); // 27 previos + TRIP_NOT_STARTED y GRACE_PERIOD_NOT_ELAPSED de CU-05
+        assertThat(values).hasSize(32); // 21 originales + CU-03 (POLICY_NOT_ACCEPTED, PAYMENT_DATA_INCOMPLETE, RETRY_NOT_ALLOWED) + H9 (DISPUTE_NOT_FOUND, WINDOW_EXPIRED, CLAIM_ALREADY_EXISTS)
 
         Set<String> codes = Arrays.stream(values) // flujo de valores
                 .map(ErrorCode::getCode) // extrae cada codigo
                 .collect(Collectors.toSet()); // recolecta en conjunto unico
 
-        assertThat(codes).hasSize(29); // conjunto tiene tamano 29
+        assertThat(codes).hasSize(32); // conjunto tiene tamano 27
     }
 }
