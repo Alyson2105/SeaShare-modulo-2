@@ -514,4 +514,18 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
         verify(outboxPort, never()).enqueue(any(OperationalStatusEvent.class));
         verify(statusAuditPort, never()).record(any());
     }
+
+    @Test
+    void rejectsPaymentTokenRefWhenTargetIsNotPendingPayment() { // token de pago solo se permite hacia PENDING_PAYMENT
+        Reservation created = createReservation();
+
+        assertThatThrownBy(() -> changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.EXPIRED, null, ActorType.SYSTEM, "TTL expirado",
+                null, null, null, null, null, null, "tok_x")))
+                .isInstanceOf(ReservationRuleException.class)
+                .hasMessageContaining("payment_token_ref"); // rechaza el token fuera de PENDING_PAYMENT
+
+        Reservation unchanged = reservationRepositoryPort.findById(created.getId()).orElseThrow();
+        assertThat(unchanged.getStatus()).isEqualTo(ReservationStatus.INITIATED); // sin cambios persistidos
+    }
 }

@@ -2,6 +2,8 @@ package com.seashare.m2.reservas.infrastructure.adapter.out.messaging.outbox;
 
 import com.seashare.m2.reservas.application.dto.ReservationInfoProvidedEvent;
 import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
+import com.seashare.m2.reservas.domain.model.ActorType;
+import com.seashare.m2.reservas.domain.model.CancellationSubtype;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import com.seashare.m2.reservas.infrastructure.adapter.out.messaging.config.MessagingProperties;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +25,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -184,5 +187,158 @@ class OutboxAdapterTest { // pruebas unitarias del adaptador outbox y formato de
         assertThat(json.get("event_id").asText()).isEqualTo(eventId.toString()); // deduplicacion
         assertThat(json.has("estimated_total")).isFalse(); // sin montos (FR-007)
         assertThat(json.has("status")).isFalse(); // sin estado crudo de reserva (SC-005)
+    }
+
+    @Test
+    void statusChangedUsesFinanceStatusNames() throws Exception { // el payload usa PENDING en vez de PENDING_PAYMENT
+        UUID reservationId = UUID.randomUUID(); // reserva de prueba
+        Instant changedAt = Instant.parse("2026-11-09T12:05:00Z"); // hora del cambio
+
+        adapter.enqueue(statusEvent(reservationId, ReservationStatus.PENDING_PAYMENT, null, null, changedAt)); // pendiente
+        adapter.enqueue(statusEvent(reservationId, ReservationStatus.RESERVED, null, null, changedAt)); // reservada
+        adapter.enqueue(statusEvent(reservationId, ReservationStatus.IN_NAVIGATION, null, null, changedAt)); // en navegacion
+        adapter.enqueue(statusEvent(reservationId, ReservationStatus.COMPLETED, null, null, changedAt)); // completada
+
+        ArgumentCaptor<OutboxMessageEntity> captor = ArgumentCaptor.forClass(OutboxMessageEntity.class); // captura entidades
+        verify(repository, times(4)).save(captor.capture()); // cuatro encolados
+
+        assertThat(payloadOf(captor.getAllValues().get(0)).get("status").asText()).isEqualTo("PENDING"); // nombre de M3
+        assertThat(payloadOf(captor.getAllValues().get(1)).get("status").asText()).isEqualTo("RESERVED"); // sin cambio
+        assertThat(payloadOf(captor.getAllValues().get(2)).get("status").asText()).isEqualTo("IN_NAVIGATION"); // sin cambio
+        assertThat(payloadOf(captor.getAllValues().get(3)).get("status").asText()).isEqualTo("COMPLETED"); // sin cambio
+    }
+
+    @Test
+    void cancelledPayloadUsesFinanceStatusAndOmitsSubtype() throws Exception { // cancelaciones usan los nombres UC07 y sin subtipo
+        UUID reservationId = UUID.randomUUID(); // reserva de prueba
+        Instant changedAt = Instant.parse("2026-11-09T12:05:00Z"); // hora del cambio
+
+        adapter.enqueue(statusEvent(reservationId, ReservationStatus.CANCELLED, CancellationSubtype.FLEXIBLE, null, changedAt));
+        adapter.enqueue(statusEvent(reservationId, ReservationStatus.CANCELLED, CancellationSubtype.MODERATE, null, changedAt));
+        adapter.enqueue(statusEvent(reservationId, ReservationStatus.CANCELLED, CancellationSubtype.LATE, null, changedAt));
+        adapter.enqueue(statusEvent(reservationId, ReservationStatus.CANCELLED, CancellationSubtype.NO_SHOW, null, changedAt));
+        adapter.enqueue(statusEvent(reservationId, ReservationStatus.CANCELLED, CancellationSubtype.BY_OWNER, null, changedAt));
+
+        ArgumentCaptor<OutboxMessageEntity> captor = ArgumentCaptor.forClass(OutboxMessageEntity.class); // captura entidades
+        verify(repository, times(5)).save(captor.capture()); // cinco encolados
+
+        JsonNode flex = payloadOf(captor.getAllValues().get(0)); // cancelacion flexible
+        JsonNode moderate = payloadOf(captor.getAllValues().get(1)); // cancelacion moderada
+        JsonNode late = payloadOf(captor.getAllValues().get(2)); // cancelacion tardia
+        JsonNode noShow = payloadOf(captor.getAllValues().get(3)); // inasistencia
+        JsonNode byOwner = payloadOf(captor.getAllValues().get(4)); // cancelada por propietario
+
+        assertThat(flex.get("status").asText()).isEqualTo("CANCELLED_FLEXIBLE"); // nombre de M3
+        assertThat(moderate.get("status").asText()).isEqualTo("CANCELLED_MODERATE"); // nombre de M3
+        assertThat(late.get("status").asText()).isEqualTo("CANCELLED_STRICT"); // nombre de M3
+        assertThat(noShow.get("status").asText()).isEqualTo("CANCELLED_STRICT"); // nombre de M3
+        assertThat(byOwner.get("status").asText()).isEqualTo("CANCELLED_BY_HOST"); // nombre de M3
+        assertThat(flex.has("cancellation_subtype")).isFalse(); // sin subtipo en el payload
+        assertThat(moderate.has("cancellation_subtype")).isFalse(); // sin subtipo en el payload
+        assertThat(late.has("cancellation_subtype")).isFalse(); // sin subtipo en el payload
+        assertThat(noShow.has("cancellation_subtype")).isFalse(); // sin subtipo en el payload
+        assertThat(byOwner.has("cancellation_subtype")).isFalse(); // sin subtipo en el payload
+    }
+
+    @Test
+    void payloadHasExactlyUc07FieldsWhenNotPending() throws Exception { // fuera de PENDING solo tres campos
+        UUID reservationId = UUID.randomUUID(); // reserva de prueba
+        Instant changedAt = Instant.parse("2026-11-09T12:05:00Z"); // hora del cambio
+        StatusChangedEvent event = new StatusChangedEvent( // evento con datos que no deben publicarse
+                UUID.randomUUID(), reservationId, ReservationStatus.RESERVED, null, changedAt,
+                ActorType.RENTER, 120, "Novedades", "tok_ignored");
+
+        adapter.enqueue(event); // ejecuta encolado
+
+        ArgumentCaptor<OutboxMessageEntity> captor = ArgumentCaptor.forClass(OutboxMessageEntity.class); // captura entidad
+        verify(repository).save(captor.capture()); // un encolado
+        JsonNode json = payloadOf(captor.getValue()); // parsea payload
+
+        assertThat(json.propertyNames()).containsExactlyInAnyOrder( // exactamente los campos del contrato
+                "reservation_id", "status", "status_changed_at");
+    }
+
+    @Test
+    void pendingIncludesPaymentTokenRef() throws Exception { // PENDING agrega el token al final
+        UUID reservationId = UUID.randomUUID(); // reserva de prueba
+        Instant changedAt = Instant.parse("2026-11-09T12:05:00Z"); // hora del cambio
+
+        adapter.enqueue(statusEvent(reservationId, ReservationStatus.PENDING_PAYMENT, null, "tok_abc", changedAt)); // con token
+
+        ArgumentCaptor<OutboxMessageEntity> captor = ArgumentCaptor.forClass(OutboxMessageEntity.class); // captura entidad
+        verify(repository).save(captor.capture()); // un encolado
+        JsonNode json = payloadOf(captor.getValue()); // parsea payload
+
+        assertThat(json.propertyNames()).containsExactlyInAnyOrder( // cuatro campos con el token
+                "reservation_id", "status", "status_changed_at", "payment_token_ref");
+        assertThat(json.get("payment_token_ref").asText()).isEqualTo("tok_abc"); // token correcto
+    }
+
+    @Test
+    void paymentTokenRefIsOmittedWhenNotPending() throws Exception { // token nulo, vacio o fuera de PENDING se omite
+        UUID reservationId = UUID.randomUUID(); // reserva de prueba
+        Instant changedAt = Instant.parse("2026-11-09T12:05:00Z"); // hora del cambio
+
+        adapter.enqueue(statusEvent(reservationId, ReservationStatus.PENDING_PAYMENT, null, null, changedAt)); // token nulo
+        adapter.enqueue(statusEvent(reservationId, ReservationStatus.PENDING_PAYMENT, null, "   ", changedAt)); // token en blanco
+        adapter.enqueue(statusEvent(reservationId, ReservationStatus.CANCELLED, CancellationSubtype.BY_OWNER, "tok_x", changedAt)); // fuera de PENDING
+
+        ArgumentCaptor<OutboxMessageEntity> captor = ArgumentCaptor.forClass(OutboxMessageEntity.class); // captura entidades
+        verify(repository, times(3)).save(captor.capture()); // tres encolados
+
+        assertThat(payloadOf(captor.getAllValues().get(0)).has("payment_token_ref")).isFalse(); // sin token nulo
+        assertThat(payloadOf(captor.getAllValues().get(1)).has("payment_token_ref")).isFalse(); // sin token en blanco
+        assertThat(payloadOf(captor.getAllValues().get(2)).has("payment_token_ref")).isFalse(); // sin token fuera de PENDING
+    }
+
+    @Test
+    void payloadHasNoAmountFields() throws Exception { // el payload nunca lleva montos ni campos internos
+        UUID reservationId = UUID.randomUUID(); // reserva de prueba
+        Instant changedAt = Instant.parse("2026-11-09T12:05:00Z"); // hora del cambio
+        StatusChangedEvent event = new StatusChangedEvent( // evento con todos los campos internos
+                UUID.randomUUID(), reservationId, ReservationStatus.RESERVED, null, changedAt,
+                ActorType.RENTER, 120, "Novedades", "tok_abc");
+
+        adapter.enqueue(event); // ejecuta encolado
+
+        ArgumentCaptor<OutboxMessageEntity> captor = ArgumentCaptor.forClass(OutboxMessageEntity.class); // captura entidad
+        verify(repository).save(captor.capture()); // un encolado
+        JsonNode json = payloadOf(captor.getValue()); // parsea payload
+
+        assertThat(json.has("estimated_total")).isFalse(); // sin total estimado
+        assertThat(json.has("amount")).isFalse(); // sin monto
+        assertThat(json.has("total")).isFalse(); // sin total
+        assertThat(json.has("price")).isFalse(); // sin precio
+        assertThat(json.has("cancellation_subtype")).isFalse(); // sin subtipo
+        assertThat(json.has("actor")).isFalse(); // sin actor
+        assertThat(json.has("anticipation_minutes")).isFalse(); // sin anticipacion
+        assertThat(json.has("completion_notes")).isFalse(); // sin notas de cierre
+    }
+
+    @Test
+    void statusChangedAtIsStableIso() throws Exception { // la hora del cambio se publica tal cual en iso-8601
+        UUID reservationId = UUID.randomUUID(); // reserva de prueba
+        Instant changedAt = Instant.parse("2026-11-09T12:05:00Z"); // hora exacta del cambio
+
+        adapter.enqueue(statusEvent(reservationId, ReservationStatus.RESERVED, null, null, changedAt)); // ejecuta encolado
+
+        ArgumentCaptor<OutboxMessageEntity> captor = ArgumentCaptor.forClass(OutboxMessageEntity.class); // captura entidad
+        verify(repository).save(captor.capture()); // un encolado
+        JsonNode json = payloadOf(captor.getValue()); // parsea payload
+
+        assertThat(json.get("status_changed_at").asText()).isEqualTo("2026-11-09T12:05:00Z"); // iso estable
+    }
+
+    private StatusChangedEvent statusEvent(UUID reservationId,
+                                           ReservationStatus status,
+                                           CancellationSubtype subtype,
+                                           String paymentTokenRef,
+                                           Instant changedAt) { // arma un evento de cambio de estado para las pruebas
+        return new StatusChangedEvent(UUID.randomUUID(), reservationId, status, subtype, changedAt,
+                null, null, null, paymentTokenRef); // datos opcionales nulos salvo el token
+    }
+
+    private JsonNode payloadOf(OutboxMessageEntity entity) throws Exception { // parsea el payload json persistido
+        return objectMapper.readTree(entity.getPayload()); // usa el mapeador jackson 3
     }
 }
