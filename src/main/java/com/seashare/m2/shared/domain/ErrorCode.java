@@ -24,6 +24,9 @@ public enum ErrorCode { // catalogo de codigos de error con mapeo http
     RETRY_NOT_ALLOWED("RETRY_NOT_ALLOWED", 409), // ya hay un cobro en proceso sin rechazo definitivo (CU-03)
     RESERVATION_EXPIRED_REVERSION_REQUIRED("RESERVATION_EXPIRED_REVERSION_REQUIRED", 409), // reserva expirada requiere reversion
     DISPUTE_ALREADY_RESOLVED("DISPUTE_ALREADY_RESOLVED", 409), // disputa ya resuelta
+    DISPUTE_NOT_FOUND("DISPUTE_NOT_FOUND", 404), // disputa de garantia inexistente (CU-16, CU-17)
+    WINDOW_EXPIRED("WINDOW_EXPIRED", 409), // ventana de 24 h vencida, el reclamo no procede (CU-16)
+    CLAIM_ALREADY_EXISTS("CLAIM_ALREADY_EXISTS", 409), // un solo reclamo por disputa (D-08, CU-16)
     INTERNAL_ERROR("INTERNAL_ERROR", 500), // error interno del servidor
     FLEET_SERVICE_UNAVAILABLE("FLEET_SERVICE_UNAVAILABLE", 503), // servicio de flota no disponible
     CALCULATION_UNAVAILABLE("CALCULATION_UNAVAILABLE", 503), // calculo del valor final no disponible
