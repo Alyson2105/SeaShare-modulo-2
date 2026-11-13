@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler { // manejador global de excepciones para respuestas uniformes
@@ -43,6 +44,12 @@ public class GlobalExceptionHandler { // manejador global de excepciones para re
     public ResponseEntity<ErrorBody> handleNotReadable(HttpMessageNotReadableException ex) { // procesa cuerpo de peticion no legible o json malformado
         return ResponseEntity.status(HttpStatus.BAD_REQUEST) // retorna status 400 bad request
                 .body(new ErrorBody(ErrorCode.INVALID_PARAMETERS.getCode(), "Malformed JSON request")); // cuerpo uniforme para json malformado
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorBody> handleNoResource(NoResourceFoundException ex) { // ruta inexistente: 404, no 500
+        return ResponseEntity.status(HttpStatus.NOT_FOUND) // recurso no encontrado
+                .body(new ErrorBody(ErrorCode.RESERVATION_NOT_FOUND.getCode(), "Resource not found")); // cuerpo uniforme
     }
 
     @ExceptionHandler(Exception.class)
