@@ -57,7 +57,7 @@ Cola finance.guarantee-dispute.v1 y flujo CU-18 pendientes.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada.
 
 #### Traceability
 FR-001, FR-005 | SC-001, SC-004 | Sin prueba de CU-18 | Blocked

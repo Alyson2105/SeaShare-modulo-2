@@ -39,7 +39,7 @@ M1 simulado devuelve cuerpo vacío, JSON inválido o operational_status ausente.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar cada variante. | Datos de las precondiciones | El adaptador lanza FLEET_SERVICE_UNAVAILABLE y no considera disponible la embarcación. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Consultar cada variante. | Datos de las precondiciones | El adaptador lanza FLEET_SERVICE_UNAVAILABLE y no considera disponible la embarcación. | Pendiente | Integración: ExternalQueryLogRegistrationTest#statusEmptyBodyThrowsAndRegistersSingleErrorRow, #statusInvalidJsonThrowsAndRegistersSingleErrorRow y #statusMissingFieldThrowsAndRegistersSingleErrorRow pasaron: error FLEET_SERVICE_UNAVAILABLE y registro ERROR. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ No se convierte el error en false; se propaga excepción de dominio.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
-FR-002, FR-006 | SC-003 | [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | In Process
+FR-002, FR-006 | SC-003 | [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#statusEmptyBodyThrowsAndRegistersSingleErrorRow; src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#statusInvalidJsonThrowsAndRegistersSingleErrorRow; src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#statusMissingFieldThrowsAndRegistersSingleErrorRow | In Process

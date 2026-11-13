@@ -57,7 +57,7 @@ Antes de la hora de zarpe el plan prevé 409 TRIP_NOT_STARTED.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
 
 #### Traceability
 FR-003, FR-004, FR-005 | SC-001, SC-003 | Sin prueba de CU-05 | Blocked

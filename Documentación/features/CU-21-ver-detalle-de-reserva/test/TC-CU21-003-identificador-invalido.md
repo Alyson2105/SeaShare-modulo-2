@@ -39,7 +39,7 @@ Identidad de prueba válida y UUID inexistente.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar con identificador malformado y luego con UUID inexistente. | Datos de las precondiciones | 400 INVALID_UUID para formato malformado; 404 RESERVATION_NOT_FOUND para UUID inexistente. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Consultar con identificador malformado y luego con UUID inexistente. | Datos de las precondiciones | 400 INVALID_UUID para formato malformado; 404 RESERVATION_NOT_FOUND para UUID inexistente. | Pendiente | ReservationQueryTest#invalidUuidIs400: exitosa. Comprueba 400 INVALID_UUID; unknownIdIs404 comprueba 404 RESERVATION_NOT_FOUND. No verifica efectos persistidos. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ No se asume UUID versión específica en el parser actual.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; Comprueba 400 INVALID_UUID; unknownIdIs404 comprueba 404 RESERVATION_NOT_FOUND. No verifica efectos persistidos.
 
 #### Traceability
-FR-001, FR-002 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java) | In Process
+FR-001, FR-002 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#invalidUuidIs400 | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#unknownIdIs404 | In Process

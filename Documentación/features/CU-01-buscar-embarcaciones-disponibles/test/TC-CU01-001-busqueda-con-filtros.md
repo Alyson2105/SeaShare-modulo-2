@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU01-001 — Búsqueda con filtros
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar búsqueda con filtros. Requisitos: FR-001, FR-002, FR-003. Criterios: 
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-01 y su endpoint aún no existen; los resultados son expectativas del contrato. CU-01 y adaptador de catálogo lote M1 no están implementados; prueba de CU-11 es solo parcial.
+Existen endpoint y orquestación; las pruebas usan dobles de catálogo y cotización.
 
 ##### Dependencies & Assumptions
 Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java); no demuestran el flujo completo de CU-01.
@@ -39,14 +39,14 @@ Catálogo simulado M1 y cotización lote simulada M3 con valores conocidos.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar GET /api/v1/vessels con fechas, pasajeros y tipo válidos. | Datos de las precondiciones | El plan prevé 200 con embarcaciones coincidentes y estimaciones de M3 sin cálculo local. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Consultar GET /api/v1/vessels con fechas, pasajeros y tipo válidos. | Datos de las precondiciones | El plan prevé 200 con embarcaciones coincidentes y estimaciones de M3 sin cálculo local. | Pendiente | Unitario: VesselSearchServiceTest#filtersByTypeLocally y #filtersByCapacity pasaron con puertos simulados. Falta verificar la combinación de fechas, pasajeros y tipo y la respuesta HTTP completa. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-CU-01 y adaptador de catálogo lote M1 no están implementados; prueba de CU-11 es solo parcial.
+Existen endpoint y orquestación; las pruebas usan dobles de catálogo y cotización.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ CU-01 y adaptador de catálogo lote M1 no están implementados; prueba de CU-11 
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Cobertura parcial; faltan las comprobaciones indicadas en el flujo.
 
 #### Traceability
-FR-001, FR-002, FR-003 | SC-001 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Blocked
+FR-001, FR-002, FR-003 | SC-001 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java#filtersByTypeLocally; src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java#filtersByCapacity | In Process

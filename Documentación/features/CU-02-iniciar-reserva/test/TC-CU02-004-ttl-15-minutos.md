@@ -35,7 +35,7 @@ Solicitud válida: `POST /api/v1/reservations`, `Content-Type: application/json`
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Ejecutar escenario | Crear con ClockPort controlado; comparar created_at y ttl_expires_at de respuesta y fila persistida. | Solicitud válida y variaciones descritas | ttl_expires_at = created_at + exactamente 900 segundos, con precisión del instante almacenado; ambas marcas corresponden al mismo reloj. | Pendiente | No ejecutado |
+| 1 | Ejecutar escenario | Crear con ClockPort controlado; comparar created_at y ttl_expires_at de respuesta y fila persistida. | Solicitud válida y variaciones descritas | ttl_expires_at = created_at + exactamente 900 segundos, con precisión del instante almacenado; ambas marcas corresponden al mismo reloj. | Pendiente | Integración: CreateReservationTest#createsReservationInInitiated pasó: diferencia de 900 segundos en respuesta; unitario: CreateReservationServiceTest#commandCarriesMaxCapacityFromModuleOne pasó con reloj fijo. Falta comparar ambos instantes persistidos con el reloj controlado. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica como comportamiento principal adicional; consultar límites abajo.
@@ -52,7 +52,7 @@ En el límite de 900 segundos la política considera vencida la reserva; la tran
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar resultado y conservar identificadores para consultar las filas; la documentación no implica ejecución.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; los resultados pendientes se detallan en el flujo.
 
 #### Traceability
-FR-012 | SC-001 | [TtlPolicyTest](../../../../src/test/java/com/seashare/m2/reservas/domain/service/TtlPolicyTest.java); [CreateReservationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java) | In Process
+FR-012 | SC-001 | [TtlPolicyTest](../../../../src/test/java/com/seashare/m2/reservas/domain/service/TtlPolicyTest.java); [CreateReservationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java#createsReservationInInitiated; src/test/java/com/seashare/m2/reservas/application/service/CreateReservationServiceTest.java#commandCarriesMaxCapacityFromModuleOne | In Process

@@ -409,3 +409,42 @@ Si el cliente reenvía la petición con el mismo `X-Idempotency-Key` dentro de u
 | **SC-006** | 100% de eventos notificados a Módulo 3 para liquidación de fondos. | Publicación garantizada en RabbitMQ (`reserva.estado.cancelada`). |
 | **SC-007** | Cero cálculos de reembolsos, comisiones o penalidades monetarias en M2. | Verificado en esquemas de datos. |
 | **SC-008** | Cero cancelaciones autorizadas a terceros no legítimos. | Garantizado por validación JWT y código `403 Forbidden`. |
+
+---
+
+## Diferencias entre el plan y la implementacion
+
+### [DIFERENCIA H8-CU04-01] Zona horaria
+- El plan dice: consultar M1 (CU-09) en cada operacion para obtener la zona del puerto; si M1 no responde, rechazar con `503 HARBOR_TIMEZONE_UNAVAILABLE` (L29, L346, L368).
+- El codigo hace: `RequestCancellationService.resolveZone` (L201-L212) lee `reservation.harborTimezone` y lanza `503 HARBOR_TIMEZONE_UNAVAILABLE` si la zona guardada falta o es invalida; no llama a M1.
+- Decision: fuente oficial por ahora es la zona persistida en la reserva; la consulta a CU-09 no esta implementada.
+
+### [DIFERENCIA H8-CU04-02] Identidad
+- El plan dice: header `Authorization` con `Bearer` JWT, `actor`/`actor_id` desde los claims `role`/`sub`, y `401 UNAUTHENTICATED` si falta el token (L52-53, L72, L341).
+- El codigo hace: `CallerIdentityArgumentResolver` (L28-L32) lee `X-User-Id` y `X-User-Role`; no existe `Authorization` ni Bearer. El `401 UNAUTHENTICATED` se emite solo si faltan esos dos headers.
+- Decision: resolver temporal por headers; JWT diferido a una fase posterior.
+
+### [DIFERENCIA H8-CU04-03] Notificacion a M1
+- El plan dice: encolar la senal de estado operativo a M1 por la cola de notificacion de CU-22 con reintentos, backoff y DLQ (L42).
+- El codigo hace: outbox con destino `M1_HTTP` (`ChangeReservationStatusService` L131-L133); el unico adaptador registrado es `FakeFleetStatusNotificationAdapter` (L23-L26), que solo registra el mensaje en log y responde `DELIVERED` sin hacer HTTP.
+- Decision: por ahora solo adaptador fake; no hay cliente HTTP real de notificacion a M1.
+
+### [DIFERENCIA H8-CU04-04] Campos de respuesta
+- El plan dice: `m1_sync_status` = `"ENQUEUED"` y `m3_notification_status` = `"PUBLISHED"` con nulabilidad "No nulo"; `vessel_new_operational_status` tambien "No nulo" (L139-L141).
+- El codigo hace: `m1_sync_status` y `m3_notification_status` salen `null` si ese destino no se encolo (`RequestCancellationService` L142-L145); `vessel_new_operational_status` sale `null` si la reserva no estaba bloqueada en M1 (matriz, L108-L112). Para `CANCELLED` el destino AMQP siempre se encola, asi que `m3_notification_status` sale `PUBLISHED` en la practica.
+- Decision: el codigo admite `null` cuando no hay destino encolado; la tabla del plan queda desactualizada en la nulabilidad.
+
+### [DIFERENCIA H8-CU04-05] Idempotencia
+- El plan dice: header opcional `X-Idempotency-Key` y respuesta `200` identica dentro de 60 segundos ante doble clic (L74, L379).
+- El codigo hace: `CancellationController` no lee `X-Idempotency-Key` y `RequestCancellationService` no usa `IdempotencyPort`; el doble clic recibe `409` (u otro error segun estado), no la respuesta anterior.
+- Decision: idempotencia de 60 s queda fuera de la primera version.
+
+### [DIFERENCIA H8-CU04-06] reason para RENTER
+- El plan dice: `reason` nulo si cancela Arrendatario; la `justification` viaja en un campo aparte (L54, L57).
+- El codigo hace: `auditReason = command.actor() == ActorType.OWNER ? ownerReason : justification` (`RequestCancellationService` L114) y ese valor se envia como `reason` a CU-08 (L122); en la respuesta `reason` queda `null` para RENTER porque `ownerReason` es `null`.
+- Decision: para RENTER la justificacion se envia a CU-08 como `reason`; el plan no refleja eso.
+
+### Clasificacion por anticipacion (sin diferencia)
+- El plan dice: Flexible `>= 72 h`, Moderado `>= 24 h`, limites inclusivos a favor del consumidor (L33-L34, L362-L365).
+- El codigo hace: `CancellationClassifier` compara minutos truncados con umbrales 4320 y 1440 usando `>=`, y rechaza en o despues del zarpe con `INVALID_RESERVATION_STATE` (L17-L32).
+- Decision: cumple el plan; verificado en `CancellationClassifierTest` (`exactly72HoursIsFlexible`, `exactly24HoursIsModerate`, `oneSecondLessThan72HoursIsModerate`, `oneSecondLessThan24HoursIsLate`, `atDepartureIsRejected`).

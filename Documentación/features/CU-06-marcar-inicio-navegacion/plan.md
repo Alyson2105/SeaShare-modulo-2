@@ -208,3 +208,40 @@ No aplica. Operación puntual sobre una reserva individual.
 | **SC-004** | 100% de inicios notifican a M3 para activar póliza | Publicación garantizada en RabbitMQ |
 | **SC-005** | Cero cobros monetarios ejecutados en Módulo 2 | Neutralidad financiera de la interfaz |
 | **SC-006** | Cero registros autorizados a no-propietarios | Control estricto de identidad en JWT |
+
+---
+
+## Diferencias entre el plan y la implementacion
+
+### [DIFERENCIA H8-CU06-01] Zona horaria
+- El plan dice: no define el origen de la zona horaria ni incluye una fila `503` en su tabla de errores (no menciona CU-09); esto contradice el resumen de la auditoria, que suponia que el plan pide consultar M1/CU-09.
+- El codigo hace: `StartNavigationService.resolveZone` (L173-L184) lee `reservation.harborTimezone` y lanza `503 HARBOR_TIMEZONE_UNAVAILABLE` si la zona falta o es invalida.
+- Decision: el codigo anade un fail-safe 503 que el plan no documenta; fuente = zona persistida.
+
+### [DIFERENCIA H8-CU06-02] Identidad
+- El plan dice: header `Authorization` con `Bearer <token>` JWT, legitimacion por claim `sub`, y `401 UNAUTHENTICATED` sin token (L38, L158, L178).
+- El codigo hace: `CallerIdentityArgumentResolver` lee `X-User-Id` y `X-User-Role`; no hay Bearer. Sin esos headers la respuesta es `401 UNAUTHENTICATED`.
+- Decision: resolver temporal por headers; JWT diferido.
+
+### [DIFERENCIA H8-CU06-03] Notificacion a M1
+- El plan dice: encolar la senal de la embarcacion a `IN_NAVIGATION` por la cola de notificacion de CU-22 (L18).
+- El codigo hace: outbox con destino `M1_HTTP`; el unico adaptador es `FakeFleetStatusNotificationAdapter`, que solo loguea y responde `DELIVERED` sin hacer HTTP.
+- Decision: por ahora solo adaptador fake; sin cliente HTTP real.
+
+### [DIFERENCIA H8-CU06-04] insurance_activated
+- El plan dice: `insurance_activated` booleano con valor `true` (L78, L117).
+- El codigo hace: `true` solo si el resultado de CU-08 contiene el destino `AMQP` en `eventsEnqueued` (`StartNavigationService` L130-L131); si no, `false` y el mensaje es `MESSAGE_PUNCTUAL_WITHOUT_INSURANCE`.
+- Decision: el valor depende de que el evento a M3 se haya encolado; no es literal `true`.
+
+### [DIFERENCIA H8-CU06-05] Orden de errores
+- El plan dice: tabla de errores con `400`, `401`, `403`, `404`, `409` y `500`, sin fila `503` (L155-L165).
+- El codigo hace: el orden real es 404, 403, 400 (`delivery_notes`), 409 de estado, 503 de zona, 409 `EARLY_DEPARTURE`, 400 (`actual_departure_at`), 409 `VESSEL_CURRENTLY_IN_NAVIGATION`, 500; hay un 400 despues del 503, cosa que el resumen no contemplaba.
+- Decision: documentar el orden real; el plan carece de la fila 503.
+
+### Sin diferencia (verificado)
+- `EARLY_DEPARTURE` si `now <` hora pactada; `now` igual a la pactada es valido (L83-L86).
+- `actual_departure_at` anterior a la pactada da `400 INVALID_PARAMETERS` (L90-L93); doble clic da `409 TRIP_ALREADY_STARTED` (L163-L165); otra reserva del mismo barco en `IN_NAVIGATION` da `409 VESSEL_CURRENTLY_IN_NAVIGATION` via `existsOtherInNavigation` (L95-L98).
+- `delivery_notes` maximo 1000, blanco = null, validado en el servicio; las notas van a `checkin_event` y no a CU-08 (L124-L128).
+- Mensaje de tardanza (sin tildes) si la salida real `>` pactada + 30 min estrictamente (L132, L190-L195).
+- Identidad: solo `OWNER` con `reservation.isOwner`; si no, `403 PROFILE_NOT_AUTHORIZED` (L144-L149). Sin `idempotency-key`.
+- `vessel_operational_status` es siempre `IN_NAVIGATION` en el codigo (matriz, `case IN_NAVIGATION`), igual que el literal del plan: aqui el campo nunca es `null`, lo que contradice el resumen de la auditoria.

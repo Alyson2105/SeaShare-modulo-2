@@ -26,7 +26,7 @@ Verificar fallo del servicio financiero. Requisitos: FR-007, FR-008. Criterios: 
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-12 es integración saliente; M3 se simula y el modo fake es el predeterminado. No se prueba persistencia de reserva ni bloqueo M1 sin CU-03.
+CU-12 es integración saliente; M3 se simula y el modo fake es el predeterminado. CU-03 está implementado; falta verificar persistencia y ausencia de bloqueo M1 en el flujo de error integrado.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java); su cobertura debe evaluarse por escenario.
@@ -39,14 +39,14 @@ M3 simulado devuelve 422, 503 o error de conexión.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar cálculo para cada fallo. | Datos de las precondiciones | El adaptador lanza CALCULATION_UNAVAILABLE; ante ConnectException admite un reintento. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Consultar cálculo para cada fallo. | Datos de las precondiciones | El adaptador lanza CALCULATION_UNAVAILABLE; ante ConnectException admite un reintento. | Pendiente | Componente WireMock: HttpCalculatedValueAdapterTest#serviceUnavailable503ThrowsCalculationUnavailable y #readTimeoutThrowsCalculationUnavailableWithoutRetry pasaron; unitario: StartPaymentServiceTest#calculationFailureAbortsWithoutTransition pasó con escritor no invocado. Falta comprobar reserva y M1 persistidos en integración. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-No se prueba persistencia de reserva ni bloqueo M1 sin CU-03.
+CU-03 está implementado; falta verificar persistencia y ausencia de bloqueo M1 en el flujo de error integrado.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ No se prueba persistencia de reserva ni bloqueo M1 sin CU-03.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; evidencia parcial, consultar el flujo.
 
 #### Traceability
-FR-007, FR-008 | SC-004 | [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java) | In Process
+FR-007, FR-008 | SC-004 | [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#serviceUnavailable503ThrowsCalculationUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#readTimeoutThrowsCalculationUnavailableWithoutRetry; src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#calculationFailureAbortsWithoutTransition | In Process

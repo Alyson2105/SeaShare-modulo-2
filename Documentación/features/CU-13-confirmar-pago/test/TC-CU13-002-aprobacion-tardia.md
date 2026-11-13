@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU13-002 — Aprobación tras TTL
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -27,7 +27,7 @@ Verificar aprobación tras ttl. Requisitos: FR-003, FR-006. Criterios: SC-002, S
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-13 y su endpoint aún no existen; los resultados son expectativas del contrato. Corte exacto sin gracia; mecanismo de detección tardía del canal B requiere aclaración.
+La lógica de CU-13 y la consulta periódica existen; el endpoint de canal A no se encontró. Corte exacto sin gracia; mecanismo de detección tardía del canal B requiere aclaración.
 
 ##### Dependencies & Assumptions
 Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [ttl](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java); [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-13.
@@ -40,7 +40,7 @@ Reserva EXPIRED por TTL y resultado APPROVED posterior.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Procesar confirmación y observar instrucción de reversión. | Datos de las precondiciones | Plan exige no pasar a RESERVED e instruir reversión: canal A prevé 409 y reversal_required; canal B evento CANCELLED_FLEXIBLE. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Procesar confirmación y observar instrucción de reversión. | Datos de las precondiciones | Plan exige no pasar a RESERVED e instruir reversión: canal A prevé 409 y reversal_required; canal B evento CANCELLED_FLEXIBLE. | Pendiente | Integración: ConfirmPaymentIntegrationTest#lateApprovalPublishesCancelledFlexibleOnceAndKeepsState y #approvedOnExpiredReservationPublishesReversal pasaron: no se reserva y se encola reversión en puerto simulado. Falta entrega real y canal A. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -58,7 +58,7 @@ Corte exacto sin gracia; mecanismo de detección tardía del canal B requiere ac
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; evidencia parcial, consultar el flujo.
 
 #### Traceability
-FR-003, FR-006 | SC-002, SC-003 | [ttl](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java); [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Blocked
+FR-003, FR-006 | SC-002, SC-003 | [ttl](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java); [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java#lateApprovalPublishesCancelledFlexibleOnceAndKeepsState; src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java#approvedOnExpiredReservationPublishesReversal | In Process

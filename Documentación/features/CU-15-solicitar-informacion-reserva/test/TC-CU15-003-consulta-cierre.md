@@ -26,7 +26,7 @@ Verificar consulta de reserva completada. Requisitos: FR-003, FR-006. Criterios:
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-15 y su endpoint aún no existen; los resultados son expectativas del contrato. Registro de check-out depende de CU-07 aún no implementado.
+CU-15 expone un endpoint interno con identidad temporal por headers; JWT de servicio está pendiente. Registro de check-out depende de CU-07 aún no implementado.
 
 ##### Dependencies & Assumptions
 Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-15; no demuestran el flujo completo de CU-15.
@@ -57,7 +57,7 @@ Registro de check-out depende de CU-07 aún no implementado.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
 
 #### Traceability
 FR-003, FR-006 | SC-003 | Sin prueba de CU-15 | Blocked

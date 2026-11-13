@@ -57,7 +57,7 @@ La idempotencia implementada para creación CU-02 no prueba idempotencia de canc
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar los resultados cuando el flujo esté disponible; conservar identificadores para la inspección.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
 
 #### Traceability
 FR-011, FR-015 | SC-001 | Sin prueba de CU-04 | Blocked

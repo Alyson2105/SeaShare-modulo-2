@@ -39,7 +39,7 @@ Modo HTTP y proveedor simulado responde 404 a la consulta individual.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Invocar FleetInfoPort.getVesselInfo. | Datos de las precondiciones | El puerto lanza ReservationRuleException con VESSEL_NOT_FOUND sin reintento. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Invocar FleetInfoPort.getVesselInfo. | Datos de las precondiciones | El puerto lanza ReservationRuleException con VESSEL_NOT_FOUND sin reintento. | Pendiente | Componente WireMock: FleetUnavailableTest#vesselNotFoundOn404WithoutRetry pasó: VESSEL_NOT_FOUND y una llamada. No comprueba la respuesta de todos los consumidores. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ Un código de dominio no es por sí mismo una respuesta HTTP del consumidor.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
-FR-003, FR-007 | SC-004 | [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | In Process
+FR-003, FR-007 | SC-004 | [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java#vesselNotFoundOn404WithoutRetry | In Process

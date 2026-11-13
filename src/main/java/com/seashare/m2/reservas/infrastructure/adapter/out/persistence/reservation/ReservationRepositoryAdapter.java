@@ -168,5 +168,12 @@ public class ReservationRepositoryAdapter implements ReservationRepositoryPort {
     public List<UUID> findPaymentCandidates(Instant since, int batchSize) { // CU-13: candidatos del job de cobro
         return repository.findPaymentCandidates(since, PageRequest.of(0, batchSize)); // pendientes y cierres recientes
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsOtherInNavigation(UUID vesselId, UUID excludeReservationId) { // CU-06: otra travesia activa
+        return repository.existsByVesselIdAndStatusAndIdNot(
+                vesselId, ReservationStatus.IN_NAVIGATION, excludeReservationId); // excluye la reserva evaluada
+    }
 }
 

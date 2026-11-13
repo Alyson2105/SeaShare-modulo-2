@@ -39,7 +39,7 @@ Reservas en INITIATED y PENDING_PAYMENT con transiciones válidas a EXPIRED o PA
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Inspeccionar notificaciones M1 de creación, pago pendiente, expiración y fallo. | Datos de las precondiciones | No se encola M1_HTTP en esas etapas. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Inspeccionar notificaciones M1 de creación, pago pendiente, expiración y fallo. | Datos de las precondiciones | No se encola M1_HTTP en esas etapas. | Pendiente | ChangeReservationStatusServiceTest.java);; ModuleNotificationMatrixTest.java); ModuleNotificationMatrixTest#initiatedAndPendingPaymentNotifyNobody; ModuleNotificationMatrixTest#expiredAndPaymentFailedNotifyNobody: exitosa. Matriz unitaria comprueba ausencia de destino M1; no comprueba cada transición en outbox real. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ CU-02 sí encola evento AMQP de información a M3 al crear; es distinto.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; Matriz unitaria comprueba ausencia de destino M1; no comprueba cada transición en outbox real.
 
 #### Traceability
-FR-001, FR-002 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | In Process
+FR-001, FR-002 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java)  | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#initiatedAndPendingPaymentNotifyNobody | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#expiredAndPaymentFailedNotifyNobody | In Process

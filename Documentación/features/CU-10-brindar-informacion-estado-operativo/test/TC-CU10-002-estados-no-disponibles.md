@@ -39,7 +39,7 @@ M1 simulado devuelve por separado RESERVED, IN_NAVIGATION y MAINTENANCE_CLEANING
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar cada estado mediante el puerto. | Datos de las precondiciones | Cada resultado es false; CU-02 impide crear reserva cuando recibe false. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Consultar cada estado mediante el puerto. | Datos de las precondiciones | Cada resultado es false; CU-02 impide crear reserva cuando recibe false. | Pendiente | Componente WireMock: HttpFleetClientTest#nonAvailableStatusesAreFalse pasó para los tres estados; integración: CreateReservationValidationTest#vesselNotAvailableIs409 pasó con puerto simulado. Falta motivo específico por estado. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ El puerto booleano no comunica al consumidor el motivo específico requerido por
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
-FR-003, FR-004, FR-005 | SC-002 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); [reserva](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java) | In Process
+FR-003, FR-004, FR-005 | SC-002 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); [reserva](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java#nonAvailableStatusesAreFalse; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java#vesselNotAvailableIs409 | In Process

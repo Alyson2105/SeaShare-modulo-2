@@ -39,7 +39,7 @@ Modo HTTP y respuesta M1 con owner y capacidad válidos pero timezone ausente o 
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Invocar consulta con cada respuesta. | Datos de las precondiciones | El adaptador rechaza con HARBOR_TIMEZONE_UNAVAILABLE, sin asumir zona predeterminada. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Invocar consulta con cada respuesta. | Datos de las precondiciones | El adaptador rechaza con HARBOR_TIMEZONE_UNAVAILABLE, sin asumir zona predeterminada. | Pendiente | Componente WireMock: FleetUnavailableTest#missingHarborTimezoneFailsSafe y #invalidHarborTimezoneFailsSafe pasaron con HARBOR_TIMEZONE_UNAVAILABLE. No verifica todos los consumidores ni M1 real. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ El contrato de timezone aún debe acordarse con M1.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
-FR-004, FR-008 | SC-004, SC-005 | [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | In Process
+FR-004, FR-008 | SC-004, SC-005 | [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java#missingHarborTimezoneFailsSafe; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java#invalidHarborTimezoneFailsSafe | In Process

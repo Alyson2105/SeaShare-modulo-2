@@ -39,7 +39,7 @@ Reservas preparadas para transiciones notificables, con guarda m1_blocked.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Transicionar a RESERVED, IN_NAVIGATION y COMPLETED e inspeccionar outbox. | Datos de las precondiciones | Se encolan respectivamente RESERVED, IN_NAVIGATION y MAINTENANCE_CLEANING como estados operativos. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Transicionar a RESERVED, IN_NAVIGATION y COMPLETED e inspeccionar outbox. | Datos de las precondiciones | Se encolan respectivamente RESERVED, IN_NAVIGATION y MAINTENANCE_CLEANING como estados operativos. | Pendiente | ChangeReservationStatusServiceTest.java);; ModuleNotificationMatrixTest.java); ModuleNotificationMatrixTest#reservedNotifiesModuleOneWithReserved; ModuleNotificationMatrixTest#inNavigationAndCompletedNotifyModuleOne: exitosa. Pruebas unitarias verifican mapeo de RESERVED, IN_NAVIGATION y COMPLETED; no prueban entrega HTTP real. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ La matriz es local; adaptador de notificación real a M1 aún no existe.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; Pruebas unitarias verifican mapeo de RESERVED, IN_NAVIGATION y COMPLETED; no prueban entrega HTTP real.
 
 #### Traceability
-FR-001, FR-002 | SC-005 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | In Process
+FR-001, FR-002 | SC-005 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java)  | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#reservedNotifiesModuleOneWithReserved | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#inNavigationAndCompletedNotifyModuleOne | In Process

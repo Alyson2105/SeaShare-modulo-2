@@ -206,3 +206,38 @@ No aplica. Operación puntual sobre una reserva individual.
 | **SC-003** | Cero evaluaciones de daños o cobros ejecutados en M2 | Neutralidad financiera garantizada |
 | **SC-004** | 100% de entregas registradas con hora real | Campo `actual_arrival_at` auditado |
 | **SC-005** | Cero cierres autorizados a no-propietarios | Control estricto de legitimación por JWT |
+
+---
+
+## Diferencias entre el plan y la implementacion
+
+### [DIFERENCIA H8-CU07-01] Disputa de CU-16
+- El plan dice: el endpoint dispara CU-16, crea la disputa en `PENDING` y devuelve `dispute_id` (UUID) y `dispute_window_expires_at` (fecha exacta a 24 horas) (L14, L76-L77, L203).
+- El codigo hace: `EndNavigationService` devuelve `null` en ambos campos, con el comentario "disputa se conectara en CU-16" (L111-L112); el mensaje no menciona la ventana de disputa y no lleva tildes (L32-L38, L158-L163).
+- Decision: la conexion con CU-16 queda pendiente; hoy la respuesta no abre ventana de disputa.
+
+### [DIFERENCIA H8-CU07-02] vessel_operational_status
+- El plan dice: `vessel_operational_status` con valor literal `MAINTENANCE_CLEANING` siempre (L75, L114).
+- El codigo hace: `ModuleNotificationMatrix.decide(IN_NAVIGATION, COMPLETED, false, isM1Blocked)` devuelve `MAINTENANCE_CLEANING` solo si la reserva estaba bloqueada en M1; si no, `null` (`EndNavigationService` L78-L82). Con `null` el mensaje es `MESSAGE_WITHOUT_M1` o `MESSAGE_WITHOUT_M1_REMARKS`, sin la clausula de M1 (L158-L163).
+- Decision: el campo puede ser `null` y el mensaje cambia; el plan no lo contempla.
+
+### [DIFERENCIA H8-CU07-03] Identidad y headers
+- El plan dice: header `Authorization` con `Bearer <token>` JWT obligatorio y `Content-Type: application/json` obligatorio, legitimacion por claim `sub`, y `401 UNAUTHENTICATED` sin token (L36-L37, L160, L178).
+- El codigo hace: `CallerIdentityArgumentResolver` lee `X-User-Id` y `X-User-Role`; no hay Bearer ni validacion de `Content-Type`, y el cuerpo es opcional (`@RequestBody(required = false)`). Sin los dos headers la respuesta es `401 UNAUTHENTICATED`.
+- Decision: resolver temporal por headers; JWT y Content-Type obligatorio no implementados.
+
+### [DIFERENCIA H8-CU07-04] Notificacion a M1
+- El plan dice: encolar la senal de la embarcacion a `MAINTENANCE_CLEANING` por la cola de notificacion de CU-22 (L16).
+- El codigo hace: outbox con destino `M1_HTTP`; el unico adaptador es `FakeFleetStatusNotificationAdapter`, que solo loguea y responde `DELIVERED` sin hacer HTTP.
+- Decision: por ahora solo adaptador fake; sin cliente HTTP real.
+
+### [DIFERENCIA H8-CU07-05] Zona horaria
+- El plan dice: no define el origen de la zona horaria ni incluye una fila `503` en su tabla de errores (no menciona CU-09); esto contradice el resumen de la auditoria, que suponia que el plan pide consultar M1/CU-09.
+- El codigo hace: `EndNavigationService.resolveZone` (L145-L156) lee `reservation.harborTimezone` y lanza `503 HARBOR_TIMEZONE_UNAVAILABLE` si la zona falta o es invalida.
+- Decision: el codigo anade un fail-safe 503 que el plan no documenta; fuente = zona persistida.
+
+### Sin diferencia (verificado)
+- Segundo clic: `409 TRIP_ALREADY_COMPLETED` (L134-L138).
+- `remarks` maximo 2000, blanco = null, validado en el servicio (L123-L132).
+- `actual_arrival_at` sin validacion extra mas alla del parseo del timestamp (L71-L73).
+- Identidad: solo `OWNER` con `reservation.isOwner`; si no, `403 PROFILE_NOT_AUTHORIZED` (L116-L121). Errores en ingles.

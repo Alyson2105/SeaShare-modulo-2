@@ -39,7 +39,7 @@ Reserva IN_NAVIGATION con novedades y guarda m1_blocked; observar outbox.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Confirmar cierre y consultar mensajes asociados. | Datos de las precondiciones | Solicitar MAINTENANCE_CLEANING a M1 y comunicar COMPLETED y novedades a M3; sin cálculo monetario en M2. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Confirmar cierre y consultar mensajes asociados. | Datos de las precondiciones | Solicitar MAINTENANCE_CLEANING a M1 y comunicar COMPLETED y novedades a M3; sin cálculo monetario en M2. | Pendiente | ChangeReservationStatusServiceTest#checkInAndCheckOutTransitionsWork pasó: motor captura novedades en evento simulado; ModuleNotificationMatrixTest#inNavigationAndCompletedNotifyModuleOne pasó: matriz decide MAINTENANCE_CLEANING; falta entrega externa. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ Encolar no demuestra entrega ni plazo de primer intento; payload final M3 pendie
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Blocked; la evidencia solo cubre el componente compartido, el flujo está bloqueado.
 
 #### Traceability
-FR-003, FR-006, FR-007, FR-008 | SC-002, SC-003 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Blocked
+FR-003, FR-006, FR-007, FR-008 | SC-002, SC-003 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#checkInAndCheckOutTransitionsWork; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#inNavigationAndCompletedNotifyModuleOne | Blocked

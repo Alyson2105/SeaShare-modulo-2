@@ -39,7 +39,7 @@ Modo HTTP; proveedor simulado responde 503 de forma persistente o conexión fall
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Invocar la consulta y contar intentos. | Datos de las precondiciones | Máximo dos intentos; ante persistencia se lanza FLEET_SERVICE_UNAVAILABLE. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Invocar la consulta y contar intentos. | Datos de las precondiciones | Máximo dos intentos; ante persistencia se lanza FLEET_SERVICE_UNAVAILABLE. | Pendiente | Componente WireMock: FleetUnavailableTest#double503FailsSafeAfterSingleRetry y #timeoutRetriesOnceThenFailsSafe pasaron con dos intentos y fallo seguro. ExternalQueryLogRegistrationTest#vesselServerError500RegistersErrorRow pasó con un solo intento; el plan exige reintentar 500/502. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ No aplica comportamiento principal adicional.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
-FR-003, FR-008 | SC-004 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | In Process
+FR-003, FR-008 | SC-004 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java#double503FailsSafeAfterSingleRetry; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java#timeoutRetriesOnceThenFailsSafe; src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#vesselServerError500RegistersErrorRow | In Process

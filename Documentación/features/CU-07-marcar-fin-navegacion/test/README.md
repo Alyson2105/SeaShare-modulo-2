@@ -2,7 +2,7 @@
 
 Casos para el contrato propuesto `POST /api/v1/reservations/{reservation_id}/navigation-end`. CU-07 no está implementado; CU-08 ofrece componentes internos. UI y servicios externos requieren pruebas independientes.
 
-**Estado global**: Draft por implementación y contratos pendientes.
+**Estado global**: Draft; un caso conserva contradicción contractual y los demás flujos no están implementados. Evaluado el 2026-11-13.
 
 ## Trazabilidad
 
@@ -47,12 +47,12 @@ Casos para el contrato propuesto `POST /api/v1/reservations/{reservation_id}/nav
 
 | TC | Documentado | Ejecutado | Resultado | Ejecutado por | Fecha | Observaciones |
 |---|---|---|---|---|---|---|
-| TC-CU07-001 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU07-002 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU07-003 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU07-004 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU07-005 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU07-006 | Sí | No | Pendiente | — | — | Draft |
+| TC-CU07-001 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | motor transiciona a COMPLETED y captura novedades en evento simulado; faltan endpoint y hora real. |
+| TC-CU07-002 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | motor rechaza INITIATED a COMPLETED sin escritura; faltan otros estados y HTTP. |
+| TC-CU07-003 | Sí | No | Blocked | Agente automatizado | — | Sin ejecución automatizada del escenario; falta implementación específica. |
+| TC-CU07-004 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | motor captura novedades en evento simulado; matriz decide MAINTENANCE_CLEANING; falta entrega externa. |
+| TC-CU07-005 | Sí | No | Blocked | Agente automatizado | — | Sin ejecución automatizada del escenario; falta implementación específica. |
+| TC-CU07-006 | Sí | No | Draft | Agente automatizado | — | Sin ejecución automatizada del escenario; contrato contradictorio. |
 
 ## Brechas detectadas
 
@@ -70,13 +70,11 @@ Casos para el contrato propuesto `POST /api/v1/reservations/{reservation_id}/nav
 - **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
 - **Blocked**: depende de funcionalidad pendiente.
 
-## Ejecución automatizada — 2026-11-10
+## Ejecución automatizada — 2026-11-13
 
-Se ejecutó `mvn clean test` en una copia aislada del commit `3e4e6a4`, con JDK 25 y compilación configurada para Java 21. El conjunto completo registró **234 pruebas: 132 exitosas, 0 fallos de aserción y 102 errores** al iniciar contextos que requieren Docker/Testcontainers. Maven terminó con `BUILD FAILURE`. Las pruebas con WireMock usaron dobles locales, no los servicios reales.
+`./mvnw -B clean test`: 395 pruebas, 0 fallos, 0 errores, 0 omitidas; BUILD SUCCESS. Las clases siguientes prueban componentes compartidos de CU-08; no implementan el flujo específico de CU-07.
 
-Los resultados siguientes corresponden a clases automatizadas vinculadas a este CU, no a la ejecución íntegra de cada caso documental. Los pasos y el checklist de cada TC permanecen pendientes cuando requieren acciones o comprobaciones adicionales; ningún caso se aprueba por esta ejecución.
-
-| Clase automatizada | Pruebas | Fallos | Errores | Resultado |
-|---|---:|---:|---:|---|
-| [ChangeReservationStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | 25 | 0 | 25 | Bloqueada por Docker/Testcontainers |
-| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | Exitosa |
+| Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
+|---|---:|---:|---:|---:|---|
+| [ChangeReservationStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | 28 | 0 | 0 | 0 | Exitosa |
+| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Exitosa |

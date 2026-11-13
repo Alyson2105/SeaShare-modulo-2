@@ -39,7 +39,7 @@ Dos propietarios con reservas distintas; X-User-Id UUID y X-User-Role OWNER.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar listado como un propietario. | Datos de las precondiciones | 200 con solo las reservas cuyo owner_id corresponde a la identidad de consulta. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Consultar listado como un propietario. | Datos de las precondiciones | 200 con solo las reservas cuyo owner_id corresponde a la identidad de consulta. | Pendiente | ReservationQueryTest#listsOnlyOwnReservations: exitosa. Comprueba tres reservas del propietario; no incluye otro propietario para comprobar exclusión. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ El filtro local por owner_id no prueba la autenticidad de headers ni pertenencia
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; Comprueba tres reservas del propietario; no incluye otro propietario para comprobar exclusión.
 
 #### Traceability
-FR-001, FR-002 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java) | In Process
+FR-001, FR-002 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#listsOnlyOwnReservations | In Process

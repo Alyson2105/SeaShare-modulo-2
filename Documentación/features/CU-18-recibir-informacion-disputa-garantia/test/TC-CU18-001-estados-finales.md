@@ -57,7 +57,7 @@ El spec CU-18 usa ACCEPTED, CU-16 propone COMPLETADO/APPROVED; aclarar mapeo ant
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Draft; sin ejecución automatizada.
 
 #### Traceability
 FR-001, FR-002 | SC-001 | Sin prueba de CU-18 | Draft

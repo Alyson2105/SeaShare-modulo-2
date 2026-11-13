@@ -26,10 +26,10 @@ Verificar filtrado por disponibilidad temporal. Requisitos: FR-002. Criterios: S
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-01 y su endpoint aún no existen; los resultados son expectativas del contrato. La discrepancia afecta resultados y debe resolverse antes de fijar expectativa ejecutable.
+La discrepancia afecta resultados y debe resolverse antes de fijar expectativa ejecutable.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-01; no demuestran el flujo completo de CU-01.
+Ejecución futura con dependencias controladas. Pruebas parciales de componentes: el flujo completo con proveedores reales queda pendiente.
 
 ##### Preconditions & Default Setup
 Barco con reserva solapada y búsqueda por el mismo rango.
@@ -39,7 +39,7 @@ Barco con reserva solapada y búsqueda por el mismo rango.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar catálogo con fechas. | Datos de las precondiciones | El spec excluye verificación de disponibilidad por rango; el plan describe filtrado local por solapamiento. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Consultar catálogo con fechas. | Datos de las precondiciones | El spec excluye verificación de disponibilidad por rango; el plan describe filtrado local por solapamiento. | Pendiente | Contrato contradictorio: spec excluye filtro por rango y plan lo exige. VesselSearchControllerTest#overlappingReservationHidesVessel y VesselSearchServiceTest#excludesVesselsWithOverlappingReservations pasaron y confirman el filtrado implementado; no resuelven el contrato. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ La discrepancia afecta resultados y debe resolverse antes de fijar expectativa e
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Draft. El contrato requiere aclaración.
 
 #### Traceability
-FR-002 | SC-003 | Sin prueba de CU-01 | Draft
+FR-002 | SC-003 | Sin prueba de CU-01 | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java#overlappingReservationHidesVessel; src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java#excludesVesselsWithOverlappingReservations | Draft

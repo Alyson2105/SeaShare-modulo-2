@@ -57,7 +57,7 @@ El plan limita description a 10–2000 caracteres; no ejecutar operaciones finan
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada.
 
 #### Traceability
 FR-005, FR-006, FR-010, FR-011 | SC-004, SC-005 | Sin prueba de CU-16 | Blocked

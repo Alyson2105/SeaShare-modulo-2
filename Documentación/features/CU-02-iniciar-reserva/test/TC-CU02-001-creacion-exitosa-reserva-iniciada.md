@@ -23,7 +23,7 @@ Verificar la creación persistida de una reserva válida. Trazabilidad: FR-001, 
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Flota fake por defecto; CU-02 aún no crea mediante CU-08 (T-24 pendiente); no es fallo al verificar la implementación actual.
+Flota fake por defecto; la integración de prueba usa puertos de flota simulados.
 
 ##### Dependencies & Assumptions
 Backend y base de datos de pruebas disponibles para una ejecución futura; identidad temporal por headers sin Spring Security. [CreateReservationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java); [CreateReservationServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/CreateReservationServiceTest.java); [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java).
@@ -35,7 +35,7 @@ Solicitud válida: `POST /api/v1/reservations`, `Content-Type: application/json`
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Ejecutar escenario | Enviar la solicitud válida y consultar respuesta, reservation, auditoría y outbox por reservation_id. | Solicitud válida y variaciones descritas | 201 Created, Location /api/v1/reservations/{reservation_id}, estado INITIATED y ttl_minutes 15; reservation y ttl_expires_at persistidos; auditoría de creación y una fila reservation.info.provided para M3; sin M1_HTTP. estimated_total se conserva sin cálculo. | Pendiente | No ejecutado |
+| 1 | Ejecutar escenario | Enviar la solicitud válida y consultar respuesta, reservation, auditoría y outbox por reservation_id. | Solicitud válida y variaciones descritas | 201 Created, Location /api/v1/reservations/{reservation_id}, estado INITIATED y ttl_minutes 15; reservation y ttl_expires_at persistidos; auditoría de creación y una fila reservation.info.provided para M3; sin M1_HTTP. estimated_total se conserva sin cálculo. | Pendiente | Integración: CreateReservationTest#createsReservationInInitiated pasó: 201, Location, estado, monto y TTL de respuesta; CreateReservationOutboxIntegrationTest#createsOutboxMessageWithExactSevenFieldsAndBoatId pasó: evento AMQP. Falta comprobar en este escenario auditoría, TTL persistido y ausencia de M1_HTTP. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica como comportamiento principal adicional; consultar límites abajo.
@@ -52,7 +52,7 @@ El relay y la UI están fuera de alcance.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar resultado y conservar identificadores para consultar las filas; la documentación no implica ejecución.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; los resultados pendientes se detallan en el flujo.
 
 #### Traceability
-FR-001, FR-004, FR-011, FR-012, FR-013 | SC-001, SC-003 | [CreateReservationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java); [CreateReservationServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/CreateReservationServiceTest.java); [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java) | In Process
+FR-001, FR-004, FR-011, FR-012, FR-013 | SC-001, SC-003 | [CreateReservationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java); [CreateReservationServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/CreateReservationServiceTest.java); [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java#createsReservationInInitiated; src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java#createsOutboxMessageWithExactSevenFieldsAndBoatId; src/test/java/com/seashare/m2/reservas/application/service/CreateReservationServiceTest.java#creationDelegatesToInitiateUseCase | In Process

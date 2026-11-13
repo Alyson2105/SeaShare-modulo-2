@@ -39,7 +39,7 @@ Reserva con liquidación oficial de M3 supuestamente asociada al pago.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar detalle y verificar rubros y total. | Datos de las precondiciones | El spec exige desglose de alquiler, seguro y depósito literal de M3. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Consultar detalle y verificar rubros y total. | Datos de las precondiciones | El spec exige desglose de alquiler, seguro y depósito literal de M3. | Pendiente | Falta asociación efectiva de rubros oficiales de M3 al pago; ReservationDetailPolicyTest verifica rubros solo con datos introducidos en memoria. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ CU-03 y asociación del cálculo final están pendientes; no atribuir estimated_
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Blocked; prueba unitaria parcial con datos introducidos en memoria. Falta asociación efectiva de rubros oficiales de M3 al pago; ReservationDetailPolicyTest verifica rubros solo con datos introducidos en memoria.
 
 #### Traceability
-FR-003, FR-004, FR-010 | SC-001 | Sin prueba de CU-21 | Blocked
+FR-003, FR-004, FR-010 | SC-001 | Sin prueba de CU-21  | src/test/java/com/seashare/m2/reservas/application/service/ReservationDetailPolicyTest.java#reservedShowsBreakdownAndUsesLiquidatedTotal | Blocked

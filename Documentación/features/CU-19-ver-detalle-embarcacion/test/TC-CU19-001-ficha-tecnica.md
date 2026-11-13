@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU19-001 — Ficha técnica
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar ficha técnica. Requisitos: FR-001, FR-002. Criterios: SC-003.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-19 y su endpoint aún no existen; los resultados son expectativas del contrato. FleetInfo actual solo devuelve propietario, capacidad y zona; CU-19 no existe.
+Endpoints de detalle y cotización implementados; cobertura parcial con dobles, sin verificar servicios reales ni UI. MockMvc verifica ficha y no-store con datos falsos; no verifica ausencia de persistencia ni M1 real.
 
 ##### Dependencies & Assumptions
 Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [flota](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); no demuestran el flujo completo de CU-19.
@@ -39,14 +39,14 @@ Embarcación existente y M1 disponible con ficha completa.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar GET de detalle propuesto. | Datos de las precondiciones | Según plan, 200 con datos técnicos y puerto sin persistir ficha local. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Consultar GET de detalle propuesto. | Datos de las precondiciones | Según plan, 200 con datos técnicos y puerto sin persistir ficha local. | Pendiente | MockMvc verifica ficha y no-store con datos falsos; no verifica ausencia de persistencia ni M1 real. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-FleetInfo actual solo devuelve propietario, capacidad y zona; CU-19 no existe.
+El adaptador de ficha obtiene más datos que FleetInfo; falta comprobar persistencia y M1 real.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ FleetInfo actual solo devuelve propietario, capacidad y zona; CU-19 no existe.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; MockMvc verifica ficha y no-store con datos falsos; no verifica ausencia de persistencia ni M1 real.
 
 #### Traceability
-FR-001, FR-002 | SC-003 | [flota](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | Blocked
+FR-001, FR-002 | SC-003 | [flota](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java)  | src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselDetailControllerTest.java#vesselDetailReturnsFleetDataWithoutCache | In Process

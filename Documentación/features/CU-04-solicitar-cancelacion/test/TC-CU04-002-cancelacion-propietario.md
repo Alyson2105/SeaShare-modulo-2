@@ -39,7 +39,7 @@ Reserva RESERVED previa al zarpe, propietario registrado y causa logística vál
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar cancelación como propietario. | Datos de las precondiciones | Según el plan, 200; CANCELLED y BY_OWNER sin clasificación por franja; motivo registrado. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Solicitar cancelación como propietario. | Datos de las precondiciones | Según el plan, 200; CANCELLED y BY_OWNER sin clasificación por franja; motivo registrado. | Pendiente | ChangeReservationStatusServiceTest#cancelledByOwnerWithMechanicalFailureEnqueuesMaintenance pasó: integración del motor encola mantenimiento para BY_OWNER con avería; falta endpoint y respuesta. |
 | 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | Sin publicación real |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ La captura visual del motivo es UI.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar los resultados cuando el flujo esté disponible; conservar identificadores para la inspección.
+Ejecutado el 2026-11-13: Blocked; la evidencia solo cubre el componente compartido, el flujo está bloqueado.
 
 #### Traceability
-FR-009, FR-010, FR-011 | SC-003 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Blocked
+FR-009, FR-010, FR-011 | SC-003 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#cancelledByOwnerWithMechanicalFailureEnqueuesMaintenance | Blocked

@@ -2,7 +2,7 @@
 
 Documentación del contrato propuesto `POST /api/v1/reservations/{reservation_id}/cancellation`. CU-04 no está implementado; CU-08 aporta componentes internos parciales. La UI y las entregas reales a M1/M3 se validan por separado.
 
-**Estado global**: Draft por funcionalidad y contratos pendientes. Ningún caso se ejecutó.
+**Estado global**: Blocked; los flujos específicos aún no están implementados. Evaluado el 2026-11-13.
 
 ## Trazabilidad
 
@@ -57,15 +57,15 @@ Documentación del contrato propuesto `POST /api/v1/reservations/{reservation_id
 
 | TC | Documentado | Ejecutado | Resultado | Ejecutado por | Fecha | Observaciones |
 |---|---|---|---|---|---|---|
-| TC-CU04-001 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU04-002 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU04-003 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU04-004 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU04-005 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU04-006 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU04-007 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU04-008 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU04-009 | Sí | No | Pendiente | — | — | Blocked |
+| TC-CU04-001 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | integración del motor acepta FLEXIBLE y anticipación suministrados; no calcula umbrales. |
+| TC-CU04-002 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | integración del motor encola mantenimiento para BY_OWNER con avería; falta endpoint y respuesta. |
+| TC-CU04-003 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | integración del motor rechaza cancelar desde PENDING_PAYMENT; faltan demás estados y HTTP. |
+| TC-CU04-004 | Sí | No | Blocked | Agente automatizado | — | Sin ejecución automatizada del escenario; falta implementación específica. |
+| TC-CU04-005 | Sí | No | Blocked | Agente automatizado | — | Sin ejecución automatizada del escenario; falta implementación específica. |
+| TC-CU04-006 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | matriz unitaria decide AVAILABLE; matriz unitaria decide MAINTENANCE_CLEANING; falta flujo de cancelación y entrega. |
+| TC-CU04-007 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | integración del motor verifica subtipo y actor en evento simulado; falta flujo de cancelación y auditoría completa. |
+| TC-CU04-008 | Sí | No | Blocked | Agente automatizado | — | Sin ejecución automatizada del escenario; falta implementación específica. |
+| TC-CU04-009 | Sí | No | Blocked | Agente automatizado | — | Sin ejecución automatizada del escenario; falta implementación específica. |
 
 ## Brechas detectadas
 
@@ -84,13 +84,11 @@ Documentación del contrato propuesto `POST /api/v1/reservations/{reservation_id
 - **Approved**: aprobado después del proceso correspondiente; ninguno en esta tarea.
 - **Blocked**: depende de funcionalidad pendiente.
 
-## Ejecución automatizada — 2026-11-10
+## Ejecución automatizada — 2026-11-13
 
-Se ejecutó `mvn clean test` en una copia aislada del commit `3e4e6a4`, con JDK 25 y compilación configurada para Java 21. El conjunto completo registró **234 pruebas: 132 exitosas, 0 fallos de aserción y 102 errores** al iniciar contextos que requieren Docker/Testcontainers. Maven terminó con `BUILD FAILURE`. Las pruebas con WireMock usaron dobles locales, no los servicios reales.
+`./mvnw -B clean test`: 395 pruebas, 0 fallos, 0 errores, 0 omitidas; BUILD SUCCESS. Las clases siguientes prueban componentes compartidos de CU-08; no implementan el flujo específico de CU-04.
 
-Los resultados siguientes corresponden a clases automatizadas vinculadas a este CU, no a la ejecución íntegra de cada caso documental. Los pasos y el checklist de cada TC permanecen pendientes cuando requieren acciones o comprobaciones adicionales; ningún caso se aprueba por esta ejecución.
-
-| Clase automatizada | Pruebas | Fallos | Errores | Resultado |
-|---|---:|---:|---:|---|
-| [ChangeReservationStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | 25 | 0 | 25 | Bloqueada por Docker/Testcontainers |
-| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | Exitosa |
+| Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
+|---|---:|---:|---:|---:|---|
+| [ChangeReservationStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | 28 | 0 | 0 | 0 | Exitosa |
+| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Exitosa |

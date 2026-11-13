@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU03-006 — Datos obligatorios de pago
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar datos obligatorios de pago. Requisitos: FR-009, FR-014. Criterios rela
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-03 y su endpoint aún no están implementados. Los resultados siguientes son expectativas del plan, no comportamiento observado. No se realiza publicación real ni cobro externo en esta tarea. El token debe ser de prueba; no introducir tarjeta real ni CVV.
+No se realiza publicación real ni cobro externo en esta tarea. El token debe ser de prueba; no introducir tarjeta real ni CVV.
 
 ##### Dependencies & Assumptions
 Entorno futuro con CU-03 implementado, repositorio de reservas y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: Sin prueba de CU-03; no demuestra el flujo completo de CU-03.
@@ -39,7 +39,7 @@ Consentimiento verdadero; preparar variantes independientes omitiendo token, pay
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Enviar cada solicitud al endpoint y revisar estado y outbox. | Datos de las precondiciones | Según el plan, 400 PAYMENT_DATA_INCOMPLETE y no se inicia el cobro. | Pendiente | Contrato pendiente de implementación |
+| 2 | Ejecutar | Enviar cada solicitud al endpoint y revisar estado y outbox. | Datos de las precondiciones | Según el plan, 400 PAYMENT_DATA_INCOMPLETE y no se inicia el cobro. | Pendiente | Integración: PaymentIntegrationTest#missingPaymentTokenIs400 pasó: 400 PAYMENT_DATA_INCOMPLETE. Faltan variantes y comprobación de estado y outbox. |
 | 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ El token debe ser de prueba; no introducir tarjeta real ni CVV.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar resultado cuando se habilite la ejecución; conservar identificadores de reserva y eventos de prueba.
+Ejecutado el 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
 
 #### Traceability
-FR-009, FR-014 | SC-004 | Sin prueba de CU-03 | Blocked
+FR-009, FR-014 | SC-004 | Sin prueba de CU-03 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#missingPaymentTokenIs400 | In Process

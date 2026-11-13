@@ -39,7 +39,7 @@ Preparar reservas que no estén IN_NAVIGATION.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar cierre para cada una. | Datos de las precondiciones | Según el plan, 409 INVALID_RESERVATION_STATE; para COMPLETED prevé TRIP_ALREADY_COMPLETED; sin nueva transición. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Solicitar cierre para cada una. | Datos de las precondiciones | Según el plan, 409 INVALID_RESERVATION_STATE; para COMPLETED prevé TRIP_ALREADY_COMPLETED; sin nueva transición. | Pendiente | ChangeReservationStatusServiceTest#invalidChangeWritesNothing pasó: motor rechaza INITIATED a COMPLETED sin escritura; faltan otros estados y HTTP. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ Estado COMPLETED es terminal; no equivale a idempotencia de respuesta.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Blocked; la evidencia solo cubre el componente compartido, el flujo está bloqueado.
 
 #### Traceability
-FR-001, FR-009 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Blocked
+FR-001, FR-009 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#invalidChangeWritesNothing | Blocked

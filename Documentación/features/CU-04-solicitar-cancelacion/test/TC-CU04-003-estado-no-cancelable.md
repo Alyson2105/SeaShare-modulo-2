@@ -39,7 +39,7 @@ Preparar reservas individuales en INITIATED, PENDING_PAYMENT, PAYMENT_FAILED, IN
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar cancelación activa de cada una. | Datos de las precondiciones | Según el plan, 409 INVALID_RESERVATION_STATE sin nueva transición. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Solicitar cancelación activa de cada una. | Datos de las precondiciones | Según el plan, 409 INVALID_RESERVATION_STATE sin nueva transición. | Pendiente | ChangeReservationStatusServiceTest#cancelFromPendingPaymentIsRejected pasó: integración del motor rechaza cancelar desde PENDING_PAYMENT; faltan demás estados y HTTP. |
 | 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | Sin publicación real |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ La expiración pasiva pertenece a CU-08.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar los resultados cuando el flujo esté disponible; conservar identificadores para la inspección.
+Ejecutado el 2026-11-13: Blocked; la evidencia solo cubre el componente compartido, el flujo está bloqueado.
 
 #### Traceability
-FR-002, FR-004 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Blocked
+FR-002, FR-004 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#cancelFromPendingPaymentIsRejected | Blocked
