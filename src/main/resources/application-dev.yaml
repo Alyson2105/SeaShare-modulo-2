@@ -19,3 +19,5 @@ m2:
       enabled: true                  # Job TTL activo en local
     outbox:
       enabled: true                  # Relay del outbox activo en local (T-03)
+    payments:
+      enabled: true                  # Canal B de CU-13 activo en local

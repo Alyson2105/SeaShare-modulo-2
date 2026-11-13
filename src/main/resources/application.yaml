@@ -53,6 +53,11 @@ m2:
       backoff-multiplier: 5                  # Multiplicador exponencial entre intentos
       jitter-ratio: 0.1                      # Jitter uniforme de +/-10 % sobre cada retardo
       lease-ms: 30000                        # Arriendo de un mensaje reclamado: cubre el timeout de publicacion y M1
+    payments:
+      enabled: false                         # Canal B de CU-13: consulta de cobros (false en la suite)
+      fixed-delay-ms: 5000                   # Ciclo de consulta a modulo 3
+      batch-size: 50                         # Reservas consultadas por ciclo
+      recent-window-minutes: 30              # Ventana para detectar cobros huerfanos tras EXPIRED/PAYMENT_FAILED
 
 seashare:                                  # Integracion con Modulo 1 y Modulo 3 (CU-09 a CU-12)
   fleet:
@@ -71,3 +76,6 @@ seashare:                                  # Integracion con Modulo 1 y Modulo 3
     batch-read-timeout-ms: 1000            # Timeout de lectura de la estimacion en lote
     calculated-value-connect-timeout-ms: 100   # Timeout de conexion del valor calculado (CU-12)
     calculated-value-read-timeout-ms: 1000     # Timeout de lectura del valor calculado (CU-12)
+    payment-status-connect-timeout-ms: 100     # Timeout de conexion de la consulta de cobro (CU-13)
+    payment-status-read-timeout-ms: 500        # Timeout de lectura de la consulta de cobro (CU-13)
+    fake-payment-status: IN_PROCESS            # Estado simulado en modo fake: IN_PROCESS, APPROVED, REJECTED, CANCELLED o EXPIRED

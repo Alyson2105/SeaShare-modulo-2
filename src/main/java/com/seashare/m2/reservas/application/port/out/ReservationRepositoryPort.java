@@ -47,6 +47,12 @@ public interface ReservationRepositoryPort { // puerto de persistencia para el a
     List<UUID> findExpiredBefore(Instant now, int batchSize); // lectura de IDs vencidos (INITIATED o PENDING_PAYMENT) para el scheduler de TTL
 
     /**
+     * Candidatos del job de confirmacion de cobro (CU-13): reservas en PENDING_PAYMENT
+     * y reservas EXPIRED o PAYMENT_FAILED recientes, para detectar cobros huerfanos.
+     */
+    List<UUID> findPaymentCandidates(Instant since, int batchSize); // reservas a consultar en modulo 3
+
+    /**
      * Cuenta las reservas COMPLETED del arrendatario, excluyendo la reserva que se
      * esta consultando. Es un conteo de calendario, no un calculo monetario (CU-21 FR-009).
      */

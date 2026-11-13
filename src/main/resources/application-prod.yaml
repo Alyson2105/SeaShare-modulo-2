@@ -25,6 +25,8 @@ m2:
       enabled: true                  # Job TTL activo (unica instancia o ShedLock, T-05)
     outbox:
       enabled: true                  # Relay del outbox activo (publica con publisher confirms)
+    payments:
+      enabled: true                  # Canal B de CU-13: consulta de cobros a M3
 
 seashare:
   fleet:

@@ -44,4 +44,15 @@ public class FinanceHttpConfig { // crea los clientes REST de modulo 3 con timeo
                 .requestFactory(factory) // aplica la fabrica con timeouts
                 .build(); // sin token: modulo 3 no usa Authorization
     }
+
+    @Bean
+    public RestClient paymentStatusRestClient(FinanceProperties properties) { // cliente de la consulta de cobro (CU-13)
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory(); // fabrica simple con timeouts
+        factory.setConnectTimeout(Duration.ofMillis(properties.getPaymentStatusConnectTimeoutMs())); // 100 ms
+        factory.setReadTimeout(Duration.ofMillis(properties.getPaymentStatusReadTimeoutMs())); // 500 ms
+        return RestClient.builder() // construye el cliente
+                .baseUrl(properties.getBaseUrl()) // uc06 vive en modulo 3
+                .requestFactory(factory) // sin reintentos en el mismo ciclo
+                .build(); // sin Authorization: el contrato de M3 no lo exige
+    }
 }

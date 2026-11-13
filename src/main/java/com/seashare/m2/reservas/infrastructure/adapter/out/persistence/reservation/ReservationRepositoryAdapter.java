@@ -162,5 +162,11 @@ public class ReservationRepositoryAdapter implements ReservationRepositoryPort {
     public long countCompletedByRenterExcluding(UUID renterId, UUID excludeReservationId) { // conteo de viajes completados en M2
         return repository.countByRenterIdAndStatusAndIdNot(renterId, ReservationStatus.COMPLETED, excludeReservationId); // excluye la reserva consultada
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> findPaymentCandidates(Instant since, int batchSize) { // CU-13: candidatos del job de cobro
+        return repository.findPaymentCandidates(since, PageRequest.of(0, batchSize)); // pendientes y cierres recientes
+    }
 }
 

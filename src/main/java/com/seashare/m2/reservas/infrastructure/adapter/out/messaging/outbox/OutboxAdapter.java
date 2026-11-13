@@ -1,5 +1,6 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.messaging.outbox;
 
+import com.seashare.m2.reservas.application.dto.LatePaymentReversalEvent;
 import com.seashare.m2.reservas.application.dto.ReservationInfoProvidedEvent;
 import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
 import com.seashare.m2.reservas.application.dto.OperationalStatusEvent;
@@ -118,6 +119,30 @@ public class OutboxAdapter implements OutboxPort { // adaptador de persistencia 
         entity.setPayload(payload); // payload json con los 4 campos del contrato
         entity.setNextAttemptAt(event.occurredAt()); // programa intento inicial
         repository.save(entity); // persiste mensaje en outbox
+    }
+
+    @Override
+    public void enqueue(LatePaymentReversalEvent event) { // CU-13: reversion del cobro tardio
+        Map<String, Object> payloadMap = new LinkedHashMap<>(); // mapa ordenado para claves json
+        payloadMap.put("reservation_id", event.reservationId().toString()); // reserva que permanece EXPIRED
+        payloadMap.put("status", "CANCELLED_FLEXIBLE"); // unico valor que M3 trata como reembolso del 100 %
+        payloadMap.put("status_changed_at", event.changedAt().toString()); // marca iso-8601 en UTC
+
+        String payload; // variable para almacenar texto json serializado
+        try { // serializacion segura con jackson 3
+            payload = objectMapper.writeValueAsString(payloadMap); // genera texto json
+        } catch (Exception e) { // captura cualquier excepcion de serializacion
+            throw new IllegalStateException("Failed to serialize late payment reversal payload", e); // falla segura
+        }
+
+        OutboxMessageEntity entity = new OutboxMessageEntity(); // instancia entidad outbox
+        entity.setEventId(event.eventId()); // id deterministico para deduplicacion
+        entity.setDestination(DESTINATION_AMQP); // destino amqp hacia modulo 3
+        entity.setExchange(messagingProperties.getExchange()); // exchange de application.yaml
+        entity.setRoutingKey(messagingProperties.getRoutingKeyStatusChanged()); // misma ruta de CU-14
+        entity.setPayload(payload); // payload con el estado literal
+        entity.setNextAttemptAt(event.changedAt()); // programa intento inicial
+        repository.save(entity); // persiste el mensaje
     }
 
     @Override

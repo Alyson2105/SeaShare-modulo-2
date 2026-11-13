@@ -21,6 +21,7 @@ public enum ErrorCode { // catalogo de codigos de error con mapeo http
     VESSEL_NOT_AVAILABLE("VESSEL_NOT_AVAILABLE", 409), // embarcacion no disponible
     VESSEL_CURRENTLY_IN_NAVIGATION("VESSEL_CURRENTLY_IN_NAVIGATION", 409), // embarcacion en navegacion actualmente
     RESERVATION_EXPIRED("RESERVATION_EXPIRED", 409), // reserva expirada por ttl
+    RETRY_NOT_ALLOWED("RETRY_NOT_ALLOWED", 409), // ya hay un cobro en proceso sin rechazo definitivo (CU-03)
     RESERVATION_EXPIRED_REVERSION_REQUIRED("RESERVATION_EXPIRED_REVERSION_REQUIRED", 409), // reserva expirada requiere reversion
     DISPUTE_ALREADY_RESOLVED("DISPUTE_ALREADY_RESOLVED", 409), // disputa ya resuelta
     INTERNAL_ERROR("INTERNAL_ERROR", 500), // error interno del servidor

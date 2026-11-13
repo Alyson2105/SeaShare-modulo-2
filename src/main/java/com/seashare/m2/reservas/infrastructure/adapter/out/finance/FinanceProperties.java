@@ -50,6 +50,12 @@ public class FinanceProperties { // configuracion de conexion con modulo 3 (CU-1
 
     private long calculatedValueReadTimeoutMs = 1000; // timeout de lectura del valor calculado (CU-12)
 
+    private long paymentStatusConnectTimeoutMs = 100; // timeout de conexion de la consulta de cobro (CU-13)
+
+    private long paymentStatusReadTimeoutMs = 500; // timeout de lectura de la consulta de cobro (CU-13)
+
+    private String fakePaymentStatus = "IN_PROCESS"; // estado simulado en modo fake (IN_PROCESS, APPROVED, REJECTED, CANCELLED, EXPIRED)
+
     public String getMode() { // obtiene el modo de adaptadores
         return mode; // retorna fake o http
     }
@@ -112,5 +118,29 @@ public class FinanceProperties { // configuracion de conexion con modulo 3 (CU-1
 
     public void setCalculatedValueReadTimeoutMs(long calculatedValueReadTimeoutMs) { // asigna el timeout de lectura del valor calculado
         this.calculatedValueReadTimeoutMs = calculatedValueReadTimeoutMs; // guarda milisegundos
+    }
+
+    public long getPaymentStatusConnectTimeoutMs() { // timeout de conexion de UC06
+        return paymentStatusConnectTimeoutMs;
+    }
+
+    public void setPaymentStatusConnectTimeoutMs(long paymentStatusConnectTimeoutMs) { // asigna el timeout de conexion
+        this.paymentStatusConnectTimeoutMs = paymentStatusConnectTimeoutMs;
+    }
+
+    public long getPaymentStatusReadTimeoutMs() { // timeout de lectura de UC06
+        return paymentStatusReadTimeoutMs;
+    }
+
+    public void setPaymentStatusReadTimeoutMs(long paymentStatusReadTimeoutMs) { // asigna el timeout de lectura
+        this.paymentStatusReadTimeoutMs = paymentStatusReadTimeoutMs;
+    }
+
+    public String getFakePaymentStatus() { // estado simulado del cobro
+        return fakePaymentStatus;
+    }
+
+    public void setFakePaymentStatus(String fakePaymentStatus) { // asigna el estado simulado
+        this.fakePaymentStatus = fakePaymentStatus;
     }
 }
