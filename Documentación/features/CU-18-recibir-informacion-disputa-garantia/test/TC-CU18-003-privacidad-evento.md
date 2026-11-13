@@ -26,10 +26,10 @@ Verificar contenido del evento. Requisitos: FR-002, FR-003, FR-006. Criterios: S
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La publicación asíncrona de CU-18 aún no existe; los resultados son expectativas del contrato. CU-18 FR-002 permite motivo opcional, pero CU-16, CU-17 y el plan de CU-18 prohíben enviarlo; resolver contrato.
+CU-18 spec FR-002 permite motivo opcional en REJECTED; plan CU-18 y specs CU-16/CU-17 prohíben transmitirlo. Resolver antes de cerrar contrato.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-18; no demuestran el flujo completo de CU-18.
+La evidencia identifica las dependencias usadas; un broker de prueba no demuestra consumo por M3.
 
 ##### Preconditions & Default Setup
 Disputa final con motivo administrativo y datos de reclamo.
@@ -38,9 +38,9 @@ Disputa final con motivo administrativo y datos de reclamo.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Inspeccionar payload serializado dirigido a M3. | Datos de las precondiciones | No incluye montos, instrucciones de pago ni datos de pasarela. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts: verde; verifica cinco campos y ausencia de reason, owner_id y amount en ACCEPTED, sin inspeccionar rechazo administrativo. |
+| 2 | Ejecutar | Inspeccionar payload serializado dirigido a M3. | Datos de las precondiciones | No incluye montos, instrucciones de pago ni datos de pasarela. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts: verde; verifica cinco campos y ausencia de reason, owner_id y amount en ACCEPTED, sin inspeccionar rechazo administrativo. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts: verde; verifica cinco campos y ausencia de reason, owner_id y amount en ACCEPTED, sin inspeccionar rechazo administrativo. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ CU-18 FR-002 permite motivo opcional, pero CU-16, CU-17 y el plan de CU-18 proh�
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Draft; sin ejecución automatizada.
+Corrida 2026-11-13: Draft; evidencia parcial.
 
 #### Traceability
-FR-002, FR-003, FR-006 | SC-002 | Sin prueba de CU-18 | Draft
+FR-002, FR-003, FR-006 | SC-002 | Evidencia: src/test/java/com/seashare/m2/disputa/integration/DisputePublishingIntegrationTest.java#acceptedIsPublishedAsCompletedWithoutAmounts | Draft
