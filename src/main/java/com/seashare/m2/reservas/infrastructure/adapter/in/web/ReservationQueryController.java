@@ -6,6 +6,8 @@ import com.seashare.m2.reservas.application.dto.ReservationViewPage;
 import com.seashare.m2.reservas.application.port.in.ReservationQueryUseCase;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.shared.domain.ErrorCode;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,7 +27,7 @@ public class ReservationQueryController { // controlador rest para consultas pag
     }
 
     @GetMapping
-    public ReservationListResponse listReservations(
+    public ResponseEntity<ReservationListResponse> listReservations(
             CallerIdentity identity, // identidad extraida de encabezados http
             @RequestParam(name = "page", defaultValue = "1") int page, // pagina solicitada por defecto uno
             @RequestParam(name = "limit", defaultValue = "10") int limit, // tamano solicitado por defecto diez
@@ -34,11 +36,13 @@ public class ReservationQueryController { // controlador rest para consultas pag
         ReservationListFilter parsedFilter = ReservationListFilter.from(filter); // valida y traduce el filtro
         ReservationViewPage result = queryService.findReservations(
                 identity.userId(), identity.role(), page, limit, parsedFilter); // ejecuta consulta con filtro
-        return ReservationListResponse.from(result); // construye el payload del contrato CU-20
+        return ResponseEntity.ok() // 200 con el contrato CU-20
+                .cacheControl(CacheControl.noStore()) // datos personales: no almacenar
+                .body(ReservationListResponse.from(result)); // construye el payload
     }
 
     @GetMapping("/{id}")
-    public ReservationDetailResponse getReservation(
+    public ResponseEntity<ReservationDetailResponse> getReservation(
             CallerIdentity identity, // identidad extraida de encabezados http
             @PathVariable("id") String id // identificador recibido como texto en la ruta
     ) { // endpoint para consultar el detalle de una reserva especifica
@@ -51,6 +55,8 @@ public class ReservationQueryController { // controlador rest para consultas pag
 
         ReservationDetailView view = queryService.getReservationDetailView(
                 reservationId, identity.userId(), identity.role()); // consulta detalle completo
-        return ReservationDetailResponse.from(view); // transforma vista a respuesta web
+        return ResponseEntity.ok() // 200 con el contrato CU-21
+                .cacheControl(CacheControl.noStore()) // datos personales: no almacenar
+                .body(ReservationDetailResponse.from(view)); // transforma vista a respuesta web
     }
 }

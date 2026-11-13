@@ -5,6 +5,7 @@ import com.seashare.m2.reservas.application.dto.StartPaymentResult;
 import com.seashare.m2.reservas.application.port.in.StartPaymentUseCase;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.shared.domain.ErrorCode;
+import jakarta.validation.Valid;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,7 +31,7 @@ public class PaymentController { // CU-03: iniciar el pago de una reserva INITIA
     public ResponseEntity<StartPaymentResponse> startPayment(
             CallerIdentity identity, // identidad temporal por headers
             @PathVariable("reservationId") String reservationId, // reserva en INITIATED
-            @RequestBody StartPaymentRequest request) { // politica y datos de pago
+            @Valid @RequestBody StartPaymentRequest request) { // politica y datos de pago
         UUID id = parseUuid(reservationId); // 400 INVALID_UUID
         requireAcceptedPolicy(request); // FR-014
         String token = requirePaymentData(request); // FR-013 / datos de M3

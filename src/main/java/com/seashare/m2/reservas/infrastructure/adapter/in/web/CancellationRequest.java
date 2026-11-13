@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 public record CancellationRequest( // cuerpo opcional de CU-04
 
         @JsonProperty("reason")
+        @Size(max = 500, message = "reason accepts at most 500 characters")
         String reason, // motivo del propietario
 
         @JsonProperty("justification")

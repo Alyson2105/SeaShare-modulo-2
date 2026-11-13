@@ -145,6 +145,21 @@ class CancellationControllerTest { // pruebas MockMvc de CU-04
     }
 
     @Test
+    void oversizedReasonIs400() throws Exception { // limite de texto libre
+        String body = "{\"reason\":\"" + "x".repeat(501) + "\"}";
+
+        mockMvc.perform(post("/api/v1/reservations/{reservation_id}/cancellation", RESERVATION_ID)
+                        .header("X-User-Id", USER_ID.toString())
+                        .header("X-User-Role", "OWNER")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_PARAMETERS"));
+
+        verify(requestCancellationUseCase, never()).execute(any());
+    }
+
+    @Test
     void financeRoleIs403() throws Exception { // rol no autorizado
         mockMvc.perform(post("/api/v1/reservations/{reservation_id}/cancellation", RESERVATION_ID)
                         .header("X-User-Id", USER_ID.toString())

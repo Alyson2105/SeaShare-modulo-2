@@ -239,4 +239,14 @@ class PaymentIntegrationTest { // CU-03: inicio de pago de punta a punta con ada
         assertThat(reservation.ttlExpiresAt())
                 .isBeforeOrEqualTo(java.time.Instant.now().plusSeconds(900)); // nace en CU-02
     }
+
+    @Test
+    void oversizedPaymentTokenIs400() throws Exception { // limite de texto libre
+        ReservationView reservation = createInitiated(LocalDate.of(2027, 6, 1), LocalDate.of(2027, 6, 3));
+        String body = VALID_BODY.replace("tok_12345abcdef", "x".repeat(256));
+
+        pay(reservation.reservationId(), body)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_PARAMETERS"));
+    }
 }
