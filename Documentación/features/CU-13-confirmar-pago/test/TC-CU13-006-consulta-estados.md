@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU13-006 — Consulta del resultado en M3
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -27,7 +27,7 @@ Verificar consulta del resultado en m3. Requisitos: FR-001, FR-003, FR-005. Crit
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-13 y su endpoint aún no existen; los resultados son expectativas del contrato. El job de consulta es propuesto y no está implementado.
+La lógica de CU-13 y la consulta periódica existen; el endpoint de canal A no se encontró. El job de consulta y la lógica del canal B están implementados.
 
 ##### Dependencies & Assumptions
 Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-13; no demuestran el flujo completo de CU-13.
@@ -40,14 +40,14 @@ Reserva PENDING_PAYMENT vigente y M3 simulado responde IN_PROCESS, UNKNOWN o err
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Ejecutar ciclos del canal B. | Datos de las precondiciones | El plan prevé no cambiar el estado y consultar en siguiente ciclo sin asumir aprobación. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Ejecutar ciclos del canal B. | Datos de las precondiciones | El plan prevé no cambiar el estado y consultar en siguiente ciclo sin asumir aprobación. | Pendiente | Unitario: PollPaymentStatusServiceTest#inProcessIsSkipped pasó sin confirmar; componente: HttpPaymentStatusAdapterTest#notFoundMeansRetryNextCycle pasó con UNKNOWN. Falta observar ciclos sucesivos completos y persistencia. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-El job de consulta es propuesto y no está implementado.
+El job de consulta y la lógica del canal B están implementados.
 
 #### Defect Severity Reference
 
@@ -58,7 +58,7 @@ El job de consulta es propuesto y no está implementado.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; evidencia parcial, consultar el flujo.
 
 #### Traceability
-FR-001, FR-003, FR-005 | SC-001, SC-002 | Sin prueba de CU-13 | Blocked
+FR-001, FR-003, FR-005 | SC-001, SC-002 | Lógica de confirmación probada | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/PollPaymentStatusServiceTest.java#inProcessIsSkipped; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpPaymentStatusAdapterTest.java#notFoundMeansRetryNextCycle | In Process

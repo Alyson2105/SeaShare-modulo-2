@@ -27,7 +27,7 @@ Verificar validación del mensaje. Requisitos: FR-002, FR-003. Criterios: SC-001
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-13 y su endpoint aún no existen; los resultados son expectativas del contrato. Autenticación servicio a servicio está pendiente; endpoint aún no existe.
+La lógica de CU-13 y la consulta periódica existen; el endpoint de canal A no se encontró. Autenticación servicio a servicio y endpoint de canal A no están implementados.
 
 ##### Dependencies & Assumptions
 Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-13; no demuestran el flujo completo de CU-13.
@@ -47,7 +47,7 @@ Canal A disponible y payload sin referencia, resultado inválido o fecha inváli
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-Autenticación servicio a servicio está pendiente; endpoint aún no existe.
+Autenticación servicio a servicio y endpoint de canal A no están implementados.
 
 #### Defect Severity Reference
 
@@ -58,7 +58,7 @@ Autenticación servicio a servicio está pendiente; endpoint aún no existe.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
 
 #### Traceability
 FR-002, FR-003 | SC-001 | Sin prueba de CU-13 | Blocked
