@@ -57,14 +57,28 @@ class ErrorCodeTest { // pruebas unitarias del catalogo de errores
     }
 
     @Test
+    void translatesTripNotStarted() { // CU-05: viaje aun no iniciado
+        assertThat(ErrorCode.TRIP_NOT_STARTED.getCode()).isEqualTo("TRIP_NOT_STARTED"); // codigo publico
+        assertThat(ErrorCode.TRIP_NOT_STARTED.getHttpStatus()).isEqualTo(409); // codigo http 409
+        assertThat(ErrorCode.fromInternal("TRIP_NOT_STARTED")).isEqualTo(ErrorCode.TRIP_NOT_STARTED); // traduccion interna
+    }
+
+    @Test
+    void translatesGracePeriodNotElapsed() { // CU-05: tolerancia de inasistencia vigente
+        assertThat(ErrorCode.GRACE_PERIOD_NOT_ELAPSED.getCode()).isEqualTo("GRACE_PERIOD_NOT_ELAPSED"); // codigo publico
+        assertThat(ErrorCode.GRACE_PERIOD_NOT_ELAPSED.getHttpStatus()).isEqualTo(409); // codigo http 409
+        assertThat(ErrorCode.fromInternal("GRACE_PERIOD_NOT_ELAPSED")).isEqualTo(ErrorCode.GRACE_PERIOD_NOT_ELAPSED); // traduccion interna
+    }
+
+    @Test
     void noDuplicateCodes() { // valida cantidad exacta y ausencia de duplicados
         ErrorCode[] values = ErrorCode.values(); // todos los valores del enum
-        assertThat(values).hasSize(27); // 25 previos + EARLY_DEPARTURE y TRIP_ALREADY_STARTED de CU-06
+        assertThat(values).hasSize(29); // 27 previos + TRIP_NOT_STARTED y GRACE_PERIOD_NOT_ELAPSED de CU-05
 
         Set<String> codes = Arrays.stream(values) // flujo de valores
                 .map(ErrorCode::getCode) // extrae cada codigo
                 .collect(Collectors.toSet()); // recolecta en conjunto unico
 
-        assertThat(codes).hasSize(27); // conjunto tiene tamano 27
+        assertThat(codes).hasSize(29); // conjunto tiene tamano 29
     }
 }
