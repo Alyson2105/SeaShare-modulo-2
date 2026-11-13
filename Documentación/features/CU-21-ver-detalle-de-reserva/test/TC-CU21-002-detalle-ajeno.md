@@ -39,7 +39,7 @@ Reserva de un arrendatario y propietario distintos de la identidad de prueba.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar con rol RENTER y OWNER ajenos en solicitudes separadas. | Datos de las precondiciones | 403 RESERVATION_NOT_OWNED para cada identidad ajena. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Consultar con rol RENTER y OWNER ajenos en solicitudes separadas. | Datos de las precondiciones | 403 RESERVATION_NOT_OWNED para cada identidad ajena. | Pendiente | ReservationQueryTest#detailOfOtherUserIs403: exitosa. Comprueba 403 para arrendatario ajeno; no comprueba propietario ajeno ni JWT. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ Headers temporales no demuestran autenticación JWT ni impiden suplantación.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; Comprueba 403 para arrendatario ajeno; no comprueba propietario ajeno ni JWT.
 
 #### Traceability
-FR-001, FR-002 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java) | In Process
+FR-001, FR-002 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#detailOfOtherUserIs403 | In Process
