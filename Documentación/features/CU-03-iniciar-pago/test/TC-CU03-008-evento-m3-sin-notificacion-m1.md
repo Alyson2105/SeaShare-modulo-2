@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU03-008 — Evento M3 sin bloqueo M1
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar evento m3 sin bloqueo m1. Requisitos: FR-006, FR-009. Criterios relaci
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-03 y su endpoint aún no están implementados. Los resultados siguientes son expectativas del plan, no comportamiento observado. No se realiza publicación real ni cobro externo en esta tarea. CU-08 ya notifica M3 y no M1, pero actualmente usa PENDING_PAYMENT en payload; traducción y payload final T-12 pendientes. Relay y cobro real fuera de alcance.
+No se realiza publicación real ni cobro externo en esta tarea. CU-08 emite estado interno PENDING_PAYMENT; el adaptador lo traduce a PENDING para M3. Relay y cobro real fuera de alcance.
 
 ##### Dependencies & Assumptions
 Entorno futuro con CU-03 implementado, repositorio de reservas y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); [estado](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestra el flujo completo de CU-03.
@@ -39,14 +39,14 @@ Reserva válida y dependencias simuladas; observar outbox y adaptador de notific
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Iniciar pago y examinar el evento de estado y las notificaciones M1. | Datos de las precondiciones | El plan exige evento reservation.status.changed con estado PENDING y token para M3; no hay notificación M1_HTTP al pasar a PENDING_PAYMENT. | Pendiente | Contrato pendiente de implementación |
+| 2 | Ejecutar | Iniciar pago y examinar el evento de estado y las notificaciones M1. | Datos de las precondiciones | El plan exige evento reservation.status.changed con estado PENDING y token para M3; no hay notificación M1_HTTP al pasar a PENDING_PAYMENT. | Pendiente | Integración con outbox simulado: PaymentIntegrationTest#pendingEventCarriesPaymentToken pasó para estado interno y token; unitario: ModuleOneNotificationMatrixTest#initiatedAndPendingPaymentNotifyNobody pasó sin destino M1. Falta inspección de payload y ausencia de M1 en flujo integrado. |
 | 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
 
 ##### Edge Cases & Boundary Conditions
-CU-08 ya notifica M3 y no M1, pero actualmente usa PENDING_PAYMENT en payload; traducción y payload final T-12 pendientes. Relay y cobro real fuera de alcance.
+CU-08 emite estado interno PENDING_PAYMENT; el adaptador lo traduce a PENDING para M3. Relay y cobro real fuera de alcance.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ CU-08 ya notifica M3 y no M1, pero actualmente usa PENDING_PAYMENT en payload; t
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar resultado cuando se habilite la ejecución; conservar identificadores de reserva y eventos de prueba.
+Ejecutado el 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
 
 #### Traceability
-FR-006, FR-009 | SC-001 | [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); [estado](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Blocked
+FR-006, FR-009 | SC-001 | [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); [estado](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#pendingEventCarriesPaymentToken; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#initiatedAndPendingPaymentNotifyNobody | In Process
