@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU17-003 — Inmutabilidad terminal
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar inmutabilidad terminal. Requisitos: FR-003. Criterios: SC-002.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-17 y su endpoint aún no existen; los resultados son expectativas del contrato. También aplica al cierre automático del sistema.
+La protección del estado final también aplica al cierre automático del sistema.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-17; no demuestran el flujo completo de CU-17.
+Se emplean las dependencias señaladas en la evidencia; los mocks y servicios externos no acreditan el flujo completo.
 
 ##### Preconditions & Default Setup
 Disputas ACCEPTED y REJECTED independientes.
@@ -38,9 +38,9 @@ Disputas ACCEPTED y REJECTED independientes.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Intentar cambiar cada estado terminal. | Datos de las precondiciones | Según el plan, 409 DISPUTE_ALREADY_RESOLVED sin mutación. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | UpdateDisputeStatusServiceTest#finalDisputeCannotBeChanged: verde con ACCEPTED y repositorio simulado; DisputeFinalStateImmutabilityTest#updateOnFinalDisputeFailsAndRowStaysIntact verifica el trigger sobre REJECTED. No se comprueba HTTP y efectos para ambos estados. |
+| 2 | Ejecutar | Intentar cambiar cada estado terminal. | Datos de las precondiciones | Según el plan, 409 DISPUTE_ALREADY_RESOLVED sin mutación. | Pendiente | UpdateDisputeStatusServiceTest#finalDisputeCannotBeChanged: verde con ACCEPTED y repositorio simulado; DisputeFinalStateImmutabilityTest#updateOnFinalDisputeFailsAndRowStaysIntact verifica el trigger sobre REJECTED. No se comprueba HTTP y efectos para ambos estados. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | UpdateDisputeStatusServiceTest#finalDisputeCannotBeChanged: verde con ACCEPTED y repositorio simulado; DisputeFinalStateImmutabilityTest#updateOnFinalDisputeFailsAndRowStaysIntact verifica el trigger sobre REJECTED. No se comprueba HTTP y efectos para ambos estados. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ También aplica al cierre automático del sistema.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada.
+Corrida 2026-11-13: Partial; evidencia parcial.
 
 #### Traceability
-FR-003 | SC-002 | Sin prueba de CU-17 | Blocked
+FR-003 | SC-002 | Evidencia: src/test/java/com/seashare/m2/disputa/application/service/UpdateDisputeStatusServiceTest.java#finalDisputeCannotBeChanged; src/test/java/com/seashare/m2/disputa/integration/DisputeFinalStateImmutabilityTest.java#updateOnFinalDisputeFailsAndRowStaysIntact | In Process
