@@ -39,7 +39,7 @@ Reserva nueva con pasajeros mayores que maxCapacity devuelta por flota.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Ejecutar creación CU-02 con dicha capacidad. | Datos de las precondiciones | CU-02 rechaza por CAPACITY_EXCEEDED y no crea reserva. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Ejecutar creación CU-02 con dicha capacidad. | Datos de las precondiciones | CU-02 rechaza por CAPACITY_EXCEEDED y no crea reserva. | Pendiente | Integración: CreateReservationTest#rejectsPassengersOverCapacity pasó: 409 CAPACITY_EXCEEDED y cero reservas del arrendatario; flota simulada. La validación se realiza en CU-02. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ FleetInfoPort no recibe pasajeros ni valida capacidad; la validación actual per
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
-FR-002, FR-005, FR-006 | SC-002 | [reserva](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java) | In Process
+FR-002, FR-005, FR-006 | SC-002 | [reserva](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java#rejectsPassengersOverCapacity | In Process

@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU09-007 — Ficha completa y ubicación GPS
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar ficha completa y ubicación gps. Requisitos: FR-001, FR-004. Criterios
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-09 es integración saliente; M1 se simula y el modo fake es el predeterminado. FleetInfo actual solo expone propietario, capacidad y zona; CU-01 y CU-19 no están implementados.
+CU-09 es integración saliente; M1 se simula y el modo fake es el predeterminado. FleetInfo expone propietario, capacidad y zona; los consumidores CU-01 y CU-19 existen y usan DTO de catálogo o detalle con GPS, pero falta matrícula.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: Sin prueba de CU-09; su cobertura debe evaluarse por escenario.
@@ -39,14 +39,14 @@ Proveedor M1 entrega ficha completa, puerto y GPS.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar ficha desde los consumidores CU-01 o CU-19. | Datos de las precondiciones | La especificación espera datos descriptivos y GPS completos para el consumidor. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Solicitar ficha desde los consumidores CU-01 o CU-19. | Datos de las precondiciones | La especificación espera datos descriptivos y GPS completos para el consumidor. | Pendiente | Componente WireMock: HttpVesselReadAdapterTest#mapsFullDetail pasó para nombre, tipo, capacidad, puerto y GPS; VesselDetailControllerTest#vesselDetailReturnsFleetDataWithoutCache pasó con adaptador fake. Falta matrícula y validación integral con M1 real. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-FleetInfo actual solo expone propietario, capacidad y zona; CU-01 y CU-19 no están implementados.
+FleetInfo expone propietario, capacidad y zona; los consumidores CU-01 y CU-19 existen y usan DTO de catálogo o detalle con GPS, pero falta matrícula.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ FleetInfo actual solo expone propietario, capacidad y zona; CU-01 y CU-19 no est
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
-FR-001, FR-004 | SC-005 | Sin prueba de CU-09 | Blocked
+FR-001, FR-004 | SC-005 | Pruebas de detalle ejecutadas | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpVesselReadAdapterTest.java#mapsFullDetail; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselDetailControllerTest.java#vesselDetailReturnsFleetDataWithoutCache | In Process

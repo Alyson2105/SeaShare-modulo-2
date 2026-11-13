@@ -39,7 +39,7 @@ Modo HTTP y puerto de registro observable.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar M1 y observar el registro final de una consulta. | Datos de las precondiciones | Se intenta registrar una entrada VESSEL_INFO con resultado final; fallo de registro no cambia el resultado de consulta. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Consultar M1 y observar el registro final de una consulta. | Datos de las precondiciones | Se intenta registrar una entrada VESSEL_INFO con resultado final; fallo de registro no cambia el resultado de consulta. | Pendiente | Integración: ExternalQueryLogRegistrationTest#vesselInfoOkRegistersOkRow y #registrationFailureDoesNotBreakQuery pasaron: fila OK y consulta exitosa con registro fallido. No garantiza trazabilidad ante fallos del almacén. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ REQUIRES_NEW puede perder el registro si no hay conexión disponible; no demuest
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
-FR-010 | SC-003 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | In Process
+FR-010 | SC-003 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#vesselInfoOkRegistersOkRow; src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#registrationFailureDoesNotBreakQuery | In Process
