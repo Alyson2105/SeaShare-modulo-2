@@ -41,6 +41,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -129,6 +130,8 @@ class EndNavigationServiceTest { // CU-07: reglas de aplicacion del fin de naveg
                 .thenReturn(Optional.of(reservation(ReservationStatus.IN_NAVIGATION, ZONE, m1Blocked)));
         when(clockPort.now()).thenReturn(NOW);
         when(changeReservationStatusUseCase.execute(any())).thenReturn(statusResult());
+        lenient().when(openDisputeUseCase.open(any())).thenReturn( // doble por defecto de la disputa
+                new OpenedDispute(UUID.randomUUID(), RESERVATION_ID, "PENDING", NOW, NOW.plusSeconds(86400)));
     }
 
     @Test
@@ -185,6 +188,8 @@ class EndNavigationServiceTest { // CU-07: reglas de aplicacion del fin de naveg
         when(reservationRepository.findById(RESERVATION_ID))
                 .thenReturn(Optional.of(reservation(ReservationStatus.IN_NAVIGATION, ZONE, true)));
         when(changeReservationStatusUseCase.execute(any())).thenReturn(statusResult());
+        lenient().when(openDisputeUseCase.open(any())).thenReturn( // doble por defecto de la disputa
+                new OpenedDispute(UUID.randomUUID(), RESERVATION_ID, "PENDING", NOW, NOW.plusSeconds(86400)));
         OffsetDateTime informedArrival = OffsetDateTime.parse("2027-04-10T17:30:00-05:00");
 
         EndNavigationResult result = service.execute(command(informedArrival, null));
@@ -401,16 +406,6 @@ class EndNavigationServiceTest { // CU-07: reglas de aplicacion del fin de naveg
 
         assertThat(result.vesselOperationalStatus()).isNull();
         assertThat(result.message()).doesNotContain("senal").contains("ha pasado a Completada.");
-    }
-
-    @Test
-    void disputeFieldsAreAlwaysNull() { // compatibilidad: sin disputa configurada no se inventan datos
-        givenInNavigation(true);
-
-        EndNavigationResult result = service.execute(command(null, null));
-
-        assertThat(result.disputeId()).isNull();
-        assertThat(result.disputeWindowExpiresAt()).isNull();
     }
 
     @Test
