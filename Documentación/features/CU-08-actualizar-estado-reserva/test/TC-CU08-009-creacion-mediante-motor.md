@@ -57,7 +57,7 @@ CU-02 delega la creación en CU-08; el caso requiere verificar directamente el m
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
-FR-001, FR-002, FR-003 | SC-001 | Pruebas de creación ejecutadas | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationTest.java#createsReservationInInitiated; src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#creationWritesAuditRow; src/test/java/com/seashare/m2/reservas/application/service/CreateReservationServiceTest.java#creationDelegatesToInitiateUseCase | In Process
+FR-001, FR-002, FR-003 | SC-001 | Pruebas de creación ejecutadas | Evidencia: src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java#createsReservationInInitiated; src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#creationWritesAuditRow; src/test/java/com/seashare/m2/reservas/application/service/CreateReservationServiceTest.java#creationDelegatesToInitiateUseCase | In Process
