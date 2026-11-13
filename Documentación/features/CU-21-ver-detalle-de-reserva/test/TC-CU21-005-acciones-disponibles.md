@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU21-005 — Acciones según estado
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar acciones según estado. Requisitos: FR-005, FR-021. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. La respuesta actual no incluye available_actions; cancelación y pago dependen de CU-04 y CU-03.
+La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. La respuesta incluye available_actions; los flujos de cancelación y pago requieren integración y pruebas adicionales.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: Sin prueba de CU-21; su cobertura debe evaluarse por escenario.
@@ -39,14 +39,14 @@ Reservas propias en RESERVED e INITIATED.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar detalle y revisar available_actions. | Datos de las precondiciones | El plan exige can_cancel para RESERVED y can_initiate_payment para INITIATED. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Consultar detalle y revisar available_actions. | Datos de las precondiciones | El plan exige can_cancel para RESERVED y can_initiate_payment para INITIATED. | Pendiente | ReservationQueryTest#detailIncludesContractFields: exitosa. Comprueba can_cancel en RESERVED; no demuestra navegación UI ni acción INITIATED para arrendatario. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-La respuesta actual no incluye available_actions; cancelación y pago dependen de CU-04 y CU-03.
+La respuesta incluye available_actions; los flujos de cancelación y pago requieren integración y pruebas adicionales.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ La respuesta actual no incluye available_actions; cancelación y pago dependen d
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; Comprueba can_cancel en RESERVED; no demuestra navegación UI ni acción INITIATED para arrendatario.
 
 #### Traceability
-FR-005, FR-021 | SC-001 | Sin prueba de CU-21 | Blocked
+FR-005, FR-021 | SC-001 | Sin prueba de CU-21  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#detailIncludesContractFields | In Process

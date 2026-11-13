@@ -39,7 +39,7 @@ Reservas RESERVED con m1_blocked y causas ordinaria y avería mecánica.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Cancelar en escenarios independientes. | Datos de las precondiciones | Se encola AVAILABLE para cancelación ordinaria y MAINTENANCE_CLEANING por avería del propietario; sin guarda no se libera. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Cancelar en escenarios independientes. | Datos de las precondiciones | Se encola AVAILABLE para cancelación ordinaria y MAINTENANCE_CLEANING por avería del propietario; sin guarda no se libera. | Pendiente | ChangeReservationStatusServiceTest.java);; ModuleNotificationMatrixTest.java); ModuleNotificationMatrixTest#cancelledAfterReservedNotifiesAvailable; ModuleNotificationMatrixTest#cancelledByOwnerWithMechanicalFailureNotifiesMaintenance; ModuleNotificationMatrixTest#cancelledBeforeReservedDoesNotNotifyModuleOne: exitosa. Matriz unitaria comprueba guarda y mapeos de cancelación; no prueba flujo completo de cancelación. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ La cancelación activa solo se admite desde RESERVED; la matriz pura puede evalu
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; Matriz unitaria comprueba guarda y mapeos de cancelación; no prueba flujo completo de cancelación.
 
 #### Traceability
-FR-001, FR-002 | SC-005 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | In Process
+FR-001, FR-002 | SC-005 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java)  | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#cancelledAfterReservedNotifiesAvailable | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#cancelledByOwnerWithMechanicalFailureNotifiesMaintenance | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#cancelledBeforeReservedDoesNotNotifyModuleOne | In Process

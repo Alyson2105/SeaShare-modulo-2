@@ -39,7 +39,7 @@ Reservas INITIATED y PENDING_PAYMENT con vencimiento conocido y reloj controlado
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Ejecutar expiración exactamente en ttl_expires_at. | Datos de las precondiciones | Cada reserva pasa a EXPIRED; no se encolan notificaciones M1 ni M3 para esa transición. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Ejecutar expiración exactamente en ttl_expires_at. | Datos de las precondiciones | Cada reserva pasa a EXPIRED; no se encolan notificaciones M1 ni M3 para esa transición. | Pendiente | Integración: TtlExpiryIntegrationTest#expiresPendingPaymentPastTtl y #pendingPaymentBeforeTtlIsNotExpired pasaron para PENDING_PAYMENT y ausencia de evento de estado. Falta demostrar ambos estados iniciales y ausencia de M1 en el mismo caso. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ Probar un segundo antes conserva el estado; expiración es del motor y scheduler
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
-FR-002, FR-003, FR-005 | SC-001, SC-003 | [ttl](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java) | In Process
+FR-002, FR-003, FR-005 | SC-001, SC-003 | [ttl](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java#expiresPendingPaymentPastTtl; src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java#pendingPaymentBeforeTtlIsNotExpired | In Process

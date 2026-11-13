@@ -57,7 +57,7 @@ Spec D-01 no define si se admite resolución antes de presentar reclamo.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Draft; sin ejecución automatizada.
 
 #### Traceability
 FR-001, FR-002 | SC-001 | Sin prueba de CU-17 | Draft

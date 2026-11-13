@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU03-007 — Estado o TTL no admisible
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar estado o ttl no admisible. Requisitos: FR-002, FR-007. Criterios relac
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-03 y su endpoint aún no están implementados. Los resultados siguientes son expectativas del plan, no comportamiento observado. No se realiza publicación real ni cobro externo en esta tarea. El vencimiento exacto se verifica con reloj controlado; la expiración pasiva es CU-08.
+No se realiza publicación real ni cobro externo en esta tarea. El vencimiento exacto se verifica con reloj controlado; la expiración pasiva es CU-08.
 
 ##### Dependencies & Assumptions
 Entorno futuro con CU-03 implementado, repositorio de reservas y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: [ttl](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java); no demuestra el flujo completo de CU-03.
@@ -39,7 +39,7 @@ Preparar por separado reserva con estado distinto de INITIATED y reserva INITIAT
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Intentar pagar cada reserva. | Datos de las precondiciones | Según el plan, 409 INVALID_RESERVATION_STATE o 409 RESERVATION_EXPIRED respectivamente, sin iniciar pago. | Pendiente | Contrato pendiente de implementación |
+| 2 | Ejecutar | Intentar pagar cada reserva. | Datos de las precondiciones | Según el plan, 409 INVALID_RESERVATION_STATE o 409 RESERVATION_EXPIRED respectivamente, sin iniciar pago. | Pendiente | Unitario: StartPaymentServiceTest#nonInitiatedReservationIsConflict y #expiredTtlIsConflict pasaron con los códigos de dominio esperados. Falta comprobar HTTP 409 y ausencia de efectos persistidos. |
 | 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ El vencimiento exacto se verifica con reloj controlado; la expiración pasiva es
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar resultado cuando se habilite la ejecución; conservar identificadores de reserva y eventos de prueba.
+Ejecutado el 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
 
 #### Traceability
-FR-002, FR-007 | SC-001 | [ttl](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java) | Blocked
+FR-002, FR-007 | SC-001 | [ttl](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#nonInitiatedReservationIsConflict; src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#expiredTtlIsConflict | In Process

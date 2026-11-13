@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU03-002 — Fallo de cálculo externo
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar fallo de cálculo externo. Requisitos: FR-003, FR-006. Criterios relac
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-03 y su endpoint aún no están implementados. Los resultados siguientes son expectativas del plan, no comportamiento observado. No se realiza publicación real ni cobro externo en esta tarea. La respuesta 503 es contractual y aún no ejecutable.
+No se realiza publicación real ni cobro externo en esta tarea. La respuesta 503 requiere comprobación HTTP en el escenario.
 
 ##### Dependencies & Assumptions
 Entorno futuro con CU-03 implementado, repositorio de reservas y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: Sin prueba de CU-03; no demuestra el flujo completo de CU-03.
@@ -39,14 +39,14 @@ Reserva INITIATED vigente; simular indisponibilidad del cálculo de M3.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Intentar iniciar pago. | Datos de las precondiciones | Según el plan, 503 CALCULATION_UNAVAILABLE; reserva permanece INITIATED con TTL original, sin retención ni notificación M1. | Pendiente | Contrato pendiente de implementación |
+| 2 | Ejecutar | Intentar iniciar pago. | Datos de las precondiciones | Según el plan, 503 CALCULATION_UNAVAILABLE; reserva permanece INITIATED con TTL original, sin retención ni notificación M1. | Pendiente | Unitario: StartPaymentServiceTest#calculationFailureAbortsWithoutTransition pasó: CALCULATION_UNAVAILABLE y escritor no invocado. Faltan HTTP 503 y comprobación de TTL, outbox y M1 persistidos. |
 | 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
 
 ##### Edge Cases & Boundary Conditions
-La respuesta 503 es contractual y aún no ejecutable.
+La respuesta 503 requiere comprobación HTTP en el escenario.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ La respuesta 503 es contractual y aún no ejecutable.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar resultado cuando se habilite la ejecución; conservar identificadores de reserva y eventos de prueba.
+Ejecutado el 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
 
 #### Traceability
-FR-003, FR-006 | SC-001, SC-003 | Sin prueba de CU-03 | Blocked
+FR-003, FR-006 | SC-001, SC-003 | Sin prueba de CU-03 | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#calculationFailureAbortsWithoutTransition | In Process

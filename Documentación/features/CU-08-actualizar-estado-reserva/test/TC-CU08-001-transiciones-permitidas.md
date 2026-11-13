@@ -26,7 +26,7 @@ Verificar transición válida. Requisitos: FR-002, FR-003, FR-004. Criterios: SC
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-08 es un puerto interno, sin endpoint HTTP. La creación inicial mediante CU-08 sigue pendiente T-24; CU-02 crea directamente.
+CU-08 es un puerto interno, sin endpoint HTTP. La creación de CU-02 delega en CU-08; la prueba directa del motor con reloj controlado queda pendiente.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas cuando corresponda. Pruebas relacionadas: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java); su cobertura debe evaluarse por escenario.
@@ -39,14 +39,14 @@ Reserva INITIATED con TTL vigente y comando interno válido.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Invocar ChangeReservationStatusUseCase hacia PENDING_PAYMENT. | Datos de las precondiciones | El estado se persiste como PENDING_PAYMENT y conserva ttl_expires_at; no hay notificación M1. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Invocar ChangeReservationStatusUseCase hacia PENDING_PAYMENT. | Datos de las precondiciones | El estado se persiste como PENDING_PAYMENT y conserva ttl_expires_at; no hay notificación M1. | Pendiente | Integración: ChangeReservationStatusServiceTest#validChangeSavesStatusAndAudit y #initiatedAndPendingPaymentDoNotEnqueueModuleOne pasaron: estado persistido, auditoría simulada y sin M1. Falta aserción del TTL persistido. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-La creación inicial mediante CU-08 sigue pendiente T-24; CU-02 crea directamente.
+La creación de CU-02 delega en CU-08; la prueba directa del motor con reloj controlado queda pendiente.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ La creación inicial mediante CU-08 sigue pendiente T-24; CU-02 crea directament
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
-FR-002, FR-003, FR-004 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java) | In Process
+FR-002, FR-003, FR-004 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#validChangeSavesStatusAndAudit; src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#initiatedAndPendingPaymentDoNotEnqueueModuleOne | In Process

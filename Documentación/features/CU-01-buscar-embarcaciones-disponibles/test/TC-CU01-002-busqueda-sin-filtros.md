@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU01-002 — Catálogo sin filtros
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar catálogo sin filtros. Requisitos: FR-001, FR-002, FR-009. Criterios: 
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-01 y su endpoint aún no existen; los resultados son expectativas del contrato. No equivale a garantizar disponibilidad del calendario ni estado operativo.
+No equivale a garantizar disponibilidad del calendario ni estado operativo.
 
 ##### Dependencies & Assumptions
 Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java); no demuestran el flujo completo de CU-01.
@@ -39,7 +39,7 @@ Catálogo con varias embarcaciones y cotizaciones simuladas.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar GET /api/v1/vessels sin fechas ni pasajeros. | Datos de las precondiciones | El plan prevé 200 y catálogo completo paginado sin filtros de fecha ni capacidad. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Consultar GET /api/v1/vessels sin fechas ni pasajeros. | Datos de las precondiciones | El plan prevé 200 y catálogo completo paginado sin filtros de fecha ni capacidad. | Pendiente | Componente MockMvc: VesselSearchControllerTest#searchWithoutFiltersReturnsFirstPageOfTwenty pasó: 200, 20 resultados de 25 y cotización simulada. Falta verificar el catálogo completo y proveedores reales. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ No equivale a garantizar disponibilidad del calendario ni estado operativo.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Cobertura parcial; faltan las comprobaciones indicadas en el flujo.
 
 #### Traceability
-FR-001, FR-002, FR-009 | SC-003 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Blocked
+FR-001, FR-002, FR-009 | SC-003 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java#searchWithoutFiltersReturnsFirstPageOfTwenty | In Process

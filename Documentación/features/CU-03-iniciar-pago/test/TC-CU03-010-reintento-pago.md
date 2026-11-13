@@ -26,7 +26,7 @@ Verificar reintento de pago rechazado. Requisitos: FR-002, FR-009. Criterios rel
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-03 y su endpoint aún no están implementados. Los resultados siguientes son expectativas del plan, no comportamiento observado. No se realiza publicación real ni cobro externo en esta tarea. Spec limita el inicio a INITIATED, pero el plan permite reintento desde PENDING_PAYMENT; confirmar contrato y clave de idempotencia con M3.
+No se realiza publicación real ni cobro externo en esta tarea. Spec limita el inicio a INITIATED, pero el plan permite reintento desde PENDING_PAYMENT; confirmar contrato y clave de idempotencia con M3.
 
 ##### Dependencies & Assumptions
 Entorno futuro con CU-03 implementado, repositorio de reservas y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: Sin prueba de CU-03; no demuestra el flujo completo de CU-03.
@@ -39,7 +39,7 @@ Reserva PENDING_PAYMENT con cobro REJECTED y TTL vigente, conforme a la nota del
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Intentar nuevamente con token distinto. | Datos de las precondiciones | El plan propone reutilizar cálculo y TTL, incrementar attempt y publicar nuevo evento; requiere resolver la contradicción con FR-002. | Pendiente | Contrato pendiente de implementación |
+| 2 | Ejecutar | Intentar nuevamente con token distinto. | Datos de las precondiciones | El plan propone reutilizar cálculo y TTL, incrementar attempt y publicar nuevo evento; requiere resolver la contradicción con FR-002. | Pendiente | Contrato contradictorio: spec limita a INITIATED y plan permite reintento tras REJECTED. StartPaymentServiceTest#retryAfterRejectedReusesThePersistedCalculation pasó: intento 2 y reutilización; no resuelve el contrato ni verifica el evento. |
 | 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ Spec limita el inicio a INITIATED, pero el plan permite reintento desde PENDING_
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar resultado cuando se habilite la ejecución; conservar identificadores de reserva y eventos de prueba.
+Ejecutado el 2026-11-13: Draft. Contrato pendiente de aclaración.
 
 #### Traceability
-FR-002, FR-009 | SC-001, SC-003 | Sin prueba de CU-03 | Draft
+FR-002, FR-009 | SC-001, SC-003 | Sin prueba de CU-03 | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#retryAfterRejectedReusesThePersistedCalculation | Draft

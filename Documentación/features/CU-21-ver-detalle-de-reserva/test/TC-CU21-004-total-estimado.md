@@ -39,7 +39,7 @@ Reserva propia con estimated_total conocido.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar detalle y comparar el total con el valor persistido. | Datos de las precondiciones | estimated_total se devuelve como cadena decimal del valor guardado sin cálculo de devolución. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Consultar detalle y comparar el total con el valor persistido. | Datos de las precondiciones | estimated_total se devuelve como cadena decimal del valor guardado sin cálculo de devolución. | Pendiente | ReservationQueryTest#detailIncludesContractFields: exitosa. Comprueba que total_paid es numérico; no compara el valor persistido ni verifica ausencia de cálculos. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ Es estimación recibida del cliente, no demuestra desglose oficial de M3.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; Comprueba que total_paid es numérico; no compara el valor persistido ni verifica ausencia de cálculos.
 
 #### Traceability
-FR-003, FR-004 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java) | In Process
+FR-003, FR-004 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#detailIncludesContractFields | In Process

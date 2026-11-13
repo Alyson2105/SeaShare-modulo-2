@@ -35,7 +35,7 @@ Solicitud válida: `POST /api/v1/reservations`, `Content-Type: application/json`
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Ejecutar escenario | Enviar dos veces el mismo cuerpo y clave UUID dentro de 60 segundos; consultar reservation y outbox. | Solicitud válida y variaciones descritas | Ambas respuestas 201 identifican la misma reserva; existe una sola reserva y un solo evento outbox correspondiente. | Pendiente | No ejecutado |
+| 1 | Ejecutar escenario | Enviar dos veces el mismo cuerpo y clave UUID dentro de 60 segundos; consultar reservation y outbox. | Solicitud válida y variaciones descritas | Ambas respuestas 201 identifican la misma reserva; existe una sola reserva y un solo evento outbox correspondiente. | Pendiente | Integración: CreateReservationTest#sameIdempotencyKeyReturnsSameReservation pasó: dos 201, mismo ID y una reserva; CreateReservationOutboxIntegrationTest#idempotentRepeatDoesNotEnqueueAdditionalMessage pasó: mismo ID y un evento. No se controla el límite temporal exacto en estas peticiones. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica como comportamiento principal adicional; consultar límites abajo.
@@ -52,7 +52,7 @@ El adaptador cubre reclamo de clave vencida; la prueba de concurrencia cubre sol
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar resultado y conservar identificadores para consultar las filas; la documentación no implica ejecución.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; los resultados pendientes se detallan en el flujo.
 
 #### Traceability
-FR-011 | SC-001 | [IdempotencyAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/integration/IdempotencyAdapterTest.java); [IdempotencyClaimConcurrencyTest](../../../../src/test/java/com/seashare/m2/reservas/integration/IdempotencyClaimConcurrencyTest.java); [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java) | In Process
+FR-011 | SC-001 | [IdempotencyAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/integration/IdempotencyAdapterTest.java); [IdempotencyClaimConcurrencyTest](../../../../src/test/java/com/seashare/m2/reservas/integration/IdempotencyClaimConcurrencyTest.java); [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java#sameIdempotencyKeyReturnsSameReservation; src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java#idempotentRepeatDoesNotEnqueueAdditionalMessage | In Process

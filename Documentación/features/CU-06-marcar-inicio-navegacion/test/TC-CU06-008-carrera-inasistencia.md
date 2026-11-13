@@ -57,7 +57,7 @@ La prueba requiere CU-05 y CU-06 implementados.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
 
 #### Traceability
 FR-001, FR-005, FR-009 | SC-001, SC-003 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Blocked

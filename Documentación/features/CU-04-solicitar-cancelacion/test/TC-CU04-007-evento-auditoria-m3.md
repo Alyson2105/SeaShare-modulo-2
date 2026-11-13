@@ -39,7 +39,7 @@ Reserva RESERVED válida; observar auditoría y eventos relacionados con la rese
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar cancelación y consultar auditoría y outbox. | Datos de las precondiciones | Se registra actor, fecha, clasificación y datos aplicables; se comunica a M3 el estado y subtipo sin cálculos monetarios en M2. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Solicitar cancelación y consultar auditoría y outbox. | Datos de las precondiciones | Se registra actor, fecha, clasificación y datos aplicables; se comunica a M3 el estado y subtipo sin cálculos monetarios en M2. | Pendiente | ChangeReservationStatusServiceTest#cancelledByRenterStoresSubtypeAndAnticipation pasó: integración del motor verifica subtipo y actor en evento simulado; falta flujo de cancelación y auditoría completa. |
 | 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | Sin publicación real |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ El contrato final de payload M3 T-12 está pendiente; PUBLISHED en plan no demue
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar los resultados cuando el flujo esté disponible; conservar identificadores para la inspección.
+Ejecutado el 2026-11-13: Blocked; la evidencia solo cubre el componente compartido, el flujo está bloqueado.
 
 #### Traceability
-FR-013, FR-014, FR-015 | SC-006, SC-007 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Blocked
+FR-013, FR-014, FR-015 | SC-006, SC-007 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#cancelledByRenterStoresSubtypeAndAnticipation | Blocked

@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU20-005 — Filtro de pestañas
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar filtro de pestañas. Requisitos: FR-007, FR-012. Criterios: SC-002.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. El controlador actual no implementa filter; no asumir rechazo al parámetro.
+La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. El filtro está implementado; faltan pruebas de todos los estados y de UI.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: Sin prueba de CU-20; su cobertura debe evaluarse por escenario.
@@ -39,14 +39,14 @@ Reservas propias en estados activos y cancelados.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar filter=history y filter=cancelled. | Datos de las precondiciones | El plan espera subconjuntos distintos por filtro y metadatos correspondientes. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Solicitar filter=history y filter=cancelled. | Datos de las precondiciones | El plan espera subconjuntos distintos por filtro y metadatos correspondientes. | Pendiente | ReservationQueryTest#listsWithAppliedFilter: exitosa. Comprueba subconjuntos history y cancelled, contadores y estado CANCELLED; no todos los estados del contrato. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-El controlador actual no implementa filter; no asumir rechazo al parámetro.
+El filtro está implementado; faltan pruebas de todos los estados y de UI.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ El controlador actual no implementa filter; no asumir rechazo al parámetro.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; Comprueba subconjuntos history y cancelled, contadores y estado CANCELLED; no todos los estados del contrato.
 
 #### Traceability
-FR-007, FR-012 | SC-002 | Sin prueba de CU-20 | Blocked
+FR-007, FR-012 | SC-002 | Sin prueba de CU-20  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#listsWithAppliedFilter | In Process

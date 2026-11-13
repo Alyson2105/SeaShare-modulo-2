@@ -39,7 +39,7 @@ Reservas RESERVED con m1_blocked verdadero; causas logística y mecánica en sol
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Cancelar como propietario y observar mensajes encolados para M1. | Datos de las precondiciones | La causa logística solicita AVAILABLE; avería solicita MAINTENANCE_CLEANING; otras reservas futuras permanecen intactas. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Cancelar como propietario y observar mensajes encolados para M1. | Datos de las precondiciones | La causa logística solicita AVAILABLE; avería solicita MAINTENANCE_CLEANING; otras reservas futuras permanecen intactas. | Pendiente | ModuleNotificationMatrixTest#cancelledAfterReservedNotifiesAvailable pasó: matriz unitaria decide AVAILABLE; ModuleNotificationMatrixTest#cancelledByOwnerWithMechanicalFailureNotifiesMaintenance pasó: matriz unitaria decide MAINTENANCE_CLEANING; falta flujo de cancelación y entrega. |
 | 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | Sin publicación real |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ El primer intento en menos de un segundo requiere ejecución y medición con rel
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar los resultados cuando el flujo esté disponible; conservar identificadores para la inspección.
+Ejecutado el 2026-11-13: Blocked; la evidencia solo cubre el componente compartido, el flujo está bloqueado.
 
 #### Traceability
-FR-010, FR-011, FR-012 | SC-005 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Blocked
+FR-010, FR-011, FR-012 | SC-005 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#cancelledAfterReservedNotifiesAvailable; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#cancelledByOwnerWithMechanicalFailureNotifiesMaintenance | Blocked

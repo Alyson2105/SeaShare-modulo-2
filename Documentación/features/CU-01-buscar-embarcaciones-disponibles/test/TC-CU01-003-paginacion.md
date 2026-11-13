@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU01-003 — Página de catálogo
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar página de catálogo. Requisitos: FR-003, FR-008. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-01 y su endpoint aún no existen; los resultados son expectativas del contrato. Paginación de catálogo pertenece a CU-01, no al adaptador de lote aislado.
+Paginación de catálogo pertenece a CU-01, no al adaptador de lote aislado.
 
 ##### Dependencies & Assumptions
 Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java); no demuestran el flujo completo de CU-01.
@@ -39,7 +39,7 @@ Catálogo con más de 20 resultados y cotización lote observable.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar página y observar identificadores enviados a M3. | Datos de las precondiciones | El plan prevé página de hasta 20 y cotización solo de IDs visibles. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Consultar página y observar identificadores enviados a M3. | Datos de las precondiciones | El plan prevé página de hasta 20 y cotización solo de IDs visibles. | Pendiente | Componente MockMvc: VesselSearchControllerTest#searchWithoutFiltersReturnsFirstPageOfTwenty pasó: página de 20 de un catálogo simulado de 25. Falta observar los identificadores enviados a M3. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ Paginación de catálogo pertenece a CU-01, no al adaptador de lote aislado.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Cobertura parcial; faltan las comprobaciones indicadas en el flujo.
 
 #### Traceability
-FR-003, FR-008 | SC-001 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Blocked
+FR-003, FR-008 | SC-001 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java#searchWithoutFiltersReturnsFirstPageOfTwenty | In Process

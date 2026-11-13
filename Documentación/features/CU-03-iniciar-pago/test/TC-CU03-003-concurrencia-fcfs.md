@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU03-003 — Contienda FCFS
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar contienda fcfs. Requisitos: FR-005, FR-008. Criterios relacionados: SC
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-03 y su endpoint aún no están implementados. Los resultados siguientes son expectativas del plan, no comportamiento observado. No se realiza publicación real ni cobro externo en esta tarea. La restricción GiST y pruebas del motor no demuestran por sí solas la orquestación FCFS de CU-03.
+No se realiza publicación real ni cobro externo en esta tarea. La restricción GiST y pruebas del motor no demuestran por sí solas la orquestación FCFS de CU-03.
 
 ##### Dependencies & Assumptions
 Entorno futuro con CU-03 implementado, repositorio de reservas y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: [estado](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestra el flujo completo de CU-03.
@@ -39,7 +39,7 @@ Dos titulares con reservas INITIATED vigentes para el mismo barco y fechas super
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Lanzar intentos de pago concurrentes coordinados, y consultar ambas reservas. | Datos de las precondiciones | Una transición a PENDING_PAYMENT como máximo; la perdedora permanece INITIATED y recibe 409 CONCURRENCY_CONFLICT según el plan. | Pendiente | Contrato pendiente de implementación |
+| 2 | Ejecutar | Lanzar intentos de pago concurrentes coordinados, y consultar ambas reservas. | Datos de las precondiciones | Una transición a PENDING_PAYMENT como máximo; la perdedora permanece INITIATED y recibe 409 CONCURRENCY_CONFLICT según el plan. | Pendiente | Integración: PaymentIntegrationTest#overlappingReservationLosesTheFcfsRace pasó: primer pago 200 y segundo 409 secuenciales. Falta carrera simultánea y verificar estado de la perdedora. |
 | 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ La restricción GiST y pruebas del motor no demuestran por sí solas la orquesta
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar resultado cuando se habilite la ejecución; conservar identificadores de reserva y eventos de prueba.
+Ejecutado el 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
 
 #### Traceability
-FR-005, FR-008 | SC-002 | [estado](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Blocked
+FR-005, FR-008 | SC-002 | [estado](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#overlappingReservationLosesTheFcfsRace | In Process

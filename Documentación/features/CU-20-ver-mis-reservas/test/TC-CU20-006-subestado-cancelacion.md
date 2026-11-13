@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU20-006 — Subestado de cancelación
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar subestado de cancelación. Requisitos: FR-005. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. ReservationResponse actual no expone cancellation_subtype.
+La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. La respuesta del listado expone cancellation_subtype; faltan pruebas de otros subtipos y del importe.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: Sin prueba de CU-20; su cobertura debe evaluarse por escenario.
@@ -39,14 +39,14 @@ Reserva propia CANCELLED con subtipo conocido.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar lista y verificar subtipo. | Datos de las precondiciones | El spec exige incluir subestado cualitativo sin alterar importe. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Consultar lista y verificar subtipo. | Datos de las precondiciones | El spec exige incluir subestado cualitativo sin alterar importe. | Pendiente | ReservationQueryTest#listsWithAppliedFilter: exitosa. Comprueba subtipo FLEXIBLE y etiqueta contextual; no compara el importe ni otros subtipos. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-ReservationResponse actual no expone cancellation_subtype.
+La respuesta del listado expone cancellation_subtype; faltan pruebas de otros subtipos y del importe.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ ReservationResponse actual no expone cancellation_subtype.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; Comprueba subtipo FLEXIBLE y etiqueta contextual; no compara el importe ni otros subtipos.
 
 #### Traceability
-FR-005 | SC-001 | Sin prueba de CU-20 | Blocked
+FR-005 | SC-001 | Sin prueba de CU-20  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#listsWithAppliedFilter | In Process

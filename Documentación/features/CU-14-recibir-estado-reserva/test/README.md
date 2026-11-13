@@ -1,28 +1,28 @@
 # CU-14 — Pruebas backend de eventos a M3
 
-Casos de notificación de estado mediante outbox y relay; el payload final para M3 sigue pendiente de T-12.
+Casos de notificación de estado mediante outbox y relay; el payload tiene discrepancias entre spec y plan.
 
-**Estado global**: Draft por integraciones y contratos pendientes.
+**Estado global**: Draft; TC-002 depende de aclarar el contrato del payload. Evaluado el 2026-11-13.
 
 ## Trazabilidad
 
 | TC | Escenario | FR | SC | Test automatizado parcial | Status |
 |---|---|---|---|---|---|
 | [TC-CU14-001](TC-CU14-001-transiciones-publicables.md) | Encolado de transiciones | FR-001, FR-006 | SC-001, SC-003 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | In Process |
-| [TC-CU14-002](TC-CU14-002-payload-contrato.md) | Payload para M3 | FR-001, FR-002, FR-003, FR-004 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Blocked |
+| [TC-CU14-002](TC-CU14-002-payload-contrato.md) | Payload para M3 | FR-001, FR-002, FR-003, FR-004 | SC-001 | [serialización](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java) | Draft |
 | [TC-CU14-003](TC-CU14-003-reintento-broker.md) | Reintentos del relay | FR-005 | SC-001 | [relay](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java) | In Process |
 | [TC-CU14-004](TC-CU14-004-confirmacion-broker.md) | Confirmación del broker | FR-005 | SC-001 | [relay](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java); [integracion](../../../../src/test/java/com/seashare/m2/reservas/integration/OutboxRelayIntegrationTest.java) | In Process |
 | [TC-CU14-005](TC-CU14-005-deduplicacion-consumidor.md) | Entrega duplicada | FR-005 | SC-001 | [deduplicacion](../../../../src/test/java/com/seashare/m2/reservas/integration/EventDeduplicationTest.java) | In Process |
-| [TC-CU14-006](TC-CU14-006-reversion-tardia.md) | Reversión de cobro tardío | FR-001 | SC-001 | Sin prueba de CU-14 | Blocked |
+| [TC-CU14-006](TC-CU14-006-reversion-tardia.md) | Reversión de cobro tardío | FR-001 | SC-001 | [confirmación](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | In Process |
 
 ## Cobertura de requisitos
 
 | FR | Cobertura | TC | Alcance | Motivo / Observación |
 |---|---|---|---|---|
 | FR-001 | Parcial — ver caso y brechas | 001, 002, 006 | Backend | Estados y reversión tardía |
-| FR-002 | Parcial — ver caso y brechas | 002 | Backend | Payload T-12 pendiente |
-| FR-003 | Parcial — ver caso y brechas | 002 | Backend | Subtipo y anticipación pendientes |
-| FR-004 | Parcial — ver caso y brechas | 002 | Backend | Notas pendientes en payload |
+| FR-002 | Parcial — ver caso y brechas | 002 | Backend | Spec y plan discrepan sobre campos |
+| FR-003 | Parcial — ver caso y brechas | 002 | Backend | No se serializan subtipo separado ni anticipación |
+| FR-004 | Parcial — ver caso y brechas | 002 | Backend | No se serializan notas en payload |
 | FR-005 | Parcial — ver caso y brechas | 003, 004, 005 | Backend | Relay y consumidor de prueba |
 | FR-006 | Parcial — ver caso y brechas | 001 | Backend | Sin dinero requiere auditoría integral |
 
@@ -38,18 +38,16 @@ Casos de notificación de estado mediante outbox y relay; el payload final para 
 
 | TC | Documentado | Ejecutado | Resultado | Ejecutado por | Fecha | Observaciones |
 |---|---|---|---|---|---|---|
-| TC-CU14-001 | Sí | No | Pendiente | — | — | In Process |
-| TC-CU14-002 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU14-003 | Sí | No | Pendiente | — | — | In Process |
-| TC-CU14-004 | Sí | No | Pendiente | — | — | In Process |
-| TC-CU14-005 | Sí | No | Pendiente | — | — | In Process |
-| TC-CU14-006 | Sí | No | Pendiente | — | — | Blocked |
+| TC-CU14-001 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Unitario: ModuleOneNotificationMatrixTest#initiatedAndPendingPaymentNotifyNobody y #expiredAndPaymentFailedNotifyNobody pasaron para decisiones locales. Faltan todas las transiciones publicables en outbox persistido. |
+| TC-CU14-002 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | Contrato contradictorio: spec exige actor, subtipo, anticipación y notas; plan no los enumera. OutboxAdapterTest#statusChangedUsesFinanceStatusNames, #pendingIncludesPaymentTokenRef y #cancelledPayloadUsesFinanceStatusAndOmitsSubtype pasaron; serialización omite campos exigidos por spec. |
+| TC-CU14-003 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Unitario: PublishPendingOutboxServiceTest#backoffExactoUnoCincoVeinticincoCientoVeinticincoSegundos y #quintoFalloMarcaDeadConAlerta pasaron con reloj y jitter controlados; falta confirmar los cinco intentos con broker real. |
+| TC-CU14-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: OutboxRelayIntegrationTest#publicaEnRabbitYMarcaPublishedAt pasó con PostgreSQL y RabbitMQ; EventDeduplicationTest#publicarElMismoEventoDosVecesSeProcesaUnaSolaVez comprobó Message-Id en consumidor de prueba. Falta consumo de M3 real. |
+| TC-CU14-005 | Sí | Sí | Passed | Agente automatizado | 2026-11-13 | Integración: EventDeduplicationTest#publicarElMismoEventoDosVecesSeProcesaUnaSolaVez pasó con RabbitMQ: dos copias, una procesada y Message-Id igual al event_id; consumidor es de prueba. |
+| TC-CU14-006 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ConfirmPaymentIntegrationTest#approvedOnExpiredReservationPublishesReversal pasó: EXPIRED se conserva y se encola evento de reversión en puerto simulado. Falta verificar payload y entrega real a M3. |
 
 ## Brechas detectadas
 
-1. [Contexto](../../../context/implementContext.md): payload final M3 y mapeo PENDING/CANCELLED_* pendientes T-12.
 2. Evento de información `reservation.info.provided` se emite al crear reserva; es distinto del evento de estado.
-3. Aprobación tardía depende de CU-13 y mapeo de reversión todavía no implementados.
 4. Publisher confirm acredita recepción por broker, no procesamiento por M3; deduplicación solo demostrada por consumidor de prueba.
 5. El relay marca dead tras quinto fallo, pero aún no republica a DLQ; primer intento en 500 ms requiere medición.
 6. Spec exige actor, subtipo y novedades, mientras el plan de M3 enumera un payload distinto; aclarar contrato final.
@@ -61,16 +59,16 @@ Casos de notificación de estado mediante outbox y relay; el payload final para 
 - **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
 - **Blocked**: depende de funcionalidad pendiente.
 
-## Ejecución automatizada — 2026-11-10
+## Ejecución automatizada — 2026-11-13
 
-Se ejecutó `mvn clean test` en una copia aislada del commit `3e4e6a4`, con JDK 25 y compilación configurada para Java 21. El conjunto completo registró **234 pruebas: 132 exitosas, 0 fallos de aserción y 102 errores** al iniciar contextos que requieren Docker/Testcontainers. Maven terminó con `BUILD FAILURE`. Las pruebas con WireMock usaron dobles locales, no los servicios reales.
+`./mvnw -B clean test`: 395 pruebas, 0 fallos, 0 errores, 0 omitidas; BUILD SUCCESS. RabbitMQ y PostgreSQL se ejecutaron con Testcontainers; M3 real no se probó.
 
-Los resultados siguientes corresponden a clases automatizadas vinculadas a este CU, no a la ejecución íntegra de cada caso documental. Los pasos y el checklist de cada TC permanecen pendientes cuando requieren acciones o comprobaciones adicionales; ningún caso se aprueba por esta ejecución.
-
-| Clase automatizada | Pruebas | Fallos | Errores | Resultado |
-|---|---:|---:|---:|---|
-| [ChangeReservationStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | 25 | 0 | 25 | Bloqueada por Docker/Testcontainers |
-| [EventDeduplicationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/EventDeduplicationTest.java) | 1 | 0 | 1 | Bloqueada por Docker/Testcontainers |
-| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | Exitosa |
-| [OutboxRelayIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/OutboxRelayIntegrationTest.java) | 3 | 0 | 3 | Bloqueada por Docker/Testcontainers |
-| [PublishPendingOutboxServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java) | 10 | 0 | 0 | Exitosa |
+| Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
+|---|---:|---:|---:|---:|---|
+| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Exitosa |
+| [OutboxAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java) | 15 | 0 | 0 | 0 | Exitosa |
+| [FinanceStatusMapperTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/FinanceStatusMapperTest.java) | 13 | 0 | 0 | 0 | Exitosa |
+| [PublishPendingOutboxServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java) | 10 | 0 | 0 | 0 | Exitosa |
+| [OutboxRelayIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/OutboxRelayIntegrationTest.java) | 4 | 0 | 0 | 0 | Exitosa |
+| [EventDeduplicationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/EventDeduplicationTest.java) | 1 | 0 | 0 | 0 | Exitosa |
+| [ConfirmPaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | 6 | 0 | 0 | 0 | Exitosa |

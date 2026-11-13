@@ -26,7 +26,7 @@ Verificar información aún no disponible. Requisitos: FR-003, FR-004, FR-008. C
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-12 es integración saliente; M3 se simula y el modo fake es el predeterminado. El límite evalúa si cabe la próxima espera; no demuestra duración máxima de toda llamada HTTP.
+CU-12 es integración saliente; M3 se simula y el modo fake es el predeterminado. El plan prevé reintentos 404; el adaptador actual responde de inmediato sin reintentar.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java); su cobertura debe evaluarse por escenario.
@@ -39,14 +39,14 @@ M3 simulado responde 404 y luego 200 o mantiene 404; reloj y retrasos controlado
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar cálculo y contar intentos y presupuesto. | Datos de las precondiciones | El adaptador reintenta 404 hasta el límite configurado y presupuesto; si persiste devuelve CALCULATION_UNAVAILABLE. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Solicitar cálculo y contar intentos y presupuesto. | Datos de las precondiciones | El adaptador reintenta 404 hasta el límite configurado y presupuesto; si persiste devuelve CALCULATION_UNAVAILABLE. | Pendiente | Componente WireMock: HttpCalculatedValueAdapterTest#notFoundFailsImmediatelyWithoutRetry y #persistentNotFoundThrowsCalculationUnavailable pasaron: un único POST y error. El plan espera hasta tres reintentos de 300 ms; la expectativa de reintento no está satisfecha. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-El límite evalúa si cabe la próxima espera; no demuestra duración máxima de toda llamada HTTP.
+El plan prevé reintentos 404; el adaptador actual responde de inmediato sin reintentar.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ El límite evalúa si cabe la próxima espera; no demuestra duración máxima de
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; evidencia parcial, consultar el flujo.
 
 #### Traceability
-FR-003, FR-004, FR-008 | SC-003, SC-004 | [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java) | In Process
+FR-003, FR-004, FR-008 | SC-003, SC-004 | [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#notFoundFailsImmediatelyWithoutRetry; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#persistentNotFoundThrowsCalculationUnavailable | In Process

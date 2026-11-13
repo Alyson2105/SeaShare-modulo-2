@@ -57,7 +57,7 @@ Evaluar también zona inválida conforme se defina el contrato.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
 
 #### Traceability
 FR-004, FR-012 | SC-001 | Sin prueba de CU-05 | Blocked

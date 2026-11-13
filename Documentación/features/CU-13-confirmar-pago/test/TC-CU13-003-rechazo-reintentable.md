@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU13-003 — Rechazo con TTL vigente
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -27,7 +27,7 @@ Verificar rechazo con ttl vigente. Requisitos: FR-005. Criterios: SC-002.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-13 y su endpoint aún no existen; los resultados son expectativas del contrato. Reintento de cobro depende de CU-03 y de clave por intento.
+La lógica de CU-13 y la consulta periódica existen; el endpoint de canal A no se encontró. Reintento de cobro depende de CU-03 y de clave por intento.
 
 ##### Dependencies & Assumptions
 Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); no demuestran el flujo completo de CU-13.
@@ -40,7 +40,7 @@ Reserva PENDING_PAYMENT vigente y resultado REJECTED con motivo.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Procesar resultado. | Datos de las precondiciones | La reserva permanece PENDING_PAYMENT con motivo registrado y TTL original; no se notifica a M1. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Procesar resultado. | Datos de las precondiciones | La reserva permanece PENDING_PAYMENT con motivo registrado y TTL original; no se notifica a M1. | Pendiente | Integración: ConfirmPaymentIntegrationTest#rejectedChargeKeepsPendingPaymentAndAllowsRetry pasó: estado pendiente y nuevo token. Falta comprobar motivo, TTL original y ausencia de M1 en ese escenario. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -58,7 +58,7 @@ Reintento de cobro depende de CU-03 y de clave por intento.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; evidencia parcial, consultar el flujo.
 
 #### Traceability
-FR-005 | SC-002 | [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Blocked
+FR-005 | SC-002 | [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java#rejectedChargeKeepsPendingPaymentAndAllowsRetry | In Process

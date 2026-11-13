@@ -39,7 +39,7 @@ Reserva existente con versión conocida y comando con expected_version diferente
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Invocar transición interna válida con versión obsoleta. | Datos de las precondiciones | El servicio rechaza con VersionConflictException sin sobrescribir la reserva. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Invocar transición interna válida con versión obsoleta. | Datos de las precondiciones | El servicio rechaza con VersionConflictException sin sobrescribir la reserva. | Pendiente | Integración: ChangeReservationStatusServiceTest#versionConflictRaisesVERSION_CONFLICT pasó al guardar una copia obsoleta mediante repositorio. Falta comprobar la invocación del servicio y la reserva tras el rechazo. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ El motor interno no es endpoint HTTP; 409 es contrato de presentación, no resul
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
-FR-004, FR-006 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | In Process
+FR-004, FR-006 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#versionConflictRaisesVERSION_CONFLICT | In Process

@@ -40,7 +40,7 @@ M3 responde estimación individual con importe nulo, ilegible, cero o negativo.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar estimación individual para cada variante. | Datos de las precondiciones | El adaptador rechaza con QUOTATION_UNAVAILABLE; no inventa un importe. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Solicitar estimación individual para cada variante. | Datos de las precondiciones | El adaptador rechaza con QUOTATION_UNAVAILABLE; no inventa un importe. | Pendiente | Componente WireMock: HttpIndividualEstimateAdapterTest#zeroTotalThrowsQuotationUnavailable, #negativeTotalThrowsQuotationUnavailable y #unparseableTotalThrowsQuotationUnavailable pasaron. Falta demostrar bloqueo completo de reserva. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -58,7 +58,7 @@ CU-02 no consume este puerto directamente; impedir reserva completa depende de C
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; evidencia parcial, consultar el flujo.
 
 #### Traceability
-FR-015, FR-016 | SC-006 | [individual](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java) | In Process
+FR-015, FR-016 | SC-006 | [individual](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java#zeroTotalThrowsQuotationUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java#negativeTotalThrowsQuotationUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java#unparseableTotalThrowsQuotationUnavailable | In Process

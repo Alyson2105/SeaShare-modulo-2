@@ -39,7 +39,7 @@ Dos entregas con el mismo Message-Id a consumidor de prueba.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Procesar ambas copias y observar contador de procesamiento. | Datos de las precondiciones | El consumidor de prueba procesa una sola vez; cada copia conserva identificador. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Procesar ambas copias y observar contador de procesamiento. | Datos de las precondiciones | El consumidor de prueba procesa una sola vez; cada copia conserva identificador. | Pasó | Integración: EventDeduplicationTest#publicarElMismoEventoDosVecesSeProcesaUnaSolaVez pasó con RabbitMQ: dos copias, una procesada y Message-Id igual al event_id; consumidor es de prueba. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ El consumidor real pertenece a M3 y no se demuestra su deduplicación.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Passed. La evidencia cubre el consumidor de prueba.
 
 #### Traceability
-FR-005 | SC-001 | [deduplicacion](../../../../src/test/java/com/seashare/m2/reservas/integration/EventDeduplicationTest.java) | In Process
+FR-005 | SC-001 | [deduplicacion](../../../../src/test/java/com/seashare/m2/reservas/integration/EventDeduplicationTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/EventDeduplicationTest.java#publicarElMismoEventoDosVecesSeProcesaUnaSolaVez | In Process

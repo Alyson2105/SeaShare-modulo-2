@@ -39,7 +39,7 @@ Reservas preparadas para transiciones válidas y outbox aislado.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Transicionar a PENDING_PAYMENT, RESERVED e IN_NAVIGATION en orden. | Datos de las precondiciones | PENDING_PAYMENT encola AMQP sin M1; RESERVED e IN_NAVIGATION encolan AMQP y M1_HTTP con estado operativo correspondiente. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Transicionar a PENDING_PAYMENT, RESERVED e IN_NAVIGATION en orden. | Datos de las precondiciones | PENDING_PAYMENT encola AMQP sin M1; RESERVED e IN_NAVIGATION encolan AMQP y M1_HTTP con estado operativo correspondiente. | Pendiente | Integración: ChangeReservationStatusServiceTest#initiatedAndPendingPaymentDoNotEnqueueModuleOne, #enqueuesReservedToModuleOneOnPaymentConfirmed y #checkInAndCheckOutTransitionsWork pasaron con puertos simulados. Falta verificar cada destino operativo y fila persistida en una secuencia completa. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ Outbox no prueba entrega; matriz excluye EXPIRED y PAYMENT_FAILED en M3 pese a F
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
-FR-007, FR-008, FR-011 | SC-003 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | In Process
+FR-007, FR-008, FR-011 | SC-003 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#initiatedAndPendingPaymentDoNotEnqueueModuleOne; src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#enqueuesReservedToModuleOneOnPaymentConfirmed; src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#checkInAndCheckOutTransitionsWork | In Process

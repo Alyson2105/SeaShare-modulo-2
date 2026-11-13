@@ -57,7 +57,7 @@ El job puede ejecutarse con retraso: no asumir que ya se consolidó REJECTED.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada.
 
 #### Traceability
 FR-005, FR-009 | SC-005 | Sin prueba de CU-16 | Blocked

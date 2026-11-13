@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU13-001 — Aprobación con TTL vigente
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -27,7 +27,7 @@ Verificar aprobación con ttl vigente. Requisitos: FR-002, FR-003, FR-004. Crite
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-13 y su endpoint aún no existen; los resultados son expectativas del contrato. El motor interno implementa guarda y persistencia; CU-13 y ambos canales no existen.
+La lógica de CU-13 y la consulta periódica existen; el endpoint de canal A no se encontró. La lógica de confirmación y el canal B existen; el canal A no se encontró.
 
 ##### Dependencies & Assumptions
 Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-13.
@@ -40,14 +40,14 @@ Reserva PENDING_PAYMENT con TTL vigente y resultado APPROVED con referencia vál
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Procesar confirmación mediante canal habilitado. | Datos de las precondiciones | Según el plan, reserva pasa a RESERVED por CU-08 y registra referencia y hora de pago. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Procesar confirmación mediante canal habilitado. | Datos de las precondiciones | Según el plan, reserva pasa a RESERVED por CU-08 y registra referencia y hora de pago. | Pendiente | Integración: ConfirmPaymentIntegrationTest#approvedWithinTtlReservesWithPaymentReference pasó: RESERVED y referencia persistida; falta comprobar hora y canal externo completo. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-El motor interno implementa guarda y persistencia; CU-13 y ambos canales no existen.
+La lógica de confirmación y el canal B existen; el canal A no se encontró.
 
 #### Defect Severity Reference
 
@@ -58,7 +58,7 @@ El motor interno implementa guarda y persistencia; CU-13 y ambos canales no exis
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; evidencia parcial, consultar el flujo.
 
 #### Traceability
-FR-002, FR-003, FR-004 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Blocked
+FR-002, FR-003, FR-004 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java#approvedWithinTtlReservesWithPaymentReference | In Process

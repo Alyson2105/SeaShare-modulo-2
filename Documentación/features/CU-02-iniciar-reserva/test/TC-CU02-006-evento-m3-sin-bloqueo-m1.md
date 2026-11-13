@@ -35,7 +35,7 @@ Solicitud válida: `POST /api/v1/reservations`, `Content-Type: application/json`
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Ejecutar escenario | Crear reserva y consultar outbox por reservation_id; inspeccionar la decisión de la matriz para INITIATED. | Solicitud válida y variaciones descritas | Una fila AMQP reservation.info.provided para M3; ninguna fila M1_HTTP ni envío o bloqueo de inventario M1 en INITIATED. | Pendiente | No ejecutado |
+| 1 | Ejecutar escenario | Crear reserva y consultar outbox por reservation_id; inspeccionar la decisión de la matriz para INITIATED. | Solicitud válida y variaciones descritas | Una fila AMQP reservation.info.provided para M3; ninguna fila M1_HTTP ni envío o bloqueo de inventario M1 en INITIATED. | Pendiente | Integración: CreateReservationOutboxIntegrationTest#createsOutboxMessageWithExactSevenFieldsAndBoatId pasó: fila AMQP y payload; unitario: ModuleOneNotificationMatrixTest#initiatedAndPendingPaymentNotifyNobody pasó: decisión sin M1. Falta comprobar ausencia de filas M1_HTTP y de envío o bloqueo M1 en el flujo integrado. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica como comportamiento principal adicional; consultar límites abajo.
@@ -52,7 +52,7 @@ Evento AMQP para M3 y notificación HTTP a M1 son mecanismos distintos.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar resultado y conservar identificadores para consultar las filas; la documentación no implica ejecución.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; los resultados pendientes se detallan en el flujo.
 
 #### Traceability
-FR-013 | SC-001 | [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java); [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | In Process
+FR-013 | SC-001 | [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java); [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java#createsOutboxMessageWithExactSevenFieldsAndBoatId; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#initiatedAndPendingPaymentNotifyNobody | In Process

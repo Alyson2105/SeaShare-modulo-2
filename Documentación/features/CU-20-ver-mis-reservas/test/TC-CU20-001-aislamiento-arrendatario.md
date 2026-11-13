@@ -39,7 +39,7 @@ Dos arrendatarios con reservas distintas; cabeceras X-User-Id UUID y X-User-Role
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar GET /api/v1/reservations como uno de ellos. | Datos de las precondiciones | 200 con items pertenecientes al arrendatario, fechas, estado, vessel_id y estimated_total; excluye reservas del otro. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Consultar GET /api/v1/reservations como uno de ellos. | Datos de las precondiciones | 200 con items pertenecientes al arrendatario, fechas, estado, vessel_id y estimated_total; excluye reservas del otro. | Pendiente | ReservationQueryTest#listsOnlyOwnReservations: exitosa. Comprueba dos reservas propias frente a una ajena y campos de respuesta con headers; no verifica JWT ni todos los campos del paso. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ Identidad por headers es temporal; JWT no está implementado.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; Comprueba dos reservas propias frente a una ajena y campos de respuesta con headers; no verifica JWT ni todos los campos del paso.
 
 #### Traceability
-FR-001, FR-002, FR-003 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java) | In Process
+FR-001, FR-002, FR-003 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#listsOnlyOwnReservations | In Process
