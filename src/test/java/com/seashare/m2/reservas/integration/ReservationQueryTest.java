@@ -271,7 +271,7 @@ class ReservationQueryTest { // pruebas de integracion de endpoints de consulta 
                 .andExpect(jsonPath("$.owner.name").value("Propietario demo"))
                 .andExpect(jsonPath("$.payment_summary.section_title").value("Resumen de pago"))
                 .andExpect(jsonPath("$.payment_summary.currency").value("COP"))
-                .andExpect(jsonPath("$.payment_summary.total_paid").isNumber())
+                .andExpect(jsonPath("$.payment_summary.total_paid").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.payment_summary.rental_amount").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.payment_summary.insurance_amount").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.available_actions.can_cancel").value(true))

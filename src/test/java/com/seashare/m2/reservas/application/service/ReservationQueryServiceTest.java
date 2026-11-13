@@ -135,7 +135,7 @@ class ReservationQueryServiceTest { // pruebas unitarias del filtrado, detalle y
         assertThat(view.owner().name()).isEqualTo("Dueno");
         assertThat(view.itinerary().durationDays()).isEqualTo(3);
         assertThat(view.itinerary().durationNights()).isEqualTo(2);
-        assertThat(view.paymentSummary().totalPaid()).isEqualByComparingTo("5000000.0000");
+        assertThat(view.paymentSummary().totalPaid()).isNull(); // sin liquidacion no se usa estimated_total
         assertThat(view.availableActions().canCancel()).isTrue();
         assertThat(view.availableActions().canInitiatePayment()).isFalse();
     }

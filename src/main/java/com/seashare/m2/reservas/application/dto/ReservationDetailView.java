@@ -68,7 +68,7 @@ public record ReservationDetailView( // vista completa del detalle de CU-21
             BigDecimal rentalAmount, // alquiler; null si no esta persistido o si el estado lo oculta
             BigDecimal insuranceAmount, // seguro; null si no esta persistido o si el estado lo oculta
             BigDecimal guaranteeDepositAmount, // deposito; null si no esta persistido o si el estado lo oculta
-            BigDecimal totalPaid, // total liquidado o el estimado persistido
+            BigDecimal totalPaid, // total liquidado; null si aun no existe
             String clarifyingNote // nota cualitativa de liquidacion
     ) {
     }

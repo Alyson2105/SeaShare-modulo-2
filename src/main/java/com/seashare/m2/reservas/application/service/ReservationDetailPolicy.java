@@ -46,7 +46,7 @@ final class ReservationDetailPolicy { // reglas de presentacion del detalle de C
             }
         }
 
-        BigDecimal totalPaid = view.totalAmount() != null ? view.totalAmount() : view.estimatedTotal(); // total liquidado o estimado literal
+        BigDecimal totalPaid = view.totalAmount(); // solo lo liquidado; nunca un estimado presentado como pagado
         return new ReservationDetailView.PaymentSummary(title, view.currency(), rental, insurance, deposit, totalPaid, note);
     }
 

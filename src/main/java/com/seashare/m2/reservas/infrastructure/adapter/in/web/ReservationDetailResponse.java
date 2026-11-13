@@ -151,7 +151,7 @@ public record ReservationDetailResponse( // contrato de respuesta del detalle de
             BigDecimal guaranteeDepositAmount, // deposito persistido
 
             @JsonProperty("total_paid")
-            BigDecimal totalPaid, // total liquidado o estimado
+            BigDecimal totalPaid, // total liquidado; null si aun no existe
 
             @JsonProperty("clarifying_note")
             String clarifyingNote // nota de liquidacion
