@@ -29,7 +29,7 @@ Verificar consentimiento obligatorio. Requisitos: FR-013, FR-014. Criterios rela
 No se realiza publicación real ni cobro externo en esta tarea. La selección visual del checkbox es responsabilidad de UI y se prueba por separado.
 
 ##### Dependencies & Assumptions
-Entorno futuro con CU-03 implementado, repositorio de reservas y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: Sin prueba de CU-03; no demuestra el flujo completo de CU-03.
+CU-03 está implementado; la evidencia usa repositorio y dobles controlados de M1 y M3. Las pruebas citadas aportan evidencia parcial, no demuestran el flujo completo de CU-03.
 
 ##### Preconditions & Default Setup
 Reserva INITIATED válida; preparar solicitudes independientes con accepts_cancellation_policy false y ausente.
@@ -57,7 +57,7 @@ La selección visual del checkbox es responsabilidad de UI y se prueba por separ
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
+Corrida 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
 
 #### Traceability
-FR-013, FR-014 | SC-004 | Sin prueba de CU-03 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#policyNotAcceptedIs400 | In Process
+FR-013, FR-014 | SC-004 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#policyNotAcceptedIs400 | In Process

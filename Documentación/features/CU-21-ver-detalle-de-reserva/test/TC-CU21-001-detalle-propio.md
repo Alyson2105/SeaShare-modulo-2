@@ -57,7 +57,7 @@ La respuesta expone subtipo y campos enriquecidos; no demuestra origen oficial d
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; Comprueba 200 y numerosos campos con identidad por headers y flota fake; no verifica todos los campos ni servicios reales.
+Corrida 2026-11-13: Partial; Comprueba 200 y numerosos campos con identidad por headers y flota fake; no verifica todos los campos ni servicios reales.
 
 #### Traceability
 FR-001, FR-002, FR-003 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#detailIncludesContractFields | In Process

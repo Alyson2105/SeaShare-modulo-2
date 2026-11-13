@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU04-001 — Clasificación por anticipación
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar clasificación por anticipación. Trazabilidad: FR-005, FR-006, FR-007
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-04 y el endpoint propuesto aún no están implementados. Los resultados son contractuales, no observados. El plan especifica truncar la anticipación a minutos antes de comparar; sin endpoint no se verifica.
+El endpoint y servicio existen; pruebas unitarias cubren umbrales. FR-005 exige consultar CU-09; RequestCancellationService#resolveZone usa zona guardada.
 
 ##### Dependencies & Assumptions
-Ejecución futura con CU-04 implementado y dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran la orquestación completa.
+Se requieren dependencias controladas; la evidencia descrita no acredita el flujo completo.
 
 ##### Preconditions & Default Setup
 Reserva RESERVED de arrendatario titular, hora de zarpe conocida y zona horaria oficial del puerto. Reloj controlado.
@@ -38,15 +38,15 @@ Reserva RESERVED de arrendatario titular, hora de zarpe conocida y zona horaria 
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Enviar solicitudes independientes con anticipación de 72 h exactas, un segundo antes de 72 h, 24 h exactas, un segundo antes de 24 h y un minuto antes del zarpe. | Datos de las precondiciones | Clasificaciones respectivas FLEXIBLE, MODERATE, MODERATE, LATE y LATE; cada reserva cambia a CANCELLED. | Pendiente | ChangeReservationStatusServiceTest#cancelledByRenterStoresSubtypeAndAnticipation pasó: integración del motor acepta FLEXIBLE y anticipación suministrados; no calcula umbrales. |
-| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | Sin publicación real |
+| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | CancellationClassifierTest#exactly72HoursIsFlexible: verde, unidad; pruebas separadas de umbrales no demuestran cada transición ni HTTP. |
+| 2 | Ejecutar | Enviar solicitudes independientes con anticipación de 72 h exactas, un segundo antes de 72 h, 24 h exactas, un segundo antes de 24 h y un minuto antes del zarpe. | Datos de las precondiciones | Clasificaciones respectivas FLEXIBLE, MODERATE, MODERATE, LATE y LATE; cada reserva cambia a CANCELLED. | Pendiente | CancellationClassifierTest#exactly72HoursIsFlexible: verde, unidad; pruebas separadas de umbrales no demuestran cada transición ni HTTP. |
+| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | CancellationClassifierTest#exactly72HoursIsFlexible: verde, unidad; pruebas separadas de umbrales no demuestran cada transición ni HTTP. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
 
 ##### Edge Cases & Boundary Conditions
-El plan especifica truncar la anticipación a minutos antes de comparar; sin endpoint no se verifica.
+El plan especifica truncar a minutos antes de comparar; CancellationClassifierTest prueba los límites de 72 h y 24 h en unidad.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ El plan especifica truncar la anticipación a minutos antes de comparar; sin end
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Blocked; la evidencia solo cubre el componente compartido, el flujo está bloqueado.
+Corrida 2026-11-13: Partial; evidencia parcial.
 
 #### Traceability
-FR-005, FR-006, FR-007, FR-008, FR-011 | SC-002 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#cancelledByRenterStoresSubtypeAndAnticipation | Blocked
+FR-005, FR-006, FR-007, FR-008, FR-011 | SC-002 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/domain/service/CancellationClassifierTest.java#exactly72HoursIsFlexible | In Process

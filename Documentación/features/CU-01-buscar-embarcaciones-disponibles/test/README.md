@@ -11,9 +11,9 @@ Casos del catálogo y cotización en lote. CU-01 dispone de endpoint y orquestac
 | [TC-CU01-001](TC-CU01-001-busqueda-con-filtros.md) | Búsqueda con filtros | FR-001, FR-002, FR-003 | SC-001 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java); [VesselSearchServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java) | In Process |
 | [TC-CU01-002](TC-CU01-002-busqueda-sin-filtros.md) | Catálogo sin filtros | FR-001, FR-002, FR-009 | SC-003 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java); [VesselSearchControllerTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java) | In Process |
 | [TC-CU01-003](TC-CU01-003-paginacion.md) | Página de catálogo | FR-003, FR-008 | SC-001 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java); [VesselSearchControllerTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java) | In Process |
-| [TC-CU01-004](TC-CU01-004-formato-invalido.md) | Rechazo de formato inválido | FR-001, FR-010 | SC-004 | Sin prueba de CU-01; [VesselSearchControllerTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java) | In Process |
+| [TC-CU01-004](TC-CU01-004-formato-invalido.md) | Rechazo de formato inválido | FR-001, FR-010 | SC-004 | [VesselSearchControllerTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java) | In Process |
 | [TC-CU01-005](TC-CU01-005-cotizacion-no-disponible.md) | Degradación de cotizaciones | FR-003, FR-004 | SC-001 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java); [VesselSearchServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java) | In Process |
-| [TC-CU01-006](TC-CU01-006-disponibilidad-rango.md) | Filtrado por disponibilidad temporal | FR-002 | SC-003 | Sin prueba de CU-01; [VesselSearchServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java) | Draft |
+| [TC-CU01-006](TC-CU01-006-disponibilidad-rango.md) | Filtrado por disponibilidad temporal | FR-002 | SC-003 | [VesselSearchServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java) | Draft |
 
 ## Cobertura de requisitos
 
@@ -66,10 +66,10 @@ Casos del catálogo y cotización en lote. CU-01 dispone de endpoint y orquestac
 
 ## Ejecución automatizada — 2026-11-13
 
-`./mvnw -B clean test`: 395 pruebas, 0 fallos, 0 errores, 0 omitidas; BUILD SUCCESS. Las pruebas de CU-01 indicadas usan dobles locales; no validan servicios reales.
+`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-01. Las pruebas de búsqueda usan dobles locales; no validan proveedores M1/M3 reales.
 
 | Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| [VesselSearchServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java) | 7 | 0 | 0 | 0 | Exitosa |
-| [VesselSearchControllerTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java) | 7 | 0 | 0 | 0 | Exitosa |
-| [HttpBatchEstimateAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | 10 | 0 | 0 | 0 | Exitosa |
+| [com.seashare.m2.reservas.application.service.VesselSearchServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java) | 7 | 0 | 0 | 0 | Verde; alcance parcial |
+| [com.seashare.m2.reservas.infrastructure.adapter.in.web.VesselSearchControllerTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java) | 7 | 0 | 0 | 0 | Verde; alcance parcial |
+| [com.seashare.m2.reservas.infrastructure.adapter.out.finance.HttpBatchEstimateAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | 10 | 0 | 0 | 0 | Verde; alcance parcial |

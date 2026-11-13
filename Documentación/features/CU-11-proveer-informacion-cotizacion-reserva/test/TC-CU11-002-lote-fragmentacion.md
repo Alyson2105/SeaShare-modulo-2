@@ -58,7 +58,7 @@ Lista vacía retorna resultado vacío sin llamada; el cálculo del importe perte
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; evidencia parcial, consultar el flujo.
+Corrida 2026-11-13: Partial; evidencia parcial, consultar el flujo.
 
 #### Traceability
 FR-003, FR-004, FR-005 | SC-003 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java#duplicateIdsAreDeduplicatedBeforeSend; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java#sixtyIdsSplitIntoTwoBlocksOfFifty | In Process

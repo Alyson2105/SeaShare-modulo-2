@@ -29,7 +29,7 @@ Verificar entrega http a m1. Requisitos: FR-006, FR-008. Criterios: SC-001, SC-0
 CU-22 encola destino M1_HTTP; el adaptador actual es fake y no realiza HTTP real. Solo existe adaptador fake; el plan mezcla HTTP y AMQP, falta acordar último salto y semántica de confirmación.
 
 ##### Dependencies & Assumptions
-Ejecución con dependencias controladas cuando corresponda. Pruebas relacionadas: Sin prueba de CU-22; su cobertura debe evaluarse por escenario.
+Ejecución con dependencias controladas cuando corresponda. Prueba parcial relacionada: OutboxRelayIntegrationTest#m1HttpUsaElPuertoFalsoYMarcaPublished; su cobertura debe evaluarse por escenario.
 
 ##### Preconditions & Default Setup
 M1 real o simulador contractual disponible y adaptador HTTP implementado.
@@ -39,7 +39,7 @@ M1 real o simulador contractual disponible y adaptador HTTP implementado.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Despachar notificación encolada y medir primer intento. | Datos de las precondiciones | Contrato propone PATCH y entrega con política de reintentos sin revertir transición local. | Pendiente | El plan y spec mezclan confirmación de broker y entrega HTTP PATCH; además solo existe adaptador fake, sin entrega real ni medición de SLA. |
+| 2 | Ejecutar | Despachar notificación encolada y medir primer intento. | Datos de las precondiciones | Contrato propone PATCH y entrega con política de reintentos sin revertir transición local. | Pendiente | OutboxRelayIntegrationTest#m1HttpUsaElPuertoFalsoYMarcaPublished pasó: fila insertada manualmente, puerto simulado invocado y published_at persistido; no hubo HTTP ni medición de SLA. El plan mezcla confirmación de broker y PATCH. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ Solo existe adaptador fake; el plan mezcla HTTP y AMQP, falta acordar último sa
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Draft; sin ejecución automatizada. El plan y spec mezclan confirmación de broker y entrega HTTP PATCH; además solo existe adaptador fake, sin entrega real ni medición de SLA.
+Corrida 2026-11-13: Draft; ejecución parcial con puerto falso. OutboxRelayIntegrationTest#m1HttpUsaElPuertoFalsoYMarcaPublished pasó: fila insertada manualmente, puerto simulado invocado y published_at persistido; no hubo HTTP ni medición de SLA. El plan mezcla confirmación de broker y PATCH.
 
 #### Traceability
-FR-006, FR-008 | SC-001, SC-002 | Sin prueba de CU-22  | Draft
+FR-006, FR-008 | SC-001, SC-002 | Evidencia parcial: src/test/java/com/seashare/m2/reservas/integration/OutboxRelayIntegrationTest.java#m1HttpUsaElPuertoFalsoYMarcaPublished | Draft

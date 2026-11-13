@@ -29,7 +29,7 @@ Verificar inicio exitoso. Requisitos: FR-002, FR-003, FR-004, FR-005, FR-006. Cr
 No se realiza publicación real ni cobro externo en esta tarea. La máquina de estados y el motor prueban transiciones internas, no la orquestación de pago.
 
 ##### Dependencies & Assumptions
-Entorno futuro con CU-03 implementado, repositorio de reservas y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: [estado](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java); no demuestra el flujo completo de CU-03.
+CU-03 está implementado; la evidencia usa repositorio y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: [estado](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java); no demuestra el flujo completo de CU-03.
 
 ##### Preconditions & Default Setup
 Una reserva INITIATED vigente y de su titular; M3 devuelve cálculo oficial y M1 disponibilidad.
@@ -57,7 +57,7 @@ La máquina de estados y el motor prueban transiciones internas, no la orquestac
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
+Corrida 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
 
 #### Traceability
 FR-002, FR-003, FR-004, FR-005, FR-006 | SC-001, SC-003 | [estado](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#startPaymentTransitionsAndReturnsBreakdown | In Process

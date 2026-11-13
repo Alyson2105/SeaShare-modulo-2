@@ -57,7 +57,7 @@ El adaptador de ficha obtiene más datos que FleetInfo; falta comprobar persiste
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; MockMvc verifica ficha y no-store con datos falsos; no verifica ausencia de persistencia ni M1 real.
+Corrida 2026-11-13: Partial; MockMvc verifica ficha y no-store con datos falsos; no verifica ausencia de persistencia ni M1 real.
 
 #### Traceability
 FR-001, FR-002 | SC-003 | [flota](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java)  | src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselDetailControllerTest.java#vesselDetailReturnsFleetDataWithoutCache | In Process

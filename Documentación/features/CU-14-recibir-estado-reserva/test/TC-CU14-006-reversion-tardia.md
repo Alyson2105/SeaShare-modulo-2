@@ -57,7 +57,7 @@ CU-13 y el mapeo de reversión existen; falta comprobar entrega a M3 real.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Consultar las comprobaciones pendientes del flujo.
+Corrida 2026-11-13: Partial. Consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
 FR-001 | SC-001 | Prueba de reversión ejecutada | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java#approvedOnExpiredReservationPublishesReversal | In Process

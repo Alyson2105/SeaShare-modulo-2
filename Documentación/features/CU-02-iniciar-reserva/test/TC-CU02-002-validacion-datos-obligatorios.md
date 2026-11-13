@@ -26,7 +26,7 @@ Verificar el rechazo de entradas inválidas implementadas. Trazabilidad: FR-006,
 La validación visual es UI; el formato telefónico no está implementado: solo no vacío y máximo 30 caracteres.
 
 ##### Dependencies & Assumptions
-Backend y base de datos de pruebas disponibles para una ejecución futura; identidad temporal por headers sin Spring Security. [CreateReservationValidationTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java).
+La corrida utilizó backend y base de datos de pruebas; identidad temporal por headers sin Spring Security. [CreateReservationValidationTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java).
 
 ##### Preconditions & Default Setup
 Solicitud válida: `POST /api/v1/reservations`, `Content-Type: application/json`, `X-User-Id: <UUID>`, `X-User-Role: RENTER`, `Idempotency-Key: <UUID>`. Cuerpo: `{"vessel_id":"d3b07384-d113-49cd-a5d6-812e9bcfc101","start_date":"2027-03-10","end_date":"2027-03-12","passengers":2,"departure_time":"08:30","estimated_total":"9600000.00","holder":{"full_name":"Carlos Gomez","phone":"+573001234567","email":"carlos@example.com"}}`. Usar identificadores únicos y flota disponible con capacidad suficiente.
@@ -52,7 +52,7 @@ No exigir rechazo por un teléfono no vacío con formato inválido; es una brech
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Evidencia parcial; los resultados pendientes se detallan en el flujo.
+Corrida 2026-11-13: Partial. Evidencia parcial; los resultados pendientes se detallan en el flujo.
 
 #### Traceability
 FR-006, FR-007, FR-008 | SC-001 | [CreateReservationValidationTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java#missingIdempotencyKeyIs400; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java#invalidIdempotencyKeyIs400InvalidUuid; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java#missingUserIdIs401; src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java#rejectsEndBeforeStart | In Process

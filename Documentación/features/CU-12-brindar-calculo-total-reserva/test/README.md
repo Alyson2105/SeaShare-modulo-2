@@ -49,7 +49,7 @@ Casos de CalculatedValuePort y cliente HTTP de M3; modo fake activo por defecto.
 | TC-CU12-003 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpCalculatedValueAdapterTest#notFoundFailsImmediatelyWithoutRetry y #persistentNotFoundThrowsCalculationUnavailable pasaron: un único POST y error. El plan espera hasta tres reintentos de 300 ms; la expectativa de reintento no está satisfecha. |
 | TC-CU12-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpCalculatedValueAdapterTest#serviceUnavailable503ThrowsCalculationUnavailable y #readTimeoutThrowsCalculationUnavailableWithoutRetry pasaron; unitario: StartPaymentServiceTest#calculationFailureAbortsWithoutTransition pasó con escritor no invocado. Falta comprobar reserva y M1 persistidos en integración. |
 | TC-CU12-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: PaymentIntegrationTest#startPaymentTransitionsAndReturnsBreakdown y #breakdownIsPersistedForDetailView pasaron con cálculo simulado; unitario: StartPaymentServiceTest#validPaymentDelegatesToTransactionalWriter pasó. No se verifica M3 real ni la entrega del evento previo. |
-| TC-CU12-006 | Sí | No | Blocked | Agente automatizado | — | Sin ejecución automatizada; no existe asiento de solicitud y respuesta de cálculo. |
+| TC-CU12-006 | Sí | No | Blocked | — | — | Sin ejecución automatizada; no existe asiento de solicitud y respuesta de cálculo. |
 
 ## Brechas detectadas
 
@@ -67,10 +67,10 @@ Casos de CalculatedValuePort y cliente HTTP de M3; modo fake activo por defecto.
 
 ## Ejecución automatizada — 2026-11-13
 
-`./mvnw -B clean test`: 395 pruebas, 0 fallos, 0 errores, 0 omitidas; BUILD SUCCESS. WireMock y dobles simulan M3; no prueban el servicio financiero real.
+`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-12. Las pruebas citadas usan las dependencias indicadas en cada caso; no acreditan servicios externos reales.
 
 | Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| [HttpCalculatedValueAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java) | 22 | 0 | 0 | 0 | Exitosa |
-| [StartPaymentServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java) | 10 | 0 | 0 | 0 | Exitosa |
-| [PaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java) | 9 | 0 | 0 | 0 | Exitosa |
+| [HttpCalculatedValueAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java) | 22 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [StartPaymentServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java) | 10 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [PaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java) | 9 | 0 | 0 | 0 | Verde; cobertura según TC |

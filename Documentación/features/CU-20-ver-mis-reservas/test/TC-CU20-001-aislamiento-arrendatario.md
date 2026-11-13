@@ -57,7 +57,7 @@ Identidad por headers es temporal; JWT no está implementado.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; Comprueba dos reservas propias frente a una ajena y campos de respuesta con headers; no verifica JWT ni todos los campos del paso.
+Corrida 2026-11-13: Partial; Comprueba dos reservas propias frente a una ajena y campos de respuesta con headers; no verifica JWT ni todos los campos del paso.
 
 #### Traceability
 FR-001, FR-002, FR-003 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#listsOnlyOwnReservations | In Process

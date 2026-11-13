@@ -57,7 +57,7 @@ FleetInfo actual solo valida que max_capacity sea numérico, no su positividad.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; WireMock verifica traducción del 404; flujo HTTP completo y ausencia de persistencia no verificados.
+Corrida 2026-11-13: Partial; WireMock verifica traducción del 404; flujo HTTP completo y ausencia de persistencia no verificados.
 
 #### Traceability
 FR-001, FR-002 | SC-003 | [flota](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java)  | src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpVesselReadAdapterTest.java#notFoundMapsToVesselNotFound | In Process

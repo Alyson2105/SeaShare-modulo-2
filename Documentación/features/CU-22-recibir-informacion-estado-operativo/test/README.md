@@ -12,8 +12,8 @@ Casos de mapeo de estado operativo, outbox y despacho M1_HTTP. El adaptador de e
 | [TC-CU22-002](TC-CU22-002-sin-notificacion.md) | Estados sin notificación M1 | FR-001, FR-002 | SC-001 | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#initiatedAndPendingPaymentNotifyNobody; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#expiredAndPaymentFailedNotifyNobody | In Process |
 | [TC-CU22-003](TC-CU22-003-cancelacion-condicional.md) | Cancelación con guarda M1 | FR-001, FR-002 | SC-005 | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#cancelledAfterReservedNotifiesAvailable; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#cancelledByOwnerWithMechanicalFailureNotifiesMaintenance; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#cancelledBeforeReservedDoesNotNotifyModuleOne | In Process |
 | [TC-CU22-004](TC-CU22-004-payload-operativo.md) | Payload operativo e identidad | FR-003, FR-004, FR-005, FR-007 | SC-003, SC-004 | src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java#enqueuesOperationalStatusToM1HttpWithExactFourFields | In Process |
-| [TC-CU22-005](TC-CU22-005-reintentos-locales.md) | Reintentos del relay | FR-006, FR-008 | SC-001 | src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#backoffExactoUnoCincoVeinticincoCientoVeinticincoSegundos; src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#quintoFalloMarcaDeadConAlerta; src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#cuarentaYCuatroDeM1VaDirectoDeadSinReintento | In Process |
-| [TC-CU22-006](TC-CU22-006-entrega-m1-real.md) | Entrega HTTP a M1 | FR-006, FR-008 | SC-001, SC-002 | Sin prueba HTTP real | Draft |
+| [TC-CU22-005](TC-CU22-005-reintentos-locales.md) | Reintentos del relay | FR-006, FR-008 | SC-001 | src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#cincoCientosDeM1ReagendaConBackoff; src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#cuarentaYCuatroDeM1VaDirectoDeadSinReintento | In Process |
+| [TC-CU22-006](TC-CU22-006-entrega-m1-real.md) | Entrega HTTP a M1 | FR-006, FR-008 | SC-001, SC-002 | OutboxRelayIntegrationTest#m1HttpUsaElPuertoFalsoYMarcaPublished: sin HTTP real | Draft |
 
 ## Cobertura de requisitos
 
@@ -48,7 +48,7 @@ Casos de mapeo de estado operativo, outbox y despacho M1_HTTP. El adaptador de e
 | TC-CU22-003 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Matriz unitaria comprueba guarda y mapeos de cancelación; no prueba flujo completo de cancelación. |
 | TC-CU22-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Prueba unitaria verifica los cuatro campos del payload y exclusión de campos adicionales; no demuestra deduplicación real de M1. |
 | TC-CU22-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Pruebas unitarias cubren backoff y dead con puertos simulados; no prueban DLQ real ni fallo HTTP real. |
-| TC-CU22-006 | Sí | No | Draft | Agente automatizado | — | El plan y spec mezclan confirmación de broker y entrega HTTP PATCH; además solo existe adaptador fake, sin entrega real ni medición de SLA. |
+| TC-CU22-006 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | OutboxRelayIntegrationTest#m1HttpUsaElPuertoFalsoYMarcaPublished pasó con fila insertada manualmente y puerto falso; no hubo HTTP ni medición SLA. El plan mezcla broker y PATCH. |
 
 ## Brechas detectadas
 
@@ -68,12 +68,12 @@ Casos de mapeo de estado operativo, outbox y despacho M1_HTTP. El adaptador de e
 
 ## Ejecución automatizada — 2026-11-13
 
-La suite terminó con 395 pruebas, 0 fallos, 0 errores y 0 omitidas. La entrega a M1 utiliza un adaptador falso; RabbitMQ se usa para AMQP, no para el destino M1_HTTP.
+`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-22. Los dobles y simulaciones no acreditan servicios externos reales.
 
 | Clase | Tests | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| ChangeReservationStatusServiceTest | 28 | 0 | 0 | 0 | Exitosa |
-| ModuleOneNotificationMatrixTest | 7 | 0 | 0 | 0 | Exitosa |
-| OutboxAdapterTest | 15 | 0 | 0 | 0 | Exitosa |
-| PublishPendingOutboxServiceTest | 10 | 0 | 0 | 0 | Exitosa |
-| OutboxRelayIntegrationTest | 4 | 0 | 0 | 0 | Exitosa |
+| [ChangeReservationStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | 28 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [OutboxAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java) | 15 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [PublishPendingOutboxServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java) | 10 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [OutboxRelayIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/OutboxRelayIntegrationTest.java) | 4 | 0 | 0 | 0 | Verde; cobertura según TC |

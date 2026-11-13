@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU18-002 — Ausencia de evento PENDING
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar ausencia de evento pending. Requisitos: FR-001. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La publicación asíncrona de CU-18 aún no existe; los resultados son expectativas del contrato. El contexto disputa y su outbox aún no están implementados.
+El outbox y la publicación existen; ausencia de mensaje en cola después del relay no demuestra por sí sola ausencia de fila al crear.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-18; no demuestran el flujo completo de CU-18.
+La evidencia identifica las dependencias usadas; un broker de prueba no demuestra consumo por M3.
 
 ##### Preconditions & Default Setup
 Nueva disputa creada en PENDING.
@@ -38,15 +38,15 @@ Nueva disputa creada en PENDING.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Inspeccionar outbox asociado a la creación. | Datos de las precondiciones | No se encola evento de disputa hacia M3 al crear PENDING. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputePublishingIntegrationTest#pendingDisputeNeverPublishes: verde tras abrir, reclamar, mantener PENDING y ejecutar relay; no inspecciona directamente el outbox al crear. |
+| 2 | Ejecutar | Inspeccionar outbox asociado a la creación. | Datos de las precondiciones | No se encola evento de disputa hacia M3 al crear PENDING. | Pendiente | DisputePublishingIntegrationTest#pendingDisputeNeverPublishes: verde tras abrir, reclamar, mantener PENDING y ejecutar relay; no inspecciona directamente el outbox al crear. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputePublishingIntegrationTest#pendingDisputeNeverPublishes: verde tras abrir, reclamar, mantener PENDING y ejecutar relay; no inspecciona directamente el outbox al crear. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-El contexto disputa y su outbox aún no están implementados.
+El contexto de disputa y su outbox existen; no se consultó directamente la fila al crear PENDING.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ El contexto disputa y su outbox aún no están implementados.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada.
+Corrida 2026-11-13: Partial; evidencia parcial.
 
 #### Traceability
-FR-001 | SC-001 | Sin prueba de CU-18 | Blocked
+FR-001 | SC-001 | Evidencia: src/test/java/com/seashare/m2/disputa/integration/DisputePublishingIntegrationTest.java#pendingDisputeNeverPublishes; src/test/java/com/seashare/m2/disputa/application/service/UpdateDisputeStatusServiceTest.java#adminKeepsPendingWithoutTransition | In Process

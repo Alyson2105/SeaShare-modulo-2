@@ -57,7 +57,7 @@ CU-03 está implementado; la ausencia de transición se prueba a nivel unitario 
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; evidencia parcial, consultar el flujo.
+Corrida 2026-11-13: Partial; evidencia parcial, consultar el flujo.
 
 #### Traceability
 FR-005, FR-007 | SC-002, SC-003 | [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#missingFieldThrowsCalculationUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#zeroTotalThrowsCalculationUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#zeroRentalThrowsCalculationUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#zeroInsuranceAndDepositAreAccepted | In Process

@@ -57,7 +57,7 @@ El adaptador traduce a PENDING y CANCELLED_*; el spec exige actor, subtipo separ
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Draft. Consultar las comprobaciones pendientes del flujo.
+Corrida 2026-11-13: Draft. Consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
 FR-001, FR-002, FR-003, FR-004 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java#statusChangedUsesFinanceStatusNames; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java#pendingIncludesPaymentTokenRef; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java#cancelledPayloadUsesFinanceStatusAndOmitsSubtype | Draft

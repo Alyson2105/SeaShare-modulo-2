@@ -48,7 +48,7 @@ Los endpoints de detalle y cotización están implementados; las pruebas usan do
 | TC-CU19-003 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | MockMvc verifica importe literal y tres días con adaptadores falsos; plan exige quotation_id y vencimiento que CU-11 indica que M3 no devuelve. |
 | TC-CU19-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Prueba unitaria verifica propagación de QUOTATION_UNAVAILABLE; respuesta HTTP y efectos no verificados. |
 | TC-CU19-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | WireMock verifica traducción del 404; flujo HTTP completo y ausencia de persistencia no verificados. |
-| TC-CU19-006 | Sí | No | Draft | Agente automatizado | — | Plan CU-19 contradice CU-11 sobre fecha final igual e intervalo inclusivo; no hay prueba ejecutada del caso de un día. |
+| TC-CU19-006 | Sí | No | Draft | — | — | Plan CU-19 contradice CU-11 sobre fecha final igual e intervalo inclusivo; no hay prueba ejecutada del caso de un día. |
 
 ## Brechas detectadas
 
@@ -68,11 +68,11 @@ Los endpoints de detalle y cotización están implementados; las pruebas usan do
 
 ## Ejecución automatizada — 2026-11-13
 
-Maven finalizó correctamente: 395 pruebas, 0 fallos, 0 errores y 0 omitidas. Las clases siguientes emplean dobles o WireMock; no prueban servicios externos reales.
+`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-19. Los dobles y simulaciones no acreditan servicios externos reales.
 
 | Clase | Tests | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| VesselDetailControllerTest | 7 | 0 | 0 | 0 | Exitosa |
-| VesselDetailServiceTest | 8 | 0 | 0 | 0 | Exitosa |
-| HttpVesselReadAdapterTest | 3 | 0 | 0 | 0 | Exitosa |
-| HttpIndividualEstimateAdapterTest | 15 | 0 | 0 | 0 | Exitosa |
+| [VesselDetailControllerTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselDetailControllerTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [VesselDetailServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/VesselDetailServiceTest.java) | 8 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [HttpVesselReadAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpVesselReadAdapterTest.java) | 3 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [HttpIndividualEstimateAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java) | 15 | 0 | 0 | 0 | Verde; cobertura según TC |

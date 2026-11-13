@@ -58,7 +58,7 @@ El job de consulta y la lógica del canal B están implementados.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; evidencia parcial, consultar el flujo.
+Corrida 2026-11-13: Partial; evidencia parcial, consultar el flujo.
 
 #### Traceability
 FR-001, FR-003, FR-005 | SC-001, SC-002 | Lógica de confirmación probada | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/PollPaymentStatusServiceTest.java#inProcessIsSkipped; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpPaymentStatusAdapterTest.java#notFoundMeansRetryNextCycle | In Process

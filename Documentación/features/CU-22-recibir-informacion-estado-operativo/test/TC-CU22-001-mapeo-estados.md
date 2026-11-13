@@ -57,7 +57,7 @@ La matriz es local; adaptador de notificación real a M1 aún no existe.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; Pruebas unitarias verifican mapeo de RESERVED, IN_NAVIGATION y COMPLETED; no prueban entrega HTTP real.
+Corrida 2026-11-13: Partial; Pruebas unitarias verifican mapeo de RESERVED, IN_NAVIGATION y COMPLETED; no prueban entrega HTTP real.
 
 #### Traceability
 FR-001, FR-002 | SC-005 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java)  | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#reservedNotifiesModuleOneWithReserved | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#inNavigationAndCompletedNotifyModuleOne | In Process

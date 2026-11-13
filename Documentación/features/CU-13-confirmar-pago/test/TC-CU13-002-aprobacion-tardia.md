@@ -58,7 +58,7 @@ Corte exacto sin gracia; mecanismo de detección tardía del canal B requiere ac
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; evidencia parcial, consultar el flujo.
+Corrida 2026-11-13: Partial; evidencia parcial, consultar el flujo.
 
 #### Traceability
 FR-003, FR-006 | SC-002, SC-003 | [ttl](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java); [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java#lateApprovalPublishesCancelledFlexibleOnceAndKeepsState; src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java#approvedOnExpiredReservationPublishesReversal | In Process

@@ -26,10 +26,10 @@ Verificar fallo de zona horaria. Requisitos: FR-004, FR-012. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-05 y su endpoint aún no existen; los resultados son expectativas del contrato. Evaluar también zona inválida conforme se defina el contrato.
+Prueba zona almacenada inválida y 503 HARBOR_TIMEZONE_UNAVAILABLE; no existe consulta a CU-09 durante el reporte, requerida por plan para FLEET_SERVICE_UNAVAILABLE. El endpoint y servicio existen. Evaluar también zona inválida conforme se defina el contrato.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-05; no demuestran el flujo completo de CU-05.
+Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: La prueba citada cubre solo parte del escenario; no demuestra el flujo completo de CU-05.
 
 ##### Preconditions & Default Setup
 Reserva RESERVED; CU-09 falla o no proporciona zona horaria.
@@ -38,9 +38,9 @@ Reserva RESERVED; CU-09 falla o no proporciona zona horaria.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Intentar reportar inasistencia. | Datos de las precondiciones | Según el plan, 503 FLEET_SERVICE_UNAVAILABLE; no asumir zona por defecto ni cambiar la reserva. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NoShowIntegrationTest#invalidHarborTimezoneReturns503: verde. Prueba zona almacenada inválida y 503 HARBOR_TIMEZONE_UNAVAILABLE; no existe consulta a CU-09 durante el reporte, requerida por plan para FLEET_SERVICE_UNAVAILABLE. |
+| 2 | Ejecutar | Intentar reportar inasistencia. | Datos de las precondiciones | Según el plan, 503 FLEET_SERVICE_UNAVAILABLE; no asumir zona por defecto ni cambiar la reserva. | Pendiente | NoShowIntegrationTest#invalidHarborTimezoneReturns503: verde. Prueba zona almacenada inválida y 503 HARBOR_TIMEZONE_UNAVAILABLE; no existe consulta a CU-09 durante el reporte, requerida por plan para FLEET_SERVICE_UNAVAILABLE. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NoShowIntegrationTest#invalidHarborTimezoneReturns503: verde. Prueba zona almacenada inválida y 503 HARBOR_TIMEZONE_UNAVAILABLE; no existe consulta a CU-09 durante el reporte, requerida por plan para FLEET_SERVICE_UNAVAILABLE. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Evaluar también zona inválida conforme se defina el contrato.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
+Corrida 2026-11-13: Blocked; evidencia parcial.
 
 #### Traceability
-FR-004, FR-012 | SC-001 | Sin prueba de CU-05 | Blocked
+FR-004, FR-012 | SC-001 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NoShowIntegrationTest.java#invalidHarborTimezoneReturns503 | Blocked

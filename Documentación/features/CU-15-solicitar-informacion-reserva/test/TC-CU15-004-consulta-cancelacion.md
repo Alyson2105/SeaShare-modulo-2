@@ -26,10 +26,10 @@ Verificar consulta de reserva cancelada. Requisitos: FR-004, FR-006. Criterios: 
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-15 expone un endpoint interno con identidad temporal por headers; JWT de servicio está pendiente. Clasificación y registro completos dependen de CU-04.
+CU-15 expone un endpoint interno con identidad temporal por headers; JWT de servicio está pendiente. CU-04 está implementado; InternalReservationResponse#from devuelve null para anticipación.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-15; no demuestran el flujo completo de CU-15.
+La lectura integrada prueba subtipo y actor; no acredita anticipación.
 
 ##### Preconditions & Default Setup
 Reserva CANCELLED con subtipo, actor y anticipación registrados.
@@ -39,14 +39,14 @@ Reserva CANCELLED con subtipo, actor y anticipación registrados.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar la reserva como M3. | Datos de las precondiciones | El plan prevé subtipo, actor y anticipación sin cálculo de reembolso. | Pendiente | Integración: InternalReservationReadIntegrationTest#cancelledByOwnerIsReportedWithOwnerActor pasó para subtipo y actor desde auditoría; anticipación permanece sin implementación del flujo CU-04. |
+| 2 | Ejecutar | Consultar la reserva como M3. | Datos de las precondiciones | El plan prevé subtipo, actor y anticipación sin cálculo de reembolso. | Pendiente | Integración: InternalReservationReadIntegrationTest#cancelledByOwnerIsReportedWithOwnerActor pasó para subtipo y actor desde auditoría; InternalReservationResponse#from devuelve null para anticipación pese a que CU-04 está implementado. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-Clasificación y registro completos dependen de CU-04.
+CU-04 está implementado; InternalReservationResponse#from devuelve null para anticipación.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ Clasificación y registro completos dependen de CU-04.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Blocked; evidencia parcial, consultar el flujo.
+Corrida 2026-11-13: Blocked; evidencia parcial, consultar el flujo.
 
 #### Traceability
 FR-004, FR-006 | SC-003 | Prueba parcial ejecutada | Evidencia: src/test/java/com/seashare/m2/reservas/integration/InternalReservationReadIntegrationTest.java#cancelledByOwnerIsReportedWithOwnerActor | Blocked

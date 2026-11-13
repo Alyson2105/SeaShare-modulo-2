@@ -57,7 +57,7 @@ Headers temporales no demuestran autenticación JWT ni impiden suplantación.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; Comprueba 403 para arrendatario ajeno; no comprueba propietario ajeno ni JWT.
+Corrida 2026-11-13: Partial; Comprueba 403 para arrendatario ajeno; no comprueba propietario ajeno ni JWT.
 
 #### Traceability
 FR-001, FR-002 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#detailOfOtherUserIs403 | In Process

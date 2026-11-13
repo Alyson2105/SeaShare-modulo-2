@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU04-005 — Fallo de zona horaria
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar fallo de zona horaria. Trazabilidad: FR-005, FR-006; SC-004.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-04 y el endpoint propuesto aún no están implementados. Los resultados son contractuales, no observados. Probar también hora pactada incompleta; spec exige rechazo descriptivo, sin fijar aquí código.
+FR-005 y plan exigen consultar CU-09; RequestCancellationService#resolveZone lee la zona guardada y rechaza ausencia o zona inválida. Probar también hora de zarpe incompleta.
 
 ##### Dependencies & Assumptions
-Ejecución futura con CU-04 implementado y dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-04; no demuestran la orquestación completa.
+Se requieren dependencias controladas; la evidencia descrita no acredita el flujo completo.
 
 ##### Preconditions & Default Setup
 Reserva RESERVED; simular fallo o ausencia de la zona horaria desde CU-09.
@@ -38,9 +38,9 @@ Reserva RESERVED; simular fallo o ausencia de la zona horaria desde CU-09.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar cancelación por arrendatario. | Datos de las precondiciones | Según el plan, 503 HARBOR_TIMEZONE_UNAVAILABLE; no se calcula clasificación ni cambia estado. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | Sin publicación real |
+| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | RequestCancellationServiceTest#nullHarborTimezoneIsUnavailable: verde con repositorio simulado; no consulta CU-09 ni prueba el 503 HTTP. |
+| 2 | Ejecutar | Solicitar cancelación por arrendatario. | Datos de las precondiciones | Según el plan, 503 HARBOR_TIMEZONE_UNAVAILABLE; no se calcula clasificación ni cambia estado. | Pendiente | RequestCancellationServiceTest#nullHarborTimezoneIsUnavailable: verde con repositorio simulado; no consulta CU-09 ni prueba el 503 HTTP. |
+| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | RequestCancellationServiceTest#nullHarborTimezoneIsUnavailable: verde con repositorio simulado; no consulta CU-09 ni prueba el 503 HTTP. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ Probar también hora pactada incompleta; spec exige rechazo descriptivo, sin fij
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
+Corrida 2026-11-13: Partial; evidencia parcial.
 
 #### Traceability
-FR-005, FR-006 | SC-004 | Sin prueba de CU-04 | Blocked
+FR-005, FR-006 | SC-004 | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/RequestCancellationServiceTest.java#nullHarborTimezoneIsUnavailable | In Process

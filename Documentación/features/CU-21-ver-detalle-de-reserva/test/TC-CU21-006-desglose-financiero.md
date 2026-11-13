@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU21-006 — Desglose financiero oficial
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar desglose financiero oficial. Requisitos: FR-003, FR-004, FR-010. Crite
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. CU-03 y asociación del cálculo final están pendientes; no atribuir estimated_total a M3.
+La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. CU-03 asocia y persiste el cálculo; la integración probada simula M3, por lo que no acredita su servicio real.
 
 ##### Dependencies & Assumptions
-Ejecución con dependencias controladas. Pruebas relacionadas: Sin prueba de CU-21; su cobertura debe evaluarse por escenario.
+Ejecución con dependencias controladas. Pruebas relacionadas: PaymentIntegrationTest#breakdownIsPersistedForDetailView; su cobertura debe evaluarse por escenario.
 
 ##### Preconditions & Default Setup
 Reserva con liquidación oficial de M3 supuestamente asociada al pago.
@@ -39,14 +39,14 @@ Reserva con liquidación oficial de M3 supuestamente asociada al pago.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar detalle y verificar rubros y total. | Datos de las precondiciones | El spec exige desglose de alquiler, seguro y depósito literal de M3. | Pendiente | Falta asociación efectiva de rubros oficiales de M3 al pago; ReservationDetailPolicyTest verifica rubros solo con datos introducidos en memoria. |
+| 2 | Ejecutar | Consultar detalle y verificar rubros y total. | Datos de las precondiciones | El spec exige desglose de alquiler, seguro y depósito literal de M3. | Pendiente | PaymentIntegrationTest#breakdownIsPersistedForDetailView pasó: tras pago comprueba alquiler, seguro, depósito y total en GET con cálculo simulado. No acredita M3 real. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-CU-03 y asociación del cálculo final están pendientes; no atribuir estimated_total a M3.
+CU-03 asocia y persiste el cálculo; la integración probada simula M3, por lo que no acredita su servicio real.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ CU-03 y asociación del cálculo final están pendientes; no atribuir estimated_
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Blocked; prueba unitaria parcial con datos introducidos en memoria. Falta asociación efectiva de rubros oficiales de M3 al pago; ReservationDetailPolicyTest verifica rubros solo con datos introducidos en memoria.
+Corrida 2026-11-13: Partial; prueba unitaria parcial con datos introducidos en memoria. PaymentIntegrationTest#breakdownIsPersistedForDetailView pasó: tras pago comprueba alquiler, seguro, depósito y total en GET con cálculo simulado. No acredita M3 real.
 
 #### Traceability
-FR-003, FR-004, FR-010 | SC-001 | Sin prueba de CU-21  | src/test/java/com/seashare/m2/reservas/application/service/ReservationDetailPolicyTest.java#reservedShowsBreakdownAndUsesLiquidatedTotal | Blocked
+FR-003, FR-004, FR-010 | SC-001 | Pruebas parciales ejecutadas  | src/test/java/com/seashare/m2/reservas/application/service/ReservationDetailPolicyTest.java#reservedShowsBreakdownAndUsesLiquidatedTotal; src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#breakdownIsPersistedForDetailView | In Process

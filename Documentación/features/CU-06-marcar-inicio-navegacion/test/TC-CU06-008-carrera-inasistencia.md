@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU06-008 — Carrera con inasistencia
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar carrera con inasistencia. Requisitos: FR-001, FR-005, FR-009. Criterio
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-06 y su endpoint aún no existen; los resultados son expectativas del contrato. La prueba requiere CU-05 y CU-06 implementados.
+Prueba no-show seguido de inicio secuencial; no prueba simultaneidad ni un único ganador. El endpoint y servicio existen. Las pruebas secuenciales no demuestran la carrera concurrente.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-06.
+Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-06.
 
 ##### Preconditions & Default Setup
 Reserva RESERVED después de la tolerancia; solicitudes concurrentes de inicio y no-show.
@@ -38,15 +38,15 @@ Reserva RESERVED después de la tolerancia; solicitudes concurrentes de inicio y
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Coordinar ambas solicitudes y consultar estado y efectos. | Datos de las precondiciones | Solo una transición se confirma; si gana no-show, inicio es rechazado. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState: verde. Prueba no-show seguido de inicio secuencial; no prueba simultaneidad ni un único ganador. |
+| 2 | Ejecutar | Coordinar ambas solicitudes y consultar estado y efectos. | Datos de las precondiciones | Solo una transición se confirma; si gana no-show, inicio es rechazado. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState: verde. Prueba no-show seguido de inicio secuencial; no prueba simultaneidad ni un único ganador. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState: verde. Prueba no-show seguido de inicio secuencial; no prueba simultaneidad ni un único ganador. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-La prueba requiere CU-05 y CU-06 implementados.
+Las pruebas secuenciales no demuestran la carrera concurrente.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ La prueba requiere CU-05 y CU-06 implementados.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
+Corrida 2026-11-13: Partial; evidencia parcial.
 
 #### Traceability
-FR-001, FR-005, FR-009 | SC-001, SC-003 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Blocked
+FR-001, FR-005, FR-009 | SC-001, SC-003 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NoShowIntegrationTest.java#navigationStartAfterNoShowIsInvalidState | In Process

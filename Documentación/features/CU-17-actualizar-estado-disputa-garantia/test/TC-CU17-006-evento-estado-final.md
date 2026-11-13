@@ -26,10 +26,10 @@ Verificar evento de estado final. Requisitos: FR-004, FR-007. Criterios: SC-003,
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-17 y su endpoint aún no existen; los resultados son expectativas del contrato. Mapeo entre CU-16, CU-17 y CU-18 presenta valores incompatibles; resolver antes de cerrar contrato.
+CU-16 spec FR-011 exige ACCEPTED → COMPLETADO y REJECTED → APPROVED; CU-18 spec FR-002 presenta ACCEPTED; CU-17 spec FR-007, CU-18 plan y DisputeEventMapper#finalEvent usan COMPLETED y REJECTED.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-17; no demuestran el flujo completo de CU-17.
+Se emplean las dependencias señaladas en la evidencia; los mocks y servicios externos no acreditan el flujo completo.
 
 ##### Preconditions & Default Setup
 Disputa PENDING con reclamo y motivo local opcional.
@@ -38,9 +38,9 @@ Disputa PENDING con reclamo y motivo local opcional.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Resolver y examinar mensaje encolado para M3. | Datos de las precondiciones | El evento no incluye motivo ni datos privados; PENDING no genera evento. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts, #pendingDisputeNeverPublishes y #expiryRejectionIsPublishedAsRejected: verdes con PostgreSQL y RabbitMQ; no prueban consumo de M3. Los contratos discrepan sobre estados. |
+| 2 | Ejecutar | Resolver y examinar mensaje encolado para M3. | Datos de las precondiciones | El evento no incluye motivo ni datos privados; PENDING no genera evento. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts, #pendingDisputeNeverPublishes y #expiryRejectionIsPublishedAsRejected: verdes con PostgreSQL y RabbitMQ; no prueban consumo de M3. Los contratos discrepan sobre estados. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts, #pendingDisputeNeverPublishes y #expiryRejectionIsPublishedAsRejected: verdes con PostgreSQL y RabbitMQ; no prueban consumo de M3. Los contratos discrepan sobre estados. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Mapeo entre CU-16, CU-17 y CU-18 presenta valores incompatibles; resolver antes 
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Draft; sin ejecución automatizada.
+Corrida 2026-11-13: Draft; evidencia parcial.
 
 #### Traceability
-FR-004, FR-007 | SC-003, SC-004 | Sin prueba de CU-17 | Draft
+FR-004, FR-007 | SC-003, SC-004 | Evidencia: src/test/java/com/seashare/m2/disputa/integration/DisputePublishingIntegrationTest.java#acceptedIsPublishedAsCompletedWithoutAmounts; src/test/java/com/seashare/m2/disputa/integration/DisputePublishingIntegrationTest.java#pendingDisputeNeverPublishes; src/test/java/com/seashare/m2/disputa/integration/DisputePublishingIntegrationTest.java#expiryRejectionIsPublishedAsRejected | Draft

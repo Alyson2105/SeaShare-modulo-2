@@ -57,7 +57,7 @@ El conflicto de disponibilidad FCFS es CU-03, no este caso.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
 FR-002, FR-003, FR-005 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java#finalStatesHaveNoExit; src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#cancelFromPendingPaymentIsRejected | In Process

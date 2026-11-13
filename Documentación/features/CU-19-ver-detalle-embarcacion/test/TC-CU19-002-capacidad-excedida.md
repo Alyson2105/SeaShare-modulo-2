@@ -57,7 +57,7 @@ SC-002 exige bloqueo UI; este caso solo describe validación backend.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; Prueba unitaria verifica rechazo previo a M3; UI no verificada.
+Corrida 2026-11-13: Partial; Prueba unitaria verifica rechazo previo a M3; UI no verificada.
 
 #### Traceability
 FR-004, FR-005 | SC-002 | [flota](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); [cotizacion](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java)  | src/test/java/com/seashare/m2/reservas/application/service/VesselDetailServiceTest.java#capacityExceededIsRejectedBeforeM3 | In Process
