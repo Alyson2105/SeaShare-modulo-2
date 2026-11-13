@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU19-004 — Fallo de cotización
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar fallo de cotización. Requisitos: FR-005, FR-007. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-19 y su endpoint aún no existen; los resultados son expectativas del contrato. Mantener ficha y deshabilitar botón son pruebas UI; CU-02 actualmente no comprueba origen del monto.
+Endpoints de detalle y cotización implementados; cobertura parcial con dobles, sin verificar servicios reales ni UI. Prueba unitaria verifica propagación de QUOTATION_UNAVAILABLE; respuesta HTTP y efectos no verificados.
 
 ##### Dependencies & Assumptions
 Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [cotizacion](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java); no demuestran el flujo completo de CU-19.
@@ -39,7 +39,7 @@ M3 simulado falla para una solicitud válida.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar cotización de detalle. | Datos de las precondiciones | Según el plan, 503 QUOTATION_UNAVAILABLE; no se produce una cotización exitosa. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Consultar cotización de detalle. | Datos de las precondiciones | Según el plan, 503 QUOTATION_UNAVAILABLE; no se produce una cotización exitosa. | Pendiente | Prueba unitaria verifica propagación de QUOTATION_UNAVAILABLE; respuesta HTTP y efectos no verificados. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ Mantener ficha y deshabilitar botón son pruebas UI; CU-02 actualmente no compru
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; Prueba unitaria verifica propagación de QUOTATION_UNAVAILABLE; respuesta HTTP y efectos no verificados.
 
 #### Traceability
-FR-005, FR-007 | SC-001 | [cotizacion](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java) | Blocked
+FR-005, FR-007 | SC-001 | [cotizacion](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java)  | src/test/java/com/seashare/m2/reservas/application/service/VesselDetailServiceTest.java#financeFailurePropagates | In Process

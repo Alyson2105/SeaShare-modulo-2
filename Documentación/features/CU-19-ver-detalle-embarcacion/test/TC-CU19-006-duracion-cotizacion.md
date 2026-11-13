@@ -26,7 +26,7 @@ Verificar duración de un día. Requisitos: FR-005, FR-006. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-19 y su endpoint aún no existen; los resultados son expectativas del contrato. Debe aclararse la regla y el cálculo de total_days antes de cerrar el contrato.
+Endpoints de detalle y cotización implementados; cobertura parcial con dobles, sin verificar servicios reales ni UI. Plan CU-19 contradice CU-11 sobre fecha final igual e intervalo inclusivo; no hay prueba ejecutada del caso de un día.
 
 ##### Dependencies & Assumptions
 Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-19; no demuestran el flujo completo de CU-19.
@@ -39,7 +39,7 @@ Fecha inicial y final coinciden.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar cotización individual para un día. | Datos de las precondiciones | El contrato CU-11 acepta un día inclusivo; el plan CU-19 parece rechazar fechas iguales. | Pendiente | Contrato futuro |
+| 2 | Ejecutar | Solicitar cotización individual para un día. | Datos de las precondiciones | El contrato CU-11 acepta un día inclusivo; el plan CU-19 parece rechazar fechas iguales. | Pendiente | Plan CU-19 contradice CU-11 sobre fecha final igual e intervalo inclusivo; no hay prueba ejecutada del caso de un día. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ Debe aclararse la regla y el cálculo de total_days antes de cerrar el contrato.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Draft; sin ejecución automatizada. Plan CU-19 contradice CU-11 sobre fecha final igual e intervalo inclusivo; no hay prueba ejecutada del caso de un día.
 
 #### Traceability
-FR-005, FR-006 | SC-001 | Sin prueba de CU-19 | Draft
+FR-005, FR-006 | SC-001 | Sin prueba de CU-19  | Draft
