@@ -57,7 +57,7 @@ La política de reintento del job está pendiente.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada.
 
 #### Traceability
 FR-002, FR-006 | SC-001, SC-002 | Sin prueba de CU-17 | Blocked

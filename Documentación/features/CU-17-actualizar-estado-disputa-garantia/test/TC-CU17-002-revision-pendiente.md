@@ -57,7 +57,7 @@ El SLA de 24 horas requiere medición del flujo completo.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada.
 
 #### Traceability
 FR-001, FR-002, FR-007 | SC-001 | Sin prueba de CU-17 | Blocked

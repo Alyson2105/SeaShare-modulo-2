@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU17-005 — Carrera con vencimiento
-**Status**: Blocked
+**Status**: Draft
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -57,7 +57,7 @@ La posibilidad de resolver sin reclamo está abierta en spec D-01.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Draft; sin ejecución automatizada. La carrera depende de aclarar si el administrador puede resolver sin reclamo.
 
 #### Traceability
-FR-002, FR-003, FR-006 | SC-001, SC-002 | Sin prueba de CU-17 | Blocked
+FR-002, FR-003, FR-006 | SC-001, SC-002 | Sin prueba de CU-17 | Draft

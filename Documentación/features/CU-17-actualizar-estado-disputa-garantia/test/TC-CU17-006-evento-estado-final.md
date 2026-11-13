@@ -57,7 +57,7 @@ Mapeo entre CU-16, CU-17 y CU-18 presenta valores incompatibles; resolver antes 
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Draft; sin ejecución automatizada.
 
 #### Traceability
 FR-004, FR-007 | SC-003, SC-004 | Sin prueba de CU-17 | Draft
