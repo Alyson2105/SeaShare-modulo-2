@@ -18,7 +18,7 @@
 
 1. **H8 es consistente con H1–H7 en lo esencial:** usa el mismo resolver de identidad por headers, el mismo formato de error `{code,message}`, la misma matriz de notificaciones y el mismo motor CU-08.
 2. **Hallazgo alto:** la notificación a M1 por `M1_HTTP` no tiene cliente HTTP real. El único adaptador es `FakeFleetStatusNotificationAdapter`, que registra el mensaje y responde `DELIVERED`; el relay marca el evento como publicado sin aplicar el estado en M1.
-3. **Hallazgo alto:** CU-07 no crea la disputa de CU-16. `dispute_id` y `dispute_window_expires_at` siempre salen `null`, aunque el plan de CU-07 los exige.
+3. **Hallazgo alto:** CU-07 no creaba la disputa de CU-16: `dispute_id` y `dispute_window_expires_at` siempre salían `null`, aunque el plan de CU-07 los exige. Quedó resuelto en el commit 5222f47.
 4. **Hallazgo medio:** CU-04 no implementa la idempotencia de 60 segundos descrita en su plan.
 5. **Hallazgo medio:** los cuatro servicios leen la zona horaria desde `reservation.harborTimezone`; no consultan M1/CU-09 en el momento de la operación, como indican los planes.
 6. **Hallazgo medio:** hay desviaciones en el contrato de respuesta (campos que el plan exige no nulos y el código devuelve nulos).
@@ -52,7 +52,7 @@
 | ID | Severidad | Hallazgo | Evidencia |
 |---|---|---|---|
 | H8-F01 | Alta | La notificación de estado operativo a M1 no llega por HTTP. El adaptador fake responde `DELIVERED` y el mensaje se marca como publicado sin ejecutar el cambio en M1. | `FakeFleetStatusNotificationAdapter.java:23-26`; `PublishPendingOutboxService.java:141-149` |
-| H8-F02 | Alta | CU-07 no abre la ventana de disputa de CU-16. La respuesta devuelve `null` en `dispute_id` y `dispute_window_expires_at`; el plan exige UUID y fecha a 24 horas. | `EndNavigationService.java:111-112`; `CU-07/plan.md:14,76-77,203` |
+| H8-F02 | Alta | CU-07 no abre la ventana de disputa de CU-16. La respuesta devuelve `null` en `dispute_id` y `dispute_window_expires_at`; el plan exige UUID y fecha a 24 horas. Resuelto en el commit 5222f47. | `EndNavigationService.java:111-112`; `CU-07/plan.md:14,76-77,203` |
 | H8-F03 | Media | CU-04 no implementa la idempotencia de 60 s ni lee `X-Idempotency-Key`; un doble clic con la misma clave recibe `409`, no `200` con la respuesta anterior. | `CU-04/plan.md:74,378-379`; ausencia de idempotencia en `CancellationController` y `RequestCancellationService` |
 | H8-F04 | Media | La zona horaria se toma de la reserva, no de una consulta actual a M1/CU-09. Si la zona guardada existe, no se detecta una caída o cambio en M1; el fail-safe solo cubre zona nula o inválida. | `RequestCancellationService.java:83`; `StartNavigationService.java:75`; `ReportNoShowService.java:73`; `EndNavigationService.java:70`; planes CU-04 L29 y CU-05 L12 |
 | H8-F05 | Media | Contrato de respuesta desviado: `m1_sync_status` y `m3_notification_status` pueden ser `null`; `vessel_operational_status` puede ser `null`; `insurance_activated` puede ser `false`. Los planes los presentan como no nulos o con valor literal. En CU-06, vessel_operational_status nunca es null: la matriz devuelve IN_NAVIGATION para ese destino.| `RequestCancellationService.java:142-145`; `StartNavigationService.java:129-130,138`; `ReportNoShowService.java:101-105`; planes CU-04 L118-141, CU-05 L75, CU-06 L77-78 |
@@ -90,7 +90,7 @@
 | CU-06 | M1 notificación | **Parcial** | Fake; estado de respuesta puede ser `null`. |
 | CU-07 | Cierre | **Cumple** | `IN_NAVIGATION -> COMPLETED`; doble cierre -> `TRIP_ALREADY_COMPLETED`. |
 | CU-07 | Notas de cierre | **Cumple** | Máximo 2000; blanco/null se guarda como `null`. |
-| CU-07 | Disputa CU-16 | **No cumple** | No se crea; campos `null`. |
+| CU-07 | Disputa CU-16 | **No cumple** | No se crea; campos `null`. Resuelto en 5222f47: ahora se abre la disputa. |
 | CU-07 | M1 notificación | **Parcial** | Fake; estado de respuesta puede ser `null`. |
 
 ---
@@ -136,7 +136,7 @@ No se ejecutaron. Los conteos se obtuvieron por búsqueda estática de `@Test`.
 
 1. **B4 en `plan-trabajo-backend.md` (resuelto):** decisión tomada el 13 de noviembre de 2026: L226 corregida (lista real de migraciones V1 a V6), L236 corregida (29 constantes, rango L8-L36), L256 y L260 sin tocar, y una línea "Nota H8" agregada debajo de la tabla del Anexo B. Queda abierto solo L241 ("son 21"), que no se tocó por la restricción de no editar nada más del archivo: [NEEDS CLARIFICATION].
 2. **Notificación M1:** confirmar si el fake de `M1_HTTP` es una entrega aceptada para H8 o si H8 debía incluir el cliente HTTP real.
-3. **CU-07 y CU-16:** confirmar si la disputa se difiere formalmente a otra fase. Hoy el plan de CU-07 la exige y el código devuelve `null`.
+3. **CU-07 y CU-16 (resuelto):** la disputa no se difirió; se implementó en el commit 5222f47 y el plan de CU-07 se cumple.
 4. **Zona horaria:** confirmar si la zona persistida en la reserva es la fuente oficial aceptada, o si cada operación debe consultar M1/CU-09 como dice el plan.
 5. **Contrato M1/M3:** confirmar si los estados pueden ser `null` cuando no hay destino encolado, o si deben devolver siempre un valor literal (`ENQUEUED`, `PUBLISHED`, `AVAILABLE`, `IN_NAVIGATION`, `MAINTENANCE_CLEANING`).
 6. **Idempotencia CU-04:** confirmar si la ventana de 60 s sigue vigente para H8 o si se difiere.
@@ -163,7 +163,7 @@ No se ejecutaron. Los conteos se obtuvieron por búsqueda estática de `@Test`.
 | [DIFERENCIA H8-CU06-03] | CU-06 | `Documentación/features/CU-06-marcar-inicio-navegacion/plan.md` | Notificacion M1 por outbox `M1_HTTP` con unico adaptador fake | no |
 | [DIFERENCIA H8-CU06-04] | CU-06 | `Documentación/features/CU-06-marcar-inicio-navegacion/plan.md` | `insurance_activated` es `true` solo si el destino AMQP fue encolado; el plan lo da literal `true` | no |
 | [DIFERENCIA H8-CU06-05] | CU-06 | `Documentación/features/CU-06-marcar-inicio-navegacion/plan.md` | Orden real: 404, 403, 400, 409, 503, 409 `EARLY_DEPARTURE`, 400, 409, 500; el plan no tiene fila 503 | si |
-| [DIFERENCIA H8-CU07-01] | CU-07 | `Documentación/features/CU-07-marcar-fin-navegacion/plan.md` | `dispute_id` y `dispute_window_expires_at` siempre `null`; el plan exige UUID y fecha a 24 h | no |
+| [DIFERENCIA H8-CU07-01] | CU-07 | `Documentación/features/CU-07-marcar-fin-navegacion/plan.md` | Sin diferencia desde el commit 5222f47: el codigo abre la disputa de CU-16 y devuelve `dispute_id` y `dispute_window_expires_at`; antes salian `null` | no |
 | [DIFERENCIA H8-CU07-02] | CU-07 | `Documentación/features/CU-07-marcar-fin-navegacion/plan.md` | `vessel_operational_status` es `MAINTENANCE_CLEANING` solo si m1_blocked y si no `null`, con mensaje sin clausula de M1 | no |
 | [DIFERENCIA H8-CU07-03] | CU-07 | `Documentación/features/CU-07-marcar-fin-navegacion/plan.md` | Identidad por headers, cuerpo opcional y sin Content-Type obligatorio; el plan exige Bearer JWT y Content-Type | no |
 | [DIFERENCIA H8-CU07-04] | CU-07 | `Documentación/features/CU-07-marcar-fin-navegacion/plan.md` | Notificacion M1 por outbox `M1_HTTP` con unico adaptador fake | no |
