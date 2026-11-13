@@ -189,13 +189,13 @@ class PaymentIntegrationTest { // CU-03: inicio de pago de punta a punta con ada
     }
 
     @Test
-    void secondPaymentIsConflict() throws Exception { // FR-002: ya no esta INITIATED
+    void secondPaymentIsConflict() throws Exception { // FR-002 y CU-13: no se reinicia un cobro en proceso
         ReservationView reservation = createInitiated(LocalDate.of(2027, 6, 1), LocalDate.of(2027, 6, 3));
         pay(reservation.reservationId(), VALID_BODY).andExpect(status().isOk());
 
         pay(reservation.reservationId(), VALID_BODY)
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("INVALID_RESERVATION_STATE"));
+                .andExpect(jsonPath("$.code").value("RETRY_NOT_ALLOWED"));
     }
 
     @Test
