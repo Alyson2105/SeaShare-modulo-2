@@ -56,5 +56,7 @@ interface ReservationJpaRepository extends JpaRepository<ReservationEntity, UUID
     List<UUID> findPaymentCandidates(@Param("since") Instant since, Pageable pageable); // CU-13: cobros por consultar
 
     long countByRenterIdAndStatusAndIdNot(UUID renterId, ReservationStatus status, UUID id); // viajes completados del arrendatario excluyendo la reserva actual
+
+    boolean existsByVesselIdAndStatusAndIdNot(UUID vesselId, ReservationStatus status, UUID id); // CU-06: otra reserva del barco en el estado indicado
 }
 

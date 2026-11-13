@@ -223,7 +223,7 @@ Orden de integración: cada frente integra en su rama de tarea; los cambios al c
 | CU-22 | spec, plan, consistencia-m2-m1.md | Ninguno | Ninguno | PENDIENTE |
 
 **Piezas transversales**:
-- Migraciones: `V1__init.sql`, `V2__remaining_tables.sql`, `V3__reservation_fields_and_outbox.sql`. No existe V4.
+- Migraciones: `V1__init.sql`, `V2__remaining_tables.sql`, `V3__reservation_fields_and_outbox.sql`, `V4__status_changed_at_and_audit_tracking.sql`, `V5__external_query_log_returned_status.sql`, `V6__payment_attempt_idempotency.sql`.
 - Relay outbox a RabbitMQ: **no existe** (sin resultados en `src/` para `RabbitTemplate`, `AmqpTemplate`, `RabbitListener`, `relay`).
 - Job TTL: `TtlExpiryJob.java` L27 (30000 ms por defecto); sin ShedLock (TODO en L13).
 - Fakes de flota activos por defecto: `FakeFleetInfoAdapter.java` L13, `FakeFleetOperationalStatusAdapter.java` L11.
@@ -233,7 +233,7 @@ Orden de integración: cada frente integra en su rama de tarea; los cambios al c
 
 **Verificaciones del entorno (2026-11-06)**:
 - Rama `feature/fase1-setup`, ahead 1. Último commit de CU-02: `96e7568` (`git log -S`).
-- `ErrorCode`: 21 constantes (L8-L28). El "20" de la nota no coincide.
+- `ErrorCode`: 29 constantes (L8-L36). El "20" de la nota no coincide.
 - `IdempotencyKeyJpaRepository.java` L24: `@Modifying(flushAutomatically = true, clearAutomatically = true)`.
 - `.\mvnw.cmd test` con Docker: 83 tests, 0 fallos, BUILD SUCCESS.
 
@@ -285,6 +285,8 @@ Orden de integración: cada frente integra en su rama de tarea; los cambios al c
 | L30 | `CANCELLED_FLEXIBLE` por cobro tardío | `CU-14/spec.md` L31, L66 vs código (ninguna ruta lo genera) |
 | L31 | `Message-Id` | `CU-14/plan.md` L35 vs código (sin headers, sin relay) |
 | L32 | `m1_blocked` | `CU-08/plan.md` L196 (controla liberaciones) vs código (solo se escribe `false`: `ReservationMapper.java` L54) |
+
+Nota H8 (13 de noviembre de 2026): el conteo vigente de ErrorCode es 29 y las migraciones son V1 a V6; ver Documentación\context\auditoria-h8.md
 
 ---
 

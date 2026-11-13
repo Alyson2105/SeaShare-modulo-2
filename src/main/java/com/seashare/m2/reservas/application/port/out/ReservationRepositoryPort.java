@@ -57,5 +57,11 @@ public interface ReservationRepositoryPort { // puerto de persistencia para el a
      * esta consultando. Es un conteo de calendario, no un calculo monetario (CU-21 FR-009).
      */
     long countCompletedByRenterExcluding(UUID renterId, UUID excludeReservationId); // viajes completados registrados en M2
+
+    /**
+     * Indica si existe otra reserva de la misma embarcacion en estado IN_NAVIGATION,
+     * excluyendo la reserva que se esta evaluando (CU-06).
+     */
+    boolean existsOtherInNavigation(UUID vesselId, UUID excludeReservationId); // otra travesia activa del mismo barco
 }
 
