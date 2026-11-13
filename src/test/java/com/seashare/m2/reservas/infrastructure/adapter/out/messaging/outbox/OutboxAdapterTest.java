@@ -122,18 +122,21 @@ class OutboxAdapterTest { // pruebas unitarias del adaptador outbox y formato de
     }
 
     @Test
-    void markPublishedPurgsPayloadWithPaymentToken() { // D-09: el payload con token se vacia tras confirmar
+    void markPublishedPurgesPaymentTokenAndKeepsRest() throws Exception { // D-09: tras confirmar solo se elimina el token
         UUID messageId = UUID.randomUUID(); // id de la fila
         Instant publishedAt = Instant.parse("2026-11-07T12:00:00Z"); // hora del confirm
         OutboxMessageEntity entity = new OutboxMessageEntity(); // entidad de prueba
         entity.setEventId(UUID.randomUUID()); // event id
         entity.setDestination("AMQP"); // destino
-        entity.setPayload("{\"reservation_id\":\"abc\",\"payment_token_ref\":\"tok_123\"}"); // payload con token
+        entity.setPayload("{\"reservation_id\":\"abc\",\"status\":\"PENDING\",\"payment_token_ref\":\"tok_123\"}"); // payload con token
         when(repository.findById(messageId)).thenReturn(Optional.of(entity)); // fila existente
 
         adapter.markPublished(messageId, publishedAt); // ejecuta el marcado con purga
 
-        assertThat(entity.getPayload()).isEqualTo("{}"); // payload purgado sin cambio de esquema
+        JsonNode json = objectMapper.readTree(entity.getPayload()); // parsea el payload purgado
+        assertThat(json.has("payment_token_ref")).isFalse(); // token eliminado
+        assertThat(json.get("reservation_id").asText()).isEqualTo("abc"); // resto del payload intacto
+        assertThat(json.get("status").asText()).isEqualTo("PENDING"); // estado conservado
         assertThat(entity.getPublishedAt()).isEqualTo(publishedAt); // published_at marcado
         verify(repository).save(entity); // persiste el cambio
     }
@@ -153,6 +156,60 @@ class OutboxAdapterTest { // pruebas unitarias del adaptador outbox y formato de
 
         assertThat(entity.getPayload()).isEqualTo(payload); // payload intacto
         assertThat(entity.getPublishedAt()).isEqualTo(publishedAt); // published_at marcado
+        verify(repository).save(entity); // persiste el cambio
+    }
+
+    @Test
+    void markFailedDeadPurgesPaymentTokenAndKeepsRest() throws Exception { // dead: el token ya no puede reintentarse
+        UUID messageId = UUID.randomUUID(); // id de la fila
+        OutboxMessageEntity entity = new OutboxMessageEntity(); // entidad de prueba
+        entity.setEventId(UUID.randomUUID()); // event id
+        entity.setDestination("AMQP"); // destino
+        entity.setPayload("{\"reservation_id\":\"abc\",\"status\":\"PENDING\",\"payment_token_ref\":\"tok_123\"}"); // payload con token
+        when(repository.findById(messageId)).thenReturn(Optional.of(entity)); // fila existente
+
+        adapter.markFailed(messageId, 5, null, "broker caido", true); // quinto fallo: dead
+
+        JsonNode json = objectMapper.readTree(entity.getPayload()); // parsea el payload purgado
+        assertThat(json.has("payment_token_ref")).isFalse(); // token eliminado
+        assertThat(json.get("reservation_id").asText()).isEqualTo("abc"); // resto del payload intacto
+        assertThat(json.get("status").asText()).isEqualTo("PENDING"); // estado conservado
+        assertThat(entity.isDead()).isTrue(); // mensaje marcado dead
+        assertThat(entity.getAttempts()).isEqualTo(5); // intentos persistidos
+        verify(repository).save(entity); // persiste el cambio
+    }
+
+    @Test
+    void markFailedRetryableKeepsPaymentToken() { // un reintento vivo conserva el token
+        UUID messageId = UUID.randomUUID(); // id de la fila
+        String payload = "{\"reservation_id\":\"abc\",\"status\":\"PENDING\",\"payment_token_ref\":\"tok_123\"}"; // payload con token
+        OutboxMessageEntity entity = new OutboxMessageEntity(); // entidad de prueba
+        entity.setEventId(UUID.randomUUID()); // event id
+        entity.setDestination("AMQP"); // destino
+        entity.setPayload(payload); // payload con token
+        when(repository.findById(messageId)).thenReturn(Optional.of(entity)); // fila existente
+
+        adapter.markFailed(messageId, 1, Instant.parse("2026-11-07T12:01:00Z"), "timeout", false); // fallo reintentable
+
+        assertThat(entity.getPayload()).isEqualTo(payload); // token conservado para el siguiente intento
+        assertThat(entity.isDead()).isFalse(); // sigue vivo
+        verify(repository).save(entity); // persiste el cambio
+    }
+
+    @Test
+    void markFailedDeadKeepsPayloadWithoutPaymentToken() { // dead sin token no reescribe el payload
+        UUID messageId = UUID.randomUUID(); // id de la fila
+        String payload = "{\"reservation_id\":\"abc\",\"status\":\"RESERVED\"}"; // payload sin token
+        OutboxMessageEntity entity = new OutboxMessageEntity(); // entidad de prueba
+        entity.setEventId(UUID.randomUUID()); // event id
+        entity.setDestination("AMQP"); // destino
+        entity.setPayload(payload); // payload sin token
+        when(repository.findById(messageId)).thenReturn(Optional.of(entity)); // fila existente
+
+        adapter.markFailed(messageId, 5, null, "broker caido", true); // quinto fallo: dead
+
+        assertThat(entity.getPayload()).isEqualTo(payload); // payload intacto
+        assertThat(entity.isDead()).isTrue(); // mensaje marcado dead
         verify(repository).save(entity); // persiste el cambio
     }
 

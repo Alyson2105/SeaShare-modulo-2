@@ -73,9 +73,20 @@ class InternalReservationControllerTest { // pruebas web standalone del endpoint
     void invalidUuidIs400WithInvalidUuidCode() throws Exception { // identificador no uuid en la ruta
         mockMvc.perform(get("/api/v1/internal/reservations/not-a-uuid")
                         .header("X-User-Id", USER_ID.toString())
-                        .header("X-User-Role", "SERVICE"))
+                        .header("X-User-Role", "FINANCE"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_UUID"));
+    }
+
+    @Test
+    void nonFinanceRoleIs403() throws Exception { // T-13: un perfil distinto de FINANCE no puede consultar
+        UUID id = UUID.randomUUID();
+
+        mockMvc.perform(get("/api/v1/internal/reservations/" + id)
+                        .header("X-User-Id", USER_ID.toString())
+                        .header("X-User-Role", "OWNER"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PROFILE_NOT_AUTHORIZED"));
     }
 
     @Test
@@ -92,7 +103,7 @@ class InternalReservationControllerTest { // pruebas web standalone del endpoint
 
         mockMvc.perform(get("/api/v1/internal/reservations/" + id)
                         .header("X-User-Id", USER_ID.toString())
-                        .header("X-User-Role", "SERVICE"))
+                        .header("X-User-Role", "FINANCE"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("RESERVATION_NOT_FOUND"));
     }
@@ -104,7 +115,7 @@ class InternalReservationControllerTest { // pruebas web standalone del endpoint
 
         MvcResult result = mockMvc.perform(get("/api/v1/internal/reservations/" + id)
                         .header("X-User-Id", USER_ID.toString())
-                        .header("X-User-Role", "SERVICE"))
+                        .header("X-User-Role", "FINANCE"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.reservation_code").value("RS-12345678"))
                 .andExpect(jsonPath("$.primary_status").value("RESERVED"))

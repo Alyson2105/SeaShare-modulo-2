@@ -416,6 +416,30 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
     }
 
     @Test
+    void creationAuditAndOutboxShareTheSameEventId() { // T-24: auditoria y outbox usan el mismo event_id (FR-011)
+        Reservation created = createReservation(); // la creacion escribe auditoria y outbox en la misma transaccion
+
+        ArgumentCaptor<com.seashare.m2.reservas.application.dto.ReservationInfoProvidedEvent> outboxCaptor =
+                ArgumentCaptor.forClass(com.seashare.m2.reservas.application.dto.ReservationInfoProvidedEvent.class);
+        verify(outboxPort).enqueue(outboxCaptor.capture()); // evento de informacion hacia M3
+
+        UUID eventId = outboxCaptor.getValue().eventId(); // id encolado
+        assertThat(outboxCaptor.getValue().reservationId()).isEqualTo(created.getId());
+        verify(statusAuditPort).record(org.mockito.ArgumentMatchers.argThat(entry ->
+                created.getId().equals(entry.reservationId())
+                        && entry.eventIds() != null
+                        && entry.eventIds().equals(java.util.List.of(eventId)))); // el mismo id en auditoria
+    }
+
+    @Test
+    void creationOnlyEnqueuesInfoProvided() { // T-24: la creacion no emite eventos de cambio de estado
+        createReservation();
+
+        verify(outboxPort, never()).enqueue(any(StatusChangedEvent.class)); // sin evento AMQP de estado
+        verify(outboxPort, never()).enqueue(any(OperationalStatusEvent.class)); // sin notificacion a M1
+    }
+
+    @Test
     void transitionAuditCarriesActorIdAndEventIds() { // T-10: cada transicion audita actor_id y event_ids
         Reservation created = createReservation();
         UUID renterActor = UUID.randomUUID();

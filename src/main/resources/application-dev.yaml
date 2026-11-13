@@ -6,9 +6,18 @@ logging:
   level:
     com.seashare: DEBUG              # Trazas de la aplicacion para depurar en local
 
+seashare:
+  fleet:
+    mode: fake                       # M2 corre aislado en local: adaptadores falsos de M1
+    token: m2-development-token      # Token de desarrollo de M1 (nunca se usa en produccion)
+  finance:
+    mode: fake                       # M2 corre aislado en local: adaptadores falsos de M3
+
 m2:
   scheduler:
     ttl:
       enabled: true                  # Job TTL activo en local
     outbox:
       enabled: true                  # Relay del outbox activo en local (T-03)
+    payments:
+      enabled: true                  # Canal B de CU-13 activo en local

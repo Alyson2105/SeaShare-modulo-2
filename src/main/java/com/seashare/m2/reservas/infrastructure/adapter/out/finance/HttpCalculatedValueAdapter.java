@@ -3,7 +3,6 @@ package com.seashare.m2.reservas.infrastructure.adapter.out.finance;
 import com.seashare.m2.reservas.application.dto.CalculatedValue;
 import com.seashare.m2.reservas.application.port.out.CalculatedValuePort;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
-import com.seashare.m2.shared.domain.ClockPort;
 import com.seashare.m2.shared.domain.ErrorCode;
 import com.seashare.m2.shared.infrastructure.adapter.in.web.CorrelationIdFilter;
 import org.slf4j.MDC;
@@ -21,8 +20,6 @@ import tools.jackson.databind.json.JsonMapper;
 import java.math.BigDecimal;
 import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.UUID;
 
 @Component
@@ -37,67 +34,34 @@ public class HttpCalculatedValueAdapter implements CalculatedValuePort { // clie
 
     private final RestClient restClient; // cliente con timeouts propios ya configurados
 
-    private final FinanceProperties properties; // reintentos y tope total de la configuracion
-
-    private final ClockPort clockPort; // reloj inyectable para medir el tope total de reintentos
-
-    public HttpCalculatedValueAdapter(@Qualifier("calculatedValueRestClient") RestClient restClient, // cliente propio de CU-12
-                                      FinanceProperties properties, ClockPort clockPort) { // config y reloj
+    public HttpCalculatedValueAdapter(@Qualifier("calculatedValueRestClient") RestClient restClient) { // cliente propio de CU-12
         this.restClient = restClient; // asigna cliente
-        this.properties = properties; // asigna configuracion
-        this.clockPort = clockPort; // asigna reloj
     }
 
     @Override
     public CalculatedValue getCalculatedValue(UUID reservationId) { // consulta el valor calculado a M3
-        String body = post(reservationId); // POST con reintentos de 404 y de socket
+        String body = post(reservationId); // una sola llamada, sin esperas en el hilo de peticion
         return parse(body); // desglose opaco sin aritmetica
     }
 
-    private String post(UUID reservationId) { // POST con reintento de 404 y un reintento de socket
+    private String post(UUID reservationId) { // POST sin esperas: el 404 se devuelve al cliente para que reintente
         String path = RESERVATIONS_PATH + reservationId + CALCULATED_VALUE_SUFFIX; // ruta completa
-        Instant start = clockPort.now(); // inicio medido con ClockPort, nunca Instant.now()
-        int retries404 = 0; // reintentos de 404 ya usados
         boolean socketRetried = false; // unico reintento de socket ya usado
         while (true) { // el bucle solo sale por return o throw
             try {
                 ResponseEntity<String> response = exchange(path); // una llamada HTTP
-                if (response.getStatusCode().value() == 404) { // la informacion llega de forma asincrona
-                    if (retries404 >= properties.getMax404Retries()) { // se agotaron los reintentos
-                        throw new ReservationRuleException(ErrorCode.CALCULATION_UNAVAILABLE, "Finance calculation not found after retries"); // persiste
-                    }
-                    if (!fitsInTotalBudget(start)) { // el tope total no alcanza para otra espera
-                        throw new ReservationRuleException(ErrorCode.CALCULATION_UNAVAILABLE, "Finance calculation retry budget exceeded"); // corta por tope
-                    }
-                    retries404++; // gasta un reintento
-                    pause(properties.getRetryDelayMs()); // espera configurable; en tests vale 0
-                    continue; // reintenta el 404
+                if (response.getStatusCode().value() == 404) { // M3 aun no tiene el calculo (llega de forma asincrona)
+                    throw new ReservationRuleException(ErrorCode.CALCULATION_UNAVAILABLE,
+                            "Finance calculation is not available yet; retry later"); // sin dormir el hilo
                 }
                 return response.getBody() == null ? "" : response.getBody(); // 200 con cuerpo
             } catch (ResourceAccessException e) { // fallo de red antes de llegar a respuesta
                 if (!socketRetried && isRetryableConnectionFailure(e)) { // solo ConnectException y una vez
                     socketRetried = true; // marca el unico reintento de socket
-                    continue; // reintenta de inmediato
+                    continue; // reintenta de inmediato, sin espera
                 }
                 throw new ReservationRuleException(ErrorCode.CALCULATION_UNAVAILABLE, "Finance service is unreachable"); // timeout o sin conexion
             }
-        }
-    }
-
-    private boolean fitsInTotalBudget(Instant start) { // decide si todavia cabe otra espera dentro del tope
-        long elapsed = Duration.between(start, clockPort.now()).toMillis(); // tiempo transcurrido medido con ClockPort
-        return elapsed + properties.getRetryDelayMs() <= properties.getMaxTotalMs(); // espera + transcurrido dentro del tope
-    }
-
-    void pause(long delayMs) { // espera entre reintentos; los tests la sustituyen con retry-delay-ms en 0
-        if (delayMs <= 0) { // sin espera configurada
-            return; // no duerme
-        }
-        try {
-            Thread.sleep(delayMs); // espera fija antes del reintento
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt(); // conserva la interrupcion
-            throw new ReservationRuleException(ErrorCode.CALCULATION_UNAVAILABLE, "Finance retry wait interrupted"); // corta seguro
         }
     }
 

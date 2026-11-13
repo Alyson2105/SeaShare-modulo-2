@@ -1,5 +1,6 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.messaging.outbox;
 
+import com.seashare.m2.reservas.application.dto.LatePaymentReversalEvent;
 import com.seashare.m2.reservas.application.dto.ReservationInfoProvidedEvent;
 import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
 import com.seashare.m2.reservas.application.dto.OperationalStatusEvent;
@@ -7,10 +8,11 @@ import com.seashare.m2.reservas.application.dto.PendingOutboxMessage;
 import com.seashare.m2.reservas.application.port.out.OutboxPort;
 import com.seashare.m2.reservas.infrastructure.adapter.out.messaging.FinanceStatusMapper;
 import com.seashare.m2.reservas.infrastructure.adapter.out.messaging.config.MessagingProperties;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -120,20 +122,49 @@ public class OutboxAdapter implements OutboxPort { // adaptador de persistencia 
     }
 
     @Override
+    public void enqueue(LatePaymentReversalEvent event) { // CU-13: reversion del cobro tardio
+        Map<String, Object> payloadMap = new LinkedHashMap<>(); // mapa ordenado para claves json
+        payloadMap.put("reservation_id", event.reservationId().toString()); // reserva que permanece EXPIRED
+        payloadMap.put("status", "CANCELLED_FLEXIBLE"); // unico valor que M3 trata como reembolso del 100 %
+        payloadMap.put("status_changed_at", event.changedAt().toString()); // marca iso-8601 en UTC
+
+        String payload; // variable para almacenar texto json serializado
+        try { // serializacion segura con jackson 3
+            payload = objectMapper.writeValueAsString(payloadMap); // genera texto json
+        } catch (Exception e) { // captura cualquier excepcion de serializacion
+            throw new IllegalStateException("Failed to serialize late payment reversal payload", e); // falla segura
+        }
+
+        OutboxMessageEntity entity = new OutboxMessageEntity(); // instancia entidad outbox
+        entity.setEventId(event.eventId()); // id deterministico para deduplicacion
+        entity.setDestination(DESTINATION_AMQP); // destino amqp hacia modulo 3
+        entity.setExchange(messagingProperties.getExchange()); // exchange de application.yaml
+        entity.setRoutingKey(messagingProperties.getRoutingKeyStatusChanged()); // misma ruta de CU-14
+        entity.setPayload(payload); // payload con el estado literal
+        entity.setNextAttemptAt(event.changedAt()); // programa intento inicial
+        repository.save(entity); // persiste el mensaje
+    }
+
+    @Override
     public List<PendingOutboxMessage> findPending(Instant now, int batchSize) { // lee pendientes para el relay
-        return repository.findPending(now, PageRequest.of(0, batchSize)) // lote ordenado y limitado
+        return repository.findPending(now, batchSize) // reclama el lote con FOR UPDATE SKIP LOCKED
                 .stream()
                 .map(this::toPending) // convierte entidad a vista publica
                 .toList(); // retorna lista inmutable
     }
 
     @Override
+    public void lease(UUID messageId, Instant leasedUntil) { // oculta el mensaje de otras instancias durante el lease
+        OutboxMessageEntity entity = load(messageId); // carga la fila reclamada
+        entity.setNextAttemptAt(leasedUntil); // hasta entonces no vuelve a estar pendiente
+        repository.save(entity); // persiste el arriendo en la transaccion del reclamo
+    }
+
+    @Override
     public void markPublished(UUID messageId, Instant publishedAt) { // marca publicado tras el confirm
         OutboxMessageEntity entity = load(messageId); // carga la fila
         entity.setPublishedAt(publishedAt); // fija published_at
-        if (entity.getPayload() != null && entity.getPayload().contains(PAYMENT_TOKEN_FIELD)) { // purga D-09
-            entity.setPayload("{}"); // vacia el payload con token tras confirmar, sin cambio de esquema
-        }
+        entity.setPayload(purgePaymentToken(entity.getPayload())); // purga solo el token, conserva el resto del payload
         repository.save(entity); // persiste el marcado
     }
 
@@ -144,7 +175,26 @@ public class OutboxAdapter implements OutboxPort { // adaptador de persistencia 
         entity.setNextAttemptAt(nextAttemptAt); // programa proximo intento o null si dead
         entity.setLastError(lastError); // guarda el ultimo error
         entity.setDead(dead); // marca dead en el 5º fallo
+        if (dead) { // el mensaje ya no se reintentara
+            entity.setPayload(purgePaymentToken(entity.getPayload())); // purga el token sin borrar el resto del payload
+        }
         repository.save(entity); // persiste el estado del intento
+    }
+
+    private String purgePaymentToken(String payload) { // elimina solo payment_token_ref del json
+        if (payload == null || !payload.contains(PAYMENT_TOKEN_FIELD)) { // sin token no hay nada que purgar
+            return payload; // conserva el payload original sin reserializar
+        }
+        try {
+            JsonNode root = objectMapper.readTree(payload); // arbol json del payload
+            if (!(root instanceof ObjectNode object) || !object.has(PAYMENT_TOKEN_FIELD)) { // no es objeto o no tiene el campo
+                return payload; // conserva el payload original
+            }
+            object.remove(PAYMENT_TOKEN_FIELD); // elimina unicamente el token de pago
+            return objectMapper.writeValueAsString(object); // conserva el resto de campos
+        } catch (Exception e) { // payload ilegible: se conserva para no perder el mensaje
+            return payload; // la purga nunca rompe el marcado del outbox
+        }
     }
 
     private OutboxMessageEntity load(UUID messageId) { // carga una fila outbox por id

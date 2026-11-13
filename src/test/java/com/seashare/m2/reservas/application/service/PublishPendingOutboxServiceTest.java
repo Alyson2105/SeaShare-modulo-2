@@ -12,14 +12,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -70,17 +69,16 @@ class PublishPendingOutboxServiceTest { // pruebas unitarias del servicio relay 
     @BeforeEach
     void setUp() { // configura reloj, TX en linea y backoff con jitter cero
         lenient().when(clockPort.now()).thenReturn(NOW); // reloj siempre en NOW
-        lenient().doAnswer(invocation -> { // la TX solo ejecuta el consumidor en linea
-            Consumer<TransactionStatus> action = invocation.getArgument(0); // consumidor del mensaje
-            action.accept(null); // sin estado transaccional real en unitario
-            return null; // firma void
-        }).when(transactionTemplate).executeWithoutResult(any()); // stub de executeWithoutResult
+        lenient().doAnswer(invocation -> { // la TX solo ejecuta el callback en linea
+            TransactionCallback<?> action = invocation.getArgument(0); // callback transaccional
+            return action.doInTransaction(null); // sin estado transaccional real en unitario
+        }).when(transactionTemplate).execute(any()); // stub de execute
         Random random = mock(Random.class); // random fijo
         lenient().when(random.nextDouble()).thenReturn(0.5); // jitter 0 -> retardos base exactos
         BackoffPolicy backoffPolicy = new BackoffPolicy(5, 1000, 5, 0.1, random); // politica de prueba
         service = new PublishPendingOutboxService( // construye el servicio con puertos simulados
                 outboxPort, eventPublisherPort, fleetStatusNotificationPort,
-                clockPort, transactionTemplate, backoffPolicy, 10); // lote de 10
+                clockPort, transactionTemplate, backoffPolicy, 10, 30000); // lote de 10 y lease de 30 s
     }
 
     @Test
@@ -88,7 +86,7 @@ class PublishPendingOutboxServiceTest { // pruebas unitarias del servicio relay 
         long[] expectedSeconds = {1, 5, 25, 125}; // retardos esperados en segundos
         for (int attempt = 0; attempt < 4; attempt++) { // simula los 4 primeros fallos
             PendingOutboxMessage message = pending(PublishPendingOutboxService.DESTINATION_AMQP, attempt); // mensaje
-            when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(message)); // pendiente unico
+            when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(message), List.of()); // pendiente unico y fin de lote
             doThrow(new EventPublishException("broker caido")).when(eventPublisherPort).publish(any()); // fallo
 
             service.execute(); // procesa el ciclo
@@ -105,7 +103,7 @@ class PublishPendingOutboxServiceTest { // pruebas unitarias del servicio relay 
     @Test
     void quintoFalloMarcaDeadConAlerta() { // tras el 5º fallo dead=true sin proximo intento
         PendingOutboxMessage message = pending(PublishPendingOutboxService.DESTINATION_AMQP, 4); // 4 intentos previos
-        when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(message)); // pendiente unico
+        when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(message), List.of()); // pendiente unico y fin de lote
         doThrow(new EventPublishException("broker caido")).when(eventPublisherPort).publish(any()); // 5º fallo
 
         service.execute(); // procesa el ciclo
@@ -122,7 +120,7 @@ class PublishPendingOutboxServiceTest { // pruebas unitarias del servicio relay 
     @Test
     void publicacionConfirmadaMarcaPublishedAt() { // ack del broker -> published_at con hora del reloj
         PendingOutboxMessage message = pending(PublishPendingOutboxService.DESTINATION_AMQP, 0); // sin intentos
-        when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(message)); // pendiente unico
+        when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(message), List.of()); // pendiente unico y fin de lote
 
         service.execute(); // procesa el ciclo
 
@@ -134,7 +132,7 @@ class PublishPendingOutboxServiceTest { // pruebas unitarias del servicio relay 
     @Test
     void cuarentaYCuatroDeM1VaDirectoDeadSinReintento() { // D-05: todo 4xx es permanente
         PendingOutboxMessage message = pending(PublishPendingOutboxService.DESTINATION_M1_HTTP, 0); // destino M1
-        when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(message)); // pendiente unico
+        when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(message), List.of()); // pendiente unico y fin de lote
         when(fleetStatusNotificationPort.notifyStatus(message)) // M1 responde 4xx
                 .thenReturn(FleetNotificationOutcome.PERMANENT_FAILURE);
 
@@ -153,7 +151,7 @@ class PublishPendingOutboxServiceTest { // pruebas unitarias del servicio relay 
     @Test
     void cincoCientosDeM1ReagendaConBackoff() { // 5xx/timeout de M1 reintenta con backoff
         PendingOutboxMessage message = pending(PublishPendingOutboxService.DESTINATION_M1_HTTP, 0); // destino M1
-        when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(message)); // pendiente unico
+        when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(message), List.of()); // pendiente unico y fin de lote
         when(fleetStatusNotificationPort.notifyStatus(message)) // M1 responde 5xx
                 .thenReturn(FleetNotificationOutcome.RETRYABLE_FAILURE);
 
@@ -170,7 +168,7 @@ class PublishPendingOutboxServiceTest { // pruebas unitarias del servicio relay 
     @Test
     void m1EntregadoMarcaPublishedAt() { // 2xx de M1 -> published_at
         PendingOutboxMessage message = pending(PublishPendingOutboxService.DESTINATION_M1_HTTP, 0); // destino M1
-        when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(message)); // pendiente unico
+        when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(message), List.of()); // pendiente unico y fin de lote
         when(fleetStatusNotificationPort.notifyStatus(message)) // M1 acepto
                 .thenReturn(FleetNotificationOutcome.DELIVERED);
 
@@ -184,7 +182,7 @@ class PublishPendingOutboxServiceTest { // pruebas unitarias del servicio relay 
     void falloDeUnMensajeNoDetieneALosDemas() { // aislamiento: el primero falla y el segundo se publica
         PendingOutboxMessage failing = pending(PublishPendingOutboxService.DESTINATION_AMQP, 0); // falla
         PendingOutboxMessage working = pending(PublishPendingOutboxService.DESTINATION_AMQP, 0); // tiene exito
-        when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(failing, working)); // lote de dos
+        when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(failing), List.of(working), List.of()); // dos claims unitarios
         doAnswer(invocation -> { // falla solo el primero
             PendingOutboxMessage current = invocation.getArgument(0); // mensaje en curso
             if (current.eventId().equals(failing.eventId())) { // si es el primero
@@ -201,18 +199,18 @@ class PublishPendingOutboxServiceTest { // pruebas unitarias del servicio relay 
     }
 
     @Test
-    void consultaElLoteRespetandoElTamanoConfigurado() { // el servicio pide exactamente batchSize al puerto
+    void reclamaUnMensajePorTransaccion() { // el servicio pide un mensaje por claim
         when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of()); // sin pendientes
 
         service.execute(); // procesa el ciclo
 
-        verify(outboxPort).findPending(NOW, 10); // reloj fijo y lote de 10 (configurado en setUp)
+        verify(outboxPort).findPending(NOW, 1); // claim unitario: el tamano del lote se controla en el bucle
     }
 
     @Test
     void destinoDesconocidoMarcaDeadDirecto() { // destino fuera del catalogo nunca tendra exito
         PendingOutboxMessage message = pending("OTRO_DESTINO", 0); // destino invalido
-        when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(message)); // pendiente unico
+        when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(message), List.of()); // pendiente unico y fin de lote
 
         service.execute(); // procesa el ciclo
 
@@ -227,7 +225,7 @@ class PublishPendingOutboxServiceTest { // pruebas unitarias del servicio relay 
     @Test
     void nuncaPropagaExcepcionesInesperadasDelPuerto() { // un fallo del puerto no escapa del servicio
         PendingOutboxMessage message = pending(PublishPendingOutboxService.DESTINATION_AMQP, 0); // mensaje
-        when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(message)); // pendiente unico
+        when(outboxPort.findPending(any(), anyInt())).thenReturn(List.of(message), List.of()); // pendiente unico y fin de lote
         doThrow(new IllegalStateException("fallo raro")).when(outboxPort).markPublished(any(), any()); // falla el marcado
 
         assertThatCode(() -> service.execute()) // el ciclo no debe lanzar

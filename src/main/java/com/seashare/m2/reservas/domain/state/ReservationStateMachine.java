@@ -39,4 +39,10 @@ public class ReservationStateMachine { // maquina de estados de reservas
             throw new InvalidTransitionException(from, to, "Cancellation subtype is required when transitioning to CANCELLED"); // lanza excepcion por falta de subtipo
         }
     }
+
+    public void validateCreation(ReservationStatus target) { // T-24: unica entrada valida a la maquina es INITIATED
+        if (target != ReservationStatus.INITIATED) { // la creacion solo puede nacer en INITIATED
+            throw new InvalidTransitionException(null, target, "Creation must start in INITIATED"); // rechaza cualquier otro estado inicial
+        }
+    }
 }

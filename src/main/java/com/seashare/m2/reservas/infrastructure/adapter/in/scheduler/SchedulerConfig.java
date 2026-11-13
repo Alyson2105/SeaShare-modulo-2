@@ -12,6 +12,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 @Configuration
 @EnableScheduling
-@ConditionalOnExpression("'${m2.scheduler.ttl.enabled:true}' == 'true' or '${m2.scheduler.outbox.enabled:false}' == 'true'") // OR de ambos jobs
+@ConditionalOnExpression("'${m2.scheduler.ttl.enabled:true}' == 'true' or '${m2.scheduler.outbox.enabled:false}' == 'true' or '${m2.scheduler.payments.enabled:false}' == 'true'") // OR de los jobs
 public class SchedulerConfig { // configuración que habilita el scheduling condicional del módulo 2
 }

@@ -3,6 +3,7 @@ package com.seashare.m2.reservas.application.port.out;
 import com.seashare.m2.reservas.application.dto.ReservationInfoProvidedEvent;
 import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
 import com.seashare.m2.reservas.application.dto.OperationalStatusEvent;
+import com.seashare.m2.reservas.application.dto.LatePaymentReversalEvent;
 import com.seashare.m2.reservas.application.dto.PendingOutboxMessage;
 
 import java.time.Instant;
@@ -17,7 +18,11 @@ public interface OutboxPort { // puerto para encolar eventos en outbox
 
     void enqueue(OperationalStatusEvent event); // T-08: encola notificacion de estado operativo a M1 (destino M1_HTTP)
 
+    void enqueue(LatePaymentReversalEvent event); // CU-13: instruye a M3 la reversion del cobro tardio como CANCELLED_FLEXIBLE
+
     List<PendingOutboxMessage> findPending(Instant now, int batchSize); // T-03: pendientes vencidos ordenados, hasta batchSize
+
+    void lease(UUID messageId, Instant leasedUntil); // reclama el mensaje hasta la hora indicada (llamada externa fuera de la TX)
 
     void markPublished(UUID messageId, Instant publishedAt); // T-03: marca published_at tras el confirm; purga payload con token (D-09)
 

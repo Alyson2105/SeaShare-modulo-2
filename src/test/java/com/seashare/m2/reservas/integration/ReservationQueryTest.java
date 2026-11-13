@@ -160,7 +160,9 @@ class ReservationQueryTest { // pruebas de integracion de endpoints de consulta 
                 .andExpect(jsonPath("$.reservations[0].dates.duration_days").value(3))
                 .andExpect(jsonPath("$.reservations[0].dates.duration_nights").value(2))
                 .andExpect(jsonPath("$.reservations[0].detail_url").isNotEmpty())
-                .andExpect(jsonPath("$.reservations[0].status_badge").doesNotExist());
+                .andExpect(jsonPath("$.reservations[0].status_badge.text").isNotEmpty())
+                .andExpect(jsonPath("$.reservations[0].status_badge.semantic_color").isNotEmpty())
+                .andExpect(jsonPath("$.reservations[0].status_badge.description").isNotEmpty());
 
         mockMvc.perform(get("/api/v1/reservations")
                         .header("X-User-Id", ownerId.toString())
@@ -275,7 +277,8 @@ class ReservationQueryTest { // pruebas de integracion de endpoints de consulta 
                 .andExpect(jsonPath("$.available_actions.can_cancel").value(true))
                 .andExpect(jsonPath("$.available_actions.can_initiate_payment").value(false))
                 .andExpect(jsonPath("$.contextual_banner.title").value("Reserva confirmada"))
-                .andExpect(jsonPath("$.status_badge").doesNotExist());
+                .andExpect(jsonPath("$.status_badge.text").value("Confirmada"))
+                .andExpect(jsonPath("$.status_badge.semantic_color").value("verde"));
     }
 
     @Test

@@ -19,6 +19,8 @@ public interface ReservationRepositoryPort { // puerto de persistencia para el a
 
     Optional<Reservation> findById(UUID id); // recupera una reserva por identificador
 
+    Optional<Reservation> findByIdForUpdate(UUID id); // CU-03: recupera y bloquea la fila hasta el commit
+
     boolean existsOverlap(UUID vesselId, LocalDate start, LocalDate end, Set<ReservationStatus> blockingStatuses); // evalua solapamiento temporal con reservas bloqueantes
 
     ReservationPage findByRenter(UUID renterId, int page, int limit); // consulta reservas paginadas por arrendatario
@@ -43,6 +45,12 @@ public interface ReservationRepositoryPort { // puerto de persistencia para el a
      * Usa el índice ix_reservation_ttl existente. El corte es exacto: en el segundo de vencimiento ya se recupera.
      */
     List<UUID> findExpiredBefore(Instant now, int batchSize); // lectura de IDs vencidos (INITIATED o PENDING_PAYMENT) para el scheduler de TTL
+
+    /**
+     * Candidatos del job de confirmacion de cobro (CU-13): reservas en PENDING_PAYMENT
+     * y reservas EXPIRED o PAYMENT_FAILED recientes, para detectar cobros huerfanos.
+     */
+    List<UUID> findPaymentCandidates(Instant since, int batchSize); // reservas a consultar en modulo 3
 
     /**
      * Cuenta las reservas COMPLETED del arrendatario, excluyendo la reserva que se

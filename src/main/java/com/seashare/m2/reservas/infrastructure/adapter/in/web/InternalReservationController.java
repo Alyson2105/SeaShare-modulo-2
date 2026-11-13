@@ -13,6 +13,8 @@ import java.util.UUID;
 @RestController
 public class InternalReservationController { // endpoint interno de solo lectura para Modulo 3 (CU-15)
 
+    static final String FINANCE_ROLE = "FINANCE"; // rol de servicio de Modulo 3 (D-06)
+
     private final GetInternalReservationUseCase getInternalReservation; // caso de uso de lectura
 
     public InternalReservationController(GetInternalReservationUseCase getInternalReservation) { // constructor con dependencia
@@ -24,6 +26,7 @@ public class InternalReservationController { // endpoint interno de solo lectura
             CallerIdentity identity, // identidad ya validada por el resolver de headers
             @PathVariable("reservationId") String reservationId // identificador recibido como texto
     ) { // consulta operativa de la reserva sin efectos secundarios
+        requireFinanceRole(identity); // T-13: solo el perfil de servicio FINANCE puede consultar
         UUID id; // identificador validado
         try {
             id = UUID.fromString(reservationId.trim()); // parsea el formato uuid
@@ -33,5 +36,12 @@ public class InternalReservationController { // endpoint interno de solo lectura
 
         InternalReservationView view = getInternalReservation.execute(id); // ejecuta la consulta de solo lectura
         return InternalReservationResponse.from(view); // transforma la vista a respuesta snake_case
+    }
+
+    private void requireFinanceRole(CallerIdentity identity) { // D-06: identidad de servicio de Modulo 3
+        if (!FINANCE_ROLE.equalsIgnoreCase(identity.role())) { // cualquier otro perfil queda fuera
+            throw new ReservationRuleException(ErrorCode.PROFILE_NOT_AUTHORIZED,
+                    "This endpoint requires the FINANCE service role"); // 403 sin exponer datos
+        }
     }
 }

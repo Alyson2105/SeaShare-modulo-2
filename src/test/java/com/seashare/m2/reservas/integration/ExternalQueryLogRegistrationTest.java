@@ -46,6 +46,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest(properties = { // levanta los adaptadores HTTP reales
         "seashare.fleet.mode=http",
+        "seashare.fleet.token=test-token", // obligatorio en modo http
         "spring.datasource.hikari.maximum-pool-size=2" // pocas conexiones: la suite comparte max_connections del contenedor
 })
 @Import(PostgresTestContainers.class) // postgres en contenedor, patron de la suite
