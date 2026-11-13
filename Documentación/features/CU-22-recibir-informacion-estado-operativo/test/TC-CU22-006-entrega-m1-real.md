@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU22-006 — Entrega HTTP a M1
-**Status**: Blocked
+**Status**: Draft
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -39,7 +39,7 @@ M1 real o simulador contractual disponible y adaptador HTTP implementado.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Despachar notificación encolada y medir primer intento. | Datos de las precondiciones | Contrato propone PATCH y entrega con política de reintentos sin revertir transición local. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Despachar notificación encolada y medir primer intento. | Datos de las precondiciones | Contrato propone PATCH y entrega con política de reintentos sin revertir transición local. | Pendiente | El plan y spec mezclan confirmación de broker y entrega HTTP PATCH; además solo existe adaptador fake, sin entrega real ni medición de SLA. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ Solo existe adaptador fake; el plan mezcla HTTP y AMQP, falta acordar último sa
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Draft; sin ejecución automatizada. El plan y spec mezclan confirmación de broker y entrega HTTP PATCH; además solo existe adaptador fake, sin entrega real ni medición de SLA.
 
 #### Traceability
-FR-006, FR-008 | SC-001, SC-002 | Sin prueba de CU-22 | Blocked
+FR-006, FR-008 | SC-001, SC-002 | Sin prueba de CU-22  | Draft

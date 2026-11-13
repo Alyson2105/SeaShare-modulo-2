@@ -2,18 +2,18 @@
 
 Casos de mapeo de estado operativo, outbox y despacho M1_HTTP. El adaptador de entrega a M1 es fake.
 
-**Estado global**: Draft por integraciones y contratos pendientes.
+**Estado global**: Draft por ambigüedad del transporte y confirmación de entrega; evaluado el 2026-11-13.
 
 ## Trazabilidad
 
 | TC | Escenario | FR | SC | Test automatizado parcial | Status |
 |---|---|---|---|---|---|
-| [TC-CU22-001](TC-CU22-001-mapeo-estados.md) | Mapeo operativo | FR-001, FR-002 | SC-005 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | In Process |
-| [TC-CU22-002](TC-CU22-002-sin-notificacion.md) | Estados sin notificación M1 | FR-001, FR-002 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | In Process |
-| [TC-CU22-003](TC-CU22-003-cancelacion-condicional.md) | Cancelación con guarda M1 | FR-001, FR-002 | SC-005 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | In Process |
-| [TC-CU22-004](TC-CU22-004-payload-operativo.md) | Payload operativo e identidad | FR-003, FR-004, FR-005, FR-007 | SC-003, SC-004 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [outbox](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java) | In Process |
-| [TC-CU22-005](TC-CU22-005-reintentos-locales.md) | Reintentos del relay | FR-006, FR-008 | SC-001 | [relay](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java) | In Process |
-| [TC-CU22-006](TC-CU22-006-entrega-m1-real.md) | Entrega HTTP a M1 | FR-006, FR-008 | SC-001, SC-002 | Sin prueba de CU-22 | Blocked |
+| [TC-CU22-001](TC-CU22-001-mapeo-estados.md) | Mapeo operativo | FR-001, FR-002 | SC-005 | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#reservedNotifiesModuleOneWithReserved; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#inNavigationAndCompletedNotifyModuleOne | In Process |
+| [TC-CU22-002](TC-CU22-002-sin-notificacion.md) | Estados sin notificación M1 | FR-001, FR-002 | SC-001 | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#initiatedAndPendingPaymentNotifyNobody; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#expiredAndPaymentFailedNotifyNobody | In Process |
+| [TC-CU22-003](TC-CU22-003-cancelacion-condicional.md) | Cancelación con guarda M1 | FR-001, FR-002 | SC-005 | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#cancelledAfterReservedNotifiesAvailable; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#cancelledByOwnerWithMechanicalFailureNotifiesMaintenance; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#cancelledBeforeReservedDoesNotNotifyModuleOne | In Process |
+| [TC-CU22-004](TC-CU22-004-payload-operativo.md) | Payload operativo e identidad | FR-003, FR-004, FR-005, FR-007 | SC-003, SC-004 | src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java#enqueuesOperationalStatusToM1HttpWithExactFourFields | In Process |
+| [TC-CU22-005](TC-CU22-005-reintentos-locales.md) | Reintentos del relay | FR-006, FR-008 | SC-001 | src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#backoffExactoUnoCincoVeinticincoCientoVeinticincoSegundos; src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#quintoFalloMarcaDeadConAlerta; src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#cuarentaYCuatroDeM1VaDirectoDeadSinReintento | In Process |
+| [TC-CU22-006](TC-CU22-006-entrega-m1-real.md) | Entrega HTTP a M1 | FR-006, FR-008 | SC-001, SC-002 | Sin prueba HTTP real | Draft |
 
 ## Cobertura de requisitos
 
@@ -34,7 +34,7 @@ Casos de mapeo de estado operativo, outbox y despacho M1_HTTP. El adaptador de e
 | SC | Estado | Observación |
 |---|---|---|
 | SC-001 | Parcial | TC-001 a 003, 005 y 006; entrega real pendiente. |
-| SC-002 | Bloqueado | TC-006; primer intento en 500 ms requiere implementación y medición. |
+| SC-002 | No verificado | TC-006; primer intento en 500 ms requiere implementación y medición. |
 | SC-003 | Parcial | TC-004; payload operativo sin montos. |
 | SC-004 | Parcial | TC-004; deduplicación del receptor no demostrada. |
 | SC-005 | Parcial | TC-001 y 003; mapeo local. |
@@ -43,12 +43,12 @@ Casos de mapeo de estado operativo, outbox y despacho M1_HTTP. El adaptador de e
 
 | TC | Documentado | Ejecutado | Resultado | Ejecutado por | Fecha | Observaciones |
 |---|---|---|---|---|---|---|
-| TC-CU22-001 | Sí | No | Pendiente | — | — | In Process |
-| TC-CU22-002 | Sí | No | Pendiente | — | — | In Process |
-| TC-CU22-003 | Sí | No | Pendiente | — | — | In Process |
-| TC-CU22-004 | Sí | No | Pendiente | — | — | In Process |
-| TC-CU22-005 | Sí | No | Pendiente | — | — | In Process |
-| TC-CU22-006 | Sí | No | Pendiente | — | — | Blocked |
+| TC-CU22-001 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Pruebas unitarias verifican mapeo de RESERVED, IN_NAVIGATION y COMPLETED; no prueban entrega HTTP real. |
+| TC-CU22-002 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Matriz unitaria comprueba ausencia de destino M1; no comprueba cada transición en outbox real. |
+| TC-CU22-003 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Matriz unitaria comprueba guarda y mapeos de cancelación; no prueba flujo completo de cancelación. |
+| TC-CU22-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Prueba unitaria verifica los cuatro campos del payload y exclusión de campos adicionales; no demuestra deduplicación real de M1. |
+| TC-CU22-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Pruebas unitarias cubren backoff y dead con puertos simulados; no prueban DLQ real ni fallo HTTP real. |
+| TC-CU22-006 | Sí | No | Draft | Agente automatizado | — | El plan y spec mezclan confirmación de broker y entrega HTTP PATCH; además solo existe adaptador fake, sin entrega real ni medición de SLA. |
 
 ## Brechas detectadas
 
@@ -66,15 +66,14 @@ Casos de mapeo de estado operativo, outbox y despacho M1_HTTP. El adaptador de e
 - **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
 - **Blocked**: depende de funcionalidad pendiente.
 
-## Ejecución automatizada — 2026-11-10
+## Ejecución automatizada — 2026-11-13
 
-Se ejecutó `mvn clean test` en una copia aislada del commit `3e4e6a4`, con JDK 25 y compilación configurada para Java 21. El conjunto completo registró **234 pruebas: 132 exitosas, 0 fallos de aserción y 102 errores** al iniciar contextos que requieren Docker/Testcontainers. Maven terminó con `BUILD FAILURE`. Las pruebas con WireMock usaron dobles locales, no los servicios reales.
+La suite terminó con 395 pruebas, 0 fallos, 0 errores y 0 omitidas. La entrega a M1 utiliza un adaptador falso; RabbitMQ se usa para AMQP, no para el destino M1_HTTP.
 
-Los resultados siguientes corresponden a clases automatizadas vinculadas a este CU, no a la ejecución íntegra de cada caso documental. Los pasos y el checklist de cada TC permanecen pendientes cuando requieren acciones o comprobaciones adicionales; ningún caso se aprueba por esta ejecución.
-
-| Clase automatizada | Pruebas | Fallos | Errores | Resultado |
-|---|---:|---:|---:|---|
-| [ChangeReservationStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | 25 | 0 | 25 | Bloqueada por Docker/Testcontainers |
-| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | Exitosa |
-| [OutboxAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java) | 5 | 0 | 0 | Exitosa |
-| [PublishPendingOutboxServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java) | 10 | 0 | 0 | Exitosa |
+| Clase | Tests | Fallos | Errores | Omitidos | Resultado |
+|---|---:|---:|---:|---:|---|
+| ChangeReservationStatusServiceTest | 28 | 0 | 0 | 0 | Exitosa |
+| ModuleOneNotificationMatrixTest | 7 | 0 | 0 | 0 | Exitosa |
+| OutboxAdapterTest | 15 | 0 | 0 | 0 | Exitosa |
+| PublishPendingOutboxServiceTest | 10 | 0 | 0 | 0 | Exitosa |
+| OutboxRelayIntegrationTest | 4 | 0 | 0 | 0 | Exitosa |

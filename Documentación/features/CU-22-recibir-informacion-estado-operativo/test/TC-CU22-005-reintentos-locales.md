@@ -39,7 +39,7 @@ Puerto M1 simulado devuelve fallo transitorio o permanente.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Ejecutar relay con reloj controlado y observar intentos. | Datos de las precondiciones | Fallo transitorio reintenta; quinto fallo o 4xx permanente marca dead sin revertir transición local. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Ejecutar relay con reloj controlado y observar intentos. | Datos de las precondiciones | Fallo transitorio reintenta; quinto fallo o 4xx permanente marca dead sin revertir transición local. | Pendiente | PublishPendingOutboxServiceTest.java); PublishPendingOutboxServiceTest#backoffExactoUnoCincoVeinticincoCientoVeinticincoSegundos; PublishPendingOutboxServiceTest#quintoFalloMarcaDeadConAlerta; PublishPendingOutboxServiceTest#cuarentaYCuatroDeM1VaDirectoDeadSinReintento: exitosa. Pruebas unitarias cubren backoff y dead con puertos simulados; no prueban DLQ real ni fallo HTTP real. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ DLQ real no se publica actualmente; comportamiento verificado solo al nivel de p
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; Pruebas unitarias cubren backoff y dead con puertos simulados; no prueban DLQ real ni fallo HTTP real.
 
 #### Traceability
-FR-006, FR-008 | SC-001 | [relay](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java) | In Process
+FR-006, FR-008 | SC-001 | [relay](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java)  | src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#backoffExactoUnoCincoVeinticincoCientoVeinticincoSegundos | src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#quintoFalloMarcaDeadConAlerta | src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#cuarentaYCuatroDeM1VaDirectoDeadSinReintento | In Process
