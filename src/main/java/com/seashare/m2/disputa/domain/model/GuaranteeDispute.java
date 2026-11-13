@@ -1,6 +1,7 @@
 package com.seashare.m2.disputa.domain.model;
 
 import com.seashare.m2.disputa.domain.exception.DisputeRuleException;
+import com.seashare.m2.disputa.domain.state.DisputeStateMachine;
 import com.seashare.m2.disputa.domain.valueobject.ClaimWindow;
 import com.seashare.m2.shared.domain.ErrorCode;
 
@@ -15,6 +16,10 @@ import java.util.UUID;
  * (nota de dominio de CU-16 y CU-17).</p>
  */
 public final class GuaranteeDispute { // disputa de garantia de una reserva completada
+
+    public static final String SYSTEM_CLOSE_REASON = "Sin reclamo en ventana"; // motivo del cierre automatico (CU-16 FR-008)
+
+    private static final DisputeStateMachine MACHINE = new DisputeStateMachine(); // reglas de transicion (CU-17)
 
     private final UUID id; // identificador de la disputa
 
@@ -91,6 +96,17 @@ public final class GuaranteeDispute { // disputa de garantia de una reserva comp
 
     public void registerClaim() { // el reclamo no cambia el estado (CU-16 FR-006)
         this.hasClaim = true;
+    }
+
+    public void resolve(DisputeStatus target, UUID actorId, String reason, Instant now) { // transiciona la disputa (CU-17)
+        MACHINE.validateTransition(status, target, hasClaim); // 409 si ya es final o si se acepta sin reclamo
+        if (target == DisputeStatus.PENDING) { // revision en curso: sin cambio efectivo de estado
+            return;
+        }
+        this.status = target;
+        this.reason = reason;
+        this.resolvedBy = actorId; // nulo cuando el actor es el sistema
+        this.resolvedAt = now;
     }
 
     public UUID id() {

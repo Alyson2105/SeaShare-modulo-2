@@ -1,5 +1,6 @@
 package com.seashare.m2.disputa.infrastructure.adapter.out.persistence;
 
+import com.seashare.m2.disputa.domain.model.AdminReview;
 import com.seashare.m2.disputa.domain.model.DisputeActorType;
 import com.seashare.m2.disputa.domain.model.DisputeCategory;
 import com.seashare.m2.disputa.domain.model.DisputeClaim;
@@ -90,6 +91,29 @@ final class DisputeMapper { // traduccion entre el dominio de disputa y las enti
                 entity.getActorId(),
                 entity.getReason(),
                 entity.getOccurredAt());
+    }
+
+    static AdminReviewEntity toEntity(AdminReview review) { // mapea la revision administrativa
+        AdminReviewEntity entity = new AdminReviewEntity();
+        entity.setId(review.id());
+        entity.setDisputeId(review.disputeId());
+        entity.setAdminId(review.adminId());
+        entity.setDecision(review.decision().name());
+        entity.setReason(review.reason());
+        entity.setInternalNotes(review.internalNotes());
+        entity.setReviewedAt(review.reviewedAt());
+        return entity;
+    }
+
+    static AdminReview toDomain(AdminReviewEntity entity) { // reconstruye la revision administrativa
+        return new AdminReview(
+                entity.getId(),
+                entity.getDisputeId(),
+                entity.getAdminId(),
+                DisputeStatus.valueOf(entity.getDecision()),
+                entity.getReason(),
+                entity.getInternalNotes(),
+                entity.getReviewedAt());
     }
 
     private static String toJson(List<String> urls) { // guarda la lista como arreglo json en TEXT

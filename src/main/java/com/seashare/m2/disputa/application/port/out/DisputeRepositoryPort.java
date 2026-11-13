@@ -1,9 +1,11 @@
 package com.seashare.m2.disputa.application.port.out;
 
+import com.seashare.m2.disputa.domain.model.AdminReview;
 import com.seashare.m2.disputa.domain.model.DisputeClaim;
 import com.seashare.m2.disputa.domain.model.DisputeStatusChange;
 import com.seashare.m2.disputa.domain.model.GuaranteeDispute;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,9 +20,15 @@ public interface DisputeRepositoryPort { // persistencia del contexto disputa
 
     List<DisputeStatusChange> findStatusHistory(UUID disputeId); // historial inmutable, ordenado por ocurrencia
 
-    GuaranteeDispute save(GuaranteeDispute dispute); // inserta o actualiza la disputa
+    List<UUID> findPendingDue(Instant now, int limit); // disputas PENDING vencidas y sin reclamo (job de cierre)
+
+    List<AdminReview> findAdminReviews(UUID disputeId); // revisiones administrativas, ordenadas por fecha
+
+    GuaranteeDispute save(GuaranteeDispute dispute); // inserta o actualiza la disputa (flush inmediato)
 
     DisputeClaim saveClaim(DisputeClaim claim); // inserta el reclamo
+
+    void saveAdminReview(AdminReview review); // agrega la revision administrativa
 
     void recordStatusChange(DisputeStatusChange change); // agrega una fila al historial
 }
