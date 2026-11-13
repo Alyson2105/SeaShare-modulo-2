@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU03-009 — Autorización del titular
-**Status**: In Process
+**Status**: Blocked
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -29,7 +29,7 @@ Verificar autorización del titular. Requisitos: FR-001, FR-002. Criterios relac
 No se realiza publicación real ni cobro externo en esta tarea. La autenticación Bearer descrita por el plan no está implementada; no se presenta como header ejecutable actual.
 
 ##### Dependencies & Assumptions
-Entorno futuro con CU-03 implementado, repositorio de reservas y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: Sin prueba de CU-03; no demuestra el flujo completo de CU-03.
+CU-03 está implementado; la evidencia usa repositorio y dobles controlados de M1 y M3. Las pruebas citadas aportan evidencia parcial, no demuestran el flujo completo de CU-03.
 
 ##### Preconditions & Default Setup
 Reserva INITIATED vigente perteneciente a un arrendatario; usar otro usuario autenticado.
@@ -57,7 +57,7 @@ La autenticación Bearer descrita por el plan no está implementada; no se prese
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
+Corrida 2026-11-13: Blocked. La prueba unitaria cubre pertenencia con identidad simulada; falta autenticación Bearer para el usuario de la precondición.
 
 #### Traceability
-FR-001, FR-002 | SC-001 | Sin prueba de CU-03 | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#otherRenterIsForbidden | In Process
+FR-001, FR-002 | SC-001 | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#otherRenterIsForbidden | Blocked

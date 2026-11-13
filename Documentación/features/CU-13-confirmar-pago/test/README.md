@@ -12,8 +12,8 @@ Casos del canal A de notificación y canal B de consulta. La lógica de confirma
 | [TC-CU13-002](TC-CU13-002-aprobacion-tardia.md) | Aprobación tras TTL | FR-003, FR-006 | SC-002, SC-003 | [ttl](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java); [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [ConfirmPaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | In Process |
 | [TC-CU13-003](TC-CU13-003-rechazo-reintentable.md) | Rechazo con TTL vigente | FR-005 | SC-002 | [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); [ConfirmPaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | In Process |
 | [TC-CU13-004](TC-CU13-004-fallo-definitivo.md) | Fallo definitivo | FR-005 | SC-002 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); [ConfirmPaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | In Process |
-| [TC-CU13-005](TC-CU13-005-confirmacion-duplicada.md) | Idempotencia de confirmación | FR-007 | SC-004 | ; [ConfirmPaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | Blocked |
-| [TC-CU13-006](TC-CU13-006-consulta-estados.md) | Consulta del resultado en M3 | FR-001, FR-003, FR-005 | SC-001, SC-002 | ; [PollPaymentStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/PollPaymentStatusServiceTest.java) | In Process |
+| [TC-CU13-005](TC-CU13-005-confirmacion-duplicada.md) | Idempotencia de confirmación | FR-007 | SC-004 | [ConfirmPaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | Blocked |
+| [TC-CU13-006](TC-CU13-006-consulta-estados.md) | Consulta del resultado en M3 | FR-001, FR-003, FR-005 | SC-001, SC-002 | [PollPaymentStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/PollPaymentStatusServiceTest.java) | In Process |
 | [TC-CU13-007](TC-CU13-007-payload-invalido.md) | Validación del mensaje | FR-002, FR-003 | SC-001 | Sin prueba de CU-13 | Blocked |
 
 ## Cobertura de requisitos
@@ -50,7 +50,7 @@ Casos del canal A de notificación y canal B de consulta. La lógica de confirma
 | TC-CU13-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ConfirmPaymentIntegrationTest#cancelledChargeFailsTheReservation pasó para CANCELLED de M3; unitario: ModuleOneNotificationMatrixTest#expiredAndPaymentFailedNotifyNobody pasó sin M1. Falta canal A FAILED y verificación integrada de notificaciones. |
 | TC-CU13-005 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | Integración: ConfirmPaymentIntegrationTest#duplicateApprovalDoesNotRepeatTransitions pasó para lógica interna y un evento RESERVED. Falta el canal A requerido por el caso y su respuesta HTTP. |
 | TC-CU13-006 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Unitario: PollPaymentStatusServiceTest#inProcessIsSkipped pasó sin confirmar; componente: HttpPaymentStatusAdapterTest#notFoundMeansRetryNextCycle pasó con UNKNOWN. Falta observar ciclos sucesivos completos y persistencia. |
-| TC-CU13-007 | Sí | No | Blocked | Agente automatizado | — | Sin ejecución automatizada; endpoint del canal A ausente. |
+| TC-CU13-007 | Sí | No | Blocked | — | — | Sin ejecución automatizada; endpoint del canal A ausente. |
 
 ## Brechas detectadas
 
@@ -66,12 +66,12 @@ Casos del canal A de notificación y canal B de consulta. La lógica de confirma
 
 ## Ejecución automatizada — 2026-11-13
 
-`./mvnw -B clean test`: 395 pruebas, 0 fallos, 0 errores, 0 omitidas; BUILD SUCCESS. M3 y puertos externos se simulan; no se demuestra entrega de reversión real.
+`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-13. Las pruebas citadas usan las dependencias indicadas en cada caso; no acreditan servicios externos reales.
 
 | Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| [ConfirmPaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | 6 | 0 | 0 | 0 | Exitosa |
-| [ConfirmPaymentServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ConfirmPaymentServiceTest.java) | 10 | 0 | 0 | 0 | Exitosa |
-| [PollPaymentStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/PollPaymentStatusServiceTest.java) | 5 | 0 | 0 | 0 | Exitosa |
-| [HttpPaymentStatusAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpPaymentStatusAdapterTest.java) | 7 | 0 | 0 | 0 | Exitosa |
-| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Exitosa |
+| [ConfirmPaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | 6 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [ConfirmPaymentServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ConfirmPaymentServiceTest.java) | 10 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [PollPaymentStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/PollPaymentStatusServiceTest.java) | 5 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [HttpPaymentStatusAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpPaymentStatusAdapterTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |

@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU04-003 — Rechazo por estado
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar rechazo por estado. Trazabilidad: FR-002, FR-004; SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-04 y el endpoint propuesto aún no están implementados. Los resultados son contractuales, no observados. La expiración pasiva pertenece a CU-08.
+Existe validación de estado; la expiración pasiva pertenece a CU-08.
 
 ##### Dependencies & Assumptions
-Ejecución futura con CU-04 implementado y dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran la orquestación completa.
+Se requieren dependencias controladas; la evidencia descrita no acredita el flujo completo.
 
 ##### Preconditions & Default Setup
 Preparar reservas individuales en INITIATED, PENDING_PAYMENT, PAYMENT_FAILED, IN_NAVIGATION, COMPLETED, EXPIRED y CANCELLED.
@@ -38,9 +38,9 @@ Preparar reservas individuales en INITIATED, PENDING_PAYMENT, PAYMENT_FAILED, IN
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar cancelación activa de cada una. | Datos de las precondiciones | Según el plan, 409 INVALID_RESERVATION_STATE sin nueva transición. | Pendiente | ChangeReservationStatusServiceTest#cancelFromPendingPaymentIsRejected pasó: integración del motor rechaza cancelar desde PENDING_PAYMENT; faltan demás estados y HTTP. |
-| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | Sin publicación real |
+| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | RequestCancellationServiceTest#reservationNotReservedIsRejected: verde con repositorio simulado para PENDING_PAYMENT; no cubre todos los estados ni HTTP real. |
+| 2 | Ejecutar | Solicitar cancelación activa de cada una. | Datos de las precondiciones | Según el plan, 409 INVALID_RESERVATION_STATE sin nueva transición. | Pendiente | RequestCancellationServiceTest#reservationNotReservedIsRejected: verde con repositorio simulado para PENDING_PAYMENT; no cubre todos los estados ni HTTP real. |
+| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | RequestCancellationServiceTest#reservationNotReservedIsRejected: verde con repositorio simulado para PENDING_PAYMENT; no cubre todos los estados ni HTTP real. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ La expiración pasiva pertenece a CU-08.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Blocked; la evidencia solo cubre el componente compartido, el flujo está bloqueado.
+Corrida 2026-11-13: Partial; evidencia parcial.
 
 #### Traceability
-FR-002, FR-004 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#cancelFromPendingPaymentIsRejected | Blocked
+FR-002, FR-004 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/RequestCancellationServiceTest.java#reservationNotReservedIsRejected | In Process

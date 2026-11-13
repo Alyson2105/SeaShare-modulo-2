@@ -29,7 +29,7 @@ Verificar fallo de cálculo externo. Requisitos: FR-003, FR-006. Criterios relac
 No se realiza publicación real ni cobro externo en esta tarea. La respuesta 503 requiere comprobación HTTP en el escenario.
 
 ##### Dependencies & Assumptions
-Entorno futuro con CU-03 implementado, repositorio de reservas y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: Sin prueba de CU-03; no demuestra el flujo completo de CU-03.
+CU-03 está implementado; la evidencia usa repositorio y dobles controlados de M1 y M3. Las pruebas citadas aportan evidencia parcial, no demuestran el flujo completo de CU-03.
 
 ##### Preconditions & Default Setup
 Reserva INITIATED vigente; simular indisponibilidad del cálculo de M3.
@@ -57,7 +57,7 @@ La respuesta 503 requiere comprobación HTTP en el escenario.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
+Corrida 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
 
 #### Traceability
-FR-003, FR-006 | SC-001, SC-003 | Sin prueba de CU-03 | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#calculationFailureAbortsWithoutTransition | In Process
+FR-003, FR-006 | SC-001, SC-003 | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#calculationFailureAbortsWithoutTransition | In Process

@@ -26,10 +26,10 @@ Verificar carrera con vencimiento. Requisitos: FR-002, FR-003, FR-006. Criterios
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-17 y su endpoint aún no existen; los resultados son expectativas del contrato. La posibilidad de resolver sin reclamo está abierta en spec D-01.
+Spec D-01 deja abierta la resolución administrativa sin reclamo; el test simula un conflicto, no la carrera real.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-17; no demuestran el flujo completo de CU-17.
+Se emplean las dependencias señaladas en la evidencia; los mocks y servicios externos no acreditan el flujo completo.
 
 ##### Preconditions & Default Setup
 Disputa PENDING susceptible de vencimiento y resolución administrativa simultáneos.
@@ -38,9 +38,9 @@ Disputa PENDING susceptible de vencimiento y resolución administrativa simultá
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Coordinar ambas transiciones. | Datos de las precondiciones | Solo una transacción se confirma; la perdedora no altera el estado final. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | UpdateDisputeStatusServiceTest#optimisticLockBecomesAlreadyResolved: verde al simular conflicto de versión; no ejecuta transacciones concurrentes ni prueba una sola ganadora. |
+| 2 | Ejecutar | Coordinar ambas transiciones. | Datos de las precondiciones | Solo una transacción se confirma; la perdedora no altera el estado final. | Pendiente | UpdateDisputeStatusServiceTest#optimisticLockBecomesAlreadyResolved: verde al simular conflicto de versión; no ejecuta transacciones concurrentes ni prueba una sola ganadora. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | UpdateDisputeStatusServiceTest#optimisticLockBecomesAlreadyResolved: verde al simular conflicto de versión; no ejecuta transacciones concurrentes ni prueba una sola ganadora. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ La posibilidad de resolver sin reclamo está abierta en spec D-01.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Draft; sin ejecución automatizada. La carrera depende de aclarar si el administrador puede resolver sin reclamo.
+Corrida 2026-11-13: Draft; evidencia parcial.
 
 #### Traceability
-FR-002, FR-003, FR-006 | SC-001, SC-002 | Sin prueba de CU-17 | Draft
+FR-002, FR-003, FR-006 | SC-001, SC-002 | Evidencia: src/test/java/com/seashare/m2/disputa/application/service/UpdateDisputeStatusServiceTest.java#optimisticLockBecomesAlreadyResolved | Draft

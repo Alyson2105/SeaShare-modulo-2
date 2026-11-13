@@ -29,7 +29,7 @@ Verificar datos obligatorios de pago. Requisitos: FR-009, FR-014. Criterios rela
 No se realiza publicación real ni cobro externo en esta tarea. El token debe ser de prueba; no introducir tarjeta real ni CVV.
 
 ##### Dependencies & Assumptions
-Entorno futuro con CU-03 implementado, repositorio de reservas y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: Sin prueba de CU-03; no demuestra el flujo completo de CU-03.
+CU-03 está implementado; la evidencia usa repositorio y dobles controlados de M1 y M3. Las pruebas citadas aportan evidencia parcial, no demuestran el flujo completo de CU-03.
 
 ##### Preconditions & Default Setup
 Consentimiento verdadero; preparar variantes independientes omitiendo token, payer_email, payment_method_id o installments.
@@ -57,7 +57,7 @@ El token debe ser de prueba; no introducir tarjeta real ni CVV.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
+Corrida 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
 
 #### Traceability
-FR-009, FR-014 | SC-004 | Sin prueba de CU-03 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#missingPaymentTokenIs400 | In Process
+FR-009, FR-014 | SC-004 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#missingPaymentTokenIs400 | In Process

@@ -48,7 +48,7 @@ Casos del puerto interno ChangeReservationStatusUseCase. El motor y la creación
 |---|---|---|---|---|---|---|
 | TC-CU08-001 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ChangeReservationStatusServiceTest#validChangeSavesStatusAndAudit y #initiatedAndPendingPaymentDoNotEnqueueModuleOne pasaron: estado persistido, auditoría simulada y sin M1. Falta aserción del TTL persistido. |
 | TC-CU08-002 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Unitario: ReservationStateMachineTest#finalStatesHaveNoExit pasó para estados terminales; integración: ChangeReservationStatusServiceTest#cancelFromPendingPaymentIsRejected pasó sin mutación ni eventos. Falta verificar persistencia para cada salida terminal. |
-| TC-CU08-003 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ChangeReservationStatusServiceTest#versionConflictRaisesVERSION_CONFLICT pasó al guardar una copia obsoleta mediante repositorio. Falta comprobar la invocación del servicio y la reserva tras el rechazo. |
+| TC-CU08-003 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ChangeReservationStatusServiceTest#expectedVersionMismatchIsRejected pasó al invocar el servicio y comprobar conflicto y estado INITIATED; #versionConflictRaisesVERSION_CONFLICT comprueba el repositorio. Faltan aserciones de todos los campos y eventos. |
 | TC-CU08-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: TtlExpiryIntegrationTest#expiresPendingPaymentPastTtl y #pendingPaymentBeforeTtlIsNotExpired pasaron para PENDING_PAYMENT y ausencia de evento de estado. Falta demostrar ambos estados iniciales y ausencia de M1 en el mismo caso. |
 | TC-CU08-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ChangeReservationStatusServiceTest#initiatedAndPendingPaymentDoNotEnqueueModuleOne, #enqueuesReservedToModuleOneOnPaymentConfirmed y #checkInAndCheckOutTransitionsWork pasaron con puertos simulados. Falta verificar cada destino operativo y fila persistida en una secuencia completa. |
 | TC-CU08-006 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ChangeReservationStatusServiceTest#cancelledByOwnerWithMechanicalFailureEnqueuesMaintenance pasó; unitario: ModuleOneNotificationMatrixTest#cancelledAfterReservedNotifiesAvailable y #cancelledBeforeReservedDoesNotNotifyModuleOne pasaron. Falta comprobar ambas decisiones de cancelación en flujo integrado. |
@@ -73,14 +73,14 @@ Casos del puerto interno ChangeReservationStatusUseCase. El motor y la creación
 
 ## Ejecución automatizada — 2026-11-13
 
-`./mvnw -B clean test`: 395 pruebas, 0 fallos, 0 errores, 0 omitidas; BUILD SUCCESS. La integración del motor utiliza puertos de salida simulados; no demuestra entrega externa.
+`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-08. Las pruebas citadas usan las dependencias indicadas en cada caso; no acreditan servicios externos reales.
 
 | Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| [ChangeReservationStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | 28 | 0 | 0 | 0 | Exitosa |
-| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Exitosa |
-| [ReservationStateMachineTest](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java) | 7 | 0 | 0 | 0 | Exitosa |
-| [ReservationStatusAuditImmutabilityTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationStatusAuditImmutabilityTest.java) | 2 | 0 | 0 | 0 | Exitosa |
-| [TtlExpiryIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java) | 8 | 0 | 0 | 0 | Exitosa |
-| [CreateReservationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java) | 5 | 0 | 0 | 0 | Exitosa |
-| [CreateReservationServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/CreateReservationServiceTest.java) | 4 | 0 | 0 | 0 | Exitosa |
+| [ChangeReservationStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | 28 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [ReservationStateMachineTest](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [ReservationStatusAuditImmutabilityTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationStatusAuditImmutabilityTest.java) | 2 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [TtlExpiryIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java) | 8 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [CreateReservationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java) | 5 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [CreateReservationServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/CreateReservationServiceTest.java) | 4 | 0 | 0 | 0 | Verde; cobertura según TC |

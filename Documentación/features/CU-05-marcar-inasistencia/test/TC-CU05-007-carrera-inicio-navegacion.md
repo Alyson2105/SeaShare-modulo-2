@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU05-007 — Carrera con inicio de viaje
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar carrera con inicio de viaje. Requisitos: FR-001, FR-006, FR-007. Crite
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-05 y su endpoint aún no existen; los resultados son expectativas del contrato. No existe endpoint de CU-05 ni CU-06; el control del motor aislado no prueba esta carrera completa.
+Prueba no-show seguido de inicio de forma secuencial; no demuestra carrera concurrente. El endpoint y servicio existen. CU-05 y CU-06 tienen endpoints; la prueba secuencial no demuestra esta carrera completa.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-05.
+Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-05.
 
 ##### Preconditions & Default Setup
 Reserva RESERVED tras tolerancia; solicitudes concurrentes de inasistencia e inicio de navegación.
@@ -38,15 +38,15 @@ Reserva RESERVED tras tolerancia; solicitudes concurrentes de inasistencia e ini
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Coordinar ambas operaciones y revisar estado final y efectos. | Datos de las precondiciones | Solo una transición prevalece; si navegación se confirma primero, el reporte es rechazado. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState: verde. Prueba no-show seguido de inicio de forma secuencial; no demuestra carrera concurrente. |
+| 2 | Ejecutar | Coordinar ambas operaciones y revisar estado final y efectos. | Datos de las precondiciones | Solo una transición prevalece; si navegación se confirma primero, el reporte es rechazado. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState: verde. Prueba no-show seguido de inicio de forma secuencial; no demuestra carrera concurrente. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState: verde. Prueba no-show seguido de inicio de forma secuencial; no demuestra carrera concurrente. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-No existe endpoint de CU-05 ni CU-06; el control del motor aislado no prueba esta carrera completa.
+CU-05 y CU-06 tienen endpoints; la prueba secuencial no demuestra esta carrera completa.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ No existe endpoint de CU-05 ni CU-06; el control del motor aislado no prueba est
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
+Corrida 2026-11-13: Partial; evidencia parcial.
 
 #### Traceability
-FR-001, FR-006, FR-007 | SC-002 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Blocked
+FR-001, FR-006, FR-007 | SC-002 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NoShowIntegrationTest.java#navigationStartAfterNoShowIsInvalidState | In Process

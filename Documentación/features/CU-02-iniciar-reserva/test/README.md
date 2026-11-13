@@ -66,6 +66,7 @@ Contexto de implementación: [implementContext](../../../context/implementContex
 7. El plan menciona FR-019, que no existe entre los 14 FR del spec.
 8. La publicación efectiva del outbox por relay y sus servicios externos queda fuera de esta validación.
 9. El formato telefónico exigido por el plan no está validado; solo se comprueba que no esté vacío y su longitud.
+10. `plan.event.md` sección 4 indica 400 por capacidad excedida, mientras `plan.md` exige 409 CAPACITY_EXCEEDED; CreateReservationTest#rejectsPassengersOverCapacity verifica 409 con flota simulada.
 
 ## Convenciones de estado
 
@@ -76,16 +77,16 @@ Contexto de implementación: [implementContext](../../../context/implementContex
 
 ## Ejecución automatizada — 2026-11-13
 
-`./mvnw -B clean test` con Java 21 y Docker: 395 pruebas, 0 fallos, 0 errores, 0 omitidas; BUILD SUCCESS. Las integraciones usan PostgreSQL de Testcontainers y dobles para flota; no prueban M1 real. Las clases siguientes son evidencia parcial de los casos.
+`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-02. Las pruebas citadas usan las dependencias indicadas en cada caso; no acreditan servicios externos reales.
 
-| Clase automatizada | Pruebas | Fallos | Errores | Omitidos | Resultado |
+| Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| [CreateReservationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java) | 5 | 0 | 0 | 0 | Exitosa |
-| [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java) | 3 | 0 | 0 | 0 | Exitosa |
-| [PaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java) | 9 | 0 | 0 | 0 | Exitosa |
-| [IdempotencyAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/integration/IdempotencyAdapterTest.java) | 5 | 0 | 0 | 0 | Exitosa |
-| [IdempotencyClaimConcurrencyTest](../../../../src/test/java/com/seashare/m2/reservas/integration/IdempotencyClaimConcurrencyTest.java) | 1 | 0 | 0 | 0 | Exitosa |
-| [CreateReservationServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/CreateReservationServiceTest.java) | 4 | 0 | 0 | 0 | Exitosa |
-| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Exitosa |
-| [TtlPolicyTest](../../../../src/test/java/com/seashare/m2/reservas/domain/service/TtlPolicyTest.java) | 3 | 0 | 0 | 0 | Exitosa |
-| [CreateReservationValidationTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java) | 13 | 0 | 0 | 0 | Exitosa |
+| [CreateReservationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java) | 5 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java) | 3 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [PaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java) | 9 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [IdempotencyAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/integration/IdempotencyAdapterTest.java) | 5 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [IdempotencyClaimConcurrencyTest](../../../../src/test/java/com/seashare/m2/reservas/integration/IdempotencyClaimConcurrencyTest.java) | 1 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [CreateReservationServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/CreateReservationServiceTest.java) | 4 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [TtlPolicyTest](../../../../src/test/java/com/seashare/m2/reservas/domain/service/TtlPolicyTest.java) | 3 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [CreateReservationValidationTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java) | 13 | 0 | 0 | 0 | Verde; cobertura según TC |

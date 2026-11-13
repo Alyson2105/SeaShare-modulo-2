@@ -70,11 +70,11 @@ Casos para FleetOperationalStatusPort y su adaptador HTTP de M1; modo fake activ
 
 ## Ejecución automatizada — 2026-11-13
 
-`./mvnw -B clean test`: 395 pruebas, 0 fallos, 0 errores, 0 omitidas; BUILD SUCCESS. WireMock simula M1; las pruebas no demuestran latencia o disponibilidad real.
+`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-10. Las pruebas citadas usan las dependencias indicadas en cada caso; no acreditan servicios externos reales.
 
 | Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| [HttpFleetClientTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | 5 | 0 | 0 | 0 | Exitosa |
-| [FleetUnavailableTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | 10 | 0 | 0 | 0 | Exitosa |
-| [ExternalQueryLogRegistrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java) | 19 | 0 | 0 | 0 | Exitosa |
-| [CreateReservationValidationTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java) | 13 | 0 | 0 | 0 | Exitosa |
+| [HttpFleetClientTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | 5 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [FleetUnavailableTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | 10 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [ExternalQueryLogRegistrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java) | 19 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [CreateReservationValidationTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java) | 13 | 0 | 0 | 0 | Verde; cobertura según TC |

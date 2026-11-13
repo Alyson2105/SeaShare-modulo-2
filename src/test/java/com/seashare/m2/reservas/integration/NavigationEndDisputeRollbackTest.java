@@ -22,6 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -55,6 +56,9 @@ class NavigationEndDisputeRollbackTest { // CU-07: si la disputa falla, el cierr
 
     @Autowired
     private ReservationRepositoryPort reservationRepository; // lee el estado tras el rollback
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate; // cuenta filas del evento tras el rollback
 
     @MockitoBean
     private FleetInfoPort fleetInfoPort; // flota simulada
@@ -129,5 +133,8 @@ class NavigationEndDisputeRollbackTest { // CU-07: si la disputa falla, el cierr
 
         Reservation saved = reservationRepository.findById(reservationId).orElseThrow();
         assertThat(saved.getStatus()).isEqualTo(ReservationStatus.IN_NAVIGATION);
+        Integer checkoutRows = jdbcTemplate.queryForObject( // el evento de checkout no sobrevive al rollback
+                "SELECT COUNT(*) FROM checkout_event WHERE reservation_id = ?", Integer.class, reservationId);
+        assertThat(checkoutRows).isZero();
     }
 }

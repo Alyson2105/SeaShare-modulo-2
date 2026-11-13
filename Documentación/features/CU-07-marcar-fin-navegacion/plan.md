@@ -213,8 +213,8 @@ No aplica. Operación puntual sobre una reserva individual.
 
 ### [DIFERENCIA H8-CU07-01] Disputa de CU-16
 - El plan dice: el endpoint dispara CU-16, crea la disputa en `PENDING` y devuelve `dispute_id` (UUID) y `dispute_window_expires_at` (fecha exacta a 24 horas) (L14, L76-L77, L203).
-- El codigo hace: `EndNavigationService` devuelve `null` en ambos campos, con el comentario "disputa se conectara en CU-16" (L111-L112); el mensaje no menciona la ventana de disputa y no lleva tildes (L32-L38, L158-L163).
-- Decision: la conexion con CU-16 queda pendiente; hoy la respuesta no abre ventana de disputa.
+- El codigo hace: desde el commit 5222f47 `EndNavigationService` abre la disputa llamando a `OpenDisputeUseCase` (contrato compartido `shared.contracts.dispute`; reservas no importa nada del paquete disputa), en la misma transaccion del paso a `COMPLETED`, con el instante `statusChangedAt` y el propietario de la reserva (L106, L125-L134). La respuesta devuelve `dispute_id` y `dispute_window_expires_at` con el offset de la zona del puerto (L120-L121). Si la apertura falla, se revierte el cierre: la reserva sigue `IN_NAVIGATION` y no queda fila en `checkout_event`; lo cubre `NavigationEndDisputeRollbackTest`.
+- Decision: sin diferencia; el codigo ya cumple lo que el plan exige. Commit de limpieza posterior: ef90625.
 
 ### [DIFERENCIA H8-CU07-02] vessel_operational_status
 - El plan dice: `vessel_operational_status` con valor literal `MAINTENANCE_CLEANING` siempre (L75, L114).

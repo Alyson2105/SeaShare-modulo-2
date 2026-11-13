@@ -57,7 +57,7 @@ Broker confirm no demuestra procesamiento por el consumidor de M3.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Consultar las comprobaciones pendientes del flujo.
+Corrida 2026-11-13: Partial. Consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
 FR-005 | SC-001 | [relay](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#backoffExactoUnoCincoVeinticincoCientoVeinticincoSegundos; src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#quintoFalloMarcaDeadConAlerta | In Process

@@ -117,8 +117,8 @@ public class EndNavigationService implements EndNavigationUseCase { // CU-07: ci
                 arrival.atZone(zone).toOffsetDateTime(), // llegada con offset del puerto
                 reservation.getVesselId(), // embarcacion
                 vesselOperationalStatus, // aviso a M1 o null
-                openedDispute == null ? null : openedDispute.disputeId(), // disputa abierta o ya existente
-                openedDispute == null ? null : openedDispute.windowEnd().atZone(zone).toOffsetDateTime(), // fin de ventana
+                openedDispute.disputeId(), // disputa abierta en esta transaccion
+                openedDispute.windowEnd().atZone(zone).toOffsetDateTime(), // fin de ventana con offset del puerto
                 messageFor(vesselOperationalStatus, remarks)); // mensaje sin tildes
     }
 
@@ -130,7 +130,7 @@ public class EndNavigationService implements EndNavigationUseCase { // CU-07: ci
                 reservation.getId(), // reserva completada
                 reservation.getOwnerId(), // propietario registrado
                 statusResult.statusChangedAt())); // mismo instante del paso a COMPLETED
-        return opened; // el contrato real siempre devuelve la disputa; null solo tolera dobles antiguos
+        return opened; // el contrato real siempre devuelve la disputa
     }
 
     private void validateIdentity(Reservation reservation, EndNavigationCommand command) { // valida rol y pertenencia

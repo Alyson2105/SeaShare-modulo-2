@@ -26,10 +26,10 @@ Verificar resolución sin reclamo. Requisitos: FR-001, FR-002. Criterios: SC-001
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-17 y su endpoint aún no existen; los resultados son expectativas del contrato. Spec D-01 no define si se admite resolución antes de presentar reclamo.
+Spec D-01 mantiene abierta la resolución administrativa sin reclamo; GuaranteeDispute#resolve aplica reglas distintas para ACCEPTED y REJECTED.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-17; no demuestran el flujo completo de CU-17.
+Se emplean las dependencias señaladas en la evidencia; los mocks y servicios externos no acreditan el flujo completo.
 
 ##### Preconditions & Default Setup
 Disputa PENDING sin reclamo y ventana vigente.
@@ -38,9 +38,9 @@ Disputa PENDING sin reclamo y ventana vigente.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Intentar resolver como ADMIN. | Datos de las precondiciones | El resultado requiere definición del contrato. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | UpdateDisputeStatusServiceTest#adminCannotAcceptWithoutClaim y #adminCanRejectWithoutClaim: verdes con mocks; rechazar se admite y aceptar se deniega, pero spec D-01 no decide la regla. |
+| 2 | Ejecutar | Intentar resolver como ADMIN. | Datos de las precondiciones | El resultado requiere definición del contrato. | Pendiente | UpdateDisputeStatusServiceTest#adminCannotAcceptWithoutClaim y #adminCanRejectWithoutClaim: verdes con mocks; rechazar se admite y aceptar se deniega, pero spec D-01 no decide la regla. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | UpdateDisputeStatusServiceTest#adminCannotAcceptWithoutClaim y #adminCanRejectWithoutClaim: verdes con mocks; rechazar se admite y aceptar se deniega, pero spec D-01 no decide la regla. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Spec D-01 no define si se admite resolución antes de presentar reclamo.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Draft; sin ejecución automatizada.
+Corrida 2026-11-13: Draft; evidencia parcial.
 
 #### Traceability
-FR-001, FR-002 | SC-001 | Sin prueba de CU-17 | Draft
+FR-001, FR-002 | SC-001 | Evidencia: src/test/java/com/seashare/m2/disputa/application/service/UpdateDisputeStatusServiceTest.java#adminCannotAcceptWithoutClaim; src/test/java/com/seashare/m2/disputa/application/service/UpdateDisputeStatusServiceTest.java#adminCanRejectWithoutClaim | Draft

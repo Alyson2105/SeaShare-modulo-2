@@ -2,7 +2,7 @@
 
 Casos para estimación individual y en lote de M3; modo fake activo por defecto. CU-01 y CU-19 consumen respectivamente los puertos de lote e individual.
 
-**Estado global**: In Process; seis casos tienen cobertura parcial y dos dependen de la UI pendiente. Evaluado el 2026-11-13.
+**Estado global**: Draft; TC-003 presenta contradicción contractual, TC-007 carece del flujo de recotización y TC-008 conserva evidencia parcial. Evaluado el 2026-11-13.
 
 ## Trazabilidad
 
@@ -10,12 +10,12 @@ Casos para estimación individual y en lote de M3; modo fake activo por defecto.
 |---|---|---|---|---|---|
 | [TC-CU11-001](TC-CU11-001-estimacion-individual.md) | Estimación individual | FR-001, FR-002, FR-010, FR-012 | SC-001, SC-002 | [individual](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java) | In Process |
 | [TC-CU11-002](TC-CU11-002-lote-fragmentacion.md) | Fragmentación de lote | FR-003, FR-004, FR-005 | SC-003 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | In Process |
-| [TC-CU11-003](TC-CU11-003-lote-parcial.md) | Estimación parcial | FR-006, FR-007 | SC-004 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | In Process |
+| [TC-CU11-003](TC-CU11-003-lote-parcial.md) | Estimación parcial | FR-006, FR-007 | SC-004 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Draft |
 | [TC-CU11-004](TC-CU11-004-lote-fallo.md) | Fallo de bloque en lote | FR-008 | SC-004 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | In Process |
 | [TC-CU11-005](TC-CU11-005-importe-invalido.md) | Importe individual inválido | FR-015, FR-016 | SC-006 | [individual](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java) | In Process |
 | [TC-CU11-006](TC-CU11-006-error-fechas.md) | Error de parámetros M3 | FR-010, FR-011 | SC-005 | [individual](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java) | In Process |
 | [TC-CU11-007](TC-CU11-007-recotizacion.md) | Recotización al cambiar viaje | FR-009, FR-014 | SC-007 | Sin prueba de CU-11 | Blocked |
-| [TC-CU11-008](TC-CU11-008-advertencia-obligatoria.md) | Advertencia en interfaz | FR-012, FR-013 | SC-002 | [individual](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java) | Blocked |
+| [TC-CU11-008](TC-CU11-008-advertencia-obligatoria.md) | Advertencia en interfaz | FR-012, FR-013 | SC-002 | [individual](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java) | In Process |
 
 ## Cobertura de requisitos
 
@@ -44,7 +44,7 @@ Casos para estimación individual y en lote de M3; modo fake activo por defecto.
 | SC | Estado | Observación |
 |---|---|---|
 | SC-001 | Parcial | TC-001 a 003; no prueba todos los precios ni UI. |
-| SC-002 | Bloqueado | TC-008; la advertencia no es obligatoria en el adaptador y falta UI. |
+| SC-002 | Parcial | TC-008; la advertencia no es obligatoria en el adaptador y falta UI. |
 | SC-003 | Parcial | TC-002; partición de ejemplo, no garantía universal. |
 | SC-004 | Parcial | TC-003 y 004; catálogo backend existente; falta UI. |
 | SC-005 | Parcial | TC-006 prueba el rechazo del adaptador; no conserva el motivo específico ni demuestra el flujo completo. |
@@ -58,12 +58,12 @@ Casos para estimación individual y en lote de M3; modo fake activo por defecto.
 |---|---|---|---|---|---|---|
 | TC-CU11-001 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpIndividualEstimateAdapterTest#successful200WithWarning pasó: monto y warning arbitrario se conservan. No verifica todos los parámetros ni el texto contractual obligatorio. |
 | TC-CU11-002 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpBatchEstimateAdapterTest#duplicateIdsAreDeduplicatedBeforeSend y #sixtyIdsSplitIntoTwoBlocksOfFifty pasaron: deduplicación y 60 IDs en dos llamadas. Falta probar otros tamaños y M3 real. |
-| TC-CU11-003 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpBatchEstimateAdapterTest#batch200PartialMarksUnavailable, #unknownIdInResponseBecomesUnavailable y #invalidEstimatedTotalMakesVesselUnavailable pasaron. El contrato de contenido del precio lote es contradictorio; no se prueba composición financiera. |
+| TC-CU11-003 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | Componente WireMock: HttpBatchEstimateAdapterTest#batch200PartialMarksUnavailable, #unknownIdInResponseBecomesUnavailable y #invalidEstimatedTotalMakesVesselUnavailable pasaron. El contrato de contenido del precio lote es contradictorio; no se prueba composición financiera. |
 | TC-CU11-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpBatchEstimateAdapterTest#failedBlockMakesItsIdsUnavailableAndKeepsGoing y #readTimeoutMarksBlockUnavailableWithSingleCall pasaron: otros bloques siguen y timeout se consulta una vez. No se verifica UI real. |
 | TC-CU11-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpIndividualEstimateAdapterTest#zeroTotalThrowsQuotationUnavailable, #negativeTotalThrowsQuotationUnavailable y #unparseableTotalThrowsQuotationUnavailable pasaron. Falta demostrar bloqueo completo de reserva. |
 | TC-CU11-006 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpIndividualEstimateAdapterTest#badRequest400ThrowsInvalidParameters pasó: código INVALID_PARAMETERS y una llamada. No comprueba mensaje específico ni ausencia de reserva. |
-| TC-CU11-007 | Sí | No | Blocked | Agente automatizado | — | Sin ejecución automatizada; recotización y descarte en UI pendientes. |
-| TC-CU11-008 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | Componente WireMock: HttpIndividualEstimateAdapterTest#successful200WithWarning pasó con warning arbitrario y #successful200WithoutWarning pasó aceptando null; unitario: VesselDetailServiceTest#quotationUsesLiteralAmountAndInclusiveDays pasó. Falta UI, modal y obligación del texto contractual. |
+| TC-CU11-007 | Sí | No | Blocked | — | — | Sin ejecución automatizada; recotización y descarte en UI pendientes. |
+| TC-CU11-008 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpIndividualEstimateAdapterTest#successful200WithWarning pasó con warning arbitrario y #successful200WithoutWarning pasó aceptando null; unitario: VesselDetailServiceTest#quotationUsesLiteralAmountAndInclusiveDays pasó. Falta UI, modal y obligación del texto contractual. |
 
 ## Brechas detectadas
 
@@ -83,11 +83,11 @@ Casos para estimación individual y en lote de M3; modo fake activo por defecto.
 
 ## Ejecución automatizada — 2026-11-13
 
-`./mvnw -B clean test`: 395 pruebas, 0 fallos, 0 errores, 0 omitidas; BUILD SUCCESS. WireMock y dobles simulan M3; no prueban su servicio real ni la UI.
+`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-11. Las pruebas citadas usan las dependencias indicadas en cada caso; no acreditan servicios externos reales.
 
 | Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| [HttpBatchEstimateAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | 10 | 0 | 0 | 0 | Exitosa |
-| [HttpIndividualEstimateAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java) | 15 | 0 | 0 | 0 | Exitosa |
-| [VesselDetailServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/VesselDetailServiceTest.java) | 8 | 0 | 0 | 0 | Exitosa |
-| [VesselSearchServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java) | 7 | 0 | 0 | 0 | Exitosa |
+| [HttpBatchEstimateAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | 10 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [HttpIndividualEstimateAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java) | 15 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [VesselDetailServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/VesselDetailServiceTest.java) | 8 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [VesselSearchServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |

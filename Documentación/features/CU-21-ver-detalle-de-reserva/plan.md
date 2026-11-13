@@ -166,7 +166,7 @@ Este endpoint de solo lectura expone la ficha técnica y contractual completa de
 | `payment_summary.rental_amount` | Number / null | Nulo condicional | Costo del alquiler (oculto en `COMPLETED` durante disputa de garantía). |
 | `payment_summary.insurance_amount` | Number / null | Nulo condicional | Costo de la póliza de seguro marítimo obligatorio. |
 | `payment_summary.guarantee_deposit_amount` | Number / null | Nulo condicional | Depósito de custodia (10% tarifa base). Siempre visible en `RESERVED`, `IN_NAVIGATION` y `COMPLETED`. |
-| `payment_summary.total_paid` | Number | No nulo | Total pagado oficial y congelado en moneda local. |
+| `payment_summary.total_paid` | Number | Nulo condicional | Puede ser null si aún no hay liquidación; total pagado oficial y congelado en moneda local. |
 | `payment_summary.clarifying_note` | String / null | Nulo condicional | Advertencia legal (ej. `"El sistema de pagos gestionará la compensación al propietario."`). |
 | `available_actions` | Objeto | No nulo | Flags booleanos que orquestan los botones interactivos de la interfaz según rol y estado. |
 | `time_indicators`| Objeto | No nulo | Métricas en segundos/minutos para renderizar contadores regresivos en la UI. |

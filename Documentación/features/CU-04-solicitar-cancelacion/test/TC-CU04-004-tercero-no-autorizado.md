@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU04-004 — Autorización de actor
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar autorización de actor. Trazabilidad: FR-003; SC-008.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-04 y el endpoint propuesto aún no están implementados. Los resultados son contractuales, no observados. La identidad por JWT es propuesta y aún no implementada.
+La identidad JWT sigue pendiente; el controlador usa identidad temporal por cabeceras.
 
 ##### Dependencies & Assumptions
-Ejecución futura con CU-04 implementado y dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-04; no demuestran la orquestación completa.
+Se requieren dependencias controladas; la evidencia descrita no acredita el flujo completo.
 
 ##### Preconditions & Default Setup
 Reserva RESERVED; usuario distinto del arrendatario titular y del propietario registrado.
@@ -38,9 +38,9 @@ Reserva RESERVED; usuario distinto del arrendatario titular y del propietario re
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar cancelación como tercero. | Datos de las precondiciones | Según el plan, 403 RESERVATION_NOT_OWNED; no se cancela la reserva. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | Sin publicación real |
+| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | RequestCancellationServiceTest#foreignRenterIsRejected: verde con repositorio y CU-08 simulados; no prueba JWT ni persistencia real. |
+| 2 | Ejecutar | Solicitar cancelación como tercero. | Datos de las precondiciones | Según el plan, 403 RESERVATION_NOT_OWNED; no se cancela la reserva. | Pendiente | RequestCancellationServiceTest#foreignRenterIsRejected: verde con repositorio y CU-08 simulados; no prueba JWT ni persistencia real. |
+| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | RequestCancellationServiceTest#foreignRenterIsRejected: verde con repositorio y CU-08 simulados; no prueba JWT ni persistencia real. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ La identidad por JWT es propuesta y aún no implementada.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
+Corrida 2026-11-13: Partial; evidencia parcial.
 
 #### Traceability
-FR-003 | SC-008 | Sin prueba de CU-04 | Blocked
+FR-003 | SC-008 | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/RequestCancellationServiceTest.java#foreignRenterIsRejected | In Process

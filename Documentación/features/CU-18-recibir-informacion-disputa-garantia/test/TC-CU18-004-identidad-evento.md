@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU18-004 — Identificador y reenvío
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar identificador y reenvío. Requisitos: FR-004, FR-005. Criterios: SC-00
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La publicación asíncrona de CU-18 aún no existe; los resultados son expectativas del contrato. La deduplicación efectiva corresponde a M3; no se demuestra con publisher confirm.
+La deduplicación efectiva corresponde a M3; publisher confirm no demuestra consumo. Spec FR-005 pide reintentar hasta confirmar; plan sección 6 y PublishPendingOutboxService#registerFailure agotan tras cinco fallos.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-18; no demuestran el flujo completo de CU-18.
+La evidencia identifica las dependencias usadas; un broker de prueba no demuestra consumo por M3.
 
 ##### Preconditions & Default Setup
 Evento final con event_key y Message-Id según plan; broker simulado.
@@ -38,9 +38,9 @@ Evento final con event_key y Message-Id según plan; broker simulado.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Fallar publicación y reintentar observando identificadores. | Datos de las precondiciones | Se conserva la identidad del evento y se marca publicado tras confirmación del broker. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputeEventMapperTest#eventIdIsDeterministicPerDisputeAndStatus y OutboxRelayIntegrationTest#falloSimuladoReintentaHastaPublicar: verdes; el segundo prueba relay genérico, no reenvío de una disputa con comparación de identificadores. |
+| 2 | Ejecutar | Fallar publicación y reintentar observando identificadores. | Datos de las precondiciones | Se conserva la identidad del evento y se marca publicado tras confirmación del broker. | Pendiente | DisputeEventMapperTest#eventIdIsDeterministicPerDisputeAndStatus y OutboxRelayIntegrationTest#falloSimuladoReintentaHastaPublicar: verdes; el segundo prueba relay genérico, no reenvío de una disputa con comparación de identificadores. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputeEventMapperTest#eventIdIsDeterministicPerDisputeAndStatus y OutboxRelayIntegrationTest#falloSimuladoReintentaHastaPublicar: verdes; el segundo prueba relay genérico, no reenvío de una disputa con comparación de identificadores. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ La deduplicación efectiva corresponde a M3; no se demuestra con publisher confi
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada.
+Corrida 2026-11-13: Partial; evidencia parcial.
 
 #### Traceability
-FR-004, FR-005 | SC-003, SC-004 | Sin prueba de CU-18 | Blocked
+FR-004, FR-005 | SC-003, SC-004 | Evidencia: src/test/java/com/seashare/m2/disputa/application/service/DisputeEventMapperTest.java#eventIdIsDeterministicPerDisputeAndStatus; src/test/java/com/seashare/m2/disputa/integration/DisputePublishingIntegrationTest.java#acceptedIsPublishedAsCompletedWithoutAmounts; src/test/java/com/seashare/m2/reservas/integration/OutboxRelayIntegrationTest.java#falloSimuladoReintentaHastaPublicar | In Process

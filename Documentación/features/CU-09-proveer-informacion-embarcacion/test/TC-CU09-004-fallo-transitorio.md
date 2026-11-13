@@ -46,6 +46,8 @@ Modo HTTP; proveedor simulado responde 503 de forma persistente o conexión fall
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
+El plan sección 4 menciona reintento para 500/502; sección 5 enumera 503 y errores de acceso. El escenario principal de 503 y timeout sigue siendo evaluable.
+
 503 persistente se registra TIMEOUT; 500 y 502 no se reintentan en código, aunque el plan los menciona.
 
 #### Defect Severity Reference
@@ -57,7 +59,7 @@ No aplica comportamiento principal adicional.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
 FR-003, FR-008 | SC-004 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java#double503FailsSafeAfterSingleRetry; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java#timeoutRetriesOnceThenFailsSafe; src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#vesselServerError500RegistersErrorRow | In Process

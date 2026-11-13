@@ -26,10 +26,10 @@ Verificar repetición idempotente. Trazabilidad: FR-011, FR-015; SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-04 y el endpoint propuesto aún no están implementados. Los resultados son contractuales, no observados. La idempotencia implementada para creación CU-02 no prueba idempotencia de cancelación.
+El plan sección 7.5 exige X-Idempotency-Key; CancellationController#cancel no la recibe ni procesa. La idempotencia de CU-02 no acredita este escenario.
 
 ##### Dependencies & Assumptions
-Ejecución futura con CU-04 implementado y dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-04; no demuestran la orquestación completa.
+Se requieren dependencias controladas; la evidencia descrita no acredita el flujo completo.
 
 ##### Preconditions & Default Setup
 Reserva RESERVED; solicitud válida y X-Idempotency-Key UUID según el plan.
@@ -38,9 +38,9 @@ Reserva RESERVED; solicitud válida y X-Idempotency-Key UUID según el plan.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Repetir la misma solicitud con la misma clave dentro de 60 segundos. | Datos de las precondiciones | El plan prevé 200 con respuesta original, sin duplicar transición ni evento. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | Sin publicación real |
+| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | Sin prueba pertinente de repetición con clave. |
+| 2 | Ejecutar | Repetir la misma solicitud con la misma clave dentro de 60 segundos. | Datos de las precondiciones | El plan prevé 200 con respuesta original, sin duplicar transición ni evento. | Pendiente | Sin prueba pertinente de repetición con clave. |
+| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | Sin prueba pertinente de repetición con clave. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ La idempotencia implementada para creación CU-02 no prueba idempotencia de canc
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada pertinente.
 
 #### Traceability
-FR-011, FR-015 | SC-001 | Sin prueba de CU-04 | Blocked
+FR-011, FR-015 | SC-001 | Sin prueba automatizada pertinente | Blocked

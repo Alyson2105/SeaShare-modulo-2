@@ -57,7 +57,7 @@ Probar un segundo antes conserva el estado; expiración es del motor y scheduler
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
 FR-002, FR-003, FR-005 | SC-001, SC-003 | [ttl](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java#expiresPendingPaymentPastTtl; src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java#pendingPaymentBeforeTtlIsNotExpired | In Process

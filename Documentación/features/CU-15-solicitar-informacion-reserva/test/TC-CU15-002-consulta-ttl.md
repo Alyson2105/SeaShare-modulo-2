@@ -57,7 +57,7 @@ Consultas repetidas pueden devolver segundos distintos sin mutar la reserva.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Draft; evidencia parcial, consultar el flujo.
+Corrida 2026-11-13: Draft; evidencia parcial, consultar el flujo.
 
 #### Traceability
 FR-002, FR-005, FR-007 | SC-002 | Prueba parcial ejecutada | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/GetInternalReservationServiceTest.java#ttlAppliesForPendingPayment | Draft

@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU09-007 — Ficha completa y ubicación GPS
-**Status**: In Process
+**Status**: Blocked
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -46,6 +46,8 @@ Proveedor M1 entrega ficha completa, puerto y GPS.
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
+La matrícula exigida por spec FR-004 y plan sección 3 no aparece en el DTO de detalle ni en el adaptador; la ruta completa requerida no existe.
+
 FleetInfo expone propietario, capacidad y zona; los consumidores CU-01 y CU-19 existen y usan DTO de catálogo o detalle con GPS, pero falta matrícula.
 
 #### Defect Severity Reference
@@ -57,7 +59,7 @@ FleetInfo expone propietario, capacidad y zona; los consumidores CU-01 y CU-19 e
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida 2026-11-13: Blocked. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
-FR-001, FR-004 | SC-005 | Pruebas de detalle ejecutadas | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpVesselReadAdapterTest.java#mapsFullDetail; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselDetailControllerTest.java#vesselDetailReturnsFleetDataWithoutCache | In Process
+FR-001, FR-004 | SC-005 | Pruebas de detalle ejecutadas | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpVesselReadAdapterTest.java#mapsFullDetail; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselDetailControllerTest.java#vesselDetailReturnsFleetDataWithoutCache | Blocked
