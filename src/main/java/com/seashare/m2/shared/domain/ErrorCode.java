@@ -25,6 +25,8 @@ public enum ErrorCode { // catalogo de codigos de error con mapeo http
     RESERVATION_EXPIRED_REVERSION_REQUIRED("RESERVATION_EXPIRED_REVERSION_REQUIRED", 409), // reserva expirada requiere reversion
     DISPUTE_ALREADY_RESOLVED("DISPUTE_ALREADY_RESOLVED", 409), // disputa ya resuelta
     TRIP_ALREADY_COMPLETED("TRIP_ALREADY_COMPLETED", 409), // viaje ya completado (CU-07)
+    EARLY_DEPARTURE("EARLY_DEPARTURE", 409), // salida antes de la hora pactada (CU-06)
+    TRIP_ALREADY_STARTED("TRIP_ALREADY_STARTED", 409), // viaje ya iniciado (CU-06)
     INTERNAL_ERROR("INTERNAL_ERROR", 500), // error interno del servidor
     FLEET_SERVICE_UNAVAILABLE("FLEET_SERVICE_UNAVAILABLE", 503), // servicio de flota no disponible
     CALCULATION_UNAVAILABLE("CALCULATION_UNAVAILABLE", 503), // calculo del valor final no disponible
