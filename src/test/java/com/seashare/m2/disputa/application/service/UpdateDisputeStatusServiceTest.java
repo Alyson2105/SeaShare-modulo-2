@@ -2,6 +2,7 @@ package com.seashare.m2.disputa.application.service;
 
 import com.seashare.m2.disputa.application.dto.UpdateDisputeStatusCommand;
 import com.seashare.m2.disputa.application.dto.UpdateDisputeStatusResult;
+import com.seashare.m2.disputa.application.port.out.DisputeOutboxPort;
 import com.seashare.m2.disputa.application.port.out.DisputeRepositoryPort;
 import com.seashare.m2.disputa.domain.exception.DisputeNotFoundException;
 import com.seashare.m2.disputa.domain.exception.DisputeRuleException;
@@ -44,6 +45,9 @@ class UpdateDisputeStatusServiceTest { // transiciones de CU-17 sin base de dato
     private DisputeRepositoryPort repository;
 
     @Mock
+    private DisputeOutboxPort disputeOutboxPort;
+
+    @Mock
     private ClockPort clockPort;
 
     private UpdateDisputeStatusService service;
@@ -52,7 +56,7 @@ class UpdateDisputeStatusServiceTest { // transiciones de CU-17 sin base de dato
 
     @BeforeEach
     void setUp() {
-        service = new UpdateDisputeStatusService(repository, clockPort);
+        service = new UpdateDisputeStatusService(repository, disputeOutboxPort, clockPort);
         adminId = UUID.randomUUID();
     }
 
@@ -97,6 +101,13 @@ class UpdateDisputeStatusServiceTest { // transiciones de CU-17 sin base de dato
         assertThat(change.getValue().fromStatus()).isEqualTo(DisputeStatus.PENDING);
         assertThat(change.getValue().toStatus()).isEqualTo(DisputeStatus.ACCEPTED);
         assertThat(change.getValue().actorType()).isEqualTo(DisputeActorType.ADMIN);
+
+        ArgumentCaptor<com.seashare.m2.disputa.application.dto.DisputeUpdatedEvent> event =
+                ArgumentCaptor.forClass(com.seashare.m2.disputa.application.dto.DisputeUpdatedEvent.class);
+        verify(disputeOutboxPort).enqueue(event.capture()); // CU-18: evento en la misma transaccion
+        assertThat(event.getValue().financeStatus()).isEqualTo("COMPLETED");
+        assertThat(event.getValue().eventKey()).isEqualTo("disputa-" + dispute.id() + "-COMPLETED");
+        assertThat(event.getValue().statusChangedAt()).isEqualTo(NOW);
     }
 
     @Test
@@ -126,6 +137,7 @@ class UpdateDisputeStatusServiceTest { // transiciones de CU-17 sin base de dato
         verify(repository).saveAdminReview(any());
         verify(repository, never()).save(any());
         verify(repository, never()).recordStatusChange(any());
+        verify(disputeOutboxPort, never()).enqueue(any()); // PENDING nunca genera mensaje
     }
 
     @Test
@@ -178,6 +190,7 @@ class UpdateDisputeStatusServiceTest { // transiciones de CU-17 sin base de dato
         assertThat(result.resolvedBy()).isNull();
         assertThat(result.reason()).isEqualTo(GuaranteeDispute.SYSTEM_CLOSE_REASON);
         verify(repository, never()).saveAdminReview(any());
+        verify(disputeOutboxPort).enqueue(any()); // REJECTED se publica como REJECTED
 
         ArgumentCaptor<DisputeStatusChange> change = ArgumentCaptor.forClass(DisputeStatusChange.class);
         verify(repository).recordStatusChange(change.capture());

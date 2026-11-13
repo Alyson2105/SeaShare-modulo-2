@@ -3,6 +3,7 @@ package com.seashare.m2.disputa.application.service;
 import com.seashare.m2.disputa.application.dto.UpdateDisputeStatusCommand;
 import com.seashare.m2.disputa.application.dto.UpdateDisputeStatusResult;
 import com.seashare.m2.disputa.application.port.in.UpdateDisputeStatusUseCase;
+import com.seashare.m2.disputa.application.port.out.DisputeOutboxPort;
 import com.seashare.m2.disputa.application.port.out.DisputeRepositoryPort;
 import com.seashare.m2.disputa.domain.exception.DisputeNotFoundException;
 import com.seashare.m2.disputa.domain.exception.DisputeRuleException;
@@ -32,10 +33,15 @@ public class UpdateDisputeStatusService implements UpdateDisputeStatusUseCase {
 
     private final DisputeRepositoryPort repository; // persistencia de disputas
 
+    private final DisputeOutboxPort disputeOutboxPort; // encolado del evento final (CU-18)
+
     private final ClockPort clockPort; // unico reloj de la aplicacion
 
-    public UpdateDisputeStatusService(DisputeRepositoryPort repository, ClockPort clockPort) {
+    public UpdateDisputeStatusService(DisputeRepositoryPort repository,
+                                      DisputeOutboxPort disputeOutboxPort,
+                                      ClockPort clockPort) {
         this.repository = repository;
+        this.disputeOutboxPort = disputeOutboxPort;
         this.clockPort = clockPort;
     }
 
@@ -65,6 +71,10 @@ public class UpdateDisputeStatusService implements UpdateDisputeStatusUseCase {
             }
             repository.recordStatusChange(DisputeStatusChange.record(dispute.id(), previous, dispute.status(),
                     command.actorType(), command.adminId(), dispute.reason(), now));
+
+            if (dispute.status().isFinal()) { // CU-18: solo los estados finales generan evento
+                disputeOutboxPort.enqueue(DisputeEventMapper.finalEvent(dispute, now)); // misma transaccion
+            }
         }
 
         return new UpdateDisputeStatusResult(
