@@ -24,7 +24,7 @@
   - Contexto `disputa` y contrato interno `shared/contracts`.
   - Todos los CU salvo los avances parciales de CU-02, CU-08, CU-20 y CU-21. **Hito H4 completado (2026-11-09)**: CU-08 quedó completo como motor interno (comando, respuesta, auditoría completa, TTL doble, matriz de notificaciones M3/M1); **desde el 2026-11-12 la creación pasa por CU-08 (T-24, ver 4.11)**, por lo que ya no queda escritura de estado fuera del motor.
 - **Hito H2 completado (2026-11-07)**: topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` y prueba de deduplicación (T-04), filtro de correlation id HTTP→AMQP (T-22) y **ShedLock en TTL y relay (T-05, 2026-11-12)**. Detalle en la sección 4.6.
-- La última ejecución registrada de la suite completa es del **2026-11-12** (`.\mvnw.cmd test`): **363 pruebas, 0 fallos, 0 errores, 0 omitidas** (eran 115 el 2026-11-07, 271 el 2026-11-10 y 332 antes de T-16a/T-16b).
+- La última ejecución registrada de la suite completa es del **2026-11-12** (`.\mvnw.cmd test`): **395 pruebas, 0 fallos, 0 errores, 0 omitidas** (eran 115 el 2026-11-07 y 271 el 2026-11-10).
 
 ---
 
@@ -38,7 +38,7 @@
 | Fase 4 — Núcleo de dominio | CU-08 | **Completada (Hito H4, 2026-11-09)** | Contrato completo de CU-08 (T-06): comando con `actor_id`/`expected_version`/`mechanical_failure`/`anticipation_minutes`/`completion_notes`/`payment_reference`, respuesta con `version` y `events_enqueued`. Persistencia y V4 (T-09): `status_changed_at` y campos de cierre/pago. Auditoría completa (T-10): creación + transiciones con `actor_id`/`event_ids` e inmutabilidad probada. TTL doble (T-07): `INITIATED` y `PENDING_PAYMENT`. Matriz M3/M1 con guarda `m1_blocked` y destinos `AMQP` + `M1_HTTP` (T-08). Detalle en la sección 4.7. Queda fuera de esta fase: creación vía CU-08 (T-24, Fase 7) y payload final de CU-14 (T-12, Fase 5). |
 | Fase 5 — Superficie Módulo 3 | CU-14, CU-15 | **Completada (Hito H5, integrada por PR #28)** | T-12: payload de CU-14 según UC07 de M3 (mapeador de estados y token de pago opcional). T-13: endpoint interno de consulta para CU-15, solo lectura; **desde el 2026-11-12 exige rol `FINANCE` y devuelve 403**. Detalle en el historial (entrada del Hito H5) y en 4.11. Los consumidores AMQP de producción son de M3. |
 | Fase 6 — Vistas de consulta | CU-19, CU-20, CU-21 | **Completada en código (Hito H6, PR #29)** | CU-19, CU-20 y CU-21 existen. **Desde el 2026-11-12 exponen `status_badge` y el listado usa el mismo total que el detalle (ver 4.11).** |
-| Fase 7 — Embudo de conversión | CU-01, CU-02, CU-03, CU-13 | **Parcial** | CU-01 (T-16a), CU-02 (con T-24) y CU-03 (T-16b) implementados el 2026-11-12. CU-13 no existe y sigue bloqueado por la decisión sobre la salida de `EXPIRED`. |
+| Fase 7 — Embudo de conversión | CU-01, CU-02, CU-03, CU-13 | **Completada en código (Hito H7)** | CU-01 (T-16a), CU-02 (con T-24), CU-03 (T-16b) y CU-13 (T-16c) implementados el 2026-11-12. El Canal A de CU-13 queda apagado/fuera de alcance. |
 | Fase 8 — Operaciones en muelle | CU-04, CU-05, CU-06, CU-07 | **No iniciada** | Sin endpoints, servicios ni eventos de cancelación, inasistencia, check-in o check-out. |
 | Fase 9 — Disputa de garantía | CU-16, CU-17, CU-18 | **No iniciada** | Las tablas `dispute_*` existen en V2, pero no hay contexto `disputa`, lógica, endpoints ni publicación de eventos. |
 | Fase 10 — Polish | Transversal | **No iniciada** | Sin pruebas de carga, resiliencia, observabilidad operativa, cierre de `[NEEDS CLARIFICATION]` ni documentación de arranque. |
@@ -61,7 +61,7 @@
 | CU-10 — Brindar información de estado operativo | **Parcial** | Cliente HTTP real (`HttpFleetOperationalStatusAdapter`) con registro de consultas; solo `AVAILABLE` es disponible y una respuesta ilegible da 503. Contrato con M1 sin firmar. |
 | CU-11 — Proveer información de cotización | **Parcial** | Clientes HTTP reales de M3 para estimación individual y en lote (`HttpIndividualEstimateAdapter`, `HttpBatchEstimateAdapter`) con puertos, fakes y pruebas WireMock; se activan con `seashare.finance.mode=http`. Falta `base-url` de M3 y que algún caso de uso los llame (CU-01 usará el lote en H7). |
 | CU-12 — Brindar cálculo total de la reserva | **Parcial** | Cliente HTTP real (`HttpCalculatedValueAdapter`) con reintento del 404 y tope total de 800 ms; se activa con `seashare.finance.mode=http`. Falta `base-url` de M3, la auditoría de CU-12 (FR-010) y que CU-03 lo llame (H7). |
-| CU-13 — Confirmar pago | **No implementado** | Sin canal B activo ni canal A. |
+| CU-13 — Confirmar pago | **Implementado (Hito H7, T-16c)** | Canal B activo: `PaymentPollingJob` consulta UC06 cada 5 s (ShedLock), traduce el estado y lo entrega a `ConfirmPaymentService`. `APPROVED` con TTL vigente → `RESERVED` con referencia; `REJECTED` → sigue `PENDING_PAYMENT` y permite reintento; `CANCELLED`/`EXPIRED` de M3 → `PAYMENT_FAILED`; `APPROVED` fuera del TTL → `CANCELLED_FLEXIBLE` + alerta, con la reserva sin cambio de estado. Idempotencia por `(reservation_id, external_reference, result)` (V6). Canal A queda fuera de H7. |
 | CU-14 — Recibir estado de reserva | **Parcial** | El relay publica las filas `AMQP` con `Message-Id` y publisher confirm (T-03/T-04) hacia `finance.reservation-status.v1`. Desde el Hito H4 el `StatusChangedEvent` transporta `actor`, `anticipation_minutes` y `completion_notes` listos para el payload. Hito H5 (T-12): el payload sigue el contrato UC07 de M3 con `reservation_id`, `status` (`PENDING`, `RESERVED`, `IN_NAVIGATION`, `COMPLETED`, `CANCELLED_FLEXIBLE`, `CANCELLED_MODERATE`, `CANCELLED_STRICT`, `CANCELLED_BY_HOST`), `status_changed_at` y `payment_token_ref` solo en `PENDING`. **CU-03 ya exige el token (T-16b).** [NEEDS CLARIFICATION] la spec de CU-14 (FR-002 a FR-004) pide actor, sub-estado, anticipación y notas en el payload y el plan no; se siguió el plan. El consumidor real es de M3. |
 | CU-15 — Solicitar información de la reserva | **Implementado (Hito H5, T-13; integrado por PR #28)** | `GET /api/v1/internal/reservations/{reservation_id}`, solo lectura y sin dinero. **T-13 cerrado el 2026-11-12**: exige `X-User-Role: FINANCE` y devuelve 403 `PROFILE_NOT_AUTHORIZED` con cualquier otro perfil. [NEEDS CLARIFICATION] `damage_detected` y `cancellation_anticipation_hours` siguen nulos porque CU-07 y CU-04 aún no los persisten; se documenta el motivo y no se inventan valores. `scheduled_arrival` provisional y formato de `reservation_code` sin definir. Detalle en el historial. |
 | CU-16 — Generar disputa de garantía | **No implementado** | Solo tablas en Flyway; sin lógica ni API. |
@@ -421,10 +421,40 @@ Trabajo posterior al merge de H6 (`1e49661`) para desbloquear la Fase 7. Los com
 
 ---
 
+### 4.13 Confirmación de pago — T-16c (CU-13) (2026-11-12)
+
+**Canal B (activo)**
+- `PaymentPollingJob` (`@Scheduled` + `@SchedulerLock`) cada 5 s; apagado por defecto en la suite (`m2.scheduler.payments.enabled=false`) y activo en dev/prod.
+- `PollPaymentStatusService` consulta `PaymentStatusPort` solo sobre reservas `PENDING_PAYMENT` y sobre `EXPIRED`/`PAYMENT_FAILED` recientes (ventana configurable, 30 min) para detectar cobros huérfanos. Una reserva con error no frena el ciclo.
+- `HttpPaymentStatusAdapter` implementa UC06 (`GET /api/v1/reservations/{id}/payment-confirmation`, connect 100 ms, read 500 ms, sin reintentos ni `Authorization`); cualquier fallo o 404 se trata como `UNKNOWN` y no cambia el estado.
+- `FakePaymentStatusAdapter` (modo fake) devuelve el estado configurado en `seashare.finance.fake-payment-status` (`IN_PROCESS` por defecto).
+
+**Lógica común (`ConfirmPaymentService`)**
+- Bloqueo pesimista de la reserva y registro idempotente del intento en la misma transacción.
+- `APPROVED` con TTL vigente → `RESERVED` por CU-08 con `payment_reference`.
+- `APPROVED` con TTL vencido o reserva ya `EXPIRED` → publica `CANCELLED_FLEXIBLE` (`LatePaymentReversalEvent` + alerta) y **no cambia el estado**; el job de TTL expira la reserva si seguía en `PENDING_PAYMENT`.
+- `REJECTED` → sigue `PENDING_PAYMENT`.
+- `CANCELLED`/`EXPIRED` de M3 → `PAYMENT_FAILED` por CU-08.
+- `IN_PROCESS`/`UNKNOWN` → sin efecto; duplicados por clave → sin efecto.
+
+**Idempotencia y esquema**
+- Migración **V6**: índice único `ux_payment_attempt_key (reservation_id, external_reference, result)`. `PaymentAttemptPort` registra con `saveAndFlush` y traduce la violación de unicidad a «duplicado».
+- Referencia sintética estable `m3-<reservation_id>-<RESULT>` cuando M3 no entrega `external_reference`.
+
+**Reintento de CU-03**
+- `StartPaymentWriter` permite reintentar solo si el último resultado fue `REJECTED`; reutiliza el desglose persistido, no vuelve a consultar M3 ni el estado de M1, publica un nuevo `PENDING` con el token nuevo y numera el intento (`countAttempts + 1`). Si no hay rechazo previo, responde 409 `RETRY_NOT_ALLOWED`.
+
+**Fuera de alcance**
+- Canal A (endpoint que M3 invocaría) sigue apagado; M3 ya está implementado y su contrato vigente es la consulta UC06.
+
+**Verificación**: `.\mvnw.cmd test` del 2026-11-12 → **395 pruebas, 0 fallos, 0 errores, 0 omitidas**.
+
+---
+
 ## 5. Pruebas y verificación
 
-- La suite ejecuta **363 pruebas** (eran 273 al cierre de H6, 234 tras el Hito H3, 115 tras el Hito H2, 84 antes y 75 el 2026-11-03).
-- La última ejecución completa es del **2026-11-12** (`.\mvnw.cmd test` con Docker): **363 pruebas ejecutadas, 0 fallos, 0 errores, 0 omitidas**.
+- La suite ejecuta **395 pruebas** (eran 273 al cierre de H6, 234 tras el Hito H3, 115 tras el Hito H2, 84 antes y 75 el 2026-11-03).
+- La última ejecución completa es del **2026-11-12** (`.\mvnw.cmd test` con Docker): **395 pruebas ejecutadas, 0 fallos, 0 errores, 0 omitidas**.
 - Comandos de referencia:
   ```bash
   ./mvnw test
@@ -477,7 +507,7 @@ Trabajo posterior al merge de H6 (`1e49661`) para desbloquear la Fase 7. Los com
 ### 6.4 Casos de uso y contextos faltantes
 
 13. Implementar el contexto `disputa` (CU-16, CU-17, CU-18) y `shared/contracts/dispute/OpenDisputeUseCase`.
-14. Implementar CU-04, CU-05, CU-06, CU-07, CU-13 y CU-22 (CU-01 y CU-03 quedaron en H7; CU-14 y CU-15 en H5; CU-19 en H6).
+14. Implementar CU-04, CU-05, CU-06, CU-07 y CU-22 (CU-01, CU-03 y CU-13 quedaron en H7; CU-14 y CU-15 en H5; CU-19 en H6).
 15. Completar los contratos de CU-20 y CU-21 según sus planes.
 16. Completar el contrato de CU-02 y sustituir las dependencias *fake* por integraciones reales.
 
@@ -585,3 +615,15 @@ Trabajo posterior al merge de H6 (`1e49661`) para desbloquear la Fase 7. Los com
   **Pruebas y verificación**: `.\mvnw.cmd test` con Docker = **363 pruebas, 0 fallos, 0 errores, 0 omitidas**, BUILD SUCCESS. Nuevas: `VesselSearchServiceTest` (7), `VesselSearchControllerTest` (7), `StartPaymentServiceTest` (8) y `PaymentIntegrationTest` (9, con PostgreSQL real). Se ajustó `ErrorCodeTest` al nuevo catálogo de 23 códigos.
 
   **Pendientes de H7**: solo T-16c (CU-13), bloqueada por la decisión sobre `EXPIRED`/`PAYMENT_FAILED` y por el contrato de consulta de estado de cobro con M3. El reintento de pago con otra tarjeta queda dentro de CU-13.
+
+- **2026-11-12 — Cierre de H7: T-16c (CU-13), canal B**, rama `feature/h7-embudo-conversion`. Detalle en la sección 4.13.
+
+  **Decisión de contrato**: se confirma que `Expirada` y `Pago Fallido` **no se publican a M3** (CU-14 FR-001) y que el cobro tardío se resuelve publicando `CANCELLED_FLEXIBLE` **sin cambiar el estado** de la reserva (CU-13 plan L25/L260). No se toca la máquina de estados y no se modifica Módulo 3: el canal B usa la consulta UC06 que M3 ya expone.
+
+  **Implementación**: migración V6 (idempotencia por reserva, referencia y resultado); `PaymentAttemptPort`; `PaymentStatusPort` con adaptador HTTP UC06 y fake configurable; `ConfirmPaymentService` compartido; `LatePaymentReversalEvent`; `PaymentPollingJob` con ShedLock; reintento de CU-03 con contador de intentos y nuevo evento `PENDING`; nuevos códigos `RETRY_NOT_ALLOWED` (409) y ajuste del catálogo a 24.
+
+  **Documentación**: corregida la contradicción de `consistencia-m2-m3.md` que afirmaba que M3 recibe `Expirada`/`Pago Fallido`; ahora refleja CU-14 y la excepción del cobro tardío.
+
+  **Pruebas y verificación**: `.\mvnw.cmd test` con Docker = **395 pruebas, 0 fallos, 0 errores, 0 omitidas**, BUILD SUCCESS. Nuevas: `ConfirmPaymentServiceTest` (10), `PollPaymentStatusServiceTest` (5), `PaymentPollingJobTest` (2), `HttpPaymentStatusAdapterTest` (7) y `ConfirmPaymentIntegrationTest` (6, con PostgreSQL real).
+
+  **Estado de H7**: completo en código (T-24, T-16a, T-16b, T-16c). El canal A de CU-13 queda fuera de alcance hasta que Módulo 3 construya un cliente que invoque a M2.
