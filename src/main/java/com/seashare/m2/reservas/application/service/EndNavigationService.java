@@ -14,6 +14,9 @@ import com.seashare.m2.reservas.domain.model.ActorType;
 import com.seashare.m2.reservas.domain.model.OperationalStatus;
 import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
+import com.seashare.m2.shared.contracts.dispute.OpenDisputeCommand;
+import com.seashare.m2.shared.contracts.dispute.OpenDisputeUseCase;
+import com.seashare.m2.shared.contracts.dispute.OpenedDispute;
 import com.seashare.m2.shared.domain.ClockPort;
 import com.seashare.m2.shared.domain.ErrorCode;
 import org.springframework.stereotype.Service;
@@ -47,16 +50,20 @@ public class EndNavigationService implements EndNavigationUseCase { // CU-07: ci
 
     private final ModuleNotificationMatrix notificationMatrix; // matriz de avisos a M1 y M3
 
+    private final OpenDisputeUseCase openDisputeUseCase; // apertura de la disputa (contrato compartido H9)
+
     public EndNavigationService(ReservationRepositoryPort repository,
                                 ChangeReservationStatusUseCase changeReservationStatusUseCase,
                                 CheckoutEventPort checkoutEventPort,
                                 ClockPort clockPort,
-                                ModuleNotificationMatrix notificationMatrix) { // constructor con puertos y matriz
+                                ModuleNotificationMatrix notificationMatrix,
+                                OpenDisputeUseCase openDisputeUseCase) { // constructor con puertos, matriz y disputa
         this.repository = repository; // asigna repositorio
         this.changeReservationStatusUseCase = changeReservationStatusUseCase; // asigna motor de estado
         this.checkoutEventPort = checkoutEventPort; // asigna persistencia del evento
         this.clockPort = clockPort; // asigna reloj
         this.notificationMatrix = notificationMatrix; // asigna matriz de avisos
+        this.openDisputeUseCase = openDisputeUseCase; // asigna contrato de disputa
     }
 
     @Override
@@ -96,6 +103,8 @@ public class EndNavigationService implements EndNavigationUseCase { // CU-07: ci
                         null, // sin referencia de pago
                         null)); // sin token de pago
 
+        OpenedDispute openedDispute = openDispute(statusResult, reservation); // CU-16: misma transaccion del cierre
+
         checkoutEventPort.save( // inserta el evento inmutable solo despues de CU-08
                 command.reservationId(),
                 command.callerId(),
@@ -108,9 +117,20 @@ public class EndNavigationService implements EndNavigationUseCase { // CU-07: ci
                 arrival.atZone(zone).toOffsetDateTime(), // llegada con offset del puerto
                 reservation.getVesselId(), // embarcacion
                 vesselOperationalStatus, // aviso a M1 o null
-                null, // disputa se conectara en CU-16
-                null, // ventana de disputa se conectara en CU-16
+                openedDispute == null ? null : openedDispute.disputeId(), // disputa abierta o ya existente
+                openedDispute == null ? null : openedDispute.windowEnd().atZone(zone).toOffsetDateTime(), // fin de ventana
                 messageFor(vesselOperationalStatus, remarks)); // mensaje sin tildes
+    }
+
+    private OpenedDispute openDispute(ChangeReservationStatusResult statusResult, Reservation reservation) {
+        if (statusResult.status() != ReservationStatus.COMPLETED) { // solo el cierre consolidado abre disputa
+            return null;
+        }
+        OpenedDispute opened = openDisputeUseCase.open(new OpenDisputeCommand( // contrato compartido, no contexto disputa
+                reservation.getId(), // reserva completada
+                reservation.getOwnerId(), // propietario registrado
+                statusResult.statusChangedAt())); // mismo instante del paso a COMPLETED
+        return opened; // el contrato real siempre devuelve la disputa; null solo tolera dobles antiguos
     }
 
     private void validateIdentity(Reservation reservation, EndNavigationCommand command) { // valida rol y pertenencia
