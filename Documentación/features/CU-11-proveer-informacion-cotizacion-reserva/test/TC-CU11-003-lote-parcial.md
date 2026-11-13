@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU11-003 — Estimación parcial
-**Status**: In Process
+**Status**: Draft
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Individual](../plan.external.individual.md) · [Lote](../plan.external.lote.md)
 
 #### Test Overview  *(mandatory)*
@@ -47,6 +47,8 @@ Lote con estimaciones válidas y embarcaciones ausentes o sin tarifa.
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
+La spec FR-006 excluye el seguro del importe de lote; su prueba independiente y plan.external.lote.md lo incluyen.
+
 El catálogo de CU-01 está implementado; no se prueba la presentación UI.
 
 #### Defect Severity Reference
@@ -58,7 +60,7 @@ El catálogo de CU-01 está implementado; no se prueba la presentación UI.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; evidencia parcial, consultar el flujo.
+Corrida 2026-11-13: Draft; evidencia parcial, consultar el flujo.
 
 #### Traceability
-FR-006, FR-007 | SC-004 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java#batch200PartialMarksUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java#unknownIdInResponseBecomesUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java#invalidEstimatedTotalMakesVesselUnavailable | In Process
+FR-006, FR-007 | SC-004 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java#batch200PartialMarksUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java#unknownIdInResponseBecomesUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java#invalidEstimatedTotalMakesVesselUnavailable | Draft
