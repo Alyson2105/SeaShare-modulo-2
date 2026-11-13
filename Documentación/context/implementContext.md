@@ -68,7 +68,7 @@
 | CU-17 — Actualizar estado de disputa | **Implementado (Hito H9, T-18b)** | `PUT /api/v1/disputes/{id}/status` (rol `ADMIN`) y `DisputeWindowCloseJob` comparten `UpdateDisputeStatusService`; estados finales inmutables por trigger; historial en `dispute_status_audit`. Ver 4.14. |
 | CU-18 — Recibir información de disputa | **Implementado (Hito H9, T-18c)** | Solo estados finales, payload de 5 campos sin montos ni motivo, `event_key` determinista y cola `finance.guarantee-dispute.v1` con binding `reservation.dispute.updated`. Ver 4.14. |
 | CU-19 — Ver detalle de embarcación | **Implementado (Hito H6, T-11a)** | `GET /api/v1/vessels/{id}` y `/quotations` con datos de M1 y cotización individual de M3; `Cache-Control: no-store` y sin persistencia. |
-| CU-20 — Ver mis reservas | **Completada en código (Hito H6)** | `GET /api/v1/reservations` con paginación y filtro `filter`; `pagination`, `applied_filter` y `status_badge` implementados. `total_price.amount` usa `total_amount` con respaldo en `estimated_total` (misma regla que CU-21, 2026-11-12). |
+| CU-20 — Ver mis reservas | **Completada en código (Hito H6)** | `GET /api/v1/reservations` con paginación y filtro `filter`; `pagination`, `applied_filter` y `status_badge` implementados. `total_price.amount` usa `total_amount` con respaldo en `estimated_total` (el listado CU-20 mantiene el respaldo en `total_price`; el detalle CU-21 ya no tiene respaldo y `total_paid` puede ser null, 2026-11-13). |
 | CU-21 — Ver detalle de reserva | **Completada en código (Hito H6)** | `GET /api/v1/reservations/{id}` con validación de pertenencia, `status_badge` y datos operativos. Los rubros de `payment_summary` siguen nulos hasta que CU-03/CU-12 los persistan (H7). |
 | CU-22 — Recibir información de estado operativo | **Parcial** | El relay despacha el destino `M1_HTTP` al puerto `FleetStatusNotificationPort` con adaptador fake (loguea y responde OK); sin HTTP real. Desde el Hito H4 la matriz de notificaciones (T-08) está implementada en `ModuleNotificationMatrix` siguiendo la tabla FR-002, con `OperationalStatusEvent` encolado a `M1_HTTP` y payload de 4 campos. Falta el cliente HTTP real (D-01). |
 
@@ -385,7 +385,7 @@ Trabajo posterior al merge de H6 (`1e49661`) para desbloquear la Fase 7. Los com
 
 **Vistas CU-20/CU-21**
 - `status_badge` (`text`, `semantic_color`, `description`) en listado y detalle, con mapeo puro en `StatusBadge` y cobertura de todos los estados y subtipos.
-- El listado usa `total_amount` con respaldo en `estimated_total`, igual que el detalle. `estimated_total` sigue siendo el monto de creación en CU-02 y el que usará CU-01 para cotizar.
+- El listado (CU-20) usa `total_amount` con respaldo en `estimated_total` en su `total_price`; el detalle (CU-21) ya no tiene respaldo y `total_paid` puede ser null. `estimated_total` sigue siendo el monto de creación en CU-02 y el que usará CU-01 para cotizar.
 
 **CU-12 sin esperas**
 - Se elimina el reintento con `Thread.sleep` del valor calculado: una sola llamada; un 404 devuelve `CALCULATION_UNAVAILABLE` de inmediato y el cliente reintenta más tarde. Se conserva un reintento inmediato solo ante conexión rechazada. Se retiran `max-404-retries`, `retry-delay-ms` y `max-total-ms`.
