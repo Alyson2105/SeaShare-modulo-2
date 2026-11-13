@@ -27,7 +27,7 @@ Verificar recotización al cambiar viaje. Requisitos: FR-009, FR-014. Criterios:
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-11 es integración saliente; M3 se simula y el modo fake es el predeterminado. CU-19 y lógica UI no implementados; adaptador aislado no gestiona solicitudes obsoletas.
+CU-11 es integración saliente; M3 se simula y el modo fake es el predeterminado. CU-19 implementa la consulta individual; la lógica UI de recotización y descarte de respuestas obsoletas no está implementada.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: Sin prueba de CU-11; su cobertura debe evaluarse por escenario.
@@ -47,7 +47,7 @@ Estimación individual previa y nueva selección de fechas o pasajeros.
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-CU-19 y lógica UI no implementados; adaptador aislado no gestiona solicitudes obsoletas.
+CU-19 implementa la consulta individual; la lógica UI de recotización y descarte de respuestas obsoletas no está implementada.
 
 #### Defect Severity Reference
 
@@ -58,7 +58,7 @@ CU-19 y lógica UI no implementados; adaptador aislado no gestiona solicitudes o
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
 
 #### Traceability
 FR-009, FR-014 | SC-007 | Sin prueba de CU-11 | Blocked

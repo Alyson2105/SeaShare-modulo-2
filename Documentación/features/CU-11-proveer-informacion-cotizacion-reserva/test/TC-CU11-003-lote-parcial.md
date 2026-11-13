@@ -27,7 +27,7 @@ Verificar estimación parcial. Requisitos: FR-006, FR-007. Criterios: SC-004.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-11 es integración saliente; M3 se simula y el modo fake es el predeterminado. El catálogo de CU-01 no está implementado; no se prueba su presentación.
+CU-11 es integración saliente; M3 se simula y el modo fake es el predeterminado. El catálogo de CU-01 está implementado; no se prueba la presentación UI.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java); su cobertura debe evaluarse por escenario.
@@ -40,14 +40,14 @@ Lote con estimaciones válidas y embarcaciones ausentes o sin tarifa.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar lote. | Datos de las precondiciones | Conserva montos válidos y marca como no disponibles IDs ausentes, rechazados o con importe inválido. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Consultar lote. | Datos de las precondiciones | Conserva montos válidos y marca como no disponibles IDs ausentes, rechazados o con importe inválido. | Pendiente | Componente WireMock: HttpBatchEstimateAdapterTest#batch200PartialMarksUnavailable, #unknownIdInResponseBecomesUnavailable y #invalidEstimatedTotalMakesVesselUnavailable pasaron. El contrato de contenido del precio lote es contradictorio; no se prueba composición financiera. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-El catálogo de CU-01 no está implementado; no se prueba su presentación.
+El catálogo de CU-01 está implementado; no se prueba la presentación UI.
 
 #### Defect Severity Reference
 
@@ -58,7 +58,7 @@ El catálogo de CU-01 no está implementado; no se prueba su presentación.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; evidencia parcial, consultar el flujo.
 
 #### Traceability
-FR-006, FR-007 | SC-004 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | In Process
+FR-006, FR-007 | SC-004 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java#batch200PartialMarksUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java#unknownIdInResponseBecomesUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java#invalidEstimatedTotalMakesVesselUnavailable | In Process
