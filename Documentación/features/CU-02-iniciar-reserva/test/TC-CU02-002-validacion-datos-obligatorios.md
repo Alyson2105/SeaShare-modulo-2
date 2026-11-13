@@ -35,7 +35,7 @@ Solicitud válida: `POST /api/v1/reservations`, `Content-Type: application/json`
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Ejecutar escenario | Repetir con una única alteración por solicitud y claves nuevas: full_name ausente o vacío; phone ausente o vacío; email inválido; fechas inválidas o fin anterior a inicio; passengers cero o negativo; vessel_id ausente o UUID malformado; clave ausente o malformada; omitir cada header de identidad. | Solicitud válida y variaciones descritas | 400 para datos inválidos o clave ausente/malformada; 401 si falta identidad. Body con code y message; no se agrega reservation ni outbox. Clave ausente: INVALID_PARAMETERS; clave malformada: INVALID_UUID. | Pendiente | No ejecutado |
+| 1 | Ejecutar escenario | Repetir con una única alteración por solicitud y claves nuevas: full_name ausente o vacío; phone ausente o vacío; email inválido; fechas inválidas o fin anterior a inicio; passengers cero o negativo; vessel_id ausente o UUID malformado; clave ausente o malformada; omitir cada header de identidad. | Solicitud válida y variaciones descritas | 400 para datos inválidos o clave ausente/malformada; 401 si falta identidad. Body con code y message; no se agrega reservation ni outbox. Clave ausente: INVALID_PARAMETERS; clave malformada: INVALID_UUID. | Pendiente | Integración: CreateReservationValidationTest#missingIdempotencyKeyIs400, #invalidIdempotencyKeyIs400InvalidUuid y #missingUserIdIs401 pasaron; CreateReservationTest#rejectsEndBeforeStart pasó. Faltan las demás variantes, message y ausencia de reservation y outbox para cada rechazo. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica como comportamiento principal adicional; consultar límites abajo.
@@ -52,7 +52,7 @@ No exigir rechazo por un teléfono no vacío con formato inválido; es una brech
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar resultado y conservar identificadores para consultar las filas; la documentación no implica ejecución.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; los resultados pendientes se detallan en el flujo.
 
 #### Traceability
-FR-006, FR-007, FR-008 | SC-001 | [CreateReservationValidationTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java) | In Process
+FR-006, FR-007, FR-008 | SC-001 | [CreateReservationValidationTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java#missingIdempotencyKeyIs400; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java#invalidIdempotencyKeyIs400InvalidUuid; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java#missingUserIdIs401; src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java#rejectsEndBeforeStart | In Process
