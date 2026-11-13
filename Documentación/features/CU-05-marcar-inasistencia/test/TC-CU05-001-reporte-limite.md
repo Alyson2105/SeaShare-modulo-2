@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU05-001 — Reporte al cumplir la tolerancia
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar reporte al cumplir la tolerancia. Requisitos: FR-001, FR-003, FR-004, 
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-05 y su endpoint aún no existen; los resultados son expectativas del contrato. Repetir con 35 minutos y observación opcional; el motor interno no valida por sí mismo la espera de CU-05.
+Comprueba HTTP, estado y evento persistidos; no demuestra el escenario de 35 minutos completo. El endpoint y servicio existen. Repetir con 35 minutos y observación opcional; el motor interno no valida por sí mismo la espera de CU-05.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-05.
+Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-05.
 
 ##### Preconditions & Default Setup
 Reserva RESERVED del propietario, con zarpe conocido y reloj controlado en zona del puerto.
@@ -38,9 +38,9 @@ Reserva RESERVED del propietario, con zarpe conocido y reloj controlado en zona 
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Reportar la inasistencia exactamente 30 minutos después del zarpe. | Datos de las precondiciones | Según el plan, 200; CANCELLED, subtipo NO_SHOW y 30 minutos registrados; se invoca CU-08. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation: verde. Comprueba HTTP, estado y evento persistidos; no demuestra el escenario de 35 minutos completo. |
+| 2 | Ejecutar | Reportar la inasistencia exactamente 30 minutos después del zarpe. | Datos de las precondiciones | Según el plan, 200; CANCELLED, subtipo NO_SHOW y 30 minutos registrados; se invoca CU-08. | Pendiente | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation: verde. Comprueba HTTP, estado y evento persistidos; no demuestra el escenario de 35 minutos completo. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation: verde. Comprueba HTTP, estado y evento persistidos; no demuestra el escenario de 35 minutos completo. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Repetir con 35 minutos y observación opcional; el motor interno no valida por s
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
+Corrida 2026-11-13: Partial; evidencia parcial.
 
 #### Traceability
-FR-001, FR-003, FR-004, FR-007, FR-008 | SC-001, SC-004 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Blocked
+FR-001, FR-003, FR-004, FR-007, FR-008 | SC-001, SC-004 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NoShowIntegrationTest.java#successfulNoShowPersistsEventAndCancelsReservation | In Process

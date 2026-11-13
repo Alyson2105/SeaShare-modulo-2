@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU05-002 — Rechazo antes de la tolerancia
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar rechazo antes de la tolerancia. Requisitos: FR-003, FR-004, FR-005. Cr
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-05 y su endpoint aún no existen; los resultados son expectativas del contrato. Antes de la hora de zarpe el plan prevé 409 TRIP_NOT_STARTED.
+Comprueba 409, estado y ausencia de evento; no comprueba outbox ni texto completo. El endpoint y servicio existen. Antes de la hora de zarpe el plan prevé 409 TRIP_NOT_STARTED.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-05; no demuestran el flujo completo de CU-05.
+Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: La prueba citada cubre solo parte del escenario; no demuestra el flujo completo de CU-05.
 
 ##### Preconditions & Default Setup
 Reserva RESERVED y reloj controlado; zarpe ya ocurrió.
@@ -38,9 +38,9 @@ Reserva RESERVED y reloj controlado; zarpe ya ocurrió.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Intentar reportar a los 29 minutos y 59 segundos y en otra solicitud a los 18 minutos. | Datos de las precondiciones | Según el plan, 409 GRACE_PERIOD_NOT_ELAPSED con tiempo restante exacto; reserva y notificaciones sin cambios. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NoShowIntegrationTest#oneSecondBeforeGraceEndIsRejected: verde. Comprueba 409, estado y ausencia de evento; no comprueba outbox ni texto completo. |
+| 2 | Ejecutar | Intentar reportar a los 29 minutos y 59 segundos y en otra solicitud a los 18 minutos. | Datos de las precondiciones | Según el plan, 409 GRACE_PERIOD_NOT_ELAPSED con tiempo restante exacto; reserva y notificaciones sin cambios. | Pendiente | NoShowIntegrationTest#oneSecondBeforeGraceEndIsRejected: verde. Comprueba 409, estado y ausencia de evento; no comprueba outbox ni texto completo. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NoShowIntegrationTest#oneSecondBeforeGraceEndIsRejected: verde. Comprueba 409, estado y ausencia de evento; no comprueba outbox ni texto completo. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Antes de la hora de zarpe el plan prevé 409 TRIP_NOT_STARTED.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
+Corrida 2026-11-13: Partial; evidencia parcial.
 
 #### Traceability
-FR-003, FR-004, FR-005 | SC-001, SC-003 | Sin prueba de CU-05 | Blocked
+FR-003, FR-004, FR-005 | SC-001, SC-003 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NoShowIntegrationTest.java#oneSecondBeforeGraceEndIsRejected | In Process
