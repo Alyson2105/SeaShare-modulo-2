@@ -2,7 +2,7 @@
 
 Casos para FleetInfoPort y su adaptador HTTP de M1; modo fake activo por defecto. Los contratos de M1 requieren confirmación; existen consumidores de catálogo y detalle con cobertura parcial.
 
-**Estado global**: In Process; siete casos tienen evidencia parcial y requieren cobertura adicional. Evaluado el 2026-11-13.
+**Estado global**: In Process; TC-007 está bloqueado por falta de matrícula; se conserva evidencia parcial. Evaluado el 2026-11-13.
 
 ## Trazabilidad
 
@@ -14,7 +14,7 @@ Casos para FleetInfoPort y su adaptador HTTP de M1; modo fake activo por defecto
 | [TC-CU09-004](TC-CU09-004-fallo-transitorio.md) | Reintento y fallo seguro | FR-003, FR-008 | SC-004 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | In Process |
 | [TC-CU09-005](TC-CU09-005-zona-horaria-invalida.md) | Zona horaria ausente o inválida | FR-004, FR-008 | SC-004, SC-005 | [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | In Process |
 | [TC-CU09-006](TC-CU09-006-registro-consulta.md) | Registro de consulta | FR-010 | SC-003 | [registro](../../../../src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java) | In Process |
-| [TC-CU09-007](TC-CU09-007-ficha-completa.md) | Ficha completa y ubicación GPS | FR-001, FR-004 | SC-005 | [detalle](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpVesselReadAdapterTest.java); [consumidor](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselDetailControllerTest.java) | In Process |
+| [TC-CU09-007](TC-CU09-007-ficha-completa.md) | Ficha completa y ubicación GPS | FR-001, FR-004 | SC-005 | [detalle](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpVesselReadAdapterTest.java); [consumidor](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselDetailControllerTest.java) | Blocked |
 
 ## Cobertura de requisitos
 
@@ -51,12 +51,12 @@ Casos para FleetInfoPort y su adaptador HTTP de M1; modo fake activo por defecto
 | TC-CU09-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: FleetUnavailableTest#double503FailsSafeAfterSingleRetry y #timeoutRetriesOnceThenFailsSafe pasaron con dos intentos y fallo seguro. ExternalQueryLogRegistrationTest#vesselServerError500RegistersErrorRow pasó con un solo intento; el plan exige reintentar 500/502. |
 | TC-CU09-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: FleetUnavailableTest#missingHarborTimezoneFailsSafe y #invalidHarborTimezoneFailsSafe pasaron con HARBOR_TIMEZONE_UNAVAILABLE. No verifica todos los consumidores ni M1 real. |
 | TC-CU09-006 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ExternalQueryLogRegistrationTest#vesselInfoOkRegistersOkRow y #registrationFailureDoesNotBreakQuery pasaron: fila OK y consulta exitosa con registro fallido. No garantiza trazabilidad ante fallos del almacén. |
-| TC-CU09-007 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpVesselReadAdapterTest#mapsFullDetail pasó para nombre, tipo, capacidad, puerto y GPS; VesselDetailControllerTest#vesselDetailReturnsFleetDataWithoutCache pasó con adaptador fake. Falta matrícula y validación integral con M1 real. |
+| TC-CU09-007 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | Componente WireMock: HttpVesselReadAdapterTest#mapsFullDetail pasó para nombre, tipo, capacidad, puerto y GPS; VesselDetailControllerTest#vesselDetailReturnsFleetDataWithoutCache pasó con adaptador fake. Falta matrícula y validación integral con M1 real. |
 
 ## Brechas detectadas
 
 1. [Contexto](../../../context/implementContext.md): contrato M1 no firmado y modo fake predeterminado.
-4. El plan menciona reintentos 500/502; el cliente solo reintenta 503 y errores de acceso.
+4. El plan sección 4 menciona 500/502, mientras la sección 5 enumera 503 y errores de acceso; el cliente no reintenta 500/502.
 5. Un 503 persistente se registra como TIMEOUT y un fallo de auditoría no detiene la consulta.
 6. Latencia y disponibilidad real de M1 requieren medición externa; no se infieren del timeout.
 
@@ -69,13 +69,13 @@ Casos para FleetInfoPort y su adaptador HTTP de M1; modo fake activo por defecto
 
 ## Ejecución automatizada — 2026-11-13
 
-`./mvnw -B clean test`: 395 pruebas, 0 fallos, 0 errores, 0 omitidas; BUILD SUCCESS. WireMock y los adaptadores fake simulan M1; no demuestran su disponibilidad real.
+`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-09. Las pruebas citadas usan las dependencias indicadas en cada caso; no acreditan servicios externos reales.
 
 | Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| [CreateReservationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java) | 5 | 0 | 0 | 0 | Exitosa |
-| [FleetUnavailableTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | 10 | 0 | 0 | 0 | Exitosa |
-| [HttpFleetClientTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | 5 | 0 | 0 | 0 | Exitosa |
-| [HttpVesselReadAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpVesselReadAdapterTest.java) | 3 | 0 | 0 | 0 | Exitosa |
-| [VesselDetailControllerTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselDetailControllerTest.java) | 7 | 0 | 0 | 0 | Exitosa |
-| [ExternalQueryLogRegistrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java) | 19 | 0 | 0 | 0 | Exitosa |
+| [CreateReservationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java) | 5 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [FleetUnavailableTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | 10 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [HttpFleetClientTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | 5 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [HttpVesselReadAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpVesselReadAdapterTest.java) | 3 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [VesselDetailControllerTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselDetailControllerTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [ExternalQueryLogRegistrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java) | 19 | 0 | 0 | 0 | Verde; cobertura según TC |
