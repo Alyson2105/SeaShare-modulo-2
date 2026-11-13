@@ -57,7 +57,7 @@ CU-16 no está implementado; cierre real y retención financiera son externos.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
 
 #### Traceability
 FR-004, FR-010 | SC-002, SC-004 | Sin prueba de CU-07 | Blocked

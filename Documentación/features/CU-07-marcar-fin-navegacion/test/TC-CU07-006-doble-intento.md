@@ -57,7 +57,7 @@ Edge case dice responder correctamente al reintento, pero el plan prevé 409 TRI
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Draft; sin ejecución automatizada del escenario.
 
 #### Traceability
 FR-001, FR-004, FR-005 | SC-001, SC-004 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Draft
