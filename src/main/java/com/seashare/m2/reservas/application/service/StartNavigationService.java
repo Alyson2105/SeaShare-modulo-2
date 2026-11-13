@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 @Transactional
@@ -182,7 +183,7 @@ public class StartNavigationService implements StartNavigationUseCase { // CU-06
         }
     }
 
-    private boolean containsDestination(java.util.List<String> eventsEnqueued, String destination) { // consulta segura de destinos
+    private boolean containsDestination(List<String> eventsEnqueued, String destination) { // consulta segura de destinos
         return eventsEnqueued != null && eventsEnqueued.contains(destination); // evita npe si no hay lista
     }
 

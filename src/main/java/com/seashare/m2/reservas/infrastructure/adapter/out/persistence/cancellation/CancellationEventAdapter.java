@@ -23,6 +23,6 @@ public class CancellationEventAdapter implements CancellationEventPort { // adap
         entity.setCancellationSubtype(record.cancellationSubtype()); // asigna el subtipo
         entity.setReason(record.reason()); // asigna el motivo
         entity.setJustification(record.justification()); // asigna la justificacion
-        repository.save(entity); // persiste solo insercion
+        repository.saveAndFlush(entity); // inserta y fuerza el envio a la base
     }
 }

@@ -25,6 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -335,10 +336,11 @@ class NavigationStartIntegrationTest { // CU-06: inicio real contra PostgreSQL
                 .andExpect(jsonPath("$.status").value("COMPLETED"));
     }
 
-    private org.springframework.test.web.servlet.ResultActions performStart(UUID reservationId,
-                                                                           UUID userId,
-                                                                           String role,
-                                                                           String body) throws Exception {
+    // ejecuta el POST de inicio de navegacion
+    private ResultActions performStart(UUID reservationId,
+                                       UUID userId,
+                                       String role,
+                                       String body) throws Exception {
         return mockMvc.perform(post("/api/v1/reservations/{reservation_id}/navigation-start", reservationId)
                 .header("X-User-Id", userId.toString())
                 .header("X-User-Role", role)
