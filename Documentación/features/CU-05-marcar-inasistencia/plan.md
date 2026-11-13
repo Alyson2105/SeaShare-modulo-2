@@ -179,7 +179,7 @@ No aplica. Operación puntual sobre una reserva individual.
 ### Notas Transversales
 
 - **Disyuntiva del Propietario post-tolerancia**: cumplidos los 30 minutos de cortesía, si el cliente arriba tardíamente (ej. al minuto 35), el Propietario tiene potestad discrecional:
-  - Puede optar por admitirlo ejecutando [`CU-06-marcar-inicio-navegacion.md`](CU-06-marcar-inicio-navegacion.md) $\rightarrow$ la reserva pasa a `IN_NAVIGATION` e inhabilita definitivamente el No-Show (FR-009 de CU-06).
+  - Puede optar por admitirlo ejecutando [`CU-06-marcar-inicio-navegacion.md`](../CU-06-marcar-inicio-navegacion/plan.md) $\rightarrow$ la reserva pasa a `IN_NAVIGATION` e inhabilita definitivamente el No-Show (FR-009 de CU-06).
   - Puede ejecutar este endpoint $\rightarrow$ la reserva transiciona a `CANCELLED` (`NO_SHOW`), y encolando la liberación asíncrona del barco a `AVAILABLE` de forma irreversible (vía CU-22).
 - **Reloj y Zona Horaria Deterministas**: la ventana de 30 minutos se calcula obligatoriamente contra el huso horario oficial del puerto obtenido de Módulo 1 (CU-09), garantizando consistencia si el dispositivo del propietario se encuentra desfasado (FR-004).
 

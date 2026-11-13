@@ -10,7 +10,7 @@ El endpoint orquesta internamente dos dependencias:
 1. Recupera la información técnica y de puerto invocando en modo lote a `Proveer información de embarcación` (`<<include>>`, FR-002), respaldado por el contrato de [`CU-09 Proveer información de embarcación`](../CU-09-proveer-informacion-embarcacion/plan.md).
 2. Obtiene las tarifas estimadas de referencia invocando en modo lote a `CU-11 Proveer información cotización de reserva` (`<<include>>`, FR-003), respaldado por el contrato de [`CU-11 Proveer información cotización de reserva`](../CU-11-proveer-informacion-cotizacion-reserva/plan.external.lote.md).
 
-Cada elemento retornado constituye el punto de extensión hacia la vista detallada [`CU-19-ver-detalle-embarcacion.md`](CU-19-ver-detalle-embarcacion.md) (`<<extend>>`, FR-005).
+Cada elemento retornado constituye el punto de extensión hacia la vista detallada [`CU-19-ver-detalle-embarcacion.md`](../CU-19-ver-detalle-embarcacion/plan.md) (`<<extend>>`, FR-005).
 
 ---
 
@@ -327,7 +327,7 @@ curl -X GET "https://api.seashare.com/api/v1/vessels?q=IslaFicticiaInexistente" 
 
 - **Disponibilidad por rango de fechas y filtrado en M2**: Módulo 1 no recibe fechas en la consulta de catálogo (`CU-09`). Si la petición incluye `start_date` y `end_date`, Módulo 2 realiza un filtrado local de disponibilidad consultando sus reservas locales activas: excluye del listado devuelto por M1 a toda embarcación que tenga una reserva en estado `PENDING_PAYMENT`, `RESERVED` o `IN_NAVIGATION` cuyo rango de fechas se solape con el solicitado (`daterange(start_date, end_date, '[]') && daterange(start_date, end_date, '[]')`). Esta depuración se ejecuta previamente a solicitar la cotización en lote hacia Módulo 3 (`CU-11`), optimizando el rendimiento de la integración. La verificación física de estado operativo instantáneo (`AVAILABLE`) se revalida en `Iniciar reserva` (`CU-02`) e `Iniciar pago` (`CU-03`).
 - **Degradación funcional ante falla de Módulo 3**: si el adaptador hacia Módulo 3 experimenta timeout o indisponibilidad (Edge Case "Ausencia de Cotización Temporal"), el catálogo **no** retorna 503; entrega la lista de embarcaciones con `quotation_available: false` y `estimated_total: null`. En cambio, si falla Módulo 1 (fuente de verdad física), se aplica el *fail-safe* obligatorio retornando `503 Service Unavailable`.
-- **Navegación e interacción UI**: las entidades retornadas incluyen los metadatos visuales requeridos (`photo_url`, `type`, `captain_included`, `context_label`) para renderizar directamente las tarjetas del catálogo y permitir la selección que extiende hacia [`CU-19-ver-detalle-embarcacion.md`](CU-19-ver-detalle-embarcacion.md) (FR-004, FR-005, FR-007).
+- **Navegación e interacción UI**: las entidades retornadas incluyen los metadatos visuales requeridos (`photo_url`, `type`, `captain_included`, `context_label`) para renderizar directamente las tarjetas del catálogo y permitir la selección que extiende hacia [`CU-19-ver-detalle-embarcacion.md`](../CU-19-ver-detalle-embarcacion/plan.md) (FR-004, FR-005, FR-007).
 - **Filtro por tipo**: El filtro por `type` lo aplica Módulo 2 sobre la lista recibida de Módulo 1; M1 no recibe ese parámetro.
 
 ---
@@ -340,7 +340,7 @@ curl -X GET "https://api.seashare.com/api/v1/vessels?q=IslaFicticiaInexistente" 
 | **FR-002** | Consulta de inventario mediante `Proveer información de embarcación` | Invocación interna al adaptador de catálogo respaldado por el [plan de CU-09](../CU-09-proveer-informacion-embarcacion/plan.md) |
 | **FR-003** | Cotización en lote mediante `CU-11` | Invocación interna al adaptador en lote respaldado por el [plan de CU-11](../CU-11-proveer-informacion-cotizacion-reserva/plan.external.lote.md) |
 | **FR-004** | Datos mínimos del activo y tarifa estimada devuelta | Propiedades del objeto `vessels`: `name`, `type`, `photo_url`, `port`, `max_capacity`, `estimated_total`, `currency` |
-| **FR-005** | Punto de extensión hacia `Ver detalle de embarcación` | Identificador `vessel_id` para invocar [`CU-19-ver-detalle-embarcacion.md`](CU-19-ver-detalle-embarcacion.md) |
+| **FR-005** | Punto de extensión hacia `Ver detalle de embarcación` | Identificador `vessel_id` para invocar [`CU-19-ver-detalle-embarcacion.md`](../CU-19-ver-detalle-embarcacion/plan.md) |
 | **FR-006** | Búsqueda rápida de texto y categorías | Query parameters: `q`, `type` |
 | **FR-007** | Contexto dinámico y contador de resultados | Campos del envelope: `context_label`, `pagination.total_items` |
 | **FR-008** | Paginación en lotes fijos de 20 embarcaciones | Objeto `pagination` con `page_size: 20` y parámetro `page` |
