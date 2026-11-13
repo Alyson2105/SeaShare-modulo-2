@@ -207,3 +207,39 @@ No aplica. Operación puntual sobre una reserva individual.
 | **SC-004** | Notificación externa encolada en < 1 segundo | Outbox transaccional, outbox hacia M1 (PATCH de UC07) y SLA de actualización |
 | **SC-005** | Cero operaciones de cálculo monetario en M2 | Neutralidad financiera del endpoint |
 | **SC-006** | Cero reportes autorizados a no-propietarios | Control de claim de rol y pertenencia |
+
+---
+
+## Diferencias entre el plan y la implementacion
+
+### [DIFERENCIA H8-CU05-01] Zona horaria y codigo 503
+- El plan dice: obtener la zona horaria invocando CU-09 y, si la consulta falla, rechazar con `503 FLEET_SERVICE_UNAVAILABLE` (L12, L160, L203).
+- El codigo hace: `ReportNoShowService.resolveZone` (L164-L175) lee `reservation.harborTimezone` y lanza `503 HARBOR_TIMEZONE_UNAVAILABLE` si la zona falta o es invalida; no llama a CU-09.
+- Decision: el codigo usa `HARBOR_TIMEZONE_UNAVAILABLE`, no `FLEET_SERVICE_UNAVAILABLE`, y no consulta M1.
+
+### [DIFERENCIA H8-CU05-02] Identidad
+- El plan dice: header `Authorization` con `Bearer <token>` JWT del propietario y `401 UNAUTHENTICATED` si el token falta o expira (L36, L154).
+- El codigo hace: `CallerIdentityArgumentResolver` lee `X-User-Id` y `X-User-Role`; no hay Bearer. Sin esos headers la respuesta es `401 UNAUTHENTICATED`; rol distinto de OWNER o usuario ajeno da `403 PROFILE_NOT_AUTHORIZED`.
+- Decision: resolver temporal por headers; JWT diferido.
+
+### [DIFERENCIA H8-CU05-03] Notificacion a M1
+- El plan dice: encolar la liberacion a `AVAILABLE` por la cola de notificacion de CU-22 (L16).
+- El codigo hace: outbox con destino `M1_HTTP`; el unico adaptador es `FakeFleetStatusNotificationAdapter`, que solo loguea y responde `DELIVERED` sin hacer HTTP.
+- Decision: por ahora solo adaptador fake; sin cliente HTTP real.
+
+### [DIFERENCIA H8-CU05-04] vessel_operational_status
+- El plan dice: `vessel_operational_status` con valor literal `AVAILABLE` siempre (L75, L114).
+- El codigo hace: `ModuleNotificationMatrix.decide(RESERVED, CANCELLED, false, isM1Blocked)` devuelve `AVAILABLE` solo si la reserva estaba bloqueada en M1; si no, `null` (`ReportNoShowService` L101-L105). Con `null` el mensaje es `MESSAGE_WITHOUT_AVAILABLE`, sin la clausula "quedo Disponible" (L136).
+- Decision: el campo puede ser `null`; el plan no lo contempla.
+
+### [DIFERENCIA H8-CU05-05] Error 409 GRACE_PERIOD_NOT_ELAPSED
+- El plan dice: cuerpo con `message` en espanol mas los campos `minutes_remaining` y `seconds_remaining` (L157, L206).
+- El codigo hace: no existen esos dos campos; el tiempo va dentro del `message` en ingles: `"Grace period still active. N minutes and S seconds remaining before no-show can be reported"`, con N = segundos totales divididos entre 60 sin decimales, S = resto, y segundos totales redondeados hacia arriba si queda fraccion de segundo (`ReportNoShowService` L86-L96).
+- Decision: SC-003 del spec (L140, "mensaje con el tiempo exacto que resta") se cumple dentro del message; los campos del plan no existen.
+
+### Sin diferencia (verificado)
+- Endpoint `POST /api/v1/reservations/{reservation_id}/no-show` con body opcional `{observations}`: maximo 500, blanco = null, validado en el servicio (L146-L155).
+- `409 TRIP_NOT_STARTED` si `now <` zarpe pactado (L80-L83); se acepta si `now >= zarpe + 30 min` (el minuto 30 exacto pasa, L85-L86).
+- `wait_minutes_recorded` = minutos completos hacia abajo desde el zarpe (L99).
+- CU-08 recibe `CANCELLED` + `NO_SHOW` + actor `OWNER` + `reason` null (L107-L119); la fila de `noshow_event` se guarda despues de que CU-08 sale bien (L121).
+- Orden de errores del codigo: 404, 403, 400, 409 de estado, 503, 409 `TRIP_NOT_STARTED`, 409 `GRACE_PERIOD_NOT_ELAPSED`; mensajes en ingles.
