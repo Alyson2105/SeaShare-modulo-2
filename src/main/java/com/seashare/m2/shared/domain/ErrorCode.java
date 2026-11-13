@@ -24,6 +24,9 @@ public enum ErrorCode { // catalogo de codigos de error con mapeo http
     RETRY_NOT_ALLOWED("RETRY_NOT_ALLOWED", 409), // ya hay un cobro en proceso sin rechazo definitivo (CU-03)
     RESERVATION_EXPIRED_REVERSION_REQUIRED("RESERVATION_EXPIRED_REVERSION_REQUIRED", 409), // reserva expirada requiere reversion
     DISPUTE_ALREADY_RESOLVED("DISPUTE_ALREADY_RESOLVED", 409), // disputa ya resuelta
+    DISPUTE_NOT_FOUND("DISPUTE_NOT_FOUND", 404), // disputa de garantia inexistente (CU-16, CU-17)
+    WINDOW_EXPIRED("WINDOW_EXPIRED", 409), // ventana de 24 h vencida, el reclamo no procede (CU-16)
+    CLAIM_ALREADY_EXISTS("CLAIM_ALREADY_EXISTS", 409), // un solo reclamo por disputa (D-08, CU-16)
     TRIP_ALREADY_COMPLETED("TRIP_ALREADY_COMPLETED", 409), // viaje ya completado (CU-07)
     EARLY_DEPARTURE("EARLY_DEPARTURE", 409), // salida antes de la hora pactada (CU-06)
     TRIP_ALREADY_STARTED("TRIP_ALREADY_STARTED", 409), // viaje ya iniciado (CU-06)

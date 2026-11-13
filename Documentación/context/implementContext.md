@@ -1,6 +1,6 @@
 # Contexto de Progreso de Implementación - Módulo 2 (SEA-SHARE)
 
-**Fecha**: 2026-11-07  
+**Fecha**: 2026-11-13  
 **Módulo**: Módulo 2 - Operación de Reservas, Tiempos y Cancelaciones  
 **Stack**: Java 21, Spring Boot 4.1.2, Maven, PostgreSQL, Flyway  
 **Referencias**: `Documentación/technical-plan/plan.md` y los `plan.md` de cada caso de uso en `Documentación/features/`.
@@ -11,7 +11,7 @@
 
 ## 1. Resumen del estado actual
 
-- El repositorio implementa **únicamente el contexto `reservas`**. No existen los paquetes `disputa` ni `shared/contracts`.
+- El repositorio implementa **dos contextos acotados**: `reservas` y `disputa`, comunicados solo por `shared/contracts/dispute/OpenDisputeUseCase` (H9).
 - Funcionalidad operativa verificable:
   - Creación de reservas (`POST /api/v1/reservations`) con idempotencia y TTL de 15 minutos.
   - Motor interno de cambio de estado (`ChangeReservationStatusUseCase`), con matriz de transiciones, auditoría y escritura en outbox.
@@ -21,10 +21,10 @@
 - **No implementado**:
   - Consumidores AMQP de producción: la deduplicación por `event_id` solo tiene un consumidor de prueba en `src/test` (T-04); M3 es quien deduplica en producción (D-04).
   - Spring Security y Resilience4j (ShedLock sí está implementado desde el 2026-11-12; ver 4.11).
-  - Contexto `disputa` y contrato interno `shared/contracts`.
+  - Contexto `disputa`: implementado en H9 (2026-11-13, ver 4.14). Pendiente el vínculo con CU-07 (H8): `EndNavigationService` no está en esta rama y se conectará al integrar `develop`.
   - Todos los CU salvo los avances parciales de CU-02, CU-08, CU-20 y CU-21. **Hito H4 completado (2026-11-09)**: CU-08 quedó completo como motor interno (comando, respuesta, auditoría completa, TTL doble, matriz de notificaciones M3/M1); **desde el 2026-11-12 la creación pasa por CU-08 (T-24, ver 4.11)**, por lo que ya no queda escritura de estado fuera del motor.
 - **Hito H2 completado (2026-11-07)**: topología RabbitMQ (T-02), relay del outbox con publisher confirms y reintentos (T-03), publicación AMQP con `Message-Id` y prueba de deduplicación (T-04), filtro de correlation id HTTP→AMQP (T-22) y **ShedLock en TTL y relay (T-05, 2026-11-12)**. Detalle en la sección 4.6.
-- La última ejecución registrada de la suite completa es del **2026-11-12** (`.\mvnw.cmd test`): **395 pruebas, 0 fallos, 0 errores, 0 omitidas** (eran 115 el 2026-11-07 y 271 el 2026-11-10).
+- La última ejecución registrada de la suite completa es del **2026-11-13** (`.\mvnw.cmd test`): **476 pruebas, 0 fallos, 0 errores, 0 omitidas** en la rama H9 antes de integrar H8 (eran 395 al cierre de H7, 115 el 2026-11-07 y 271 el 2026-11-10).
 
 ---
 
@@ -39,8 +39,8 @@
 | Fase 5 — Superficie Módulo 3 | CU-14, CU-15 | **Completada (Hito H5, integrada por PR #28)** | T-12: payload de CU-14 según UC07 de M3 (mapeador de estados y token de pago opcional). T-13: endpoint interno de consulta para CU-15, solo lectura; **desde el 2026-11-12 exige rol `FINANCE` y devuelve 403**. Detalle en el historial (entrada del Hito H5) y en 4.11. Los consumidores AMQP de producción son de M3. |
 | Fase 6 — Vistas de consulta | CU-19, CU-20, CU-21 | **Completada en código (Hito H6, PR #29)** | CU-19, CU-20 y CU-21 existen. **Desde el 2026-11-12 exponen `status_badge` y el listado usa el mismo total que el detalle (ver 4.11).** |
 | Fase 7 — Embudo de conversión | CU-01, CU-02, CU-03, CU-13 | **Completada en código (Hito H7)** | CU-01 (T-16a), CU-02 (con T-24), CU-03 (T-16b) y CU-13 (T-16c) implementados el 2026-11-12. El Canal A de CU-13 queda apagado/fuera de alcance. |
-| Fase 8 — Operaciones en muelle | CU-04, CU-05, CU-06, CU-07 | **No iniciada** | Sin endpoints, servicios ni eventos de cancelación, inasistencia, check-in o check-out. |
-| Fase 9 — Disputa de garantía | CU-16, CU-17, CU-18 | **No iniciada** | Las tablas `dispute_*` existen en V2, pero no hay contexto `disputa`, lógica, endpoints ni publicación de eventos. |
+| Fase 8 — Operaciones en muelle | CU-04, CU-05, CU-06, CU-07 | **Completada en código (Hito H8, en `develop`)** | Cancelación con clasificación (CU-04), inasistencia con tolerancia de 30 min (CU-05), check-in (CU-06) y check-out (CU-07), con endpoints, eventos inmutables y transiciones por CU-08. La auditoría de H8 cuenta 140 métodos `@Test`. **El vínculo con la disputa (CU-16) sigue pendiente**: ver 4.14. |
+| Fase 9 — Disputa de garantía | CU-16, CU-17, CU-18 | **Completada en código (Hito H9, 2026-11-13)** | Contexto `disputa` completo: apertura automática por contrato compartido, reclamo del propietario, resolución del Admin, cierre automático de la ventana de 24 h y publicación de estados finales por el outbox. Migración V7. Detalle en 4.14. Falta el disparador real de CU-07 (H8). |
 | Fase 10 — Polish | Transversal | **No iniciada** | Sin pruebas de carga, resiliencia, observabilidad operativa, cierre de `[NEEDS CLARIFICATION]` ni documentación de arranque. |
 
 ---
@@ -52,10 +52,10 @@
 | CU-01 — Buscar embarcaciones disponibles | **Implementado (Hito H7, T-16a)** | `GET /api/v1/vessels` con `start_date`, `end_date`, `passengers`, `type`, `q` y `page`; pagina de 20, filtros locales por tipo, capacidad y solapamiento, y cotización en lote con degradación controlada si M3 falla. Catálogo de M1 vía `FleetCatalogPort` (fake por defecto). |
 | CU-02 — Iniciar reserva | **Implementado (código)** | `POST /api/v1/reservations`; valida fechas, capacidad, zona horaria y solapamiento; usa idempotencia de 60 s y fija TTL de 15 min. La creación pasa por CU-08 (T-24). Depende de adaptadores *fake* de flota por decisión de entorno aislado. |
 | CU-03 — Iniciar pago | **Implementado (Hito H7, T-16b)** | `POST /api/v1/reservations/{id}/payments`: exige política aceptada, desglose de M3, disponibilidad de M1, bloqueo pesimista, control FCFS y transición a `PENDING_PAYMENT` sin reiniciar el TTL; persiste el desglose y publica el token en el evento `PENDING`. Reintento con tarjeta queda para CU-13. |
-| CU-04 — Solicitar cancelación | **No implementado** | Sin endpoint ni clasificación de cancelación. |
-| CU-05 — Marcar inasistencia | **No implementado** | Sin endpoint ni validación de la ventana de 30 min. |
-| CU-06 — Marcar inicio de navegación | **No implementado** | Sin endpoint ni registro de check-in. |
-| CU-07 — Marcar fin de navegación | **No implementado** | Sin endpoint ni registro de check-out. |
+| CU-04 — Solicitar cancelación | **Implementado (Hito H8, en `develop`)** | `POST /api/v1/reservations/{reservation_id}/cancellation` con clasificación por anticipación (`FLEXIBLE`, `MODERATE`, `LATE`) o por propietario (`BY_OWNER`); persiste `cancellation_event` y transiciona por CU-08, con los eventos de notificación correspondientes. |
+| CU-05 — Marcar inasistencia | **Implementado (Hito H8, en `develop`)** | `POST /api/v1/reservations/{reservation_id}/no-show` con tolerancia fija de 30 min; `noshow_event`; errores `TRIP_NOT_STARTED` y `GRACE_PERIOD_NOT_ELAPSED`. |
+| CU-06 — Marcar inicio de navegación | **Implementado (Hito H8, en `develop`)** | `POST /api/v1/reservations/{reservation_id}/navigation-start`; registra `checkin_event`, transiciona a `IN_NAVIGATION` por CU-08 y avisa a M1 según la matriz operativa. Errores `EARLY_DEPARTURE` y `TRIP_ALREADY_STARTED`. |
+| CU-07 — Marcar fin de navegación | **Implementado (Hito H8, en `develop`)** | `POST /api/v1/reservations/{reservation_id}/navigation-end`; registra `checkout_event`, fija la llegada real y transiciona a `COMPLETED` por CU-08, con aviso operativo a M1. Error `TRIP_ALREADY_COMPLETED` en reintentos. **El vínculo con la disputa (CU-16) está pendiente de aplicar al integrar H8**; ver 4.14. |
 | CU-08 — Actualizar estado de reserva | **Parcial (motor completo desde el Hito H4)** | Motor interno con matriz de transiciones, auditoría inmutable, outbox y `@Version`. Contrato completo (T-06): comando con `expected_version`, `actor_id`, `mechanical_failure`, `anticipation_minutes`, `completion_notes`, `payment_reference` y respuesta con `version` + `events_enqueued` (puerto `ChangeReservationStatusUseCase`). Auditoría de creación y de cada transición con `actor_id`/`event_ids` (T-10). TTL desde `INITIATED` y `PENDING_PAYMENT` (T-07). Notificación a M1 (`M1_HTTP`) con guarda `m1_blocked` y matriz M3/M1 (T-08). **La creación pasa por CU-08 con `InitiateReservationUseCase.initiate` (T-24, 2026-11-12)**: la reserva, la auditoría `null → INITIATED` y `reservation.info.provided` se escriben en la misma transacción con el mismo `event_id`. El payload de los eventos hacia M3 (T-12) se cerró en el Hito H5. |
 | CU-09 — Proveer información de embarcación | **Parcial** | Cliente HTTP real (`HttpFleetInfoAdapter`) con timeouts, un reintento y registro de consultas; se activa con `seashare.fleet.mode=http`. Contrato con M1 sin firmar. |
 | CU-10 — Brindar información de estado operativo | **Parcial** | Cliente HTTP real (`HttpFleetOperationalStatusAdapter`) con registro de consultas; solo `AVAILABLE` es disponible y una respuesta ilegible da 503. Contrato con M1 sin firmar. |
@@ -64,9 +64,9 @@
 | CU-13 — Confirmar pago | **Implementado (Hito H7, T-16c)** | Canal B activo: `PaymentPollingJob` consulta UC06 cada 5 s (ShedLock), traduce el estado y lo entrega a `ConfirmPaymentService`. `APPROVED` con TTL vigente → `RESERVED` con referencia; `REJECTED` → sigue `PENDING_PAYMENT` y permite reintento; `CANCELLED`/`EXPIRED` de M3 → `PAYMENT_FAILED`; `APPROVED` fuera del TTL → `CANCELLED_FLEXIBLE` + alerta, con la reserva sin cambio de estado. Idempotencia por `(reservation_id, external_reference, result)` (V6). Canal A queda fuera de H7. |
 | CU-14 — Recibir estado de reserva | **Parcial** | El relay publica las filas `AMQP` con `Message-Id` y publisher confirm (T-03/T-04) hacia `finance.reservation-status.v1`. Desde el Hito H4 el `StatusChangedEvent` transporta `actor`, `anticipation_minutes` y `completion_notes` listos para el payload. Hito H5 (T-12): el payload sigue el contrato UC07 de M3 con `reservation_id`, `status` (`PENDING`, `RESERVED`, `IN_NAVIGATION`, `COMPLETED`, `CANCELLED_FLEXIBLE`, `CANCELLED_MODERATE`, `CANCELLED_STRICT`, `CANCELLED_BY_HOST`), `status_changed_at` y `payment_token_ref` solo en `PENDING`. **CU-03 ya exige el token (T-16b).** [NEEDS CLARIFICATION] la spec de CU-14 (FR-002 a FR-004) pide actor, sub-estado, anticipación y notas en el payload y el plan no; se siguió el plan. El consumidor real es de M3. |
 | CU-15 — Solicitar información de la reserva | **Implementado (Hito H5, T-13; integrado por PR #28)** | `GET /api/v1/internal/reservations/{reservation_id}`, solo lectura y sin dinero. **T-13 cerrado el 2026-11-12**: exige `X-User-Role: FINANCE` y devuelve 403 `PROFILE_NOT_AUTHORIZED` con cualquier otro perfil. [NEEDS CLARIFICATION] `damage_detected` y `cancellation_anticipation_hours` siguen nulos porque CU-07 y CU-04 aún no los persisten; se documenta el motivo y no se inventan valores. `scheduled_arrival` provisional y formato de `reservation_code` sin definir. Detalle en el historial. |
-| CU-16 — Generar disputa de garantía | **No implementado** | Solo tablas en Flyway; sin lógica ni API. |
-| CU-17 — Actualizar estado de disputa | **No implementado** | Solo tablas en Flyway; sin lógica ni API. |
-| CU-18 — Recibir información de disputa | **No implementado** | Sin contexto `disputa` ni publicación AMQP. |
+| CU-16 — Generar disputa de garantía | **Implementado (Hito H9, T-18a)** | `OpenDisputeService` implementa `shared.contracts.dispute.OpenDisputeUseCase` (idempotente por reserva) y `POST /api/v1/disputes/{id}/claims` registra el único reclamo del propietario dentro de la ventana de 24 h. Ver 4.14. |
+| CU-17 — Actualizar estado de disputa | **Implementado (Hito H9, T-18b)** | `PUT /api/v1/disputes/{id}/status` (rol `ADMIN`) y `DisputeWindowCloseJob` comparten `UpdateDisputeStatusService`; estados finales inmutables por trigger; historial en `dispute_status_audit`. Ver 4.14. |
+| CU-18 — Recibir información de disputa | **Implementado (Hito H9, T-18c)** | Solo estados finales, payload de 5 campos sin montos ni motivo, `event_key` determinista y cola `finance.guarantee-dispute.v1` con binding `reservation.dispute.updated`. Ver 4.14. |
 | CU-19 — Ver detalle de embarcación | **Implementado (Hito H6, T-11a)** | `GET /api/v1/vessels/{id}` y `/quotations` con datos de M1 y cotización individual de M3; `Cache-Control: no-store` y sin persistencia. |
 | CU-20 — Ver mis reservas | **Completada en código (Hito H6)** | `GET /api/v1/reservations` con paginación y filtro `filter`; `pagination`, `applied_filter` y `status_badge` implementados. `total_price.amount` usa `total_amount` con respaldo en `estimated_total` (misma regla que CU-21, 2026-11-12). |
 | CU-21 — Ver detalle de reserva | **Completada en código (Hito H6)** | `GET /api/v1/reservations/{id}` con validación de pertenencia, `status_badge` y datos operativos. Los rubros de `payment_summary` siguen nulos hasta que CU-03/CU-12 los persistan (H7). |
@@ -451,10 +451,70 @@ Trabajo posterior al merge de H6 (`1e49661`) para desbloquear la Fase 7. Los com
 
 ---
 
+### 4.14 Disputa de garantía — Hito H9 (2026-11-13)
+
+**Alcance**
+- Nuevo contexto acotado `com.seashare.m2.disputa` con `domain/`, `application/` e `infrastructure/adapter/in|out` (web, scheduler, messaging, persistence).
+- Contrato interno `shared/contracts/dispute/`: `OpenDisputeUseCase`, `OpenDisputeCommand` (`reservationId`, `ownerId`, `completedAt`) y `OpenedDispute`. Es la **única** dependencia entre `reservas` y `disputa` (D-03), verificada por ArchUnit en ambos sentidos.
+- **Migración V7** (`V7__dispute_context_and_guards.sql`): única migración de H9. V1–V6 no se tocaron.
+
+**Esquema (V7)**
+- `dispute_guarantee.owner_id` (NOT NULL; la tabla nunca tuvo filas): permite autorizar el reclamo sin leer el contexto `reservas`. `version` ya existía en V2 y ahora se mapea con `@Version`.
+- Índice parcial `ix_dispute_due (window_end) WHERE status='PENDING' AND has_claim=false` para el barrido.
+- Trigger `prevent_final_dispute_mutation`: bloquea UPDATE y DELETE cuando el estado es `REJECTED` o `ACCEPTED` (D-19).
+- Triggers de inmutabilidad en `dispute_claim` (D-08: un reclamo, no editable), `admin_review` y `dispute_status_audit`.
+- `CHECK` de `category`, `decision`, estados y actor; índice `(dispute_id, reviewed_at DESC)`.
+- Tabla nueva `dispute_status_audit` (historial de estados exigido por las entidades clave de CU-16 y por la vista de CU-17).
+
+**CU-16 (T-18a)**
+- `OpenDisputeService` implementa el contrato compartido: nace `PENDING` con ventana `completedAt + 24 h`, escribe la fila de creación del historial y es **idempotente por reserva** (D-10: devuelve la existente aunque el comando traiga otros datos). `@Transactional` (REQUIRED), de modo que CU-07 (H8) puede llamarlo dentro de la transacción del paso a `COMPLETED`; si algo falla, revierte el cierre completo.
+- `POST /api/v1/disputes/{dispute_id}/claims` (201): exige `X-User-Role: OWNER` (403 `PROFILE_NOT_AUTHORIZED`) y que el `userId` sea el `owner_id` de la disputa (403 `RESERVATION_NOT_OWNED`). Un único reclamo (409 `CLAIM_ALREADY_EXISTS`), estado final (409 `DISPUTE_ALREADY_RESOLVED`), ventana cerrada (409 `WINDOW_EXPIRED`, sin modificar el estado), disputa inexistente (404 `DISPUTE_NOT_FOUND`), UUID inválido (400 `INVALID_UUID`).
+- Bordes exactos con reloj fijo: `now = window_end - 1 s` acepta; `now = window_end` devuelve 409 `WINDOW_EXPIRED`. El reclamo no cambia el estado y desactiva el cierre automático. `description` 10–2000, `evidence_urls` máx. 5, `damage_category` del enum del contrato.
+- Sin montos en ninguna capa (FR-010); las reglas `MoneyArchitectureTest` siguen cubriendo todo `com.seashare.m2..`.
+
+**CU-17 (T-18b)**
+- `UpdateDisputeStatusService` es la **única** operación de transición: la usan el Admin y el cierre automático (una sola fuente de verdad, CU-16 FR-004/FR-008). Carga con `@Version`, hace `saveAndFlush` y traduce `OptimisticLockingFailureException` a 409 `DISPUTE_ALREADY_RESOLVED` (carrera Admin vs job).
+- `PUT /api/v1/disputes/{dispute_id}/status` (rol `ADMIN`, 403 con otro perfil): destinos `PENDING`, `REJECTED`, `ACCEPTED`; `reason` e `internal_notes` opcionales (máx. 1000). Cada revisión del Admin se guarda en `admin_review`; toda transición efectiva va a `dispute_status_audit`. El cierre de sistema no escribe `admin_review` (el motivo queda en la disputa y en el historial).
+- **D-6**: el Admin puede mantener `PENDING` o rechazar sin reclamo, pero **`ACCEPTED` exige `has_claim = true`**; si no, 409 `INVALID_RESERVATION_STATE` (código existente más cercano; no se inventó uno). Regla marcada `[NEEDS CLARIFICATION]` en código porque CU-17 D-01 sigue abierto.
+- `DisputeWindowCloseJob` (`@Scheduled` + `@SchedulerLock`, T-05) → `CloseExpiredDisputesService`: barrido `status='PENDING' AND has_claim=false AND window_end <= now`, **una transacción por disputa** (delegando en el caso de uso) y **sin reintento interno** (D-7): el estado es durable y el siguiente ciclo recupera lo que falle. Un fallo individual no frena el lote.
+- Propiedades `m2.scheduler.dispute.*`: `enabled: false` por defecto en `application.yaml` (protege la suite) y `true` en `application-dev.yaml`; `SchedulerConfig` incorpora el cuarto disyunto.
+- `m3_event_published` mantiene el nombre del contrato y significa **encolado en outbox** (D-8), no publicado: la publicación es asíncrona.
+
+**CU-18 (T-18c)**
+- `DisputeOutboxPort` + `DisputeOutboxAdapter` con **entidad JPA propia y package-private** sobre `outbox_message` (solo las columnas del INSERT: `id`, `event_id`, `destination`, `exchange`, `routing_key`, `payload`, `created_at`, `next_attempt_at`), su repositorio Spring Data package-private y `ddl-auto=validate` en verde. Sin `JdbcTemplate`.
+- Se encola **solo** en estados finales, dentro de la misma transacción del cambio de estado: si el outbox falla, la transición revierte. Cero filas y cero mensajes en `PENDING` (probado contra broker real).
+- Payload de exactamente 5 campos: `reservation_id`, `dispute_id`, `status`, `status_changed_at`, `event_key`. `ACCEPTED → COMPLETED` y `REJECTED → REJECTED` (D-3). **El motivo no viaja** (D-4; pendiente de confirmar con M3). Sin montos, sin IDs de usuario.
+- `event_key = disputa-<id>-<estado>`; `event_id` es un UUID determinista derivado de esa clave, por lo que el `UNIQUE(event_id)` del outbox impide duplicados en un reenvío.
+- Topología propia del contexto (`DisputeMessagingProperties` + `DisputeRabbitTopologyConfig`, sin tocar `RabbitTopologyConfig` ni `MessagingProperties`): cola `finance.guarantee-dispute.v1`, DLQ `.dlq` y binding `reservation.dispute.updated` sobre el exchange `seashare.reservations`.
+- El **relay de reservas no necesitó cambios**: despacha por `destination` y usa `exchange`/`routing_key` de la fila; marca `published_at` solo tras el confirm y aplica el backoff existente.
+
+**ArchUnit**
+- `LayeredArchitectureTest` pasa a analizar solo producción (`ImportOption.DoNotIncludeTests`) y añade cinco reglas: capas de `disputa`, dominio de `disputa` sin Spring/JPA/AMQP y aislamiento mutuo `reservas ↔ disputa`.
+- La exclusión de tests es deliberada: los tests de integración siembran reservas con casos de uso de `reservas` y ejercitan el relay real, algo prohibido solo en producción.
+
+**Decisiones aplicadas en el hito**
+- D-2 `@SchedulerLock` real (T-05 ya existía). D-3 `REJECTED → REJECTED`. D-4 el motivo no viaja. D-5 `dispute_status_audit`. D-6 `ACCEPTED` exige reclamo. D-7 sin reintento interno. D-8 `m3_event_published` = encolado. D-9 timestamps UTC ISO-8601. D-10 apertura idempotente. D-11 403 `PROFILE_NOT_AUTHORIZED` / `RESERVATION_NOT_OWNED`. D-12 job apagado por defecto.
+
+**Excepción documentada de `JdbcTemplate`**
+- `DisputeFinalStateImmutabilityTest` usa `JdbcTemplate` **solo** para intentar `UPDATE`/`DELETE` sobre `dispute_guarantee` (el objeto bajo prueba es el trigger de V7, sin camino público para mutar una disputa final). Sin `@Transactional`, igual que `ReservationStatusAuditImmutabilityTest`. El resto de tests de integración usan solo puertos, casos de uso y MockMvc.
+
+**Deudas y pendientes**
+1. Una disputa **con reclamo y sin decisión del Admin queda `PENDING` indefinidamente**: los specs no definen escalado ni cierre por SLA (FR-013 solo fija el SLA de 24 h). No se inventó un mecanismo.
+2. El motivo en el evento de CU-18 queda **pendiente de confirmar con Módulo 3** (los specs se contradicen; se aplicó la opción sin motivo).
+3. CU-17 D-01 sigue abierto: la regla de D-6 está marcada `[NEEDS CLARIFICATION]`.
+4. Identidad duplicada: `DisputeCallerIdentity` + resolver propios del contexto (TODO de unificación cuando exista autenticación real).
+5. `ClockPort` sigue declarado en `reservas.infrastructure`; `disputa` consume el bean sin declarar otro (deuda de ubicación, no de comportamiento).
+6. La topología de disputa se declara en su propio `Declarables`; si el equipo prefiere una única topología centralizada, moverla a `RabbitTopologyConfig`.
+7. **Vínculo con CU-07 pendiente de aplicar**: `EndNavigationService` (H8) no existe en esta rama; al integrar `develop` debe inyectar `OpenDisputeUseCase` y llamar `open(new OpenDisputeCommand(reservationId, reservation.getOwnerId(), statusResult.statusChangedAt()))` justo después de consolidar `COMPLETED`, dentro de la misma transacción y descartando el retorno (`dispute_id` y `dispute_window_expires_at` de la respuesta de CU-07 siguen nulos por sus tests). Requiere añadir el mock al constructor manual de `EndNavigationServiceTest:80`, sin cambios de aserciones. `reservas` no debe leer nada de `disputa` (ArchUnit lo impide).
+
+**Verificación**: `.\mvnw.cmd test` del 2026-11-13 → **476 pruebas, 0 fallos, 0 errores, 0 omitidas** (baseline de H9: 395/0). Commits del hito: `4c765c4` (contrato), `5579205` (códigos de error), `05f1b79` (T-18a), `01d0d0a` (T-18b), `7373bc5` (T-18c).
+
+---
+
 ## 5. Pruebas y verificación
 
-- La suite ejecuta **395 pruebas** (eran 273 al cierre de H6, 234 tras el Hito H3, 115 tras el Hito H2, 84 antes y 75 el 2026-11-03).
-- La última ejecución completa es del **2026-11-12** (`.\mvnw.cmd test` con Docker): **395 pruebas ejecutadas, 0 fallos, 0 errores, 0 omitidas**.
+- La suite ejecuta **476 pruebas** (eran 395 al cierre de H7, 273 al cierre de H6, 234 tras el Hito H3, 115 tras el Hito H2, 84 antes y 75 el 2026-11-03).
+- La última ejecución completa es del **2026-11-13** (`.\mvnw.cmd test` con Docker): **476 pruebas ejecutadas, 0 fallos, 0 errores, 0 omitidas**.
 - Comandos de referencia:
   ```bash
   ./mvnw test
@@ -477,6 +537,9 @@ Trabajo posterior al merge de H6 (`1e49661`) para desbloquear la Fase 7. Los com
   - `ReservationPersistenceTest` (L28): inyecta `ReservationJpaRepository` directamente para probar bloqueo optimista sobre la entidad `ReservationEntity` (mismo paquete, visibilidad de paquete).
   - `OutboxAdapterTest` (L33): mockea `OutboxMessageJpaRepository` (test unitario del adaptador, no de integración).
   - **Excepción vigente y autorizada (H4)**: `ReservationStatusAuditImmutabilityTest` (L20) — `JdbcTemplate` solo para `UPDATE`/`DELETE` sobre `reservation_status_audit` (objeto bajo prueba: el trigger de V1; ver detalle en la sección 4.7).
+  - **Excepción vigente y autorizada (H9)**: `DisputeFinalStateImmutabilityTest` — `JdbcTemplate` solo para `UPDATE`/`DELETE` sobre `dispute_guarantee` (objeto bajo prueba: el trigger de inmutabilidad de estados finales de V7; ver 4.14).
+- **Nota de verificación (2026-11-13, Hito H9)**: baseline en verde antes de empezar (395/0); `.\mvnw.cmd test` tras cada commit → 437/0 (T-18a), 468/0 (T-18b) y **476 pruebas, 0 fallos** al cierre, con PostgreSQL y RabbitMQ de Testcontainers. Los bordes de la ventana de 24 h se probaron con `ClockPort` fijo: `window_end - 1 s` acepta, `window_end` rechaza el reclamo y el job cierra en `now >= window_end`.
+- **Nota de integración (H8)**: H8 está en `origin/develop` (`4a49a00`, PR #35) y **no** en esta rama. La auditoría de H8 cuenta **140 métodos `@Test`** estáticos, así que el conteo de la suite cambiará al integrar; el 476/0 corresponde a la rama H9 antes del merge y el definitivo lo fija la primera ejecución tras la integración.
 
 ---
 
@@ -490,7 +553,7 @@ Trabajo posterior al merge de H6 (`1e49661`) para desbloquear la Fase 7. Los com
 
 ### 6.2 Mensajería y outbox
 
-4. ~~Definir la topología RabbitMQ (exchange, colas, *bindings*, DLQ y retención).~~ **Completado (Hito H2, T-02)**: exchange topic,2 colas de M3 con sus DLQ y bindings. **Pendiente**: la cola de disputa `finance.guarantee-dispute.v1` queda para T-18c (decisión: no crearla en T-02).
+4. ~~Definir la topología RabbitMQ (exchange, colas, *bindings*, DLQ y retención).~~ **Completado (Hito H2, T-02)**: exchange topic,2 colas de M3 con sus DLQ y bindings. ~~**Pendiente**: la cola de disputa `finance.guarantee-dispute.v1` queda para T-18c~~ **Completado el 2026-11-13 (T-18c)**: cola `finance.guarantee-dispute.v1`, DLQ `.dlq` y binding `reservation.dispute.updated` declarados por `DisputeRabbitTopologyConfig` (topología propia del contexto, sin tocar la de reservas).
 5. ~~Implementar el relay del outbox con *publisher confirms*, reintentos con *backoff* y marcado de publicación.~~ **Completado (Hito H2, T-03)**.
 6. Implementar los **consumidores AMQP de producción** (el publicador y la deduplicación por `event_id` ya están: T-03/T-04; la deduplicación solo tiene consumidor de prueba en `src/test`). **Pendiente también**: republicar a DLQ desde el relay tras el5º fallo (decisión del Hito H2: por ahora solo `dead=true` + log de alerta, sin consumidores aún).
 7. ~~Incorporar ShedLock y el bloqueo de jobs.~~ **Completado el 2026-11-12 (T-05)**: `shedlock-spring` 7.11.0 + provider JDBC sobre la tabla `shedlock` de V2; `TtlExpiryJob` y `OutboxRelayJob` usan `@SchedulerLock`, y el relay reclama con `FOR UPDATE SKIP LOCKED` y *lease* por mensaje.
@@ -506,7 +569,7 @@ Trabajo posterior al merge de H6 (`1e49661`) para desbloquear la Fase 7. Los com
 
 ### 6.4 Casos de uso y contextos faltantes
 
-13. Implementar el contexto `disputa` (CU-16, CU-17, CU-18) y `shared/contracts/dispute/OpenDisputeUseCase`.
+13. ~~Implementar el contexto `disputa` (CU-16, CU-17, CU-18) y `shared/contracts/dispute/OpenDisputeUseCase`.~~ **Completado el 2026-11-13 (Hito H9)**, ver 4.14. Pendiente la integración con CU-07 (H8): debe invocar `open()` al consolidar `COMPLETED`.
 14. Implementar CU-04, CU-05, CU-06, CU-07 y CU-22 (CU-01, CU-03 y CU-13 quedaron en H7; CU-14 y CU-15 en H5; CU-19 en H6).
 15. Completar los contratos de CU-20 y CU-21 según sus planes.
 16. Completar el contrato de CU-02 y sustituir las dependencias *fake* por integraciones reales.
@@ -627,3 +690,24 @@ Trabajo posterior al merge de H6 (`1e49661`) para desbloquear la Fase 7. Los com
   **Pruebas y verificación**: `.\mvnw.cmd test` con Docker = **395 pruebas, 0 fallos, 0 errores, 0 omitidas**, BUILD SUCCESS. Nuevas: `ConfirmPaymentServiceTest` (10), `PollPaymentStatusServiceTest` (5), `PaymentPollingJobTest` (2), `HttpPaymentStatusAdapterTest` (7) y `ConfirmPaymentIntegrationTest` (6, con PostgreSQL real).
 
   **Estado de H7**: completo en código (T-24, T-16a, T-16b, T-16c). El canal A de CU-13 queda fuera de alcance hasta que Módulo 3 construya un cliente que invoque a M2.
+
+- **2026-11-13 — Hito H9 (Fase 9: disputa de garantía)**, rama `feature/h9-disputa`. Detalle en la sección 4.14. Commits (uno por tarea):
+  - `4c765c4` `feat: agregar contrato interno de apertura de disputa (H9)`.
+  - `5579205` `feat: agregar codigos de error del contexto de disputa (H9)`.
+  - `05f1b79` `feat: implementar CU-16 apertura y reclamo de disputa (T-18a)`.
+  - `01d0d0a` `feat: implementar CU-17 resolucion admin y cierre automatico (T-18b)`.
+  - `7373bc5` `feat: publicar estados finales de disputa a M3 via outbox (T-18c)`.
+
+  **Orden y estrategia**: primero el contrato de `shared/contracts/dispute` (para que H8 lo consuma cuanto antes) y el catálogo de errores en un commit separado; después T-18a, T-18b y T-18c. Una sola migración nueva (V7) para todo el hito; V1–V6 intactas. No se tocó `pom.xml`, ni CU-04/05/06/07, ni `features/`, `diagrams/` ni `templates/`.
+
+  **Decisiones aplicadas**: D-2 `@SchedulerLock` (T-05 ya hecho, sin TODO); D-3 `REJECTED → REJECTED`; D-4 el motivo no viaja a M3; D-5 `dispute_status_audit`; D-6 `ACCEPTED` exige reclamo (409 `INVALID_RESERVATION_STATE`, `[NEEDS CLARIFICATION]`); D-7 sin reintento interno del job; D-8 `m3_event_published` = encolado; D-9 UTC ISO-8601; D-10 apertura idempotente; D-11 403 `PROFILE_NOT_AUTHORIZED` vs `RESERVATION_NOT_OWNED`; D-12 job apagado por defecto.
+
+  **Aislamiento de contextos**: `reservas` y `disputa` no se importan entre sí (solo `shared/contracts`); el outbox se escribe desde `disputa` con su propia entidad JPA package-private sobre `outbox_message` (sin `JdbcTemplate`), y el relay de reservas lo publica sin cambios. La topología, las propiedades de mensajería y la identidad web son propias del contexto `disputa`.
+
+  **Pruebas y verificación**: baseline 395/0; tras cada tarea, `.\mvnw.cmd test` en verde (437/0, 468/0, 476/0). Se añadieron 81 pruebas: `ClaimWindowTest`, `GuaranteeDisputeTest`, `RegisterDisputeClaimServiceTest`, `OpenDisputeIntegrationTest`, `RegisterDisputeClaimIntegrationTest`, `DisputeClaimControllerTest`, `DisputeStateMachineTest`, `UpdateDisputeStatusServiceTest`, `DisputeAdminControllerTest`, `DisputeWindowCloseJobTest`, `DisputeWindowCloseIntegrationTest`, `DisputeFinalStateImmutabilityTest`, `DisputeEventMapperTest` y `DisputePublishingIntegrationTest` (broker real). `LayeredArchitectureTest` pasó de 3 a 8 reglas.
+
+  **Pendientes de H9**: ver la lista de deudas de 4.14 (escalado de disputas reclamadas sin decisión, motivo del evento pendiente de confirmar con M3, CU-17 D-01, unificación de la identidad temporal y ubicación del `ClockPort`).
+
+  **Vínculo con CU-07**: pendiente de aplicar. La rama H9 se construyó sobre `develop` antes de H8, así que `EndNavigationService` llegará con el merge. El cambio preparado es mínimo: inyectar `OpenDisputeUseCase`, llamarlo tras consolidar `COMPLETED` con `ownerId` y `statusResult.statusChangedAt()`, descartar el retorno y añadir el mock al constructor manual de su test. No cambia el contrato HTTP ni las aserciones de CU-07.
+
+  **Documentación**: además de esta sección, se actualizaron la fila de la Fase 8 y las de CU-04 a CU-07 para reflejar H8 (ya en `origin/develop`), y se anotó que el conteo definitivo de pruebas se fija al integrar.
