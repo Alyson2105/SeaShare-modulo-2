@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU08-009 — Creación por CU-08
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar creación por cu-08. Requisitos: FR-001, FR-002, FR-003. Criterios: SC
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-08 es un puerto interno, sin endpoint HTTP. Actualmente CU-02 crea directamente; caso bloqueado por T-24.
+CU-08 es un puerto interno, sin endpoint HTTP. CU-02 delega la creación en CU-08; el caso requiere verificar directamente el motor con reloj controlado.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas cuando corresponda. Pruebas relacionadas: Sin prueba de CU-08; su cobertura debe evaluarse por escenario.
@@ -39,14 +39,14 @@ Solicitud de creación desde CU-02.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Invocar la creación por CU-08 cuando exista T-24. | Datos de las precondiciones | Reserva nace INITIATED por el motor, con TTL de 15 minutos. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Invocar la creación por CU-08. | Datos de las precondiciones | Reserva nace INITIATED por el motor, con TTL de 15 minutos. | Pendiente | Integración: CreateReservationTest#createsReservationInInitiated pasó con TTL en respuesta; ChangeReservationStatusServiceTest#creationWritesAuditRow pasó; unitario: CreateReservationServiceTest#creationDelegatesToInitiateUseCase pasó con escritor simulado. Falta invocación directa del motor con reloj controlado y TTL persistido. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-Actualmente CU-02 crea directamente; caso bloqueado por T-24.
+CU-02 delega la creación en CU-08; el caso requiere verificar directamente el motor con reloj controlado.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ Actualmente CU-02 crea directamente; caso bloqueado por T-24.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
-FR-001, FR-002, FR-003 | SC-001 | Sin prueba de CU-08 | Blocked
+FR-001, FR-002, FR-003 | SC-001 | Pruebas de creación ejecutadas | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationTest.java#createsReservationInInitiated; src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#creationWritesAuditRow; src/test/java/com/seashare/m2/reservas/application/service/CreateReservationServiceTest.java#creationDelegatesToInitiateUseCase | In Process
