@@ -2,7 +2,7 @@
 
 Casos para FleetOperationalStatusPort y su adaptador HTTP de M1; modo fake activo por defecto. El contrato de M1 sigue pendiente de firma.
 
-**Estado global**: Draft por integración y contratos pendientes.
+**Estado global**: In Process; siete casos tienen cobertura parcial. Evaluado el 2026-11-13.
 
 ## Trazabilidad
 
@@ -14,7 +14,7 @@ Casos para FleetOperationalStatusPort y su adaptador HTTP de M1; modo fake activ
 | [TC-CU10-004](TC-CU10-004-respuesta-invalida.md) | Respuesta ilegible | FR-002, FR-006 | SC-003 | [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | In Process |
 | [TC-CU10-005](TC-CU10-005-fallo-conexion.md) | Reintento y fallo seguro | FR-002, FR-006 | SC-003 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | In Process |
 | [TC-CU10-006](TC-CU10-006-embarcacion-inexistente.md) | Embarcación inexistente | FR-001, FR-002, FR-006 | SC-005 | [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | In Process |
-| [TC-CU10-007](TC-CU10-007-registro-estado.md) | Registro de consulta | FR-009 | SC-004 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | In Process |
+| [TC-CU10-007](TC-CU10-007-registro-estado.md) | Registro de consulta | FR-009 | SC-004 | [registro](../../../../src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java) | In Process |
 
 ## Cobertura de requisitos
 
@@ -44,13 +44,13 @@ Casos para FleetOperationalStatusPort y su adaptador HTTP de M1; modo fake activ
 
 | TC | Documentado | Ejecutado | Resultado | Ejecutado por | Fecha | Observaciones |
 |---|---|---|---|---|---|---|
-| TC-CU10-001 | Sí | No | Pendiente | — | — | In Process |
-| TC-CU10-002 | Sí | No | Pendiente | — | — | In Process |
-| TC-CU10-003 | Sí | No | Pendiente | — | — | In Process |
-| TC-CU10-004 | Sí | No | Pendiente | — | — | In Process |
-| TC-CU10-005 | Sí | No | Pendiente | — | — | In Process |
-| TC-CU10-006 | Sí | No | Pendiente | — | — | In Process |
-| TC-CU10-007 | Sí | No | Pendiente | — | — | In Process |
+| TC-CU10-001 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpFleetClientTest#availableStatusIsTrue pasó: AVAILABLE produce true y se verifica ruta y token. No se consulta M1 real. |
+| TC-CU10-002 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpFleetClientTest#nonAvailableStatusesAreFalse pasó para los tres estados; integración: CreateReservationValidationTest#vesselNotAvailableIs409 pasó con puerto simulado. Falta motivo específico por estado. |
+| TC-CU10-003 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ExternalQueryLogRegistrationTest#statusUnknownRawStatusRegistersOkRow pasó: false y registro OK con valor crudo WEIRD_STATE. M1 se simula con WireMock. |
+| TC-CU10-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ExternalQueryLogRegistrationTest#statusEmptyBodyThrowsAndRegistersSingleErrorRow, #statusInvalidJsonThrowsAndRegistersSingleErrorRow y #statusMissingFieldThrowsAndRegistersSingleErrorRow pasaron: error FLEET_SERVICE_UNAVAILABLE y registro ERROR. |
+| TC-CU10-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ExternalQueryLogRegistrationTest#statusTimeoutRegistersTimeoutRow pasó: timeout produce FLEET_SERVICE_UNAVAILABLE y registro TIMEOUT. El test no cuenta intentos ni comprueba 503 persistente. |
+| TC-CU10-006 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: FleetUnavailableTest#operationalStatusNotFoundOn404 pasó: VESSEL_NOT_FOUND y una llamada; falta verificar respuesta de cada consumidor. |
+| TC-CU10-007 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ExternalQueryLogRegistrationTest#statusAvailableRegistersOkWithRawStatus pasó: estado AVAILABLE, resultado OK y tipo OPERATIONAL_STATUS persistidos. No demuestra registro ante toda falla de almacenamiento. |
 
 ## Brechas detectadas
 
@@ -59,7 +59,7 @@ Casos para FleetOperationalStatusPort y su adaptador HTTP de M1; modo fake activ
 3. El plan menciona reintentos 500/502; el cliente solo reintenta 503 y errores de acceso.
 4. Un 503 persistente se registra como TIMEOUT y un fallo de auditoría no detiene la consulta.
 5. Latencia y disponibilidad real de M1 requieren medición externa; no se infieren del timeout.
-6. Consulta puntual no garantiza exclusividad FCFS; CU-03 sigue pendiente.
+6. Consulta puntual no garantiza exclusividad FCFS; CU-03 implementa el inicio de pago y requiere prueba de concurrencia simultánea.
 
 ## Convenciones de estado
 
@@ -68,14 +68,13 @@ Casos para FleetOperationalStatusPort y su adaptador HTTP de M1; modo fake activ
 - **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
 - **Blocked**: depende de funcionalidad pendiente.
 
-## Ejecución automatizada — 2026-11-10
+## Ejecución automatizada — 2026-11-13
 
-Se ejecutó `mvn clean test` en una copia aislada del commit `3e4e6a4`, con JDK 25 y compilación configurada para Java 21. El conjunto completo registró **234 pruebas: 132 exitosas, 0 fallos de aserción y 102 errores** al iniciar contextos que requieren Docker/Testcontainers. Maven terminó con `BUILD FAILURE`. Las pruebas con WireMock usaron dobles locales, no los servicios reales.
+`./mvnw -B clean test`: 395 pruebas, 0 fallos, 0 errores, 0 omitidas; BUILD SUCCESS. WireMock simula M1; las pruebas no demuestran latencia o disponibilidad real.
 
-Los resultados siguientes corresponden a clases automatizadas vinculadas a este CU, no a la ejecución íntegra de cada caso documental. Los pasos y el checklist de cada TC permanecen pendientes cuando requieren acciones o comprobaciones adicionales; ningún caso se aprueba por esta ejecución.
-
-| Clase automatizada | Pruebas | Fallos | Errores | Resultado |
-|---|---:|---:|---:|---|
-| [CreateReservationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java) | 5 | 0 | 5 | Bloqueada por Docker/Testcontainers |
-| [FleetUnavailableTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | 10 | 0 | 0 | Exitosa |
-| [HttpFleetClientTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | 5 | 0 | 0 | Exitosa |
+| Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
+|---|---:|---:|---:|---:|---|
+| [HttpFleetClientTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | 5 | 0 | 0 | 0 | Exitosa |
+| [FleetUnavailableTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | 10 | 0 | 0 | 0 | Exitosa |
+| [ExternalQueryLogRegistrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java) | 19 | 0 | 0 | 0 | Exitosa |
+| [CreateReservationValidationTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java) | 13 | 0 | 0 | 0 | Exitosa |

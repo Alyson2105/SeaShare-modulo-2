@@ -39,7 +39,7 @@ Modo HTTP y puerto de registro observable.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar un estado válido y verificar registro. | Datos de las precondiciones | Se intenta registrar OPERATIONAL_STATUS, identificador, resultado y estado crudo. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Consultar un estado válido y verificar registro. | Datos de las precondiciones | Se intenta registrar OPERATIONAL_STATUS, identificador, resultado y estado crudo. | Pendiente | Integración: ExternalQueryLogRegistrationTest#statusAvailableRegistersOkWithRawStatus pasó: estado AVAILABLE, resultado OK y tipo OPERATIONAL_STATUS persistidos. No demuestra registro ante toda falla de almacenamiento. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ Fallo de registro solo produce advertencia; no garantiza el 100 % de auditoría.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
-FR-009 | SC-004 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | In Process
+FR-009 | SC-004 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#statusAvailableRegistersOkWithRawStatus | In Process
