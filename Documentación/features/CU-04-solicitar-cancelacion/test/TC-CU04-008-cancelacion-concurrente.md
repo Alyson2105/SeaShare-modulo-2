@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU04-008 — Carrera de cancelación
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar carrera de cancelación. Trazabilidad: FR-002, FR-011; SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-04 y el endpoint propuesto aún no están implementados. Los resultados son contractuales, no observados. También verificar competencia con inicio de navegación; el motor usa control de versión, no equivale al endpoint.
+El motor usa control de versión; no se ha demostrado esta carrera ni la competencia con inicio de navegación.
 
 ##### Dependencies & Assumptions
-Ejecución futura con CU-04 implementado y dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran la orquestación completa.
+Se requieren dependencias controladas; la evidencia descrita no acredita el flujo completo.
 
 ##### Preconditions & Default Setup
 Reserva RESERVED y solicitudes simultáneas de titular y propietario sobre la misma versión.
@@ -38,9 +38,9 @@ Reserva RESERVED y solicitudes simultáneas de titular y propietario sobre la mi
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Coordinar ambas solicitudes y observar transiciones y respuesta perdedora. | Datos de las precondiciones | Solo una transición confirmada; el plan contempla 409 CONCURRENT_STATE_CHANGE para la perdedora. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | Sin publicación real |
+| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | Sin prueba ejecutada de ambas solicitudes de cancelación simultáneas. |
+| 2 | Ejecutar | Coordinar ambas solicitudes y observar transiciones y respuesta perdedora. | Datos de las precondiciones | Solo una transición confirmada; el plan contempla 409 CONCURRENT_STATE_CHANGE para la perdedora. | Pendiente | Sin prueba ejecutada de ambas solicitudes de cancelación simultáneas. |
+| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | Sin prueba ejecutada de ambas solicitudes de cancelación simultáneas. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ También verificar competencia con inicio de navegación; el motor usa control d
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
+Evaluado el 2026-11-13: Pendiente; sin ejecución automatizada pertinente.
 
 #### Traceability
-FR-002, FR-011 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Blocked
+FR-002, FR-011 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Sin prueba automatizada pertinente | In Process

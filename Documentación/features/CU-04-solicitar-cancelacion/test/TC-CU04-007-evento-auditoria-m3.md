@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU04-007 — Auditoría y notificación M3
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar auditoría y notificación m3. Trazabilidad: FR-013, FR-014, FR-015; S
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-04 y el endpoint propuesto aún no están implementados. Los resultados son contractuales, no observados. El contrato final de payload M3 T-12 está pendiente; PUBLISHED en plan no demuestra confirmación de consumo.
+PUBLISHED se deriva del destino encolado en RequestCancellationService#execute; no demuestra confirmación de M3. El payload completo y la ausencia integral de cálculos requieren evidencia.
 
 ##### Dependencies & Assumptions
-Ejecución futura con CU-04 implementado y dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); no demuestran la orquestación completa.
+Se requieren dependencias controladas; la evidencia descrita no acredita el flujo completo.
 
 ##### Preconditions & Default Setup
 Reserva RESERVED válida; observar auditoría y eventos relacionados con la reserva.
@@ -38,9 +38,9 @@ Reserva RESERVED válida; observar auditoría y eventos relacionados con la rese
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar cancelación y consultar auditoría y outbox. | Datos de las precondiciones | Se registra actor, fecha, clasificación y datos aplicables; se comunica a M3 el estado y subtipo sin cálculos monetarios en M2. | Pendiente | ChangeReservationStatusServiceTest#cancelledByRenterStoresSubtypeAndAnticipation pasó: integración del motor verifica subtipo y actor en evento simulado; falta flujo de cancelación y auditoría completa. |
-| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | Sin publicación real |
+| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | RequestCancellationServiceTest#renterWith72HoursCancelsFlexible: verde con puertos simulados; no acredita persistencia real ni entrega a M3. |
+| 2 | Ejecutar | Solicitar cancelación y consultar auditoría y outbox. | Datos de las precondiciones | Se registra actor, fecha, clasificación y datos aplicables; se comunica a M3 el estado y subtipo sin cálculos monetarios en M2. | Pendiente | RequestCancellationServiceTest#renterWith72HoursCancelsFlexible: verde con puertos simulados; no acredita persistencia real ni entrega a M3. |
+| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | RequestCancellationServiceTest#renterWith72HoursCancelsFlexible: verde con puertos simulados; no acredita persistencia real ni entrega a M3. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ El contrato final de payload M3 T-12 está pendiente; PUBLISHED en plan no demue
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Blocked; la evidencia solo cubre el componente compartido, el flujo está bloqueado.
+Corrida 2026-11-13: Partial; evidencia parcial.
 
 #### Traceability
-FR-013, FR-014, FR-015 | SC-006, SC-007 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#cancelledByRenterStoresSubtypeAndAnticipation | Blocked
+FR-013, FR-014, FR-015 | SC-006, SC-007 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/RequestCancellationServiceTest.java#renterWith72HoursCancelsFlexible | In Process
