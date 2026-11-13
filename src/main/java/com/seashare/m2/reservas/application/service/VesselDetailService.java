@@ -11,14 +11,12 @@ import com.seashare.m2.reservas.application.port.out.VesselReadPort;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.shared.domain.ErrorCode;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Service
-@Transactional(readOnly = true)
 public class VesselDetailService implements VesselDetailUseCase { // orquesta CU-09 y CU-11 para CU-19, sin persistir datos de flota
 
     private static final String CURRENCY = "COP"; // moneda constante de la plataforma (CU-11, M3 no la envia)
