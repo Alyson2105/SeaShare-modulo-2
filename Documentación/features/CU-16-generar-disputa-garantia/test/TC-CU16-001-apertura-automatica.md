@@ -26,10 +26,10 @@ Verificar apertura automática. Requisitos: FR-001, FR-003, FR-004, FR-005. Crit
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-16 y su endpoint aún no existen; los resultados son expectativas del contrato. Estado de disputa y estado de reserva son entidades diferentes.
+CU-07 no invoca OpenDisputeUseCase; la apertura directa persiste PENDING y 24 h, pero no acredita el disparador automático ni la operación inicial mediante CU-17.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-16; no demuestran el flujo completo de CU-16.
+La prueba usa componentes controlados; no demuestra el flujo completo.
 
 ##### Preconditions & Default Setup
 Reserva IN_NAVIGATION y cierre CU-07 válido; reloj controlado.
@@ -38,9 +38,9 @@ Reserva IN_NAVIGATION y cierre CU-07 válido; reloj controlado.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Finalizar navegación e inspeccionar disputa asociada. | Datos de las precondiciones | Se crea exactamente una disputa PENDING por el sistema mediante CU-17 con vencimiento 24 horas después. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | OpenDisputeIntegrationTest#opensPendingDisputeWith24HourWindow: verde; invoca apertura directamente, no desde CU-07. |
+| 2 | Ejecutar | Finalizar navegación e inspeccionar disputa asociada. | Datos de las precondiciones | Se crea exactamente una disputa PENDING por el sistema mediante CU-17 con vencimiento 24 horas después. | Pendiente | OpenDisputeIntegrationTest#opensPendingDisputeWith24HourWindow: verde; invoca apertura directamente, no desde CU-07. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | OpenDisputeIntegrationTest#opensPendingDisputeWith24HourWindow: verde; invoca apertura directamente, no desde CU-07. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Estado de disputa y estado de reserva son entidades diferentes.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada.
+Corrida 2026-11-13: Blocked; evidencia parcial, pasos completos pendientes.
 
 #### Traceability
-FR-001, FR-003, FR-004, FR-005 | SC-001 | Sin prueba de CU-16 | Blocked
+FR-001, FR-003, FR-004, FR-005 | SC-001 | src/test/java/com/seashare/m2/disputa/integration/OpenDisputeIntegrationTest.java#opensPendingDisputeWith24HourWindow | Blocked

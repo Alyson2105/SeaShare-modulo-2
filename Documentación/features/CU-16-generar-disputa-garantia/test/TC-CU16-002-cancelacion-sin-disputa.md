@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU16-002 — Reserva cancelada sin disputa
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar reserva cancelada sin disputa. Requisitos: FR-002. Criterios: SC-002.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-16 y su endpoint aún no existen; los resultados son expectativas del contrato. Requiere CU-04 o CU-05 y contexto disputa.
+Existen flujos de cancelación e inasistencia; no se verificó ausencia de disputa después del cierre.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-16; no demuestran el flujo completo de CU-16.
+El escenario requiere CU-04 o CU-05 y consulta de disputas; no se identificó prueba pertinente.
 
 ##### Preconditions & Default Setup
 Reserva que finaliza en CANCELLED por cancelación o inasistencia.
@@ -38,9 +38,9 @@ Reserva que finaliza en CANCELLED por cancelación o inasistencia.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consolidar cierre y consultar disputas asociadas. | Datos de las precondiciones | No se crea disputa de garantía. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | Sin prueba ejecutada que consulte disputas tras cancelación o inasistencia. |
+| 2 | Ejecutar | Consolidar cierre y consultar disputas asociadas. | Datos de las precondiciones | No se crea disputa de garantía. | Pendiente | Sin prueba ejecutada que consulte disputas tras cancelación o inasistencia. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | Sin prueba ejecutada que consulte disputas tras cancelación o inasistencia. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Requiere CU-04 o CU-05 y contexto disputa.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada.
+Evaluado el 2026-11-13: Pendiente; sin ejecución automatizada pertinente.
 
 #### Traceability
-FR-002 | SC-002 | Sin prueba de CU-16 | Blocked
+FR-002 | SC-002 | Sin prueba ejecutada pertinente | In Process
