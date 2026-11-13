@@ -57,7 +57,7 @@ No confundir identidad de evento con deduplicación demostrada por M1.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; Prueba unitaria verifica los cuatro campos del payload y exclusión de campos adicionales; no demuestra deduplicación real de M1.
+Corrida 2026-11-13: Partial; Prueba unitaria verifica los cuatro campos del payload y exclusión de campos adicionales; no demuestra deduplicación real de M1.
 
 #### Traceability
 FR-003, FR-004, FR-005, FR-007 | SC-003, SC-004 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [outbox](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java)  | src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java#enqueuesOperationalStatusToM1HttpWithExactFourFields | In Process
