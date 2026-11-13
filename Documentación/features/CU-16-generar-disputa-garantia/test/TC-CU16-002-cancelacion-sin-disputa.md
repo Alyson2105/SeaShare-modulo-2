@@ -57,7 +57,7 @@ Requiere CU-04 o CU-05 y contexto disputa.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada.
 
 #### Traceability
 FR-002 | SC-002 | Sin prueba de CU-16 | Blocked

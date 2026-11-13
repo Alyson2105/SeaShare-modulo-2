@@ -2,7 +2,7 @@
 
 Casos de creación automática, reclamo y vencimiento de disputa. El contexto disputa no está implementado; su estado es distinto del de reserva.
 
-**Estado global**: Draft por implementación y contratos pendientes.
+**Estado global**: Draft; el contexto de disputas no está implementado y hay casos con contrato por aclarar. Evaluado el 2026-11-13.
 
 ## Trazabilidad
 
@@ -50,12 +50,12 @@ Casos de creación automática, reclamo y vencimiento de disputa. El contexto di
 
 | TC | Documentado | Ejecutado | Resultado | Ejecutado por | Fecha | Observaciones |
 |---|---|---|---|---|---|---|
-| TC-CU16-001 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU16-002 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU16-003 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU16-004 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU16-005 | Sí | No | Pendiente | — | — | Blocked |
-| TC-CU16-006 | Sí | No | Pendiente | — | — | Draft |
+| TC-CU16-001 | Sí | No | Blocked | Agente automatizado | — | sin implementación ni test ejecutado del escenario. |
+| TC-CU16-002 | Sí | No | Blocked | Agente automatizado | — | sin implementación ni test ejecutado del escenario. |
+| TC-CU16-003 | Sí | No | Blocked | Agente automatizado | — | sin implementación ni test ejecutado del escenario. |
+| TC-CU16-004 | Sí | No | Blocked | Agente automatizado | — | sin implementación ni test ejecutado del escenario. |
+| TC-CU16-005 | Sí | No | Blocked | Agente automatizado | — | sin implementación ni test ejecutado del escenario. |
+| TC-CU16-006 | Sí | No | Draft | Agente automatizado | — | Contrato por aclarar; sin implementación ni test ejecutado del escenario. |
 
 ## Brechas detectadas
 
@@ -73,10 +73,10 @@ Casos de creación automática, reclamo y vencimiento de disputa. El contexto di
 - **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
 - **Blocked**: depende de funcionalidad pendiente.
 
-## Ejecución automatizada — 2026-11-10
+## Ejecución automatizada — 2026-11-13
 
-Se ejecutó `mvn clean test` en una copia aislada del commit `3e4e6a4`, con JDK 25 y compilación configurada para Java 21. El conjunto completo registró **234 pruebas: 132 exitosas, 0 fallos de aserción y 102 errores** al iniciar contextos que requieren Docker/Testcontainers. Maven terminó con `BUILD FAILURE`. Las pruebas con WireMock usaron dobles locales, no los servicios reales.
+`./mvnw -B clean test`: 395 pruebas, 0 fallos, 0 errores, 0 omitidas; BUILD SUCCESS. No se localizaron clases que ejecuten los escenarios de CU-16; la suite no aporta cobertura directa de estos casos.
 
-Los resultados siguientes corresponden a clases automatizadas vinculadas a este CU, no a la ejecución íntegra de cada caso documental. Los pasos y el checklist de cada TC permanecen pendientes cuando requieren acciones o comprobaciones adicionales; ningún caso se aprueba por esta ejecución.
-
-No hay clases automatizadas vinculadas en los casos documentados de este CU.
+| Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
+|---|---:|---:|---:|---:|---|
+| Ninguna vinculada | — | — | — | — | Sin ejecución automatizada del CU |
