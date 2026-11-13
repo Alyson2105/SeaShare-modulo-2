@@ -26,7 +26,7 @@ Verificar desglose inválido. Requisitos: FR-005, FR-007. Criterios: SC-002, SC-
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-12 es integración saliente; M3 se simula y el modo fake es el predeterminado. La ausencia de transición de reserva pertenece a CU-03 aún no implementado.
+CU-12 es integración saliente; M3 se simula y el modo fake es el predeterminado. CU-03 está implementado; la ausencia de transición se prueba a nivel unitario con escritor simulado.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java); su cobertura debe evaluarse por escenario.
@@ -39,14 +39,14 @@ M3 responde importes ausentes, no numéricos o negativos.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar variantes con cada campo inválido. | Datos de las precondiciones | El adaptador lanza CALCULATION_UNAVAILABLE; alquiler y total cero se rechazan, seguro y depósito cero se aceptan. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Consultar variantes con cada campo inválido. | Datos de las precondiciones | El adaptador lanza CALCULATION_UNAVAILABLE; alquiler y total cero se rechazan, seguro y depósito cero se aceptan. | Pendiente | Componente WireMock: HttpCalculatedValueAdapterTest#missingFieldThrowsCalculationUnavailable, #zeroTotalThrowsCalculationUnavailable, #zeroRentalThrowsCalculationUnavailable y #zeroInsuranceAndDepositAreAccepted pasaron. No cubren todas las variantes ni el flujo persistido. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-La ausencia de transición de reserva pertenece a CU-03 aún no implementado.
+CU-03 está implementado; la ausencia de transición se prueba a nivel unitario con escritor simulado.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ La ausencia de transición de reserva pertenece a CU-03 aún no implementado.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; evidencia parcial, consultar el flujo.
 
 #### Traceability
-FR-005, FR-007 | SC-002, SC-003 | [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java) | In Process
+FR-005, FR-007 | SC-002, SC-003 | [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#missingFieldThrowsCalculationUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#zeroTotalThrowsCalculationUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#zeroRentalThrowsCalculationUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#zeroInsuranceAndDepositAreAccepted | In Process

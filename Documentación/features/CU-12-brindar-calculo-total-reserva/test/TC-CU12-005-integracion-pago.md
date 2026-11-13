@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU12-005 — Asociación al pago
-**Status**: Blocked
+**Status**: In Process
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,7 +26,7 @@ Verificar asociación al pago. Requisitos: FR-001, FR-006, FR-009. Criterios: SC
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-12 es integración saliente; M3 se simula y el modo fake es el predeterminado. CU-03 no implementado y no llama aún al puerto.
+CU-12 es integración saliente; M3 se simula y el modo fake es el predeterminado. CU-03 invoca el puerto y asocia los montos; las pruebas usan cálculo simulado.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: Sin prueba de CU-12; su cobertura debe evaluarse por escenario.
@@ -39,14 +39,14 @@ Reserva INITIATED y cálculo oficial de M3.
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Iniciar pago y revisar transición y montos asociados. | Datos de las precondiciones | El spec exige asociar valores sin alteración antes de PENDING_PAYMENT. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Iniciar pago y revisar transición y montos asociados. | Datos de las precondiciones | El spec exige asociar valores sin alteración antes de PENDING_PAYMENT. | Pendiente | Integración: PaymentIntegrationTest#startPaymentTransitionsAndReturnsBreakdown y #breakdownIsPersistedForDetailView pasaron con cálculo simulado; unitario: StartPaymentServiceTest#validPaymentDelegatesToTransactionalWriter pasó. No se verifica M3 real ni la entrega del evento previo. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-CU-03 no implementado y no llama aún al puerto.
+CU-03 invoca el puerto y asocia los montos; las pruebas usan cálculo simulado.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ CU-03 no implementado y no llama aún al puerto.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Partial; evidencia parcial, consultar el flujo.
 
 #### Traceability
-FR-001, FR-006, FR-009 | SC-001, SC-003 | Sin prueba de CU-12 | Blocked
+FR-001, FR-006, FR-009 | SC-001, SC-003 | Pruebas de pago ejecutadas | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#startPaymentTransitionsAndReturnsBreakdown; src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#breakdownIsPersistedForDetailView; src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#validPaymentDelegatesToTransactionalWriter | In Process

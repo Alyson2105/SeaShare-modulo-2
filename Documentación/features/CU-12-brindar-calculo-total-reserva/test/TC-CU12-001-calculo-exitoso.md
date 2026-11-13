@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU12-001 — Cálculo vinculante
-**Status**: In Process
+**Status**: Draft
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -39,7 +39,7 @@ Modo seashare.finance.mode=http; M3 simulado devuelve cuatro montos decimales v�
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
 | 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Invocar CalculatedValuePort con reservation_id. | Datos de las precondiciones | El adaptador envía POST sin cuerpo y devuelve alquiler, seguro, depósito y total como BigDecimal sin recomponerlos. | Pendiente | No ejecutado |
+| 2 | Ejecutar | Invocar CalculatedValuePort con reservation_id. | Datos de las precondiciones | El adaptador envía POST sin cuerpo y devuelve alquiler, seguro, depósito y total como BigDecimal sin recomponerlos. | Pendiente | Contrato contradictorio: FR-005 exige ID de cálculo y plan y entidades indican que M3 no lo envía. Componente WireMock: HttpCalculatedValueAdapterTest#correct200ReturnsBreakdown pasó para cuatro montos; no aclara el ID ni verifica cuerpo vacío. |
 | 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
 
 ##### Section 2: Secondary Flow / Error Handling
@@ -57,7 +57,7 @@ FR-005 exige identificador de cálculo pero el plan dice que M3 no lo envía; DT
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Ejecutado el 2026-11-13: Draft; evidencia parcial, consultar el flujo.
 
 #### Traceability
-FR-002, FR-003, FR-004, FR-005 | SC-001, SC-002 | [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java) | In Process
+FR-002, FR-003, FR-004, FR-005 | SC-001, SC-002 | [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#correct200ReturnsBreakdown | Draft
