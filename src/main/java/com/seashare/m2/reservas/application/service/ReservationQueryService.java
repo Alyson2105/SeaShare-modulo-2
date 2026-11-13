@@ -16,7 +16,6 @@ import com.seashare.m2.reservas.domain.model.ReservationStatus;
 import com.seashare.m2.shared.domain.ClockPort;
 import com.seashare.m2.shared.domain.ErrorCode;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -30,7 +29,6 @@ import java.util.Set;
 import java.util.UUID;
 
 @Service
-@Transactional(readOnly = true)
 public class ReservationQueryService implements ReservationQueryUseCase { // servicio de aplicacion para consulta paginada y detalle de reservas
 
     private final ReservationRepositoryPort queryPort; // puerto de salida para ejecucion de consultas

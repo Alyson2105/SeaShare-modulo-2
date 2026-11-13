@@ -4,6 +4,8 @@ import com.seashare.m2.reservas.application.dto.InternalReservationView;
 import com.seashare.m2.reservas.application.port.in.GetInternalReservationUseCase;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.shared.domain.ErrorCode;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,7 +24,7 @@ public class InternalReservationController { // endpoint interno de solo lectura
     }
 
     @GetMapping("/api/v1/internal/reservations/{reservationId}")
-    public InternalReservationResponse getReservation(
+    public ResponseEntity<InternalReservationResponse> getReservation(
             CallerIdentity identity, // identidad ya validada por el resolver de headers
             @PathVariable("reservationId") String reservationId // identificador recibido como texto
     ) { // consulta operativa de la reserva sin efectos secundarios
@@ -35,7 +37,9 @@ public class InternalReservationController { // endpoint interno de solo lectura
         }
 
         InternalReservationView view = getInternalReservation.execute(id); // ejecuta la consulta de solo lectura
-        return InternalReservationResponse.from(view); // transforma la vista a respuesta snake_case
+        return ResponseEntity.ok() // 200 con el contrato de CU-15
+                .cacheControl(CacheControl.noStore()) // datos operativos: no almacenar
+                .body(InternalReservationResponse.from(view)); // transforma la vista a respuesta snake_case
     }
 
     private void requireFinanceRole(CallerIdentity identity) { // D-06: identidad de servicio de Modulo 3

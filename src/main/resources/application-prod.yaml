@@ -27,6 +27,8 @@ m2:
       enabled: true                  # Relay del outbox activo (publica con publisher confirms)
     payments:
       enabled: true                  # Canal B de CU-13: consulta de cobros a M3
+    dispute:
+      enabled: true                  # Cierre automatico de la ventana de disputa (H9)
 
 seashare:
   fleet:

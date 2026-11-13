@@ -84,8 +84,20 @@ class ReservationDetailPolicyTest { // reglas de presentacion del detalle sin ca
         assertThat(summary.rentalAmount()).isNull();
         assertThat(summary.insuranceAmount()).isNull();
         assertThat(summary.guaranteeDepositAmount()).isEqualByComparingTo("300000.00");
-        assertThat(summary.totalPaid()).isEqualByComparingTo("3000000.00"); // estimado literal, sin recalcular
+        assertThat(summary.totalPaid()).isNull(); // sin monto liquidado no se presenta el estimado
         assertThat(summary.clarifyingNote()).isNotBlank();
+    }
+
+    @Test
+    void totalPaidIsNullWhenTotalAmountIsMissing() { // sin liquidacion no hay total pagado
+        Reservation reservation = reservation(ReservationStatus.RESERVED, null);
+        reservation.setRentalAmount(new BigDecimal("2800000.00"));
+        reservation.setInsuranceAmount(new BigDecimal("350000.00"));
+        reservation.setGuaranteeDepositAmount(new BigDecimal("300000.00"));
+
+        ReservationDetailView.PaymentSummary summary = ReservationDetailPolicy.paymentSummary(view(reservation));
+
+        assertThat(summary.totalPaid()).isNull();
     }
 
     @Test

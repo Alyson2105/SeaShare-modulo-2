@@ -13,6 +13,9 @@ import com.seashare.m2.reservas.domain.model.ActorType;
 import com.seashare.m2.reservas.domain.model.OperationalStatus;
 import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
+import com.seashare.m2.shared.contracts.dispute.OpenDisputeCommand;
+import com.seashare.m2.shared.contracts.dispute.OpenDisputeUseCase;
+import com.seashare.m2.shared.contracts.dispute.OpenedDispute;
 import com.seashare.m2.shared.domain.ClockPort;
 import com.seashare.m2.shared.domain.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,7 +41,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -73,12 +78,15 @@ class EndNavigationServiceTest { // CU-07: reglas de aplicacion del fin de naveg
     @Mock
     private ClockPort clockPort; // reloj inyectable
 
+    @Mock
+    private OpenDisputeUseCase openDisputeUseCase; // contrato compartido de disputa
+
     private EndNavigationService service; // servicio bajo prueba
 
     @BeforeEach
     void setUp() { // construye el servicio con la matriz real
         service = new EndNavigationService(reservationRepository, changeReservationStatusUseCase,
-                checkoutEventPort, clockPort, new ModuleNotificationMatrix());
+                checkoutEventPort, clockPort, new ModuleNotificationMatrix(), openDisputeUseCase);
     }
 
     private Reservation reservation(ReservationStatus status, String timezone, boolean m1Blocked) { // builder base
@@ -122,6 +130,8 @@ class EndNavigationServiceTest { // CU-07: reglas de aplicacion del fin de naveg
                 .thenReturn(Optional.of(reservation(ReservationStatus.IN_NAVIGATION, ZONE, m1Blocked)));
         when(clockPort.now()).thenReturn(NOW);
         when(changeReservationStatusUseCase.execute(any())).thenReturn(statusResult());
+        lenient().when(openDisputeUseCase.open(any())).thenReturn( // doble por defecto de la disputa
+                new OpenedDispute(UUID.randomUUID(), RESERVATION_ID, "PENDING", NOW, NOW.plusSeconds(86400)));
     }
 
     @Test
@@ -178,6 +188,8 @@ class EndNavigationServiceTest { // CU-07: reglas de aplicacion del fin de naveg
         when(reservationRepository.findById(RESERVATION_ID))
                 .thenReturn(Optional.of(reservation(ReservationStatus.IN_NAVIGATION, ZONE, true)));
         when(changeReservationStatusUseCase.execute(any())).thenReturn(statusResult());
+        lenient().when(openDisputeUseCase.open(any())).thenReturn( // doble por defecto de la disputa
+                new OpenedDispute(UUID.randomUUID(), RESERVATION_ID, "PENDING", NOW, NOW.plusSeconds(86400)));
         OffsetDateTime informedArrival = OffsetDateTime.parse("2027-04-10T17:30:00-05:00");
 
         EndNavigationResult result = service.execute(command(informedArrival, null));
@@ -397,12 +409,48 @@ class EndNavigationServiceTest { // CU-07: reglas de aplicacion del fin de naveg
     }
 
     @Test
-    void disputeFieldsAreAlwaysNull() { // disputa aun no implementada
+    void completedCheckoutOpensDisputeWithStatusChangedAtAndOwner() { // CU-07 -> CU-16
         givenInNavigation(true);
+        UUID disputeId = UUID.randomUUID();
+        Instant windowEnd = NOW.plusSeconds(24 * 60 * 60);
+        when(openDisputeUseCase.open(any())).thenReturn(
+                new OpenedDispute(disputeId, RESERVATION_ID, "PENDING", NOW, windowEnd));
 
         EndNavigationResult result = service.execute(command(null, null));
 
-        assertThat(result.disputeId()).isNull();
-        assertThat(result.disputeWindowExpiresAt()).isNull();
+        assertThat(result.disputeId()).isEqualTo(disputeId);
+        assertThat(result.disputeWindowExpiresAt().toInstant()).isEqualTo(windowEnd);
+        ArgumentCaptor<OpenDisputeCommand> captor = ArgumentCaptor.forClass(OpenDisputeCommand.class);
+        verify(openDisputeUseCase).open(captor.capture());
+        assertThat(captor.getValue()).isEqualTo(new OpenDisputeCommand(RESERVATION_ID, OWNER_ID, NOW));
+    }
+
+    @Test
+    void retryAfterCompletedDoesNotOpenAnotherDispute() { // reintento no duplica la disputa
+        when(reservationRepository.findById(RESERVATION_ID))
+                .thenReturn(Optional.of(reservation(ReservationStatus.IN_NAVIGATION, ZONE, true)),
+                        Optional.of(reservation(ReservationStatus.COMPLETED, ZONE, true)));
+        when(clockPort.now()).thenReturn(NOW);
+        when(changeReservationStatusUseCase.execute(any())).thenReturn(statusResult());
+        when(openDisputeUseCase.open(any())).thenReturn(
+                new OpenedDispute(UUID.randomUUID(), RESERVATION_ID, "PENDING", NOW, NOW.plusSeconds(86400)));
+
+        service.execute(command(null, null));
+
+        assertThatThrownBy(() -> service.execute(command(null, null)))
+                .isInstanceOfSatisfying(ReservationRuleException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ErrorCode.TRIP_ALREADY_COMPLETED.getCode()));
+        verify(openDisputeUseCase, times(1)).open(any());
+    }
+
+    @Test
+    void disputeFailurePropagatesAndSkipsCheckout() { // el fallo de disputa revierte el cierre
+        givenInNavigation(true);
+        when(openDisputeUseCase.open(any())).thenThrow(new IllegalStateException("dispute failure"));
+
+        assertThatThrownBy(() -> service.execute(command(null, null)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("dispute failure");
+        verify(checkoutEventPort, never()).save(any(), any(), any(), any());
     }
 }

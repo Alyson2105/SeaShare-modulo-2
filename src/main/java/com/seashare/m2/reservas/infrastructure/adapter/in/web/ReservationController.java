@@ -6,6 +6,7 @@ import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.shared.domain.ErrorCode;
 import jakarta.validation.Valid;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -62,6 +63,8 @@ public class ReservationController { // controlador rest para operaciones sobre 
         ReservationView view = createReservationUseCase.execute(command); // delega en el caso de uso
         ReservationResponse response = ReservationResponse.from(view); // transforma la vista a payload http
         URI location = URI.create("/api/v1/reservations/" + response.reservationId()); // ruta del recurso creado
-        return ResponseEntity.created(location).body(response); // 201 con header Location
+        return ResponseEntity.created(location) // 201 con header Location
+                .cacheControl(CacheControl.noStore()) // respuesta con PII: no almacenar
+                .body(response); // payload de la reserva creada
     }
 }

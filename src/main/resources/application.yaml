@@ -1,3 +1,7 @@
+logging:                                    # Correlation id en todos los logs de la aplicacion (T-22)
+  pattern:
+    level: "%5p [%X{correlationId:-}]"      # imprime el valor del MDC o "-" si no hay contexto HTTP
+
 spring:
   application:
     name: seashare-modulo-2                  # Nombre del servicio (aparece en logs y metricas)
@@ -83,3 +87,6 @@ seashare:                                  # Integracion con Modulo 1 y Modulo 3
     payment-status-connect-timeout-ms: 100     # Timeout de conexion de la consulta de cobro (CU-13)
     payment-status-read-timeout-ms: 500        # Timeout de lectura de la consulta de cobro (CU-13)
     fake-payment-status: IN_PROCESS            # Estado simulado en modo fake: IN_PROCESS, APPROVED, REJECTED, CANCELLED o EXPIRED
+
+  cors:
+    allowed-origins: http://localhost:5173   # Origenes con CORS habilitado (lista separada por comas)

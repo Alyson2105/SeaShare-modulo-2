@@ -12,6 +12,7 @@ seashare:
     token: m2-development-token      # Token de desarrollo de M1 (nunca se usa en produccion)
   finance:
     mode: fake                       # M2 corre aislado en local: adaptadores falsos de M3
+    fake-payment-status: APPROVED    # En dev el cobro fake se toma aprobado: la reserva sale de PENDING_PAYMENT
 
 m2:
   scheduler:

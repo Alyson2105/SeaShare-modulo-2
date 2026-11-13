@@ -30,6 +30,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -271,7 +272,7 @@ class ReservationQueryTest { // pruebas de integracion de endpoints de consulta 
                 .andExpect(jsonPath("$.owner.name").value("Propietario demo"))
                 .andExpect(jsonPath("$.payment_summary.section_title").value("Resumen de pago"))
                 .andExpect(jsonPath("$.payment_summary.currency").value("COP"))
-                .andExpect(jsonPath("$.payment_summary.total_paid").isNumber())
+                .andExpect(jsonPath("$.payment_summary.total_paid").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.payment_summary.rental_amount").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.payment_summary.insurance_amount").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.available_actions.can_cancel").value(true))
@@ -396,5 +397,23 @@ class ReservationQueryTest { // pruebas de integracion de endpoints de consulta 
         mockMvc.perform(get("/api/v1/reservations/" + UUID.randomUUID()))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    }
+
+    @Test
+    void listAndDetailDisableCaching() throws Exception { // respuestas con PII no se almacenan
+        UUID renterId = UUID.randomUUID();
+        ReservationView created = createReservation(renterId, UUID.randomUUID());
+
+        mockMvc.perform(get("/api/v1/reservations")
+                        .header("X-User-Id", renterId.toString())
+                        .header("X-User-Role", "RENTER"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"));
+
+        mockMvc.perform(get("/api/v1/reservations/" + created.reservationId())
+                        .header("X-User-Id", renterId.toString())
+                        .header("X-User-Role", "RENTER"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"));
     }
 }
