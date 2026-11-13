@@ -57,7 +57,7 @@ La respuesta incluye available_actions; los flujos de cancelación y pago requie
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; Comprueba can_cancel en RESERVED; no demuestra navegación UI ni acción INITIATED para arrendatario.
+Corrida 2026-11-13: Partial; Comprueba can_cancel en RESERVED; no demuestra navegación UI ni acción INITIATED para arrendatario.
 
 #### Traceability
-FR-005, FR-021 | SC-001 | Sin prueba de CU-21  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#detailIncludesContractFields | In Process
+FR-005, FR-021 | SC-001 | Prueba parcial ejecutada  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#detailIncludesContractFields | In Process
