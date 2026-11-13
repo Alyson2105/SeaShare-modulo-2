@@ -57,7 +57,7 @@ Predeterminado 10, pero código permite hasta 50 mientras FR-012 dice límite fi
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Draft; Comprueba page=0 y limit=51; no comprueba orden ni segunda página. FR-012 fija 10 y plan permite hasta 50.
+Corrida 2026-11-13: Draft; Comprueba page=0 y limit=51; no comprueba orden ni segunda página. FR-012 fija 10 y plan permite hasta 50.
 
 #### Traceability
 FR-012 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#invalidPaginationIs400 | Draft

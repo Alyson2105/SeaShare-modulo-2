@@ -57,7 +57,7 @@ El filtro está implementado; faltan pruebas de todos los estados y de UI.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; Comprueba subconjuntos history y cancelled, contadores y estado CANCELLED; no todos los estados del contrato.
+Corrida 2026-11-13: Partial; Comprueba subconjuntos history y cancelled, contadores y estado CANCELLED; no todos los estados del contrato.
 
 #### Traceability
-FR-007, FR-012 | SC-002 | Sin prueba de CU-20  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#listsWithAppliedFilter | In Process
+FR-007, FR-012 | SC-002 | Prueba parcial ejecutada  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#listsWithAppliedFilter | In Process

@@ -57,7 +57,7 @@ El filtro local por owner_id no prueba la autenticidad de headers ni pertenencia
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; Comprueba tres reservas del propietario; no incluye otro propietario para comprobar exclusión.
+Corrida 2026-11-13: Partial; Comprueba tres reservas del propietario; no incluye otro propietario para comprobar exclusión.
 
 #### Traceability
 FR-001, FR-002 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#listsOnlyOwnReservations | In Process

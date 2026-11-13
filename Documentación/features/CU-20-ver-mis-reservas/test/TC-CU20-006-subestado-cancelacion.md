@@ -57,7 +57,7 @@ La respuesta del listado expone cancellation_subtype; faltan pruebas de otros su
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial; Comprueba subtipo FLEXIBLE y etiqueta contextual; no compara el importe ni otros subtipos.
+Corrida 2026-11-13: Partial; Comprueba subtipo FLEXIBLE y etiqueta contextual; no compara el importe ni otros subtipos.
 
 #### Traceability
-FR-005 | SC-001 | Sin prueba de CU-20  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#listsWithAppliedFilter | In Process
+FR-005 | SC-001 | Prueba parcial ejecutada  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#listsWithAppliedFilter | In Process
