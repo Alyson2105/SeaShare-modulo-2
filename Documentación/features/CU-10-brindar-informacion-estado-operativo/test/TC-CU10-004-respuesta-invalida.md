@@ -57,7 +57,7 @@ No se convierte el error en false; se propaga excepción de dominio.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
 
 #### Traceability
 FR-002, FR-006 | SC-003 | [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#statusEmptyBodyThrowsAndRegistersSingleErrorRow; src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#statusInvalidJsonThrowsAndRegistersSingleErrorRow; src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#statusMissingFieldThrowsAndRegistersSingleErrorRow | In Process
