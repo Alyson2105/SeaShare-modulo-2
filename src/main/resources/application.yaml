@@ -1,3 +1,7 @@
+logging:                                    # Correlation id en todos los logs de la aplicacion (T-22)
+  pattern:
+    level: "%5p [%X{correlationId:-}]"      # imprime el valor del MDC o "-" si no hay contexto HTTP
+
 spring:
   application:
     name: seashare-modulo-2                  # Nombre del servicio (aparece en logs y metricas)
