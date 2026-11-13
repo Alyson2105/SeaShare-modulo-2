@@ -57,7 +57,7 @@ CU-18 FR-002 permite motivo opcional, pero CU-16, CU-17 y el plan de CU-18 proh�
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Registrar el resultado cuando el flujo esté disponible y conservar los identificadores de prueba.
+Evaluado el 2026-11-13: Draft; sin ejecución automatizada.
 
 #### Traceability
 FR-002, FR-003, FR-006 | SC-002 | Sin prueba de CU-18 | Draft
