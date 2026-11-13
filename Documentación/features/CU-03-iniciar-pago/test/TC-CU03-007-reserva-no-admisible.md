@@ -29,7 +29,7 @@ Verificar estado o ttl no admisible. Requisitos: FR-002, FR-007. Criterios relac
 No se realiza publicación real ni cobro externo en esta tarea. El vencimiento exacto se verifica con reloj controlado; la expiración pasiva es CU-08.
 
 ##### Dependencies & Assumptions
-Entorno futuro con CU-03 implementado, repositorio de reservas y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: [ttl](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java); no demuestra el flujo completo de CU-03.
+CU-03 está implementado; la evidencia usa repositorio y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: [ttl](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java); no demuestra el flujo completo de CU-03.
 
 ##### Preconditions & Default Setup
 Preparar por separado reserva con estado distinto de INITIATED y reserva INITIATED con TTL vencido; controlar reloj.
@@ -57,7 +57,7 @@ El vencimiento exacto se verifica con reloj controlado; la expiración pasiva es
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Ejecutado el 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
+Corrida 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
 
 #### Traceability
 FR-002, FR-007 | SC-001 | [ttl](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#nonInitiatedReservationIsConflict; src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#expiredTtlIsConflict | In Process
