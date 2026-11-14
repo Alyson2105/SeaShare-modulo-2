@@ -23,9 +23,9 @@ Casos del catálogo y cotización en lote. CU-01 dispone de endpoint y orquestac
 | FR-002 | Parcial | 001, 002, 006 | Backend | Catálogo; discrepancia temporal |
 | FR-003 | Parcial | 001, 003, 005 | Backend | Cotización lote |
 | FR-004 | Parcial | 005 | Backend | Datos backend parciales; presentación UI |
-| FR-005 | Sin cobertura backend | — | UI | Selección UI |
-| FR-006 | Sin cobertura backend | — | UI | Navegación UI |
-| FR-007 | Sin cobertura backend | — | UI | Contexto y contador UI |
+| FR-005 | Sin evidencia | — | UI | Selección UI |
+| FR-006 | Sin evidencia | — | UI | Navegación UI |
+| FR-007 | Sin evidencia | — | UI | Contexto y contador UI |
 | FR-008 | Parcial | 003 | Backend | Página de 20 |
 | FR-009 | Parcial | 002 | Backend | Sin filtros |
 | FR-010 | Parcial | 004 | Backend | Formato previo a proveedores |
@@ -35,10 +35,10 @@ Casos del catálogo y cotización en lote. CU-01 dispone de endpoint y orquestac
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Parcial | Búsqueda y cotización con dobles probadas; falta demostrar todos los resultados con M3 real. |
-| SC-002 | Fuera de alcance | Tiempo de 2000 ms requiere servicios y medición. |
-| SC-003 | Parcial | Primera página sin filtros probada con catálogo simulado; falta demostrar el catálogo completo. |
-| SC-004 | Parcial | Rechazos HTTP probados; no se verifican todas las entradas ni la ausencia de llamadas. |
+| SC-001 | Parcialmente demostrado | Búsqueda y cotización con dobles probadas; falta demostrar todos los resultados con M3 real. |
+| SC-002 | No demostrado | Tiempo de 2000 ms requiere servicios y medición. |
+| SC-003 | Parcialmente demostrado | Primera página sin filtros probada con catálogo simulado; falta demostrar el catálogo completo. |
+| SC-004 | Parcialmente demostrado | Rechazos HTTP probados; no se verifican todas las entradas ni la ausencia de llamadas. |
 
 ## Checklist de ejecución
 
@@ -61,15 +61,15 @@ Casos del catálogo y cotización en lote. CU-01 dispone de endpoint y orquestac
 
 - **Draft**: contrato incompleto o inconsistente.
 - **In Process**: ejecutable con implementación actual.
-- **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
+- **Approved**: escenario y postcondiciones demostrados por aserciones de la corrida V4, sin impedimentos de aprobación.
 - **Blocked**: depende de funcionalidad pendiente.
 
 ## Ejecución automatizada — 2026-11-13
 
-`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-01. Las pruebas de búsqueda usan dobles locales; no validan proveedores M1/M3 reales.
+`sg docker -c 'bash ./mvnw -B clean test'`; inicio 2026-11-13T19:02:00-05:00, fin 2026-11-13T19:03:11-05:00; BASELINE_HEAD `568290a0d4334b477a4b0f9d5e949e981da3fa55`; salida 0. Las pruebas de búsqueda usan puertos simulados; WireMock no demuestra disponibilidad de M3 real.
 
-| Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
+| Clase | Pruebas | Fallos | Errores | Omitidos | Alcance |
 |---|---:|---:|---:|---:|---|
-| [com.seashare.m2.reservas.application.service.VesselSearchServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java) | 7 | 0 | 0 | 0 | Verde; alcance parcial |
-| [com.seashare.m2.reservas.infrastructure.adapter.in.web.VesselSearchControllerTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java) | 7 | 0 | 0 | 0 | Verde; alcance parcial |
-| [com.seashare.m2.reservas.infrastructure.adapter.out.finance.HttpBatchEstimateAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | 10 | 0 | 0 | 0 | Verde; alcance parcial |
+| com.seashare.m2.reservas.application.service.VesselSearchServiceTest | 7 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.in.web.VesselSearchControllerTest | 7 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.out.finance.HttpBatchEstimateAdapterTest | 10 | 0 | 0 | 0 | Evidencia parcial según TC |

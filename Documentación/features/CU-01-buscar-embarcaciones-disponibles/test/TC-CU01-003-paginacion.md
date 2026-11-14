@@ -26,10 +26,10 @@ Verificar página de catálogo. Requisitos: FR-003, FR-008. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Paginación de catálogo pertenece a CU-01, no al adaptador de lote aislado.
+Se verifica la primera página de 20 en un catálogo de 25; no se observan los identificadores enviados a cotización.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java); no demuestran el flujo completo de CU-01.
+Ejecución V4 con dependencias controladas. Pruebas parciales de componentes: [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java); no demuestran el flujo completo de CU-01.
 
 ##### Preconditions & Default Setup
 Catálogo con más de 20 resultados y cotización lote observable.
@@ -38,9 +38,9 @@ Catálogo con más de 20 resultados y cotización lote observable.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar página y observar identificadores enviados a M3. | Datos de las precondiciones | El plan prevé página de hasta 20 y cotización solo de IDs visibles. | Pendiente | Componente MockMvc: VesselSearchControllerTest#searchWithoutFiltersReturnsFirstPageOfTwenty pasó: página de 20 de un catálogo simulado de 25. Falta observar los identificadores enviados a M3. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | VesselSearchControllerTest#searchWithoutFiltersReturnsFirstPageOfTwenty (XML V4: passed). Aserta tamaño 20, total 25 y dos páginas; el fake de cotización no registra los IDs recibidos. |
+| 2 | Ejecutar | Consultar página y observar identificadores enviados a M3. | Datos de las precondiciones | El plan prevé página de hasta 20 y cotización solo de IDs visibles. | Pendiente | VesselSearchControllerTest#searchWithoutFiltersReturnsFirstPageOfTwenty (XML V4: passed). Aserta tamaño 20, total 25 y dos páginas; el fake de cotización no registra los IDs recibidos. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | VesselSearchControllerTest#searchWithoutFiltersReturnsFirstPageOfTwenty (XML V4: passed). Aserta tamaño 20, total 25 y dos páginas; el fake de cotización no registra los IDs recibidos. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Paginación de catálogo pertenece a CU-01, no al adaptador de lote aislado.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Cobertura parcial; faltan las comprobaciones indicadas en el flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: VesselSearchControllerTest#searchWithoutFiltersReturnsFirstPageOfTwenty. Se verifica la primera página de 20 en un catálogo de 25; no se observan los identificadores enviados a cotización.
 
 #### Traceability
 FR-003, FR-008 | SC-001 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java#searchWithoutFiltersReturnsFirstPageOfTwenty | In Process
