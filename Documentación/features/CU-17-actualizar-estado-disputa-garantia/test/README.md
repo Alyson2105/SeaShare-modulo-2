@@ -38,10 +38,10 @@ Casos de resolución administrativa y transición interna de disputas. El contex
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Parcial | Actualizaciones probadas parcialmente; D-01 sin resolver. |
-| SC-002 | Parcial | Inmutabilidad probada parcialmente; carrera real no ejecutada. |
-| SC-003 | Sin evidencia integral | Sin prueba integral de ausencia de operaciones financieras. |
-| SC-004 | Parcial | Motivo de rechazo probado con repositorio simulado; falta persistencia integral. |
+| SC-001 | Parcialmente demostrado | Actualizaciones probadas parcialmente; D-01 sin resolver. |
+| SC-002 | Parcialmente demostrado | Inmutabilidad probada parcialmente; carrera real no ejecutada. |
+| SC-003 | No demostrado | Sin prueba integral de ausencia de operaciones financieras. |
+| SC-004 | Parcialmente demostrado | Motivo de rechazo probado con repositorio simulado; falta persistencia integral. |
 
 ## Checklist de ejecución
 
@@ -57,7 +57,7 @@ Casos de resolución administrativa y transición interna de disputas. El contex
 
 ## Brechas detectadas
 
-1. [Contexto](../../../context/implementContext.md): CU-17, CU-16 y publicación de CU-18 existen; CU-07 aún no conecta la apertura de CU-16.
+1. [Contexto](../../../context/implementContext.md): CU-17, CU-16 y publicación de CU-18 existen; H10 conecta CU-07 con la apertura de CU-16.
 2. El spec deja abierta la resolución de PENDING sin reclamo y el tamaño del motivo; el plan propone un límite.
 3. CU-16 FR-011 traduce ACCEPTED a COMPLETADO y REJECTED a APPROVED, mientras CU-17 FR-007 y plan CU-18 indican COMPLETED y REJECTED, y CU-18 spec FR-002 presenta ACCEPTED; confirmar contrato de M3.
 4. El plan describe `m3_event_published` como emisión a RabbitMQ; UpdateDisputeStatusService#update lo deriva del estado final tras encolar, sin confirmar entrega ni consumo.
@@ -68,17 +68,17 @@ Casos de resolución administrativa y transición interna de disputas. El contex
 
 - **Draft**: contrato incompleto o inconsistente.
 - **In Process**: ejecutable con implementación actual.
-- **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
+- **Approved**: escenario y postcondiciones demostrados por aserciones de la corrida V4, sin impedimentos de aprobación.
 - **Blocked**: depende de funcionalidad pendiente.
 
 ## Ejecución automatizada — 2026-11-13
 
-`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes; el fallo no se atribuye a CU-17. Las pruebas unitarias usan puertos simulados; las de integración usan PostgreSQL y, cuando corresponde, RabbitMQ.
+`sg docker -c 'bash ./mvnw -B clean test'`; inicio 2026-11-13T19:02:00-05:00, fin 2026-11-13T19:03:11-05:00; BASELINE_HEAD `568290a0d4334b477a4b0f9d5e949e981da3fa55`; salida 0. Las pruebas unitarias usan puertos simulados; las de integración usan PostgreSQL y, cuando corresponde, RabbitMQ.
 
 | Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| com.seashare.m2.disputa.application.service.UpdateDisputeStatusServiceTest | 9 | 0 | 0 | 0 | Verde; alcance según TC |
-| com.seashare.m2.disputa.infrastructure.adapter.in.web.DisputeAdminControllerTest | 9 | 0 | 0 | 0 | Verde; alcance según TC |
-| com.seashare.m2.disputa.integration.DisputeFinalStateImmutabilityTest | 2 | 0 | 0 | 0 | Verde; alcance según TC |
-| com.seashare.m2.disputa.integration.DisputeWindowCloseIntegrationTest | 4 | 0 | 0 | 0 | Verde; alcance según TC |
-| com.seashare.m2.disputa.integration.DisputePublishingIntegrationTest | 4 | 0 | 0 | 0 | Verde; alcance según TC |
+| com.seashare.m2.disputa.application.service.UpdateDisputeStatusServiceTest | 9 | 0 | 0 | 0 | Parcial para los escenarios relacionados |
+| com.seashare.m2.disputa.infrastructure.adapter.in.web.DisputeAdminControllerTest | 9 | 0 | 0 | 0 | Parcial para los escenarios relacionados |
+| com.seashare.m2.disputa.integration.DisputeFinalStateImmutabilityTest | 2 | 0 | 0 | 0 | Parcial para los escenarios relacionados |
+| com.seashare.m2.disputa.integration.DisputePublishingIntegrationTest | 4 | 0 | 0 | 0 | Parcial para los escenarios relacionados |
+| com.seashare.m2.disputa.integration.DisputeWindowCloseIntegrationTest | 4 | 0 | 0 | 0 | Parcial para los escenarios relacionados |

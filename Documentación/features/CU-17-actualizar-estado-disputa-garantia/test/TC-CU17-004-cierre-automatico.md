@@ -26,7 +26,7 @@ Verificar cierre automático. Requisitos: FR-002, FR-006. Criterios: SC-001, SC-
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La política de reintento del job está pendiente; la prueba ejecuta el barrido directamente. DisputeWindowCloseJob se habilita con m2.scheduler.dispute.enabled=true y está desactivado por defecto.
+El barrido directo con PostgreSQL demuestra cierre e historial; el scheduler está deshabilitado por defecto y no se ejecutó programado en esta prueba.
 
 ##### Dependencies & Assumptions
 Se emplean las dependencias señaladas en la evidencia; los mocks y servicios externos no acreditan el flujo completo.
@@ -38,9 +38,9 @@ Disputa PENDING sin reclamo y ventana vencida.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd: verde con PostgreSQL y reloj simulado; barrido ejecutado directamente, estado REJECTED, motivo, actor SYSTEM e historial persistidos. |
-| 2 | Ejecutar | Ejecutar vencimiento de CU-16 mediante la operación interna de CU-17. | Datos de las precondiciones | El sistema transiciona a REJECTED con motivo informativo. | Pendiente | DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd: verde con PostgreSQL y reloj simulado; barrido ejecutado directamente, estado REJECTED, motivo, actor SYSTEM e historial persistidos. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd: verde con PostgreSQL y reloj simulado; barrido ejecutado directamente, estado REJECTED, motivo, actor SYSTEM e historial persistidos. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pasó | DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd (XML V4: passed). Aserta un cierre, REJECTED, motivo, resolvedBy nulo, instante e historial SYSTEM persistidos; el caso de uso se invoca directamente. |
+| 2 | Ejecutar | Ejecutar vencimiento de CU-16 mediante la operación interna de CU-17. | Datos de las precondiciones | El sistema transiciona a REJECTED con motivo informativo. | Pendiente | DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd (XML V4: passed). Aserta un cierre, REJECTED, motivo, resolvedBy nulo, instante e historial SYSTEM persistidos; el caso de uso se invoca directamente. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd (XML V4: passed). Aserta un cierre, REJECTED, motivo, resolvedBy nulo, instante e historial SYSTEM persistidos; el caso de uso se invoca directamente. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ La política de reintento del job está pendiente.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; barrido directo con reloj controlado y efectos persistidos; no se verificó ejecución programada.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd. El barrido directo con PostgreSQL demuestra cierre e historial; el scheduler está deshabilitado por defecto y no se ejecutó programado en esta prueba.
 
 #### Traceability
 FR-002, FR-006 | SC-001, SC-002 | Evidencia: src/test/java/com/seashare/m2/disputa/integration/DisputeWindowCloseIntegrationTest.java#closesAtExactWindowEnd | In Process
