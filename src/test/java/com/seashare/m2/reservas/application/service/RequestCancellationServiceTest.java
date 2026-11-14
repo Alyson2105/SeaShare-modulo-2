@@ -340,17 +340,16 @@ class RequestCancellationServiceTest { // CU-04: reglas de aplicacion de la canc
     }
 
     @Test
-    void ownerCanCancelAfterDeparture() { // el propietario no mide tiempo
+    void ownerCannotCancelAtOrAfterDeparture() { // spec US2/FR-002: el propietario tampoco cancela tras el zarpe
         Instant afterDeparture = ZARPE.plus(Duration.ofHours(1));
         when(reservationRepository.findById(RESERVATION_ID)).thenReturn(Optional.of(reserved(true)));
         when(clockPort.now()).thenReturn(afterDeparture);
-        when(changeReservationStatusUseCase.execute(any()))
-                .thenReturn(statusResult(CancellationSubtype.BY_OWNER, List.of("AMQP", "M1_HTTP")));
 
-        CancellationResult result = service.execute(ownerCommand("logistics_force_majeure", null));
-
-        assertThat(result.cancelledAt().toInstant()).isEqualTo(afterDeparture);
-        verify(cancellationEventPort).save(any());
+        assertThatThrownBy(() -> service.execute(ownerCommand("logistics_force_majeure", null)))
+                .isInstanceOfSatisfying(ReservationRuleException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(ErrorCode.INVALID_RESERVATION_STATE.getCode()));
+        verify(changeReservationStatusUseCase, never()).execute(any());
+        verify(cancellationEventPort, never()).save(any());
     }
 
     @Test

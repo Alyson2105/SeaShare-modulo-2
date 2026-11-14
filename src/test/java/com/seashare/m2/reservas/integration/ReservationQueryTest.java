@@ -178,6 +178,52 @@ class ReservationQueryTest { // pruebas de integracion de endpoints de consulta 
     }
 
     @Test
+    void paginationDefaultsToTenAndServesSecondPage() throws Exception { // CU-20: default 10, pagina 2 y limite maximo 50
+        UUID renter = UUID.randomUUID();
+        UUID vesselId = UUID.randomUUID();
+        for (int i = 0; i < 12; i++) {
+            createReservation(renter, vesselId);
+        }
+
+        mockMvc.perform(get("/api/v1/reservations")
+                        .header("X-User-Id", renter.toString())
+                        .header("X-User-Role", "RENTER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pagination.page").value(1))
+                .andExpect(jsonPath("$.pagination.page_size").value(10)) // valor predeterminado
+                .andExpect(jsonPath("$.pagination.total_items").value(12))
+                .andExpect(jsonPath("$.pagination.total_pages").value(2))
+                .andExpect(jsonPath("$.reservations.length()").value(10));
+
+        mockMvc.perform(get("/api/v1/reservations")
+                        .header("X-User-Id", renter.toString())
+                        .header("X-User-Role", "RENTER")
+                        .param("page", "2")
+                        .param("limit", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pagination.page").value(2))
+                .andExpect(jsonPath("$.reservations.length()").value(2));
+
+        mockMvc.perform(get("/api/v1/reservations")
+                        .header("X-User-Id", renter.toString())
+                        .header("X-User-Role", "RENTER")
+                        .param("page", "2")
+                        .param("limit", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pagination.page_size").value(1))
+                .andExpect(jsonPath("$.reservations.length()").value(1));
+
+        mockMvc.perform(get("/api/v1/reservations")
+                        .header("X-User-Id", renter.toString())
+                        .header("X-User-Role", "RENTER")
+                        .param("page", "1")
+                        .param("limit", "50"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pagination.page_size").value(50))
+                .andExpect(jsonPath("$.reservations.length()").value(12));
+    }
+
+    @Test
     void listsWithAppliedFilter() throws Exception { // history excluye canceladas y cancelled las aisla
         UUID renter = UUID.randomUUID();
 
@@ -272,7 +318,8 @@ class ReservationQueryTest { // pruebas de integracion de endpoints de consulta 
                 .andExpect(jsonPath("$.owner.name").value("Propietario demo"))
                 .andExpect(jsonPath("$.payment_summary.section_title").value("Resumen de pago"))
                 .andExpect(jsonPath("$.payment_summary.currency").value("COP"))
-                .andExpect(jsonPath("$.payment_summary.total_paid").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.payment_summary.estimated_total").value(5000000.0)) // estimacion local explicita
+                .andExpect(jsonPath("$.payment_summary.total_paid").value(org.hamcrest.Matchers.nullValue())) // aun no liquidado
                 .andExpect(jsonPath("$.payment_summary.rental_amount").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.payment_summary.insurance_amount").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.available_actions.can_cancel").value(true))

@@ -14,6 +14,9 @@ public record VesselDetailResponse( // ficha tecnica de CU-19 Endpoint 1
         @JsonProperty("name")
         String name, // nombre comercial
 
+        @JsonProperty("registration_number")
+        String registrationNumber, // matricula oficial provista por M1
+
         @JsonProperty("navigation_type")
         String navigationType, // tipo de navegacion segun M1
 
@@ -67,6 +70,7 @@ public record VesselDetailResponse( // ficha tecnica de CU-19 Endpoint 1
         return new VesselDetailResponse(
                 detail.vesselId(),
                 detail.name(),
+                detail.registrationNumber(),
                 detail.type(),
                 detail.maxCapacity(),
                 detail.lengthFeet(),

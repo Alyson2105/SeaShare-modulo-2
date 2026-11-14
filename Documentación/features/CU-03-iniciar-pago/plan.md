@@ -7,7 +7,7 @@
 Este caso de uso expone la operación REST que formaliza la transición transaccional hacia el cobro de una reserva existente (FR-001 a FR-015). Actúa como la extensión (`<<extend>>`) anclada a `Ver detalle de reserva` (CU-21), ejecutándose cuando el Arrendatario titular decide proceder al pago de una reserva en estado `INITIATED` tras aceptar expresamente la política de cancelación.
 
 Al ejecutarse exitosamente:
-1. Valida que la reserva exista, pertenezca al usuario autenticado y se encuentre estrictamente en estado **`INITIATED`** con su TTL vigente (FR-002).
+1. Valida que la reserva exista, pertenezca al usuario autenticado y tenga TTL vigente y esté en `INITIATED` para el primer inicio o en `PENDING_PAYMENT` tras `REJECTED` para un reintento (FR-002).
 2. Consulta el cálculo final oficial vinculante invocando a `Brindar cálculo total de la reserva` (`<<include>>`, FR-003) respaldado por el contrato de [`CU-12 Brindar cálculo total de la reserva`](../CU-12-brindar-calculo-total-reserva/plan.md).
 3. Adquiere el bloqueo pesimista de fila en base de datos (`SELECT ... FOR UPDATE`) sobre la reserva y evalúa la no existencia de solapamiento temporal (`daterange(start_date, end_date, '[]')`) contra reservas del mismo barco en estados retenidos (`PENDING_PAYMENT`, `RESERVED`, `IN_NAVIGATION`), junto con la validación atómica de estado físico en tiempo real consultando a Módulo 1 mediante el [plan de CU-10](../CU-10-brindar-informacion-estado-operativo/plan.md) (`<<include>>`, FR-005).
 4. Resuelve la contienda concurrente bajo la regla **First-Come First-Served (FCFS)**: si otra reserva ganó el activo para las mismas fechas, rechaza con `409 Conflict` (FR-008, SC-002). Como salvaguarda física infalible a nivel de base de datos, la restricción `EXCLUDE USING gist` en PostgreSQL aborta atómicamente cualquier carrera concurrente con violación de exclusión (`exclusion_violation` 23P01).
@@ -39,7 +39,7 @@ POST /api/v1/reservations/{reservation_id}/payments
 
 | Nombre | Tipo | Obligatorio | Descripción |
 |---|---|---|---|
-| `reservation_id` | string (UUID) | Sí | Identificador de la reserva en estado `INITIATED` (FR-001) |
+| `reservation_id` | string (UUID) | Sí | Identificador de la reserva; `INITIATED` para primer inicio o `PENDING_PAYMENT` para reintento autorizado (FR-001) |
 
 **Query Parameters**: No tiene.
 
@@ -168,7 +168,7 @@ curl -X POST "https://api.seashare.com/api/v1/reservations/e4f81c92-7a20-4215-9c
 | `401 Unauthorized` | Token ausente, inválido o expirado | `{ "code": "UNAUTHENTICATED", "message": "Token de autenticación ausente o inválido" }` |
 | `403 Forbidden` | El usuario autenticado no es el Arrendatario titular de la reserva | `{ "code": "RESERVATION_NOT_OWNED", "message": "No tienes autorización para iniciar el pago de esta reserva" }` |
 | `404 Not Found` | La reserva no existe en el sistema | `{ "code": "RESERVATION_NOT_FOUND", "message": "La reserva especificada no existe" }` |
-| `409 Conflict` (Estado Inválido) | La reserva no se encuentra en estado `INITIATED` (ej. ya está `PENDING_PAYMENT`, `RESERVED`, `CANCELLED`) (FR-002) | `{ "code": "INVALID_RESERVATION_STATE", "message": "Solo se puede iniciar el pago de reservas en estado Iniciada (estado actual: Pendiente de Pago)" }` |
+| `409 Conflict` (Estado Inválido) | La reserva no admite primer inicio ni reintento: `RESERVED`, `CANCELLED` u otro estado incompatible; `PENDING_PAYMENT` solo permite reintento tras `REJECTED` y con TTL vigente (FR-002) | `{ "code": "INVALID_RESERVATION_STATE", "message": "Solo se puede iniciar el pago de reservas en estado Iniciada (estado actual: Pendiente de Pago)" }` |
 | `409 Conflict` (TTL Expirado) | El temporizador TTL de 15 minutos venció antes de iniciar el pago (Edge Case TTL) | `{ "code": "RESERVATION_EXPIRED", "message": "El tiempo límite de 15 minutos para iniciar el pago de esta reserva ha expirado" }` |
 | `409 Conflict` (Carrera Concurrente FCFS / Violación GiST) | Las fechas acaban de ser retenidas por otro usuario que pagó primero, detectado por bloqueo pesimista o por violación de la restricción GiST de PostgreSQL (`exclusion_violation` 23P01) (FR-008, SC-002) | `{ "code": "CONCURRENCY_CONFLICT", "message": "La embarcación ya no se encuentra disponible para las fechas seleccionadas debido a un pago concurrente" }` |
 | `409 Conflict` | Reintento no permitido: la reserva está en Pendiente de Pago y el último cobro de M3 no figura como REJECTED | `{ "code": "RETRY_NOT_ALLOWED", "message": "Ya hay un cobro en proceso para esta reserva" }` |
@@ -209,7 +209,7 @@ No aplica. Operación transaccional sobre un agregado de reserva individual.
 | Requisito / Criterio | Descripción en Spec | Elemento de este Contrato |
 |---|---|---|
 | **FR-001** | Activación como extensión desde `Ver detalle de reserva` | Path parameter `reservation_id` y contexto de invocación |
-| **FR-002** | Inicio de pago exclusivo desde estado `INITIATED` | Manejo de error `409 INVALID_RESERVATION_STATE` |
+| **FR-002** | Primer inicio desde `INITIATED`; reintento desde `PENDING_PAYMENT` tras `REJECTED` | Manejo de error `409 INVALID_RESERVATION_STATE` |
 | **FR-003** | Invocación subordinada a `Brindar cálculo total de la reserva` | Integración respaldada por el [plan de CU-12](../CU-12-brindar-calculo-total-reserva/plan.md) |
 | **FR-004** | Prohibición estricta de cálculo o alteración monetaria en M2 | Objeto `total_calculation` poblado literalmente |
 | **FR-005** | Validación atómica bajo lock pesimista (`SELECT ... FOR UPDATE`) y chequeo de M1 (CU-10) | Consulta respaldada por el [plan de CU-10](../CU-10-brindar-informacion-estado-operativo/plan.md) y validación transaccional |

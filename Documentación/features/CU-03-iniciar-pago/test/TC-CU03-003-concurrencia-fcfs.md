@@ -61,3 +61,6 @@ Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: Pa
 
 #### Traceability
 FR-005, FR-008 | SC-002 | [estado](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#overlappingReservationLosesTheFcfsRace | In Process
+
+#### Evidencia local posterior a V4 — 2026-11-13
+PaymentRetryConcurrencyTest#simultaneousPaymentsForOverlappingReservationsHaveOneWinner: dos hilos, transacciones independientes y PostgreSQL local; una reserva queda PENDING_PAYMENT y la otra recibe CONCURRENCY_CONFLICT. Corrida focalizada del 2026-11-13: 19 pruebas sin fallos. Flota y cálculo son simulados; no acredita la integración M1/M3. Veredicto técnico: Partial.

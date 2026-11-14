@@ -61,3 +61,9 @@ Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: StartPaym
 
 #### Traceability
 FR-002, FR-009 | SC-001, SC-003 | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#retryAfterRejectedReusesThePersistedCalculation | Draft
+
+#### Evidencia local posterior a V4 — 2026-11-13
+PaymentRetryConcurrencyTest#concurrentRetriesConsumeOneRejectionOnlyOnce: dos transacciones concurrentes sobre PostgreSQL aceptaron un solo reintento por rechazo y produjeron un solo mensaje adicional; suite focalizada de 28 pruebas sin fallos el 2026-11-13. El contrato INITIATED frente a PENDING_PAYMENT sigue pendiente de decisión. Veredicto técnico: Partial; no se declara integración externa exitosa.
+
+#### Decisión aprobada — 2026-11-13
+Se aprobó el reintento desde PENDING_PAYMENT tras REJECTED y con TTL vigente, conservando cálculo y vencimiento. Esta decisión no modifica automáticamente el veredicto del TC.

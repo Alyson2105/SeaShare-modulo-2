@@ -20,10 +20,7 @@ public final class DisputeStateMachine { // reglas de transicion del objeto disp
         if (target == null) { // destino obligatorio
             throw new DisputeRuleException(ErrorCode.INVALID_PARAMETERS, "Target status is required");
         }
-        if (target == DisputeStatus.ACCEPTED && !hasClaim) { // D-6: aceptar exige reclamo registrado
-            // [NEEDS CLARIFICATION] CU-17 D-01: el spec no cierra si el Admin puede aceptar sin reclamo.
-            // Decision H9: solo se permite REJECTED o mantener PENDING; INVALID_RESERVATION_STATE es el
-            // codigo 409 mas cercano del catalogo vigente y no se inventa uno nuevo.
+        if (target == DisputeStatus.ACCEPTED && !hasClaim) { // aceptar exige reclamo registrado
             throw new DisputeRuleException(ErrorCode.INVALID_RESERVATION_STATE,
                     "A dispute can only be ACCEPTED when the owner has registered a claim");
         }

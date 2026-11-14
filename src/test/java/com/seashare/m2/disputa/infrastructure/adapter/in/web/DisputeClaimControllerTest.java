@@ -88,7 +88,7 @@ class DisputeClaimControllerTest { // contrato HTTP de POST /api/v1/disputes/{id
                 .andExpect(jsonPath("$.auto_close_disabled").value(true))
                 .andExpect(jsonPath("$.window_24h.start_at").value("2026-11-13T10:00:00Z"))
                 .andExpect(jsonPath("$.window_24h.end_at").value("2026-11-14T10:00:00Z"))
-                .andExpect(jsonPath("$.window_24h.window_status").value("CLOSED_BY_CLAIM_FILED"));
+                .andExpect(jsonPath("$.window_24h.window_status").value("OPEN_FOR_EDIT"));
 
         ArgumentCaptor<RegisterDisputeClaimCommand> captor = ArgumentCaptor.forClass(RegisterDisputeClaimCommand.class);
         verify(useCase).register(captor.capture());

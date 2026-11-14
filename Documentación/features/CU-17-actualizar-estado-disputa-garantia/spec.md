@@ -54,7 +54,7 @@ Si la revisión todavía no terminó, el Admin puede dejar constancia de que la 
 
 - **Actualización sobre estado final**: si la disputa ya está en REJECTED o ACCEPTED (incluido el cierre automático por vencimiento), el sistema DEBE rechazar cualquier intento de cambio (ni el Admin ni ningún otro actor pueden reabrirla). REJECTED y ACCEPTED son estados finales.
 - **Carrera entre resolución del Admin y cierre por vencimiento**: si el Admin resuelve en el mismo instante en que vence la ventana, el sistema DEBE garantizar atomicidad: solo una de las dos transiciones se aplica; la otra se rechaza (si ganó el vencimiento, la disputa ya está finalizada; si ganó el Admin, el vencimiento posterior no la altera).
-- **Actualización sin reclamo presentado**: la precondición de la revisión por el Admin es el estado PENDING. [DUDA — ver lista de dudas al final del documento] no está definido si el Admin puede resolver una disputa PENDING que aún no tiene reclamo registrado (antes del vencimiento).
+- **Actualización sin reclamo presentado**: el Admin no puede resolver ACCEPTED ni REJECTED una disputa sin reclamo. El sistema conserva el cierre automático por vencimiento sin reclamo.
 - **Motivo extenso o con formato**: el motivo es texto libre opcional; [NEEDS CLARIFICATION: longitud máxima y reglas de contenido del campo motivo — se define en diseño, no en este spec].
 - **Admin sin permisos**: solo el rol Admin puede ejecutar este caso de uso; cualquier otro actor DEBE ser rechazado.
 
@@ -100,5 +100,5 @@ Si la revisión todavía no terminó, el Admin puede dejar constancia de que la 
 
 ## Dudas abiertas de este spec
 
-- **D-01**: ¿Puede el Admin resolver (ACCEPTED/REJECTED) una disputa PENDING que aún no tiene reclamo registrado, antes de que venza la ventana?
+- **D-01 — Resuelta:** el Admin no puede resolver sin reclamo; se espera el reclamo o el cierre automático por vencimiento.
 - **D-02**: Longitud máxima y reglas de contenido del campo motivo — se define en diseño.

@@ -87,3 +87,5 @@ Casos de creación automática, reclamo y vencimiento de disputa. El contexto de
 | com.seashare.m2.disputa.integration.OpenDisputeIntegrationTest | 3 | 0 | 0 | 0 | Parcial para los escenarios relacionados |
 | com.seashare.m2.disputa.integration.RegisterDisputeClaimIntegrationTest | 6 | 0 | 0 | 0 | Parcial para los escenarios relacionados |
 | com.seashare.m2.reservas.integration.NavigationEndDisputeRollbackTest | 1 | 0 | 0 | 0 | Parcial para los escenarios relacionados |
+
+**Decisión aprobada y evidencia local 2026-11-13:** TC-CU16-006-reclamo-repetido.md — Decisión aprobada: un reclamo editable mediante PUT dentro de 24 h, con historial. RegisterDisputeClaimIntegrationTest#editPreservesOriginalAndAppendsHistory, #editAtExpiryIsRejected y #otherOwnerCannotEdit verifican persistencia, borde y autorización; el segundo POST sigue rechazándose. EditDisputeClaimControllerTest#ownerCanSubmitAnEditedClaim verifica la ruta con identidad simulada. Corrida focalizada 2026-11-13: 32 pruebas, sin fallos. Falta prueba integral de concurrencia edición/resolución y autenticación real.

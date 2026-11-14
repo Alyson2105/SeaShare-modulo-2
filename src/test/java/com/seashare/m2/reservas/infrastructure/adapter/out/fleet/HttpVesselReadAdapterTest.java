@@ -55,6 +55,7 @@ class HttpVesselReadAdapterTest { // pruebas WireMock del adaptador de ficha y r
                 {
                   "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
                   "name": "Yate Tayrona",
+                  "registration_number": "CP-04-2021-0892",
                   "type": "YACHT",
                   "max_capacity": 12,
                   "length_feet": 48.5,
@@ -86,6 +87,7 @@ class HttpVesselReadAdapterTest { // pruebas WireMock del adaptador de ficha y r
         VesselDetail detail = adapter.getDetail(VESSEL_ID);
 
         assertThat(detail.name()).isEqualTo("Yate Tayrona");
+        assertThat(detail.registrationNumber()).isEqualTo("CP-04-2021-0892");
         assertThat(detail.type()).isEqualTo("YACHT");
         assertThat(detail.maxCapacity()).isEqualTo(12);
         assertThat(detail.lengthFeet()).isEqualTo(48.5);

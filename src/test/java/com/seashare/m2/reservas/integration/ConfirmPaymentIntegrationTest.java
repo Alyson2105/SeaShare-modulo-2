@@ -23,6 +23,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
+import jakarta.persistence.EntityManager;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,6 +65,12 @@ class ConfirmPaymentIntegrationTest { // CU-13: confirmacion de cobro con Postgr
 
     @Autowired
     private ReservationRepositoryPort reservationRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @MockitoBean
     private ClockPort clockPort;
@@ -165,6 +173,29 @@ class ConfirmPaymentIntegrationTest { // CU-13: confirmacion de cobro con Postgr
         assertThat(result.outcome()).isEqualTo(PaymentConfirmationOutcome.PAYMENT_FAILED);
         assertThat(reservationRepository.findById(id).orElseThrow().getStatus())
                 .isEqualTo(ReservationStatus.PAYMENT_FAILED);
+    }
+
+    @Test
+    void failedConfirmationDoesNotNotifyM1OrRepeatEffects() {
+        UUID id = createInitiated();
+        startPayment(id, "tok_failed");
+        entityManager.flush();
+        Integer before = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM outbox_message WHERE destination = 'M1_HTTP' AND payload LIKE ?",
+                Integer.class, "%" + id + "%");
+
+        ConfirmPaymentResult first = confirm(id, PaymentStatus.FAILED, "simulated-failure");
+        confirm(id, PaymentStatus.FAILED, "simulated-failure");
+        entityManager.flush();
+
+        assertThat(first.outcome()).isEqualTo(PaymentConfirmationOutcome.PAYMENT_FAILED);
+        assertThat(reservationRepository.findById(id).orElseThrow().getStatus()).isEqualTo(ReservationStatus.PAYMENT_FAILED);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM outbox_message WHERE destination = 'M1_HTTP' AND payload LIKE ?",
+                Integer.class, "%" + id + "%")).isEqualTo(before);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM reservation_status_audit WHERE reservation_id = ? AND to_status = 'PAYMENT_FAILED'",
+                Integer.class, id)).isEqualTo(1);
     }
 
     @Test

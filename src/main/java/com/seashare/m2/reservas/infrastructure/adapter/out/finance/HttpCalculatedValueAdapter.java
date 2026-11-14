@@ -32,6 +32,10 @@ public class HttpCalculatedValueAdapter implements CalculatedValuePort { // clie
 
     private static final String CALCULATED_VALUE_SUFFIX = "/calculated-value"; // sufijo del recurso
 
+    private static final int NOT_FOUND_RETRIES = 3; // reintentos documentados ante 404
+
+    private static final long NOT_FOUND_RETRY_DELAY_MS = 300L; // espera indicada por el plan de CU-12
+
     private final RestClient restClient; // cliente con timeouts propios ya configurados
 
     public HttpCalculatedValueAdapter(@Qualifier("calculatedValueRestClient") RestClient restClient) { // cliente propio de CU-12
@@ -44,15 +48,21 @@ public class HttpCalculatedValueAdapter implements CalculatedValuePort { // clie
         return parse(body); // desglose opaco sin aritmetica
     }
 
-    private String post(UUID reservationId) { // POST sin esperas: el 404 se devuelve al cliente para que reintente
+    private String post(UUID reservationId) { // POST con reintentos acotados ante 404 de M3
         String path = RESERVATIONS_PATH + reservationId + CALCULATED_VALUE_SUFFIX; // ruta completa
         boolean socketRetried = false; // unico reintento de socket ya usado
+        int notFoundRetries = 0; // reintentos por informacion aun no registrada
         while (true) { // el bucle solo sale por return o throw
             try {
                 ResponseEntity<String> response = exchange(path); // una llamada HTTP
                 if (response.getStatusCode().value() == 404) { // M3 aun no tiene el calculo (llega de forma asincrona)
+                    if (notFoundRetries < NOT_FOUND_RETRIES) { // quedan reintentos permitidos
+                        notFoundRetries++; // consume uno
+                        sleepBeforeRetry(); // espera acotada antes de repetir la solicitud
+                        continue; // repite la solicitud
+                    }
                     throw new ReservationRuleException(ErrorCode.CALCULATION_UNAVAILABLE,
-                            "Finance calculation is not available yet; retry later"); // sin dormir el hilo
+                            "Finance calculation is not available yet; retry later"); // agotados los reintentos
                 }
                 return response.getBody() == null ? "" : response.getBody(); // 200 con cuerpo
             } catch (ResourceAccessException e) { // fallo de red antes de llegar a respuesta
@@ -62,6 +72,16 @@ public class HttpCalculatedValueAdapter implements CalculatedValuePort { // clie
                 }
                 throw new ReservationRuleException(ErrorCode.CALCULATION_UNAVAILABLE, "Finance service is unreachable"); // timeout o sin conexion
             }
+        }
+    }
+
+    private static void sleepBeforeRetry() { // espera documentada de 300 ms entre reintentos de 404
+        try {
+            Thread.sleep(NOT_FOUND_RETRY_DELAY_MS); // pausa acotada
+        } catch (InterruptedException e) { // el hilo fue interrumpido
+            Thread.currentThread().interrupt(); // conserva la interrupcion
+            throw new ReservationRuleException(ErrorCode.CALCULATION_UNAVAILABLE,
+                    "Finance calculation retry was interrupted"); // falla de forma controlada
         }
     }
 

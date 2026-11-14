@@ -44,7 +44,7 @@ public record InternalReservationResponse(
         String cancellationActor, // RENTER, OWNER o SYSTEM_TTL
 
         @JsonProperty("cancellation_anticipation_hours")
-        BigDecimal cancellationAnticipationHours, // siempre nulo hasta CU-04
+        BigDecimal cancellationAnticipationHours, // horas de anticipacion registradas por CU-04
 
         @JsonProperty("checkin_checkout")
         CheckinCheckout checkinCheckout, // datos reales de muelle
@@ -126,8 +126,7 @@ public record InternalReservationResponse(
                 view.status(), // estado interno
                 view.cancellationSubtype(), // subtipo
                 view.cancellationActor(), // actor de cancelacion
-                // [NEEDS CLARIFICATION] CU-04 (cancelacion) aun no persiste cancellation_event: no hay dato que inventar.
-                null, // cancellation_anticipation_hours: nulo hasta que CU-04 registre la anticipacion real
+                anticipationHours(view.cancellationAnticipationMinutes()), // horas reales o nulas sin evento
                 new CheckinCheckout(
                         instantText(view.actualDepartureAt()), // check-in real
                         instantText(view.actualArrivalAt()), // check-out real
@@ -141,6 +140,13 @@ public record InternalReservationResponse(
                 instantText(view.createdAt()), // creacion
                 instantText(view.updatedAt()) // actualizacion
         );
+    }
+
+    private static BigDecimal anticipationHours(Long anticipationMinutes) { // convierte minutos persistidos a horas del contrato
+        if (anticipationMinutes == null) { // sin evento de cancelacion
+            return null; // se informa nulo
+        }
+        return BigDecimal.valueOf(anticipationMinutes / 60.0); // conversion temporal, sin redondear a dos decimales
     }
 
     private static ZoneId resolveZone(String timezone) { // valida la zona horaria sin aplicar valores por defecto

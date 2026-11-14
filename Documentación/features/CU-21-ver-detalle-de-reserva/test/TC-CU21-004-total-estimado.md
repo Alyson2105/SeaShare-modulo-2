@@ -26,7 +26,7 @@ Verificar total estimado persistido. Requisitos: FR-003, FR-004. Criterios: SC-0
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-spec.md FR-004 exige valores de M3 al pago; plan.md §2 admite estimación previa para INITIATED. El caso no fija estado y pide estimated_total como cadena; el plan define total_paid numérico o nulo.
+CU-21: el total calculado antes de confirmar el pago ya no se presenta como total pagado. La representación de estimated_total y el contrato definitivo siguen pendientes.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java); su cobertura debe evaluarse por escenario.
@@ -63,3 +63,9 @@ Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: Reservati
 
 #### Traceability
 FR-003, FR-004 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#detailIncludesContractFields | Draft
+
+#### Evidencia local posterior a V4 — 2026-11-13
+ReservationQueryServiceTest#calculatedTotalIsOnlyShownAsPaidAfterConfirmation; corrida focalizada 2026-11-13, 35 pruebas sin fallos; importes simulados. Veredicto técnico: Partial. No acredita integración real M1/M3 ni resuelve las decisiones contractuales pendientes.
+
+#### Decisión aprobada — 2026-11-13
+Se aprobaron estimación, cálculo solicitado y monto confirmado diferenciados. ReservationQueryServiceTest#calculatedTotalIsNeverPresentedAsConfirmedWithoutEvidence y PaymentIntegrationTest#breakdownIsPersistedForDetailView pasaron en 41 pruebas focalizadas; total_paid es nulo hasta contar con un importe confirmado de M3. Esta decisión no modifica automáticamente el veredicto del TC.

@@ -15,4 +15,6 @@ public interface PaymentAttemptPort { // CU-13: historial de intentos de cobro c
     int countAttempts(UUID reservationId); // intentos registrados para numerar el siguiente
 
     Optional<String> lastResult(UUID reservationId); // ultimo resultado registrado
+
+    boolean claimLastRejectionForRetry(UUID reservationId); // un rechazo habilita un solo reintento
 }

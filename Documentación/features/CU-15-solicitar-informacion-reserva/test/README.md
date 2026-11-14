@@ -70,3 +70,7 @@ Casos para el GET interno a M3. CU-15 está implementado con identidad temporal 
 | com.seashare.m2.reservas.application.service.GetInternalReservationServiceTest | 10 | 0 | 0 | 0 | Evidencia parcial según TC |
 | com.seashare.m2.reservas.infrastructure.adapter.in.web.InternalReservationControllerTest | 5 | 0 | 0 | 0 | Evidencia parcial según TC |
 | com.seashare.m2.reservas.integration.InternalReservationReadIntegrationTest | 2 | 0 | 0 | 0 | Evidencia parcial según TC |
+
+**Actualización local 2026-11-13:** TC-CU15-004-consulta-cancelacion.md — InternalReservationReadIntegrationTest#cancelledByRenterReportsPersistedAnticipation y #cancelledByOwnerIsReportedWithOwnerActor; PostgreSQL local; corrida focalizada 2026-11-13, 18 pruebas sin fallos. Resultado parcial; consultar limitaciones del caso.
+
+**Decisión aprobada 2026-11-13 — TC-CU15-002-consulta-ttl.md:** Se aprobó el GET sin efectos con remaining_seconds variable según el reloj.

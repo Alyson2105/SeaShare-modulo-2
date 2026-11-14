@@ -61,3 +61,6 @@ Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: UpdateDis
 
 #### Traceability
 FR-001, FR-002 | SC-001 | Evidencia: src/test/java/com/seashare/m2/disputa/application/service/UpdateDisputeStatusServiceTest.java#adminCannotAcceptWithoutClaim; src/test/java/com/seashare/m2/disputa/application/service/UpdateDisputeStatusServiceTest.java#adminCanRejectWithoutClaim | Draft
+
+#### Decisión aprobada y evidencia local — 2026-11-13
+Decisión aprobada: el administrador no puede resolver sin reclamo; el sistema sí puede cerrar por vencimiento. UpdateDisputeStatusServiceTest#adminCannotAcceptWithoutClaim, #adminCannotRejectWithoutClaim y #systemCloseRejectsWithoutClaimAndWithoutAdminReview pasaron en corrida focalizada de 32 pruebas. Falta autenticación real y prueba HTTP completa. Veredicto técnico: Partial.

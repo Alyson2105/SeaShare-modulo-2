@@ -74,3 +74,7 @@ Casos de CalculatedValuePort y cliente HTTP de M3; modo fake activo por defecto.
 | com.seashare.m2.reservas.application.service.StartPaymentServiceTest | 10 | 0 | 0 | 0 | Según TC; revisar discrepancia 404 |
 | com.seashare.m2.reservas.infrastructure.adapter.out.finance.HttpCalculatedValueAdapterTest | 22 | 0 | 0 | 0 | Según TC; revisar discrepancia 404 |
 | com.seashare.m2.reservas.integration.PaymentIntegrationTest | 10 | 0 | 0 | 0 | Según TC; revisar discrepancia 404 |
+
+**Actualización local 2026-11-13:** TC-CU12-003-reintentos-404.md — HttpCalculatedValueAdapterTest#notFoundRetriesUntilCalculationIsAvailable y #persistentNotFoundThrowsCalculationUnavailableAfterThreeRetries: respuestas HTTP simuladas, no integración real con M3; ambas pasaron en la suite completa de 640 pruebas del 2026-11-13. Resultado parcial.
+
+**Actualización local 2026-11-13:** TC-CU12-006-auditoria-calculo.md — CalculationAuditIntegrationTest verifica inserción de asientos SUCCESS y FAILED en PostgreSQL local; StartPaymentServiceTest verifica la invocación del puerto. Las 35 pruebas focalizadas pasaron el 2026-11-13. Falta demostrar el recorrido completo y la integración real con M3. Resultado parcial.

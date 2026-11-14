@@ -27,7 +27,7 @@ Verificar fallo definitivo. Requisitos: FR-005. Criterios: SC-002.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-El caso requiere FAILED, pero PaymentStatus no contiene FAILED y el canal A HTTP no está implementado; CANCELLED es otra entrada probada. Falta verificar ausencia de notificación M1.
+CU-13: FAILED se probó en el servicio local con PostgreSQL. El canal HTTP A sigue ausente y la integración real con M3 está aplazada.
 
 ##### Dependencies & Assumptions
 Ejecución V4 con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); no demuestran el flujo completo de CU-13.
@@ -47,7 +47,7 @@ Reserva PENDING_PAYMENT con resultado FAILED definitivo.
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-La confirmación interna ante CANCELLED está probada; FAILED del canal A carece de implementación.
+La confirmación interna simulada ante FAILED está probada; el canal A sigue sin implementación.
 
 #### Defect Severity Reference
 
@@ -62,3 +62,6 @@ Corrida V4 del 2026-11-13: Blocked; estado documental: Blocked; evidencia: Confi
 
 #### Traceability
 FR-005 | SC-002 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java#cancelledChargeFailsTheReservation; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#expiredAndPaymentFailedNotifyNobody | Blocked
+
+#### Evidencia local posterior a V4 — 2026-11-13
+ConfirmPaymentIntegrationTest#failedConfirmationDoesNotNotifyM1OrRepeatEffects; confirmación simulada, una transición persistida y ninguna nueva fila M1_HTTP; corrida focalizada 2026-11-13, 18 pruebas sin fallos. Veredicto técnico: Partial. No acredita integración real M1/M3 ni resuelve las decisiones contractuales pendientes.

@@ -150,6 +150,12 @@ public record ReservationDetailResponse( // contrato de respuesta del detalle de
             @JsonProperty("guarantee_deposit_amount")
             BigDecimal guaranteeDepositAmount, // deposito persistido
 
+            @JsonProperty("estimated_total")
+            BigDecimal estimatedTotal, // estimacion previa al pago
+
+            @JsonProperty("calculated_total")
+            BigDecimal calculatedTotal, // importe solicitado para el cobro
+
             @JsonProperty("total_paid")
             BigDecimal totalPaid, // total liquidado; null si aun no existe
 
@@ -233,6 +239,8 @@ public record ReservationDetailResponse( // contrato de respuesta del detalle de
                         view.paymentSummary().rentalAmount(),
                         view.paymentSummary().insuranceAmount(),
                         view.paymentSummary().guaranteeDepositAmount(),
+                        view.paymentSummary().estimatedTotal(),
+                        view.paymentSummary().calculatedTotal(),
                         view.paymentSummary().totalPaid(),
                         view.paymentSummary().clarifyingNote()),
                 new AvailableActionsResponse(

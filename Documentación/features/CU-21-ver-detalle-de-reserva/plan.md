@@ -591,3 +591,7 @@ El objeto `available_actions` abstrae la complejidad temporal y de roles:
 | **FR-021** | En `INITIATED`, proveer acceso para detonar `Iniciar pago`. | Flag `available_actions.can_initiate_payment: true`. |
 | **SC-001** | 100% de reservas en `RESERVED` proveen acceso directo al flujo de cancelación. | Validado mediante `can_cancel: true`. |
 | **SC-002** | Cero (0%) filtraciones de datos a usuarios no autorizados. | Garantizado por validación estricta de pertenencia y código `403`. |
+
+## Decisión aprobada: importes diferenciados
+
+La estimación previa y el cálculo solicitado para cobro no equivalen al importe efectivamente confirmado. `total_paid` no debe informarse como pagado antes de confirmar; el contrato exacto para el monto liquidado y su formato se acordará con M3. Hasta entonces M2 expone el cálculo persistido como `calculated_total` y mantiene `total_paid` nulo, incluso tras confirmar el estado, porque no dispone del importe efectivamente liquidado.

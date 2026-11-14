@@ -3,6 +3,7 @@ package com.seashare.m2.disputa.integration;
 import com.seashare.m2.disputa.application.dto.DisputeClaimView;
 import com.seashare.m2.disputa.application.dto.RegisterDisputeClaimCommand;
 import com.seashare.m2.disputa.application.port.in.RegisterDisputeClaimUseCase;
+import com.seashare.m2.disputa.application.port.in.EditDisputeClaimUseCase;
 import com.seashare.m2.disputa.application.port.out.DisputeRepositoryPort;
 import com.seashare.m2.disputa.domain.exception.DisputeNotFoundException;
 import com.seashare.m2.disputa.domain.exception.DisputeRuleException;
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,6 +65,9 @@ class RegisterDisputeClaimIntegrationTest { // reclamo contra PostgreSQL real co
 
     @Autowired
     private DisputeRepositoryPort disputeRepositoryPort; // verificacion por puerto
+
+    @Autowired private EditDisputeClaimUseCase editClaim;
+    @Autowired private JdbcTemplate jdbc;
 
     @MockitoBean
     private FleetInfoPort fleetInfoPort; // propietario simulado
@@ -166,6 +171,44 @@ class RegisterDisputeClaimIntegrationTest { // reclamo contra PostgreSQL real co
         when(clockPort.now()).thenReturn(BASE.plus(Duration.ofHours(2)));
         assertCode(() -> registerDisputeClaimUseCase.register(command(seeded, seeded.ownerId())),
                 "CLAIM_ALREADY_EXISTS");
+    }
+
+    @Test
+    void editPreservesOriginalAndAppendsHistory() {
+        Seeded seeded = openDispute();
+        var original = registerDisputeClaimUseCase.register(command(seeded, seeded.ownerId()));
+        when(clockPort.now()).thenReturn(WINDOW_END.minusSeconds(1));
+        var edited = editClaim.edit(new RegisterDisputeClaimCommand(seeded.dispute().disputeId(), seeded.ownerId(),
+                "Descripcion corregida y nueva evidencia", "equipment", List.of("https://cdn/new.jpg")));
+        assertThat(edited.claimId()).isEqualTo(original.claimId());
+        assertThat(edited.registeredAt()).isEqualTo(original.registeredAt());
+        assertThat(disputeRepositoryPort.findClaimByDisputeId(seeded.dispute().disputeId()).orElseThrow().description())
+                .isEqualTo("Descripcion corregida y nueva evidencia");
+        assertThat(jdbc.queryForObject("SELECT description FROM dispute_claim WHERE id = ?", String.class, original.claimId()))
+                .isEqualTo(DESCRIPTION);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM dispute_claim_revision WHERE claim_id = ?", Integer.class,
+                original.claimId())).isEqualTo(1);
+        editClaim.edit(new RegisterDisputeClaimCommand(seeded.dispute().disputeId(), seeded.ownerId(),
+                "Segunda descripcion y evidencia", "other", List.of()));
+        assertThat(disputeRepositoryPort.findClaimByDisputeId(seeded.dispute().disputeId()).orElseThrow().description())
+                .isEqualTo("Segunda descripcion y evidencia");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM dispute_claim_revision WHERE claim_id = ?", Integer.class,
+                original.claimId())).isEqualTo(2);
+    }
+
+    @Test
+    void editAtExpiryIsRejected() {
+        Seeded seeded = openDispute();
+        registerDisputeClaimUseCase.register(command(seeded, seeded.ownerId()));
+        when(clockPort.now()).thenReturn(WINDOW_END);
+        assertCode(() -> editClaim.edit(command(seeded, seeded.ownerId())), "WINDOW_EXPIRED");
+    }
+
+    @Test
+    void otherOwnerCannotEdit() {
+        Seeded seeded = openDispute();
+        registerDisputeClaimUseCase.register(command(seeded, seeded.ownerId()));
+        assertCode(() -> editClaim.edit(command(seeded, UUID.randomUUID())), "RESERVATION_NOT_OWNED");
     }
 
     @Test

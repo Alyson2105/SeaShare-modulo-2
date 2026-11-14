@@ -107,7 +107,7 @@ Este endpoint permite al **Propietario registrado** radicar formalmente su recla
   "window_24h": {
     "start_at": "2026-10-09T10:00:00-05:00",
     "end_at": "2026-10-10T10:00:00-05:00",
-    "window_status": "CLOSED_BY_CLAIM_FILED"
+    "window_status": "OPEN_FOR_EDIT"
   },
   "message": "Tu reclamo ha quedado formalmente registrado y ha sido derivado a la bandeja de revisión administrativa. La disputa continuará en estado PENDING hasta su resolución por un Administrador. No se ha aplicado ningún débito ni cálculo monetario."
 }
@@ -174,7 +174,7 @@ curl -X POST "https://api.seashare.com/api/v1/disputes/d1a2b3c4-e5f6-7a8b-9c0d-1
   "window_24h": {
     "start_at": "2026-10-09T10:00:00-05:00",
     "end_at": "2026-10-10T10:00:00-05:00",
-    "window_status": "CLOSED_BY_CLAIM_FILED"
+    "window_status": "OPEN_FOR_EDIT"
   },
   "message": "Tu reclamo ha quedado formalmente registrado y ha sido derivado a la bandeja de revisión administrativa. La disputa continuará en estado PENDING hasta su resolución por un Administrador. No se ha aplicado ningún débito ni cálculo monetario."
 }
@@ -240,3 +240,7 @@ El temporizador o job programado de 24 horas (implementado en PostgreSQL como co
 | **FR-016** | Ventana emergente "Reportar problema con la garantía" (descripción y envío). | Schema del request body modelado exactamente para capturar este formulario modal. |
 | **SC-004** | Cero operaciones financieras o montos gestionados por M2. | Cumplimiento total. |
 | **SC-005** | 100% de reclamos fuera de ventana son rechazados. | Garantizado por validación temporal en backend. |
+
+## Decisión aprobada: edición del reclamo
+
+Un único reclamo puede editarse por el propietario mediante `PUT /api/v1/disputes/{dispute_id}/claims`, con el mismo cuerpo validado del registro. La operación exige disputa `PENDING` y `now < window_end`; conserva el identificador y la fecha original, registra cada versión de forma inmutable y devuelve `200` con `window_status: OPEN_FOR_EDIT`. Un segundo `POST` sigue rechazándose. El registro desactiva el cierre automático por ausencia de reclamo sin cerrar anticipadamente la ventana de edición. La autenticación por cabeceras sigue siendo temporal.

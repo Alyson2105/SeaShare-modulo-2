@@ -26,7 +26,7 @@ Verificar duplicación de cierre. Requisitos: FR-001, FR-004, FR-005. Criterios:
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-El plan de CU-07, tabla de errores, incluye COMPLETED tanto en INVALID_RESERVATION_STATE como en TRIP_ALREADY_COMPLETED; el edge case del spec solo exige responder correctamente. La ambigüedad afecta la respuesta esperada.
+CU-07: el segundo cierre devuelve TRIP_ALREADY_COMPLETED y no duplica checkout, disputa ni filas outbox en la prueba local. El código contractual de error sigue ambiguo.
 
 ##### Dependencies & Assumptions
 Evidencia V4 de componentes con dependencias controladas; los límites del escenario se detallan en Comments.
@@ -61,3 +61,6 @@ Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: Navigatio
 
 #### Traceability
 FR-001, FR-004, FR-005 | SC-001, SC-004 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NavigationEndIntegrationTest.java#secondClickReturnsTripAlreadyCompleted | Draft
+
+#### Evidencia local posterior a V4 — 2026-11-13
+NavigationEndIntegrationTest#secondClickReturnsTripAlreadyCompleted; PostgreSQL local; corrida focalizada 2026-11-13, 18 pruebas sin fallos. Veredicto técnico: Partial. No acredita integración real M1/M3 ni resuelve las decisiones contractuales pendientes.

@@ -2,6 +2,8 @@ package com.seashare.m2.disputa.infrastructure.adapter.out.persistence;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
@@ -12,6 +14,10 @@ import java.util.UUID;
 interface DisputeJpaRepository extends JpaRepository<DisputeEntity, UUID> { // repositorio spring data de disputas
 
     Optional<DisputeEntity> findByReservationId(UUID reservationId); // una disputa por reserva (UNIQUE en V2)
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select d from DisputeEntity d where d.id = :id")
+    Optional<DisputeEntity> findByIdForUpdate(@Param("id") UUID id);
 
     @Query(value = """
             select d.id from dispute_guarantee d

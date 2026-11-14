@@ -273,3 +273,7 @@ Si el Admin envía la resolución exactamente en el instante en que el job progr
 | **SC-002** | Cero cambios aplicados sobre disputas ya en `REJECTED` o `ACCEPTED`. | Garantizado por código `409 Conflict`. |
 | **SC-003** | Cero montos u operaciones financieras introducidas en este flujo. | Verificado en especificación de datos. |
 | **SC-004** | 100% de rechazos con motivo guardado solo como campo informativo. | Confirmado en persistencia. |
+
+## Decisión aprobada: resolución sin reclamo
+
+El administrador no puede llevar una disputa sin reclamo a `ACCEPTED` ni `REJECTED`; se responde `409 INVALID_RESERVATION_STATE`. El sistema conserva el cierre automático a `REJECTED` al vencer la ventana sin reclamo.

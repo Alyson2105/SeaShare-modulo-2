@@ -79,7 +79,15 @@ public record DisputeClaimResponse( // respuesta 201 del reclamo (CU-16 plan sec
                 new ClaimBody(view.claimId(), view.ownerId(), view.description(),
                         view.damageCategory(), view.evidenceUrls(), view.registeredAt()),
                 view.autoCloseDisabled(),
-                new WindowBody(view.windowStart(), view.windowEnd(), "CLOSED_BY_CLAIM_FILED"),
+                new WindowBody(view.windowStart(), view.windowEnd(), "OPEN_FOR_EDIT"),
                 REGISTERED_MESSAGE);
+    }
+
+    public static DisputeClaimResponse edited(DisputeClaimView view) {
+        return new DisputeClaimResponse(view.disputeId(), view.reservationId(), view.status().name(),
+                new ClaimBody(view.claimId(), view.ownerId(), view.description(), view.damageCategory(),
+                        view.evidenceUrls(), view.registeredAt()), view.autoCloseDisabled(),
+                new WindowBody(view.windowStart(), view.windowEnd(), "OPEN_FOR_EDIT"),
+                "Reclamo actualizado; se conserva el historial de versiones.");
     }
 }

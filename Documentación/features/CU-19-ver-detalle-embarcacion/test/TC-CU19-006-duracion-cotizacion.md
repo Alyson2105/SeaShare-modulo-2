@@ -61,3 +61,6 @@ Evaluado el 2026-11-13: Draft; sin ejecución automatizada pertinente. plan.md C
 
 #### Traceability
 FR-005, FR-006 | SC-001 | Sin prueba de CU-19  | Draft
+
+#### Decisión aprobada — 2026-11-13
+Se aprobaron fechas iguales como un día inclusivo; la semántica de instantes, si se introduce, requiere contrato separado. Esta decisión no modifica automáticamente el veredicto del TC.

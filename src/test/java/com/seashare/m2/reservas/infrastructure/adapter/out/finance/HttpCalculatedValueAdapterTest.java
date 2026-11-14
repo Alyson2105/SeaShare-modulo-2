@@ -2,6 +2,7 @@ package com.seashare.m2.reservas.infrastructure.adapter.out.finance;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import com.seashare.m2.reservas.application.dto.CalculatedValue;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.shared.domain.ErrorCode;
@@ -180,25 +181,32 @@ class HttpCalculatedValueAdapterTest { // pruebas del adaptador HTTP del valor c
     }
 
     @Test
-    void notFoundFailsImmediatelyWithoutRetry() { // 404: no se espera en el hilo; el cliente reintenta despues
-        wireMock.stubFor(post(urlPathEqualTo(CALCULATED_PATH)).willReturn(aResponse().withStatus(404))); // aun sin informar
+    void notFoundRetriesUntilCalculationIsAvailable() { // 404 transitorio: reintenta y termina obteniendo el desglose
+        wireMock.stubFor(post(urlPathEqualTo(CALCULATED_PATH))
+                .inScenario("calculo-asincrono")
+                .whenScenarioStateIs(Scenario.STARTED)
+                .willReturn(aResponse().withStatus(404))
+                .willSetStateTo("disponible")); // primera llamada aun sin informacion
+        wireMock.stubFor(post(urlPathEqualTo(CALCULATED_PATH))
+                .inScenario("calculo-asincrono")
+                .whenScenarioStateIs("disponible")
+                .willReturn(aResponse().withStatus(200).withBody(FULL_BODY))); // segunda llamada ya calculada
 
-        assertThatThrownBy(() -> adapter.getCalculatedValue(RESERVATION_ID)) // corte inmediato
-                .isInstanceOfSatisfying(ReservationRuleException.class, e ->
-                        assertThat(e.getCode()).isEqualTo(ErrorCode.CALCULATION_UNAVAILABLE.getCode())); // codigo esperado
+        CalculatedValue value = adapter.getCalculatedValue(RESERVATION_ID); // reintento exitoso
 
-        wireMock.verify(1, postRequestedFor(urlPathEqualTo(CALCULATED_PATH))); // una sola llamada, sin reintentos
+        assertThat(value.totalAmount()).isEqualByComparingTo("10040000.00");
+        wireMock.verify(2, postRequestedFor(urlPathEqualTo(CALCULATED_PATH))); // un 404 y un 200
     }
 
     @Test
-    void persistentNotFoundThrowsCalculationUnavailable() { // 404 persistente: una sola llamada
+    void persistentNotFoundThrowsCalculationUnavailableAfterThreeRetries() { // 404 persistente: tres reintentos
         wireMock.stubFor(post(urlPathEqualTo(CALCULATED_PATH)).willReturn(aResponse().withStatus(404))); // siempre sin informar
 
         assertThatThrownBy(() -> adapter.getCalculatedValue(RESERVATION_ID)) // corte seguro
                 .isInstanceOfSatisfying(ReservationRuleException.class, e ->
                         assertThat(e.getCode()).isEqualTo(ErrorCode.CALCULATION_UNAVAILABLE.getCode())); // codigo esperado
 
-        wireMock.verify(1, postRequestedFor(urlPathEqualTo(CALCULATED_PATH))); // sin bucle de reintentos
+        wireMock.verify(4, postRequestedFor(urlPathEqualTo(CALCULATED_PATH))); // solicitud inicial mas tres reintentos
     }
 
     @Test

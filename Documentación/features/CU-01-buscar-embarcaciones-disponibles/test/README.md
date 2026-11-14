@@ -73,3 +73,5 @@ Casos del catálogo y cotización en lote. CU-01 dispone de endpoint y orquestac
 | com.seashare.m2.reservas.application.service.VesselSearchServiceTest | 7 | 0 | 0 | 0 | Evidencia parcial según TC |
 | com.seashare.m2.reservas.infrastructure.adapter.in.web.VesselSearchControllerTest | 7 | 0 | 0 | 0 | Evidencia parcial según TC |
 | com.seashare.m2.reservas.infrastructure.adapter.out.finance.HttpBatchEstimateAdapterTest | 10 | 0 | 0 | 0 | Evidencia parcial según TC |
+
+**Decisión aprobada 2026-11-13 — TC-CU01-006-disponibilidad-rango.md:** Se aprobó filtrar en M2 por reservas locales solapadas cuando existan ambas fechas, conservando la validación transaccional posterior.

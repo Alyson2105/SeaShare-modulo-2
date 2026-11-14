@@ -160,7 +160,7 @@ curl -X POST "https://api.seashare.com/api/v1/reservations/e4f81c92-7a20-4215-9c
 | `401 Unauthorized` | Token ausente, inválido o expirado | `{ "code": "UNAUTHENTICATED", "message": "Token de autenticación ausente o inválido" }` |
 | `403 Forbidden` | El usuario autenticado no es el Propietario registrado de la embarcación (FR-002, SC-005) | `{ "code": "PROFILE_NOT_AUTHORIZED", "message": "Solo el propietario registrado de la embarcación puede marcar el fin de la navegación" }` |
 | `404 Not Found` | La reserva no existe en Módulo 2 | `{ "code": "RESERVATION_NOT_FOUND", "message": "La reserva especificada no existe" }` |
- | `409 Conflict` (Estado Incompatible) | La reserva no se encuentra en estado `IN_NAVIGATION` (ej. está `RESERVED`, `COMPLETED`, `CANCELLED`) (FR-009, SC-001) | `{ "code": "INVALID_RESERVATION_STATE", "message": "No se puede finalizar la navegación en una reserva con estado actual: Reservada" }` |
+ | `409 Conflict` (Estado Incompatible) | La reserva no se encuentra en estado `IN_NAVIGATION` (ej. está `RESERVED`, `CANCELLED`; `COMPLETED` usa `TRIP_ALREADY_COMPLETED`) (FR-009, SC-001) | `{ "code": "INVALID_RESERVATION_STATE", "message": "No se puede finalizar la navegación en una reserva con estado actual: Reservada" }` |
 | `409 Conflict` (Viaje Ya Cerrado) | La reserva ya fue cerrada previamente (operación terminal inmutable) | `{ "code": "TRIP_ALREADY_COMPLETED", "message": "La reserva ya se encuentra Completada y no admite nuevas modificaciones" }` |
 | `500 Internal Server Error` | Error no controlado durante la consolidación del cierre | `{ "code": "INTERNAL_ERROR", "message": "Ocurrió un error inesperado al marcar el fin de navegación" }` |
 

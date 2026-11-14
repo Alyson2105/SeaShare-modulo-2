@@ -61,3 +61,6 @@ Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: Reservati
 
 #### Traceability
 FR-012 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#invalidPaginationIs400 | Draft
+
+#### Decisión aprobada — 2026-11-13
+Se aprobó limit=10 por defecto y valores configurables de 1 a 50. Esta decisión no modifica automáticamente el veredicto del TC.

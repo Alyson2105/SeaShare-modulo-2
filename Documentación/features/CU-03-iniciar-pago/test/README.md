@@ -90,3 +90,9 @@ Casos documentales para `POST /api/v1/reservations/{reservation_id}/payments`. E
 | com.seashare.m2.reservas.integration.ChangeReservationStatusServiceTest | 28 | 0 | 0 | 0 | Evidencia parcial según TC |
 | com.seashare.m2.reservas.integration.PaymentIntegrationTest | 10 | 0 | 0 | 0 | Evidencia parcial según TC |
 | com.seashare.m2.reservas.integration.TtlExpiryIntegrationTest | 8 | 0 | 0 | 0 | Evidencia parcial según TC |
+
+**Actualización local 2026-11-13:** TC-CU03-010-reintento-pago.md — PaymentRetryConcurrencyTest#concurrentRetriesConsumeOneRejectionOnlyOnce: dos transacciones concurrentes sobre PostgreSQL aceptaron un solo reintento por rechazo y produjeron un solo mensaje adicional; suite focalizada de 28 pruebas sin fallos el 2026-11-13. El contrato INITIATED frente a PENDING_PAYMENT sigue pendiente de decisión. Resultado parcial.
+
+**Actualización local 2026-11-13:** TC-CU03-003 — PaymentRetryConcurrencyTest#simultaneousPaymentsForOverlappingReservationsHaveOneWinner: dos hilos, transacciones independientes y PostgreSQL local; una reserva queda PENDING_PAYMENT y la otra recibe CONCURRENCY_CONFLICT. Corrida focalizada del 2026-11-13: 19 pruebas sin fallos. Flota y cálculo son simulados; no acredita la integración M1/M3.
+
+**Decisión aprobada 2026-11-13 — TC-CU03-010-reintento-pago.md:** Se aprobó el reintento desde PENDING_PAYMENT tras REJECTED y con TTL vigente, conservando cálculo y vencimiento.

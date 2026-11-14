@@ -41,6 +41,15 @@ public class InternalReservationReadAdapter implements InternalReservationReadPo
              LIMIT 1
             """; // actor de la cancelacion mas reciente
 
+    // Anticipacion registrada en el evento inmutable de cancelacion. Sin evento (NO_SHOW, etc.)
+    // la consulta no devuelve filas y la anticipacion se informa nula.
+    private static final String SELECT_ANTICIPATION = """
+            SELECT anticipation_minutes
+              FROM cancellation_event
+             WHERE reservation_id = ?
+               AND actor = 'RENTER'
+            """; // anticipacion real registrada por CU-04
+
     private final JdbcTemplate jdbcTemplate; // acceso jdbc de solo lectura
 
     public InternalReservationReadAdapter(JdbcTemplate jdbcTemplate) { // constructor con plantilla jdbc
@@ -51,16 +60,19 @@ public class InternalReservationReadAdapter implements InternalReservationReadPo
     public Optional<InternalReservationView> findById(UUID reservationId) { // busca la reserva y su actor de cancelacion
         String cancellationActor = jdbcTemplate.query(SELECT_CANCELLATION_ACTOR, // consulta el actor de auditoria
                 rs -> rs.next() ? rs.getString("actor") : null, reservationId); // toma la fila mas reciente o nulo
+        Long anticipationMinutes = jdbcTemplate.query(SELECT_ANTICIPATION, // consulta la anticipacion persistida
+                rs -> rs.next() ? rs.getLong("anticipation_minutes") : null, reservationId); // fila unica o nula
 
         return jdbcTemplate.query(SELECT_RESERVATION, rs -> { // consulta la reserva principal
             if (!rs.next()) { // sin filas para ese identificador
                 return Optional.<InternalReservationView>empty(); // informa ausencia
             }
-            return Optional.of(mapRow(rs, cancellationActor)); // mapea la fila encontrada
+            return Optional.of(mapRow(rs, cancellationActor, anticipationMinutes)); // mapea la fila encontrada
         }, reservationId);
     }
 
-    private InternalReservationView mapRow(ResultSet rs, String cancellationActor) throws SQLException { // mapea columnas a la vista
+    private InternalReservationView mapRow(ResultSet rs, String cancellationActor,
+                                           Long anticipationMinutes) throws SQLException { // mapea columnas a la vista
         String subtype = rs.getString("cancellation_subtype"); // subtipo puede ser nulo
 
         return new InternalReservationView(
@@ -86,6 +98,7 @@ public class InternalReservationReadAdapter implements InternalReservationReadPo
                 0, // dias: los calcula el servicio
                 0, // noches: las calcula el servicio
                 null, // actor efectivo: lo resuelve el servicio
+                anticipationMinutes, // anticipacion persistida o nula
                 false, // ttl: lo resuelve el servicio con el reloj
                 null // segundos restantes: los calcula el servicio
         );

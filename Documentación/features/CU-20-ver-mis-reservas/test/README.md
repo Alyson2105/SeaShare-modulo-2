@@ -73,3 +73,5 @@ Casos para GET /api/v1/reservations, con identidad temporal por headers y contra
 | Clase | Tests | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
 | [ReservationQueryTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java) | 13 | 0 | 0 | 0 | XML V4 exitoso; alcance parcial según cada TC |
+
+**Decisión aprobada 2026-11-13 — TC-CU20-003-paginacion.md:** Se aprobó limit=10 por defecto y valores configurables de 1 a 50.

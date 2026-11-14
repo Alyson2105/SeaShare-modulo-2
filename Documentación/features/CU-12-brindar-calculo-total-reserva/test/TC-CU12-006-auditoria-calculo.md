@@ -61,3 +61,6 @@ Evaluado el 2026-11-13: Blocked; sin ejecución automatizada pertinente. FR-010 
 
 #### Traceability
 FR-010 | SC-001 | Sin prueba de CU-12 | Blocked
+
+#### Evidencia local posterior a V4 — 2026-11-13
+CalculationAuditIntegrationTest verifica inserción de asientos SUCCESS y FAILED en PostgreSQL local; StartPaymentServiceTest verifica la invocación del puerto. Las 35 pruebas focalizadas pasaron el 2026-11-13. Falta demostrar el recorrido completo y la integración real con M3. Veredicto técnico: Partial; no se declara integración externa exitosa.

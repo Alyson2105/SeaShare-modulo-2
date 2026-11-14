@@ -70,7 +70,7 @@ Si el Propietario no reporta nada dentro de las 24 horas, el propio caso de uso 
 
 - **Reclamo fuera de ventana**: si el Propietario intenta reportar después de vencidas las 24 horas (disputa ya cerrada en REJECTED por vencimiento), el sistema DEBE rechazar el reporte sin modificar el estado de la disputa.
 - **Texto de novedades del cierre no es reclamo**: el texto opcional de novedades adjuntado al cerrar la navegación (CU-07) es informativo del check-out y NO cuenta como reclamo presentado. Si no hay registro separado dentro de la ventana, la disputa se cierra en REJECTED al vencimiento aunque hubiera texto al cierre.
-- **Segundo reclamo dentro de la ventana / edición del reclamo**: [DUDA — ver lista de dudas al final del documento] no está definido si el Propietario puede registrar más de un reclamo o editar el ya registrado mientras la ventana sigue abierta.
+- **Segundo reclamo dentro de la ventana / edición del reclamo**: se admite un único reclamo por disputa. El Propietario puede editarlo antes del vencimiento y mientras la disputa siga PENDING; se conserva el original y el historial de versiones.
 - **Fallo del mecanismo de vencimiento**: si el evento diferido o job programado no se ejecuta a tiempo, [NEEDS CLARIFICATION: política de reintentos y tolerancia del programador de vencimientos — se define en fase de arquitectura, no en este spec].
 - **Disputa ya finalizada**: cualquier intento de registro o transición sobre una disputa en REJECTED o ACCEPTED DEBE rechazarse (son estados finales).
 - **Reserva que nunca llega a Completada**: no existe disputa; cualquier solicitud de reclamo sobre una reserva sin disputa asociada DEBE rechazarse indicando que no hay disputa abierta.
@@ -125,6 +125,6 @@ Si el Propietario no reporta nada dentro de las 24 horas, el propio caso de uso 
 
 ## Dudas abiertas de este spec
 
-- **D-01**: ¿Puede el Propietario registrar más de un reclamo o editar el ya registrado mientras la ventana sigue abierta, o solo se admite un único registro?
+- **D-01 — Resuelta:** un único reclamo editable dentro de la ventana, con historial.
 - **D-02**: ~~¿La duración de la ventana de 24 horas debe ser configurable por parámetro o es fija?~~ **Resuelto**: la ventana y el SLA límite de respuesta a disputas de garantía están fijados en 24 horas.
 - **D-03**: Política de reintentos del mecanismo de vencimiento (evento diferido / job) ante fallos de ejecución — se define en arquitectura.

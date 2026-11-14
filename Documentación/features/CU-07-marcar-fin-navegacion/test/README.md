@@ -83,3 +83,7 @@ Discrepancias: la ausencia de llamada CU-07 a CU-16 quedó resuelta en H10; aún
 | com.seashare.m2.reservas.infrastructure.adapter.in.web.NavigationEndControllerTest | 7 | 0 | 0 | 0 | Parcial para los escenarios relacionados |
 | com.seashare.m2.reservas.integration.NavigationEndDisputeRollbackTest | 1 | 0 | 0 | 0 | Parcial para los escenarios relacionados |
 | com.seashare.m2.reservas.integration.NavigationEndIntegrationTest | 7 | 0 | 0 | 0 | Parcial para los escenarios relacionados |
+
+**Actualización local 2026-11-13:** TC-CU07-006-doble-intento.md — NavigationEndIntegrationTest#secondClickReturnsTripAlreadyCompleted; PostgreSQL local; corrida focalizada 2026-11-13, 18 pruebas sin fallos. Resultado parcial; consultar limitaciones del caso.
+
+**Decisión aprobada 2026-11-13 — TC-CU07-002-estado-incompatible.md:** Se aprobó TRIP_ALREADY_COMPLETED para un segundo cierre de una reserva COMPLETED.

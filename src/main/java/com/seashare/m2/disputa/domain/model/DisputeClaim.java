@@ -11,8 +11,8 @@ import java.util.UUID;
  * Reclamo del propietario sobre una disputa (CU-16).
  *
  * <p>Solo datos facticos: descripcion, categoria y evidencias. No hay montos ni
- * valoraciones economicas (CU-16 FR-010 y SC-004). El reclamo es inmutable y se
- * admite uno solo por disputa (D-08).</p>
+ * valoraciones economicas (CU-16 FR-010 y SC-004). Se admite un reclamo por
+ * disputa; cada version es inmutable y las ediciones conservan el historial.</p>
  */
 public record DisputeClaim(
         UUID id,

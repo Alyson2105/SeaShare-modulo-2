@@ -61,3 +61,6 @@ Corrida V4 del 2026-11-13: Failed; estado documental: In Process; evidencia: Htt
 
 #### Traceability
 FR-003, FR-004, FR-008 | SC-003, SC-004 | [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#notFoundFailsImmediatelyWithoutRetry; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#persistentNotFoundThrowsCalculationUnavailable | In Process
+
+#### Evidencia local posterior a V4 — 2026-11-13
+HttpCalculatedValueAdapterTest#notFoundRetriesUntilCalculationIsAvailable y #persistentNotFoundThrowsCalculationUnavailableAfterThreeRetries: respuestas HTTP simuladas, no integración real con M3; ambas pasaron en la suite completa de 640 pruebas del 2026-11-13. Veredicto técnico: Partial; no se declara integración externa exitosa.
