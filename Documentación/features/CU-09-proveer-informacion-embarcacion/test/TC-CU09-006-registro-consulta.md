@@ -26,7 +26,7 @@ Verificar registro de consulta. Requisitos: FR-010. Criterios: SC-003.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-09 es integración saliente; M1 se simula y el modo fake es el predeterminado. REQUIRES_NEW puede perder el registro si no hay conexión disponible; no demuestra 100 % de trazabilidad.
+registrationFailureDoesNotBreakQuery demuestra retorno exitoso pese a fallo de registro; no verifica SC-003 sobre ausencia de acceso directo a BD de M1 o cálculos.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Modo HTTP y puerto de registro observable.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar M1 y observar el registro final de una consulta. | Datos de las precondiciones | Se intenta registrar una entrada VESSEL_INFO con resultado final; fallo de registro no cambia el resultado de consulta. | Pendiente | Integración: ExternalQueryLogRegistrationTest#vesselInfoOkRegistersOkRow y #registrationFailureDoesNotBreakQuery pasaron: fila OK y consulta exitosa con registro fallido. No garantiza trazabilidad ante fallos del almacén. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ExternalQueryLogRegistrationTest#vesselInfoOkRegistersOkRow (XML V4: passed). Comprueba fila VESSEL_INFO de resultado OK en PostgreSQL con M1 simulado. registrationFailureDoesNotBreakQuery demuestra retorno exitoso pese a fallo de registro; no verifica SC-003 sobre ausencia de acceso directo a BD de M1 o cálculos. |
+| 2 | Ejecutar | Consultar M1 y observar el registro final de una consulta. | Datos de las precondiciones | Se intenta registrar una entrada VESSEL_INFO con resultado final; fallo de registro no cambia el resultado de consulta. | Pendiente | ExternalQueryLogRegistrationTest#vesselInfoOkRegistersOkRow (XML V4: passed). Comprueba fila VESSEL_INFO de resultado OK en PostgreSQL con M1 simulado. registrationFailureDoesNotBreakQuery demuestra retorno exitoso pese a fallo de registro; no verifica SC-003 sobre ausencia de acceso directo a BD de M1 o cálculos. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ExternalQueryLogRegistrationTest#vesselInfoOkRegistersOkRow (XML V4: passed). Comprueba fila VESSEL_INFO de resultado OK en PostgreSQL con M1 simulado. registrationFailureDoesNotBreakQuery demuestra retorno exitoso pese a fallo de registro; no verifica SC-003 sobre ausencia de acceso directo a BD de M1 o cálculos. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ REQUIRES_NEW puede perder el registro si no hay conexión disponible; no demuest
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ExternalQueryLogRegistrationTest#vesselInfoOkRegistersOkRow. registrationFailureDoesNotBreakQuery demuestra retorno exitoso pese a fallo de registro; no verifica SC-003 sobre ausencia de acceso directo a BD de M1 o cálculos.
 
 #### Traceability
 FR-010 | SC-003 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#vesselInfoOkRegistersOkRow; src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#registrationFailureDoesNotBreakQuery | In Process

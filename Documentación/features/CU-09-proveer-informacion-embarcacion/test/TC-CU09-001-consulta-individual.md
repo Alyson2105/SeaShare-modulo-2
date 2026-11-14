@@ -26,7 +26,7 @@ Verificar consulta de datos de embarcación. Requisitos: FR-001, FR-003, FR-004.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-09 es integración saliente; M1 se simula y el modo fake es el predeterminado. FleetInfoPort devuelve un DTO reducido; hay otro adaptador de detalle con GPS. El contrato M1 y zona horaria no están firmados.
+FleetInfoPort devuelve DTO reducido; no demuestra ficha completa, GPS ni integración con M1 real.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Modo seashare.fleet.mode=http; M1 simulado devuelve owner.owner_id UUID, max_cap
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Invocar FleetInfoPort.getVesselInfo con UUID de embarcación. | Datos de las precondiciones | El adaptador solicita GET /api/v1/vessels/{vessel_id} y devuelve ownerId, maxCapacity y harborTimezone. | Pendiente | Componente WireMock: HttpFleetClientTest#mapsVesselInfoFromSuccessfulResponse y #sendsInternalServiceTokenHeader pasaron: propietario, capacidad, zona y cabecera. M1 real no fue consultado. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | HttpFleetClientTest#mapsVesselInfoFromSuccessfulResponse (XML V4: passed). Aserta ownerId, maxCapacity y harborTimezone usando respuesta WireMock. FleetInfoPort devuelve DTO reducido; no demuestra ficha completa, GPS ni integración con M1 real. |
+| 2 | Ejecutar | Invocar FleetInfoPort.getVesselInfo con UUID de embarcación. | Datos de las precondiciones | El adaptador solicita GET /api/v1/vessels/{vessel_id} y devuelve ownerId, maxCapacity y harborTimezone. | Pendiente | HttpFleetClientTest#mapsVesselInfoFromSuccessfulResponse (XML V4: passed). Aserta ownerId, maxCapacity y harborTimezone usando respuesta WireMock. FleetInfoPort devuelve DTO reducido; no demuestra ficha completa, GPS ni integración con M1 real. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | HttpFleetClientTest#mapsVesselInfoFromSuccessfulResponse (XML V4: passed). Aserta ownerId, maxCapacity y harborTimezone usando respuesta WireMock. FleetInfoPort devuelve DTO reducido; no demuestra ficha completa, GPS ni integración con M1 real. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ FleetInfoPort devuelve un DTO reducido; hay otro adaptador de detalle con GPS. E
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: HttpFleetClientTest#mapsVesselInfoFromSuccessfulResponse. FleetInfoPort devuelve DTO reducido; no demuestra ficha completa, GPS ni integración con M1 real.
 
 #### Traceability
 FR-001, FR-003, FR-004 | SC-003, SC-005 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java#mapsVesselInfoFromSuccessfulResponse; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java#sendsInternalServiceTokenHeader | In Process
