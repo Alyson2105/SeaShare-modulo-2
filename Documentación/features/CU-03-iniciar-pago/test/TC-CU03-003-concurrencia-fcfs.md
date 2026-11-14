@@ -26,7 +26,7 @@ Verificar contienda fcfs. Requisitos: FR-005, FR-008. Criterios relacionados: SC
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-No se realiza publicación real ni cobro externo en esta tarea. La restricción GiST y pruebas del motor no demuestran por sí solas la orquestación FCFS de CU-03.
+Las solicitudes son secuenciales; no comprueba la carrera simultánea ni el estado persistido de la perdedora.
 
 ##### Dependencies & Assumptions
 CU-03 está implementado; la evidencia usa repositorio y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: [estado](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestra el flujo completo de CU-03.
@@ -38,9 +38,9 @@ Dos titulares con reservas INITIATED vigentes para el mismo barco y fechas super
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Lanzar intentos de pago concurrentes coordinados, y consultar ambas reservas. | Datos de las precondiciones | Una transición a PENDING_PAYMENT como máximo; la perdedora permanece INITIATED y recibe 409 CONCURRENCY_CONFLICT según el plan. | Pendiente | Integración: PaymentIntegrationTest#overlappingReservationLosesTheFcfsRace pasó: primer pago 200 y segundo 409 secuenciales. Falta carrera simultánea y verificar estado de la perdedora. |
-| 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | PaymentIntegrationTest#overlappingReservationLosesTheFcfsRace (XML V4: passed). Aserta 200 del primer pago y 409 CONCURRENCY_CONFLICT del segundo. Las solicitudes son secuenciales; no comprueba la carrera simultánea ni el estado persistido de la perdedora. |
+| 2 | Ejecutar | Lanzar intentos de pago concurrentes coordinados, y consultar ambas reservas. | Datos de las precondiciones | Una transición a PENDING_PAYMENT como máximo; la perdedora permanece INITIATED y recibe 409 CONCURRENCY_CONFLICT según el plan. | Pendiente | PaymentIntegrationTest#overlappingReservationLosesTheFcfsRace (XML V4: passed). Aserta 200 del primer pago y 409 CONCURRENCY_CONFLICT del segundo. Las solicitudes son secuenciales; no comprueba la carrera simultánea ni el estado persistido de la perdedora. |
+| 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | PaymentIntegrationTest#overlappingReservationLosesTheFcfsRace (XML V4: passed). Aserta 200 del primer pago y 409 CONCURRENCY_CONFLICT del segundo. Las solicitudes son secuenciales; no comprueba la carrera simultánea ni el estado persistido de la perdedora. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ La restricción GiST y pruebas del motor no demuestran por sí solas la orquesta
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: PaymentIntegrationTest#overlappingReservationLosesTheFcfsRace. Las solicitudes son secuenciales; no comprueba la carrera simultánea ni el estado persistido de la perdedora.
 
 #### Traceability
 FR-005, FR-008 | SC-002 | [estado](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#overlappingReservationLosesTheFcfsRace | In Process

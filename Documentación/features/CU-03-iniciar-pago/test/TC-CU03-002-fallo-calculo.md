@@ -26,7 +26,7 @@ Verificar fallo de cálculo externo. Requisitos: FR-003, FR-006. Criterios relac
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-No se realiza publicación real ni cobro externo en esta tarea. La respuesta 503 requiere comprobación HTTP en el escenario.
+Faltan respuesta HTTP 503 y comprobación de TTL, outbox y M1 persistidos.
 
 ##### Dependencies & Assumptions
 CU-03 está implementado; la evidencia usa repositorio y dobles controlados de M1 y M3. Las pruebas citadas aportan evidencia parcial, no demuestran el flujo completo de CU-03.
@@ -38,9 +38,9 @@ Reserva INITIATED vigente; simular indisponibilidad del cálculo de M3.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Intentar iniciar pago. | Datos de las precondiciones | Según el plan, 503 CALCULATION_UNAVAILABLE; reserva permanece INITIATED con TTL original, sin retención ni notificación M1. | Pendiente | Unitario: StartPaymentServiceTest#calculationFailureAbortsWithoutTransition pasó: CALCULATION_UNAVAILABLE y escritor no invocado. Faltan HTTP 503 y comprobación de TTL, outbox y M1 persistidos. |
-| 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | StartPaymentServiceTest#calculationFailureAbortsWithoutTransition (XML V4: passed). Aserta CALCULATION_UNAVAILABLE y verifica que el escritor no sea invocado. Faltan respuesta HTTP 503 y comprobación de TTL, outbox y M1 persistidos. |
+| 2 | Ejecutar | Intentar iniciar pago. | Datos de las precondiciones | Según el plan, 503 CALCULATION_UNAVAILABLE; reserva permanece INITIATED con TTL original, sin retención ni notificación M1. | Pendiente | StartPaymentServiceTest#calculationFailureAbortsWithoutTransition (XML V4: passed). Aserta CALCULATION_UNAVAILABLE y verifica que el escritor no sea invocado. Faltan respuesta HTTP 503 y comprobación de TTL, outbox y M1 persistidos. |
+| 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | StartPaymentServiceTest#calculationFailureAbortsWithoutTransition (XML V4: passed). Aserta CALCULATION_UNAVAILABLE y verifica que el escritor no sea invocado. Faltan respuesta HTTP 503 y comprobación de TTL, outbox y M1 persistidos. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ La respuesta 503 requiere comprobación HTTP en el escenario.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: StartPaymentServiceTest#calculationFailureAbortsWithoutTransition. Faltan respuesta HTTP 503 y comprobación de TTL, outbox y M1 persistidos.
 
 #### Traceability
 FR-003, FR-006 | SC-001, SC-003 | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#calculationFailureAbortsWithoutTransition | In Process
