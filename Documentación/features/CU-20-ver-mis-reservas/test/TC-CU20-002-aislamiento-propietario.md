@@ -26,7 +26,7 @@ Verificar listado de propietario. Requisitos: FR-001, FR-002. Criterios: SC-002.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. El filtro local por owner_id no prueba la autenticidad de headers ni pertenencia real en M1.
+Las tres reservas comparten propietario; no prueba exclusión frente a otro propietario ni JWT.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Dos propietarios con reservas distintas; X-User-Id UUID y X-User-Role OWNER.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar listado como un propietario. | Datos de las precondiciones | 200 con solo las reservas cuyo owner_id corresponde a la identidad de consulta. | Pendiente | ReservationQueryTest#listsOnlyOwnReservations: exitosa. Comprueba tres reservas del propietario; no incluye otro propietario para comprobar exclusión. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ReservationQueryTest#listsOnlyOwnReservations (XML V4: passed). Aserta HTTP 200 y tres resultados del propietario. Las tres reservas comparten propietario; no prueba exclusión frente a otro propietario ni JWT. |
+| 2 | Ejecutar | Consultar listado como un propietario. | Datos de las precondiciones | 200 con solo las reservas cuyo owner_id corresponde a la identidad de consulta. | Pendiente | ReservationQueryTest#listsOnlyOwnReservations (XML V4: passed). Aserta HTTP 200 y tres resultados del propietario. Las tres reservas comparten propietario; no prueba exclusión frente a otro propietario ni JWT. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ReservationQueryTest#listsOnlyOwnReservations (XML V4: passed). Aserta HTTP 200 y tres resultados del propietario. Las tres reservas comparten propietario; no prueba exclusión frente a otro propietario ni JWT. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ El filtro local por owner_id no prueba la autenticidad de headers ni pertenencia
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; Comprueba tres reservas del propietario; no incluye otro propietario para comprobar exclusión.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ReservationQueryTest#listsOnlyOwnReservations. Las tres reservas comparten propietario; no prueba exclusión frente a otro propietario ni JWT.
 
 #### Traceability
 FR-001, FR-002 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#listsOnlyOwnReservations | In Process

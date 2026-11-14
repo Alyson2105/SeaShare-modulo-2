@@ -26,7 +26,7 @@ Verificar paginación de reservas. Requisitos: FR-012. Criterios: SC-002.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. Predeterminado 10, pero código permite hasta 50 mientras FR-012 dice límite fijo de 10.
+spec.md FR-012 fija diez por página; plan.md permite limit entre 1 y 50. No prueba segunda página ni orden.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Más de diez reservas del mismo usuario con created_at distinguibles.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar páginas 1 y 2 con page y limit; probar page=0 y limit=51 por separado. | Datos de las precondiciones | Resultados ordenados por created_at descendente, items de hasta limit; parámetros inválidos reciben 400 INVALID_PARAMETERS. | Pendiente | ReservationQueryTest#invalidPaginationIs400: exitosa. Comprueba page=0 y limit=51; no comprueba orden ni segunda página. FR-012 fija 10 y plan permite hasta 50. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ReservationQueryTest#invalidPaginationIs400 (XML V4: passed). Aserta 400 INVALID_PARAMETERS para page=0 y limit=51. spec.md FR-012 fija diez por página; plan.md permite limit entre 1 y 50. No prueba segunda página ni orden. |
+| 2 | Ejecutar | Consultar páginas 1 y 2 con page y limit; probar page=0 y limit=51 por separado. | Datos de las precondiciones | Resultados ordenados por created_at descendente, items de hasta limit; parámetros inválidos reciben 400 INVALID_PARAMETERS. | Pendiente | ReservationQueryTest#invalidPaginationIs400 (XML V4: passed). Aserta 400 INVALID_PARAMETERS para page=0 y limit=51. spec.md FR-012 fija diez por página; plan.md permite limit entre 1 y 50. No prueba segunda página ni orden. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ReservationQueryTest#invalidPaginationIs400 (XML V4: passed). Aserta 400 INVALID_PARAMETERS para page=0 y limit=51. spec.md FR-012 fija diez por página; plan.md permite limit entre 1 y 50. No prueba segunda página ni orden. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Predeterminado 10, pero código permite hasta 50 mientras FR-012 dice límite fi
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Draft; Comprueba page=0 y limit=51; no comprueba orden ni segunda página. FR-012 fija 10 y plan permite hasta 50.
+Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: ReservationQueryTest#invalidPaginationIs400. spec.md FR-012 fija diez por página; plan.md permite limit entre 1 y 50. No prueba segunda página ni orden.
 
 #### Traceability
 FR-012 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#invalidPaginationIs400 | Draft

@@ -26,10 +26,10 @@ Verificar subestado de cancelación. Requisitos: FR-005. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. La respuesta del listado expone cancellation_subtype; faltan pruebas de otros subtipos y del importe.
+No compara el importe original ni demuestra SC-001; otros subtipos no se prueban.
 
 ##### Dependencies & Assumptions
-Ejecución con dependencias controladas. Pruebas relacionadas: Sin prueba de CU-20; su cobertura debe evaluarse por escenario.
+Ejecución con dependencias controladas. Pruebas relacionadas: [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java); su cobertura debe evaluarse por escenario.
 
 ##### Preconditions & Default Setup
 Reserva propia CANCELLED con subtipo conocido.
@@ -38,9 +38,9 @@ Reserva propia CANCELLED con subtipo conocido.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar lista y verificar subtipo. | Datos de las precondiciones | El spec exige incluir subestado cualitativo sin alterar importe. | Pendiente | ReservationQueryTest#listsWithAppliedFilter: exitosa. Comprueba subtipo FLEXIBLE y etiqueta contextual; no compara el importe ni otros subtipos. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ReservationQueryTest#listsWithAppliedFilter (XML V4: passed). Aserta subtipo FLEXIBLE y etiqueta contextual. No compara el importe original ni demuestra SC-001; otros subtipos no se prueban. |
+| 2 | Ejecutar | Consultar lista y verificar subtipo. | Datos de las precondiciones | El spec exige incluir subestado cualitativo sin alterar importe. | Pendiente | ReservationQueryTest#listsWithAppliedFilter (XML V4: passed). Aserta subtipo FLEXIBLE y etiqueta contextual. No compara el importe original ni demuestra SC-001; otros subtipos no se prueban. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ReservationQueryTest#listsWithAppliedFilter (XML V4: passed). Aserta subtipo FLEXIBLE y etiqueta contextual. No compara el importe original ni demuestra SC-001; otros subtipos no se prueban. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ La respuesta del listado expone cancellation_subtype; faltan pruebas de otros su
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; Comprueba subtipo FLEXIBLE y etiqueta contextual; no compara el importe ni otros subtipos.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ReservationQueryTest#listsWithAppliedFilter. No compara el importe original ni demuestra SC-001; otros subtipos no se prueban.
 
 #### Traceability
 FR-005 | SC-001 | Prueba parcial ejecutada  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#listsWithAppliedFilter | In Process

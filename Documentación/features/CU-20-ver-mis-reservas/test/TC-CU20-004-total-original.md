@@ -26,7 +26,7 @@ Verificar total de reserva cancelada. Requisitos: FR-003, FR-004. Criterios: SC-
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. Es importe estimado recibido del cliente al crear, no liquidación final confirmada por M3.
+No hay aserción del importe original en una reserva cancelada; es importe estimado recibido al crear, no liquidación confirmada por M3.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Reserva propia CANCELLED con estimated_total conocido.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar el listado y comparar estimated_total con el valor almacenado. | Datos de las precondiciones | Se devuelve estimated_total sin deducciones o cálculo de reembolso. | Pendiente | No se encontró aserción del importe original en una reserva cancelada. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | Sin ejecución automatizada pertinente. No hay aserción del importe original en una reserva cancelada; es importe estimado recibido al crear, no liquidación confirmada por M3. |
+| 2 | Ejecutar | Consultar el listado y comparar estimated_total con el valor almacenado. | Datos de las precondiciones | Se devuelve estimated_total sin deducciones o cálculo de reembolso. | Pendiente | Sin ejecución automatizada pertinente. No hay aserción del importe original en una reserva cancelada; es importe estimado recibido al crear, no liquidación confirmada por M3. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | Sin ejecución automatizada pertinente. No hay aserción del importe original en una reserva cancelada; es importe estimado recibido al crear, no liquidación confirmada por M3. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Es importe estimado recibido del cliente al crear, no liquidación final confirm
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Pendiente; sin ejecución automatizada. No se encontró aserción del importe original en una reserva cancelada.
+Evaluado el 2026-11-13: Pendiente; sin ejecución automatizada pertinente. No hay aserción del importe original en una reserva cancelada; es importe estimado recibido al crear, no liquidación confirmada por M3.
 
 #### Traceability
 FR-003, FR-004 | SC-001 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | In Process

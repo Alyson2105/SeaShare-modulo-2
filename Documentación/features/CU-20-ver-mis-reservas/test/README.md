@@ -19,25 +19,25 @@ Casos para GET /api/v1/reservations, con identidad temporal por headers y contra
 
 | FR | Cobertura | TC | Alcance | Motivo / Observación |
 |---|---|---|---|---|
-| FR-001 | Parcial — ver caso y brechas | 001, 002 | Backend | Roles RENTER y OWNER |
-| FR-002 | Parcial — ver caso y brechas | 001, 002 | Backend | Aislamiento por identificador |
-| FR-003 | Parcial — ver caso y brechas | 001, 004 | Backend | Datos básicos; nombre de barco pendiente |
-| FR-004 | Pendiente | 004 | Backend | Sin aserción del importe original de una reserva cancelada |
-| FR-005 | Parcial — ver caso y brechas | 006 | Backend | Subestado FLEXIBLE verificado; otros subtipos no comprobados |
-| FR-006 | Sin cobertura backend | — | UI | Selección UI |
-| FR-007 | Parcial — ver caso y brechas | 005 | Backend | Filtro backend probado con algunos estados; encabezados UI sin prueba |
-| FR-008 | Sin cobertura backend | — | UI | Badges UI |
-| FR-009 | Sin cobertura backend | — | UI | Datos enriquecidos parciales con dobles; UI sin prueba |
-| FR-010 | Sin cobertura backend | — | UI | Etiquetas UI |
-| FR-011 | Sin cobertura backend | — | UI | Enlace UI |
-| FR-012 | Parcial — ver caso y brechas | 003, 005 | Backend | Paginación parcial; límite de spec y plan difiere |
+| FR-001 | Parcial | 001, 002 | Backend | Roles RENTER y OWNER |
+| FR-002 | Parcial | 001, 002 | Backend | Aislamiento por identificador |
+| FR-003 | Parcial | 001, 004 | Backend | Datos básicos y nombre con flota fake; faltan campos y servicios reales |
+| FR-004 | Sin evidencia | 004 | Backend | Sin aserción del importe original de una reserva cancelada |
+| FR-005 | Parcial | 006 | Backend | Subestado FLEXIBLE verificado; otros subtipos no comprobados |
+| FR-006 | Sin evidencia | — | UI | Selección UI |
+| FR-007 | Parcial | 005 | Backend | Filtro backend probado con algunos estados; encabezados UI sin prueba |
+| FR-008 | Sin evidencia | — | UI | Badges UI |
+| FR-009 | Sin evidencia | — | UI | Datos enriquecidos parciales con dobles; UI sin prueba |
+| FR-010 | Sin evidencia | — | UI | Etiquetas UI |
+| FR-011 | Sin evidencia | — | UI | Enlace UI |
+| FR-012 | Parcial | 003, 005 | Backend | Paginación parcial; límite de spec y plan difiere |
 
 ## Criterios de éxito
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Pendiente | TC-004 carece de aserción del importe original en una reserva cancelada; no se demuestra ausencia global de cálculos. |
-| SC-002 | Parcial | TC-001 a 003; identidad por headers es temporal y no autenticada por JWT. |
+| SC-001 | No demostrado | TC-004 carece de aserción del importe original en una reserva cancelada; no se demuestra ausencia global de cálculos. |
+| SC-002 | Parcialmente demostrado | TC-001 a 003; identidad por headers es temporal y no autenticada por JWT. |
 
 ## Checklist de ejecución
 
@@ -63,13 +63,13 @@ Casos para GET /api/v1/reservations, con identidad temporal por headers y contra
 
 - **Draft**: contrato incompleto o inconsistente.
 - **In Process**: ejecutable con implementación actual.
-- **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
+- **Approved**: todos los pasos, postcondiciones y FR/SC se demuestran mediante pruebas V4 ejecutadas y aserciones suficientes.
 - **Blocked**: depende de funcionalidad pendiente.
 
 ## Ejecución automatizada — 2026-11-13
 
-`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-20. Los dobles y simulaciones no acreditan servicios externos reales.
+`sg docker -c 'bash ./mvnw -B clean test'`; inicio 2026-11-13T19:02:00-05:00, fin 2026-11-13T19:03:11-05:00, salida 0; código base `568290a0d4334b477a4b0f9d5e949e981da3fa55`. La identidad se suministra por headers y los datos de flota son ficticios.
 
 | Clase | Tests | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| [ReservationQueryTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java) | 12 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [ReservationQueryTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java) | 13 | 0 | 0 | 0 | XML V4 exitoso; alcance parcial según cada TC |
