@@ -18,6 +18,8 @@ public interface DisputeRepositoryPort { // persistencia del contexto disputa
 
     Optional<GuaranteeDispute> findByReservationId(UUID reservationId); // idempotencia de la apertura
 
+    List<GuaranteeDispute> findAll(UUID ownerId, UUID reservationId); // filtros opcionales, apertura descendente
+
     Optional<DisputeClaim> findClaimByDisputeId(UUID disputeId); // unico reclamo admitido (D-08)
 
     List<DisputeStatusChange> findStatusHistory(UUID disputeId); // historial inmutable, ordenado por ocurrencia

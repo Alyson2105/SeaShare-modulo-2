@@ -15,6 +15,14 @@ interface DisputeJpaRepository extends JpaRepository<DisputeEntity, UUID> { // r
 
     Optional<DisputeEntity> findByReservationId(UUID reservationId); // una disputa por reserva (UNIQUE en V2)
 
+    @Query("""
+            select d from DisputeEntity d
+            where (:ownerId is null or d.ownerId = :ownerId)
+              and (:reservationId is null or d.reservationId = :reservationId)
+            order by d.windowStart desc, d.id desc
+            """)
+    List<DisputeEntity> findAll(@Param("ownerId") UUID ownerId, @Param("reservationId") UUID reservationId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select d from DisputeEntity d where d.id = :id")
     Optional<DisputeEntity> findByIdForUpdate(@Param("id") UUID id);
