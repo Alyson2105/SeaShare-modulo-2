@@ -1,5 +1,6 @@
 package com.seashare.m2.reservas.integration;
 
+import com.seashare.m2.reservas.application.dto.CancellationEventRecord;
 import com.seashare.m2.reservas.application.dto.ChangeReservationStatusCommand;
 import com.seashare.m2.reservas.application.dto.CreateReservationCommand;
 import com.seashare.m2.reservas.application.dto.FleetInfo;
@@ -10,6 +11,7 @@ import com.seashare.m2.reservas.application.port.in.CreateReservationUseCase;
 import com.seashare.m2.reservas.application.port.in.GetInternalReservationUseCase;
 import com.seashare.m2.reservas.application.port.out.FleetInfoPort;
 import com.seashare.m2.reservas.application.port.out.FleetOperationalStatusPort;
+import com.seashare.m2.reservas.application.port.out.CancellationEventPort;
 import com.seashare.m2.reservas.domain.model.ActorType;
 import com.seashare.m2.reservas.domain.model.CancellationSubtype;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
@@ -44,6 +46,9 @@ class InternalReservationReadIntegrationTest { // pruebas de integracion del lec
 
     @Autowired
     private GetInternalReservationUseCase getInternalReservationUseCase; @Autowired private jakarta.persistence.EntityManager entityManager; // caso de uso bajo prueba y volcado a la base antes de leer con jdbc
+
+    @Autowired
+    private CancellationEventPort cancellationEventPort; // evento inmutable real de CU-04
 
     @MockitoBean
     private FleetInfoPort fleetInfoPort; // simulacion del puerto de flota
@@ -99,11 +104,37 @@ class InternalReservationReadIntegrationTest { // pruebas de integracion del lec
         changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
                 created.reservationId(), ReservationStatus.CANCELLED, CancellationSubtype.BY_OWNER, ActorType.OWNER,
                 "Averia del propietario", UUID.randomUUID(), null, true, null, null, null, null));
+        cancellationEventPort.save(new CancellationEventRecord(created.reservationId(), ActorType.OWNER,
+                java.time.Instant.parse("2027-06-01T09:00:00Z"), 0, CancellationSubtype.BY_OWNER,
+                "mechanical_failure", null)); // cero es marcador interno, no anticipacion calculada
 
         entityManager.flush(); InternalReservationView view = getInternalReservationUseCase.execute(created.reservationId());
 
         assertThat(view.status()).isEqualTo(ReservationStatus.CANCELLED);
         assertThat(view.cancellationSubtype()).isEqualTo(CancellationSubtype.BY_OWNER);
         assertThat(view.cancellationActor()).isEqualTo("OWNER"); // actor leido de reservation_status_audit
+        assertThat(view.cancellationAnticipationMinutes()).isNull(); // OWNER no calcula anticipacion
+    }
+
+    @Test
+    void cancelledByRenterReportsPersistedAnticipation() { // cancellation_event aporta la anticipacion real
+        ReservationView created = createReservation(LocalDate.of(2027, 6, 10), LocalDate.of(2027, 6, 12));
+
+        changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.reservationId(), ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER, "Pago iniciado",
+                UUID.randomUUID(), null, null, null, null, null, null));
+        changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.reservationId(), ReservationStatus.RESERVED, null, ActorType.SYSTEM, "Pago confirmado",
+                null, null, null, null, null, "pg-1234", null));
+        changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.reservationId(), ReservationStatus.CANCELLED, CancellationSubtype.FLEXIBLE, ActorType.RENTER,
+                "Cambio de planes", UUID.randomUUID(), null, null, 4320, null, null, null));
+        cancellationEventPort.save(new CancellationEventRecord(created.reservationId(), ActorType.RENTER,
+                java.time.Instant.parse("2027-06-01T09:00:00Z"), 4320, CancellationSubtype.FLEXIBLE, null, "Cambio de planes"));
+
+        entityManager.flush();
+        InternalReservationView view = getInternalReservationUseCase.execute(created.reservationId());
+
+        assertThat(view.cancellationAnticipationMinutes()).isEqualTo(4320L); // 72 horas en minutos
     }
 }

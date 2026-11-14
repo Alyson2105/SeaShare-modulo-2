@@ -154,14 +154,28 @@ class NavigationEndIntegrationTest { // CU-07: cierre real contra PostgreSQL
         Seed seed = inNavigation();
         String body = bodyWithRemarks("Llegada sin novedad");
 
-        mockMvc.perform(post("/api/v1/reservations/{reservation_id}/navigation-end", seed.reservationId())
+        String response = mockMvc.perform(post("/api/v1/reservations/{reservation_id}/navigation-end", seed.reservationId())
                         .header("X-User-Id", ownerId.toString())
                         .header("X-User-Role", "OWNER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
-                .andExpect(jsonPath("$.actual_arrival_at").value("2027-04-10T17:30:00-05:00"));
+                .andExpect(jsonPath("$.actual_arrival_at").value("2027-04-10T17:30:00-05:00"))
+                .andExpect(jsonPath("$.dispute_id").isNotEmpty())
+                .andReturn().getResponse().getContentAsString();
+
+        entityManager.flush();
+        var dispute = jdbcTemplate.queryForMap(
+                "SELECT id, status, window_start, window_end FROM dispute_guarantee WHERE reservation_id = ?",
+                seed.reservationId());
+        assertThat(com.jayway.jsonpath.JsonPath.<String>read(response, "$.dispute_id"))
+                .isEqualTo(dispute.get("id").toString());
+        assertThat(dispute.get("status")).isEqualTo("PENDING");
+        assertThat(((java.sql.Timestamp) dispute.get("window_start")).toInstant()).isEqualTo(T0);
+        assertThat(((java.sql.Timestamp) dispute.get("window_end")).toInstant()).isEqualTo(T0.plusSeconds(86400));
+        assertThat(OffsetDateTime.parse(com.jayway.jsonpath.JsonPath.read(response, "$.dispute_window_expires_at"))
+                .toInstant()).isEqualTo(T0.plusSeconds(86400));
 
         Reservation saved = reservationRepository.findById(seed.reservationId()).orElseThrow();
         assertThat(saved.getStatus()).isEqualTo(ReservationStatus.COMPLETED);
@@ -194,6 +208,11 @@ class NavigationEndIntegrationTest { // CU-07: cierre real contra PostgreSQL
                         .content(body))
                 .andExpect(status().isOk());
 
+        entityManager.flush();
+        Integer outboxBefore = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM outbox_message WHERE payload LIKE ?", Integer.class,
+                "%" + seed.reservationId() + "%");
+
         mockMvc.perform(post("/api/v1/reservations/{reservation_id}/navigation-end", seed.reservationId())
                         .header("X-User-Id", ownerId.toString())
                         .header("X-User-Role", "OWNER")
@@ -201,6 +220,14 @@ class NavigationEndIntegrationTest { // CU-07: cierre real contra PostgreSQL
                         .content(body))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("TRIP_ALREADY_COMPLETED"));
+
+        entityManager.flush();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM checkout_event WHERE reservation_id = ?",
+                Integer.class, seed.reservationId())).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM dispute_guarantee WHERE reservation_id = ?",
+                Integer.class, seed.reservationId())).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM outbox_message WHERE payload LIKE ?",
+                Integer.class, "%" + seed.reservationId() + "%")).isEqualTo(outboxBefore);
     }
 
     @Test

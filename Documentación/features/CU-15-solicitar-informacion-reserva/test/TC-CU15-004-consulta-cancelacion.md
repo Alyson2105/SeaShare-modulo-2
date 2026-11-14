@@ -26,10 +26,10 @@ Verificar consulta de reserva cancelada. Requisitos: FR-004, FR-006. Criterios: 
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-InternalReservationResponse#from devuelve null para cancellation_anticipation_hours; el dato obligatorio de FR-004 no se expone.
+CU-15: la lectura local devuelve minutos persistidos del arrendatario y conserva nulo para propietario; falta verificar el flujo HTTP completo y la autenticación de servicio.
 
 ##### Dependencies & Assumptions
-La lectura integrada prueba subtipo y actor; no acredita anticipación.
+La lectura integrada prueba subtipo, actor y anticipación persistida; no acredita autenticación real de M3.
 
 ##### Preconditions & Default Setup
 Reserva CANCELLED con subtipo, actor y anticipación registrados.
@@ -46,7 +46,7 @@ Reserva CANCELLED con subtipo, actor y anticipación registrados.
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-CU-04 está implementado; InternalReservationResponse#from devuelve null para anticipación.
+La anticipación es nula cuando no aplica, por ejemplo para cancelación del propietario; para el arrendatario se deriva de minutos persistidos.
 
 #### Defect Severity Reference
 
@@ -61,3 +61,6 @@ Corrida V4 del 2026-11-13: Blocked; estado documental: Blocked; evidencia: Inter
 
 #### Traceability
 FR-004, FR-006 | SC-003 | Prueba parcial ejecutada | Evidencia: src/test/java/com/seashare/m2/reservas/integration/InternalReservationReadIntegrationTest.java#cancelledByOwnerIsReportedWithOwnerActor | Blocked
+
+#### Evidencia local posterior a V4 — 2026-11-13
+InternalReservationReadIntegrationTest#cancelledByRenterReportsPersistedAnticipation y #cancelledByOwnerIsReportedWithOwnerActor; PostgreSQL local; corrida focalizada 2026-11-13, 18 pruebas sin fallos. Veredicto técnico: Partial. No acredita integración real M1/M3 ni resuelve las decisiones contractuales pendientes.

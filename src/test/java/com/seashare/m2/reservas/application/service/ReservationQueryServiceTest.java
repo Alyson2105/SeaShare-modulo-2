@@ -4,6 +4,7 @@ import com.seashare.m2.reservas.application.dto.ReservationDetailView;
 import com.seashare.m2.reservas.application.dto.ReservationListFilter;
 import com.seashare.m2.reservas.application.dto.ReservationPage;
 import com.seashare.m2.reservas.application.dto.ReservationViewPage;
+import com.seashare.m2.reservas.application.dto.ReservationView;
 import com.seashare.m2.reservas.application.dto.VesselDetail;
 import com.seashare.m2.reservas.application.dto.VesselSummary;
 import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
@@ -66,6 +67,17 @@ class ReservationQueryServiceTest { // pruebas unitarias del filtrado, detalle y
     }
 
     @Test
+    void calculatedTotalIsNeverPresentedAsConfirmedWithoutEvidence() {
+        for (ReservationStatus status : ReservationStatus.values()) {
+            Reservation reservation = reservation(UUID.randomUUID(), UUID.randomUUID(), status);
+            reservation.setTotalAmount(new BigDecimal("125.00")); // calculo simulado, guardado al iniciar pago
+            var summary = ReservationDetailPolicy.paymentSummary(ReservationView.from(reservation));
+            assertThat(summary.calculatedTotal()).as(status.name()).isEqualByComparingTo("125.00");
+            assertThat(summary.totalPaid()).as(status.name()).isNull();
+        }
+    }
+
+    @Test
     void historyFilterDelegatesWithHistoryStatuses() { // el filtro history se traduce al conjunto de estados del contrato
         UUID renter = UUID.randomUUID();
         UUID vesselId = UUID.randomUUID();
@@ -123,7 +135,7 @@ class ReservationQueryServiceTest { // pruebas unitarias del filtrado, detalle y
         when(clockPort.now()).thenReturn(NOW);
         when(repository.findById(reservation.getId())).thenReturn(Optional.of(reservation));
         when(repository.countCompletedByRenterExcluding(renter, reservation.getId())).thenReturn(2L);
-        when(vesselReadPort.getDetail(vesselId)).thenReturn(new VesselDetail(vesselId, "Catamaran", "CATAMARAN",
+        when(vesselReadPort.getDetail(vesselId)).thenReturn(new VesselDetail(vesselId, "Catamaran", "REG-001", "CATAMARAN",
                 "https://img", 12, 48.5, 3, true, "Marina", null, 11.0, -74.0,
                 "America/Bogota", List.of("GPS"), UUID.randomUUID(), "Dueno", true));
 

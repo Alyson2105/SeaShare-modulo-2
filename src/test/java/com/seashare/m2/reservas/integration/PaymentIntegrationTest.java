@@ -163,7 +163,8 @@ class PaymentIntegrationTest { // CU-03: inicio de pago de punta a punta con ada
                 .andExpect(jsonPath("$.payment_summary.rental_amount").value(9600000.00))
                 .andExpect(jsonPath("$.payment_summary.insurance_amount").value(120000.00))
                 .andExpect(jsonPath("$.payment_summary.guarantee_deposit_amount").value(320000.00))
-                .andExpect(jsonPath("$.payment_summary.total_paid").value(10040000.00));
+                .andExpect(jsonPath("$.payment_summary.calculated_total").value(10040000.00))
+                .andExpect(jsonPath("$.payment_summary.total_paid").value(org.hamcrest.Matchers.nullValue())); // aun no hay confirmacion
     }
 
     @Test

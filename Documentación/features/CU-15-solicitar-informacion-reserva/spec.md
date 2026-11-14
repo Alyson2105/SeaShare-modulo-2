@@ -57,7 +57,7 @@ Como motor financiero (Módulo 3), necesito obtener los detalles de cierre de un
 
 ### Edge Cases
 
-- **Naturaleza Estrictamente Idempotente (Solo Lectura)**: Esta interfaz no produce efectos secundarios. No avanza el estado, no interfiere con el TTL, no llama a Módulo 1 ni dispara webhooks. Módulo 3 puede consultarla 1,000 veces seguidas obteniendo exactamente el mismo resultado sin corromper el sistema.
+- **Naturaleza Estrictamente Idempotente (Solo Lectura)**: Esta interfaz no produce efectos secundarios. No avanza el estado, no interfiere con el TTL, no llama a Módulo 1 ni dispara webhooks. Las consultas repetidas no modifican la reserva ni reinician el TTL. Los datos estables permanecen iguales si no cambia la reserva; `remaining_seconds` puede variar con el reloj.
 - **Sin Política de Reintentos Internos**: Dado que Módulo 2 actúa como servidor pasivo en este caso de uso, si hay un timeout de red, Módulo 2 simplemente cierra el hilo. La responsabilidad de reintentar la llamada recae 100% en el cliente (Módulo 3).
 - **Prohibición de Cálculos Financieros**: Módulo 2 **NO** tasa económicamente los daños, no estima penalidades y no deduce comisiones. Solo entrega hechos (horas, textos, estados).
 - **Inmutabilidad en Estados Terminales**: Las consultas sobre reservas en estado `Completada`, `Cancelada` o `Expirada` siempre devolverán la misma fotografía histórica del cierre.

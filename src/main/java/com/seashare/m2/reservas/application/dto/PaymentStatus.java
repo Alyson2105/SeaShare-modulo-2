@@ -8,6 +8,8 @@ public enum PaymentStatus { // estado del cobro reportado por modulo 3 (UC06)
 
     REJECTED, // cobro rechazado; permite reintento si queda TTL
 
+    FAILED, // cobro fallido de forma definitiva (resultado externo FAILED)
+
     CANCELLED, // operacion cancelada por M3
 
     EXPIRED, // autorizacion vencida sin captura

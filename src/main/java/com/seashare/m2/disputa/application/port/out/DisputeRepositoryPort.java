@@ -14,6 +14,8 @@ public interface DisputeRepositoryPort { // persistencia del contexto disputa
 
     Optional<GuaranteeDispute> findById(UUID disputeId); // disputa por identificador
 
+    Optional<GuaranteeDispute> findByIdForUpdate(UUID disputeId); // serializa ediciones y resoluciones
+
     Optional<GuaranteeDispute> findByReservationId(UUID reservationId); // idempotencia de la apertura
 
     Optional<DisputeClaim> findClaimByDisputeId(UUID disputeId); // unico reclamo admitido (D-08)
@@ -27,6 +29,8 @@ public interface DisputeRepositoryPort { // persistencia del contexto disputa
     GuaranteeDispute save(GuaranteeDispute dispute); // inserta o actualiza la disputa (flush inmediato)
 
     DisputeClaim saveClaim(DisputeClaim claim); // inserta el reclamo
+
+    DisputeClaim saveClaimRevision(DisputeClaim claim, Instant editedAt); // nueva version inmutable
 
     void saveAdminReview(AdminReview review); // agrega la revision administrativa
 

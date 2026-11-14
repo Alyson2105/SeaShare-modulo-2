@@ -31,6 +31,7 @@ public record InternalReservationView( // datos crudos de la reserva leidos para
         int durationDays, // dias completos del alquiler (calculado en el servicio)
         int durationNights, // noches del alquiler (calculado en el servicio)
         String cancellationActor, // actor efectivo expuesto a Modulo 3
+        Long cancellationAnticipationMinutes, // anticipacion registrada en cancellation_event; nula sin evento
         boolean ttlApplies, // indica si el temporizador ttl esta vigente
         Long ttlRemainingSeconds // segundos restantes del ttl; nulo si no aplica
 ) { // proyeccion inmutable de solo lectura para el endpoint interno
@@ -40,7 +41,7 @@ public record InternalReservationView( // datos crudos de la reserva leidos para
         return new InternalReservationView(reservationId, reservationCode, renterId, vesselId, ownerId,
                 startDate, endDate, departureTime, harborTimezone, passengers, status, cancellationSubtype,
                 ttlExpiresAt, actualDepartureAt, actualArrivalAt, completionNotes, createdAt, updatedAt,
-                latestCancellationActor, durationDays, durationNights, cancellationActor, ttlApplies,
-                ttlRemainingSeconds); // copia con los campos derivados
+                latestCancellationActor, durationDays, durationNights, cancellationActor,
+                cancellationAnticipationMinutes, ttlApplies, ttlRemainingSeconds); // copia con los campos derivados
     }
 }

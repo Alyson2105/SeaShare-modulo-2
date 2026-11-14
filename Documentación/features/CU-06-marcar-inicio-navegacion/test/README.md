@@ -89,3 +89,5 @@ Discrepancias verificadas: El spec FR-003 prohíbe salida temprana, pero su edge
 | com.seashare.m2.reservas.infrastructure.adapter.in.web.NavigationStartControllerTest | 7 | 0 | 0 | 0 | Cobertura parcial según TC |
 | com.seashare.m2.reservas.integration.NavigationStartIntegrationTest | 10 | 0 | 0 | 0 | Cobertura parcial según TC |
 | com.seashare.m2.reservas.integration.NoShowIntegrationTest | 9 | 0 | 0 | 0 | Cobertura parcial según TC |
+
+**Decisión aprobada 2026-11-13 — TC-CU06-002-inicio-anticipado.md:** Se aprobó rechazar solicitudes y horas reales anteriores al zarpe pactado.

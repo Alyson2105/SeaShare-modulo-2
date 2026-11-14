@@ -75,3 +75,5 @@ Casos del canal A de notificación y canal B de consulta. La lógica de confirma
 | com.seashare.m2.reservas.application.service.PollPaymentStatusServiceTest | 5 | 0 | 0 | 0 | Evidencia parcial según TC |
 | com.seashare.m2.reservas.infrastructure.adapter.out.finance.HttpPaymentStatusAdapterTest | 7 | 0 | 0 | 0 | Evidencia parcial según TC |
 | com.seashare.m2.reservas.integration.ConfirmPaymentIntegrationTest | 6 | 0 | 0 | 0 | Evidencia parcial según TC |
+
+**Actualización local 2026-11-13:** TC-CU13-004-fallo-definitivo.md — ConfirmPaymentIntegrationTest#failedConfirmationDoesNotNotifyM1OrRepeatEffects; confirmación simulada, una transición persistida y ninguna nueva fila M1_HTTP; corrida focalizada 2026-11-13, 18 pruebas sin fallos. Resultado parcial; consultar limitaciones del caso.

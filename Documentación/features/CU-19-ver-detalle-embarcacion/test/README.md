@@ -76,3 +76,5 @@ Los endpoints de detalle y cotización están implementados; las pruebas usan do
 | com.seashare.m2.reservas.infrastructure.adapter.in.web.VesselDetailControllerTest | 7 | 0 | 0 | 0 | Evidencia parcial según TC |
 | com.seashare.m2.reservas.infrastructure.adapter.out.finance.HttpIndividualEstimateAdapterTest | 15 | 0 | 0 | 0 | Evidencia parcial según TC |
 | com.seashare.m2.reservas.infrastructure.adapter.out.fleet.HttpVesselReadAdapterTest | 3 | 0 | 0 | 0 | Evidencia parcial según TC |
+
+**Decisión aprobada 2026-11-13 — TC-CU19-006-duracion-cotizacion.md:** Se aprobaron fechas iguales como un día inclusivo; la semántica de instantes, si se introduce, requiere contrato separado.

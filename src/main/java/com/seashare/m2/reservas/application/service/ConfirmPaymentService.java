@@ -80,7 +80,7 @@ public class ConfirmPaymentService implements ConfirmPaymentUseCase { // CU-13: 
                 || reservation.getStatus() == ReservationStatus.PAYMENT_FAILED) {
             return processTerminal(command, reservation, now); // posible cobro huerfano
         }
-        return new ConfirmPaymentResult(PaymentConfirmationOutcome.IGNORED, reservation.getStatus()); // ya consolidada
+        return new ConfirmPaymentResult(PaymentConfirmationOutcome.INVALID_STATE, reservation.getStatus()); // 409 en Canal A
     }
 
     private ConfirmPaymentResult processPending(ConfirmPaymentCommand command, Reservation reservation, Instant now) {
@@ -116,7 +116,8 @@ public class ConfirmPaymentService implements ConfirmPaymentUseCase { // CU-13: 
             return new ConfirmPaymentResult(PaymentConfirmationOutcome.PENDING_RETRY, ReservationStatus.PENDING_PAYMENT);
         }
 
-        if (command.result() == PaymentStatus.CANCELLED || command.result() == PaymentStatus.EXPIRED) {
+        if (command.result() == PaymentStatus.CANCELLED || command.result() == PaymentStatus.EXPIRED
+                || command.result() == PaymentStatus.FAILED) {
             if (!register(command, reservation.getId(), now)) {
                 return duplicate(reservation);
             }

@@ -256,7 +256,7 @@ GET /api/v1/vessels/{vessel_id}/quotations
 
 | Código | Caso | Cuerpo de respuesta (ejemplo) |
 |---|---|---|
-| `400 Bad Request` | Parámetros con formato inválido, `end_at` menor o igual a `start_at`, fecha en el pasado o `passengers` no numérico | `{ "code": "INVALID_PARAMETERS", "message": "Las fechas ingresadas o la cantidad de pasajeros no son válidas" }` |
+| `400 Bad Request` | Parámetros con formato inválido, `end_date` anterior a `start_date` (fechas iguales son un día inclusivo), fecha en el pasado o `passengers` no numérico | `{ "code": "INVALID_PARAMETERS", "message": "Las fechas ingresadas o la cantidad de pasajeros no son válidas" }` |
 | `401 Unauthorized` | Token de autenticación ausente o expirado | `{ "code": "UNAUTHENTICATED", "message": "Token de autenticación inválido o ausente" }` |
 | `403 Forbidden` | Perfil de usuario distinto de Arrendatario | `{ "code": "PROFILE_NOT_AUTHORIZED", "message": "Este recurso requiere perfil Arrendatario" }` |
  | `404 Not Found` | La embarcación indicada no existe en el catálogo | `{ "code": "VESSEL_NOT_FOUND", "message": "La embarcación solicitada no se encuentra registrada" }` |

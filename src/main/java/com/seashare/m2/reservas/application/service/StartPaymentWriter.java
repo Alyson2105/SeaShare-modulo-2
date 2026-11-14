@@ -60,7 +60,9 @@ public class StartPaymentWriter { // CU-03: frontera transaccional con bloqueo p
         Reservation reservation = reservationRepository.findByIdForUpdate(reservationId) // SELECT ... FOR UPDATE
                 .orElseThrow(() -> new ReservationNotFoundException(reservationId));
 
-        assertTtlActive(reservation, requestedAt); // el TTL nunca se reinicia (FR-007)
+        reservationRepository.lockVesselForPayment(reservation.getVesselId()); // FCFS entre reservas distintas del mismo barco
+
+        assertTtlActive(reservation, clockPort.now()); // el TTL puede vencer mientras espera el bloqueo
 
         if (reservation.getStatus() == ReservationStatus.INITIATED) {
             return firstPayment(reservation, calculation, paymentTokenRef, requestedAt);
@@ -113,6 +115,11 @@ public class StartPaymentWriter { // CU-03: frontera transaccional con bloqueo p
         if (!LAST_REJECTED.equals(lastResult)) { // solo se reintenta tras un rechazo
             throw new ReservationRuleException(ErrorCode.RETRY_NOT_ALLOWED,
                     "Ya hay un cobro en proceso para esta reserva");
+        }
+
+        if (!paymentAttemptPort.claimLastRejectionForRetry(reservation.getId())) {
+            throw new ReservationRuleException(ErrorCode.RETRY_NOT_ALLOWED,
+                    "Ya se inicio un nuevo cobro para el ultimo rechazo");
         }
 
         CalculatedValue persisted = persistedCalculation(reservation); // se reutiliza el calculo ya asociado

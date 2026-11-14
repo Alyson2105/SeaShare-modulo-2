@@ -61,3 +61,6 @@ Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: Navigatio
 
 #### Traceability
 FR-003 | SC-002 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NavigationStartIntegrationTest.java#clockBeforeScheduledDepartureReturnsEarlyDeparture | Draft
+
+#### Decisión aprobada — 2026-11-13
+Se aprobó rechazar solicitudes y horas reales anteriores al zarpe pactado. Esta decisión no modifica automáticamente el veredicto del TC.

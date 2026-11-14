@@ -73,7 +73,7 @@ Como Propietario, quiero consultar el listado de las reservas asociadas exclusiv
 - **FR-009**: El sistema DEBE incluir en la tarjeta de resumen para el **Propietario** el nombre del Arrendatario que realizó la reserva (ej. "Laura Gomez") y la cantidad de pasajeros, junto a los datos básicos de la embarcación (imagen, nombre, rango de fechas y noches).
 - **FR-010**: El sistema DEBE incluir en la tarjeta de resumen para el **Arrendatario** insignias o etiquetas contextuales de estado cualitativo debajo de las fechas cuando aplique a los estados finales, tales como confirmaciones operativas de garantía (ej. "Depósito sin disputa / Reembolso gestionado por Módulo 3") o sub-estados de cancelación (ej. "Cancelada - Ventana Flexible", "Cancelada - Por Propietario"). En ningún caso el sistema mostrará montos numéricos de reembolso ni monedas extranjeras en esta vista.
 - **FR-011**: El sistema DEBE proveer un enlace de acción textual explícito en cada fila o tarjeta (ej. "Ver detalles >") ubicado junto al monto total, para invocar la vista profunda (extensión hacia `Ver detalle de reserva`).
-- **FR-012**: El sistema DEBE implementar paginación de resultados fijando un límite de 10 reservas por página, ordenadas descendentemente por fecha de creación (`created_at DESC`), proveyendo controles de navegación entre páginas.
+- **FR-012**: El sistema DEBE implementar paginación de resultados con 10 reservas por página por defecto y un límite configurable entre 1 y 50, ordenadas descendentemente por fecha de creación (`created_at DESC`), proveyendo controles de navegación entre páginas.
 
 
 ### Key Entities

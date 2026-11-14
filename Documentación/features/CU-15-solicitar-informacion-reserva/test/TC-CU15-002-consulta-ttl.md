@@ -61,3 +61,6 @@ Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: GetIntern
 
 #### Traceability
 FR-002, FR-005, FR-007 | SC-002 | Prueba parcial ejecutada | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/GetInternalReservationServiceTest.java#ttlAppliesForPendingPayment | Draft
+
+#### Decisión aprobada — 2026-11-13
+Se aprobó el GET sin efectos con remaining_seconds variable según el reloj. Esta decisión no modifica automáticamente el veredicto del TC.

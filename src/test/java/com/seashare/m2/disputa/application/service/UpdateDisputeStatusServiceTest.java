@@ -153,15 +153,17 @@ class UpdateDisputeStatusServiceTest { // transiciones de CU-17 sin base de dato
     }
 
     @Test
-    void adminCanRejectWithoutClaim() { // permitido antes del vencimiento
+    void adminCannotRejectWithoutClaim() { // decision de negocio: solo el sistema cierra sin reclamo
         GuaranteeDispute dispute = dispute(DisputeStatus.PENDING, false);
-        stubWrites();
         when(clockPort.now()).thenReturn(NOW);
 
-        UpdateDisputeStatusResult result = service.update(
-                command(dispute.id(), DisputeStatus.REJECTED, DisputeActorType.ADMIN, adminId, "sin reclamo"));
-
-        assertThat(result.newStatus()).isEqualTo(DisputeStatus.REJECTED);
+        assertThatThrownBy(() -> service.update(
+                command(dispute.id(), DisputeStatus.REJECTED, DisputeActorType.ADMIN, adminId, "sin reclamo")))
+                .isInstanceOf(DisputeRuleException.class)
+                .satisfies(e -> assertThat(((DisputeRuleException) e).getCode()).isEqualTo("INVALID_RESERVATION_STATE"));
+        verify(repository, never()).saveAdminReview(any());
+        verify(repository, never()).save(any());
+        verify(disputeOutboxPort, never()).enqueue(any());
     }
 
     @Test

@@ -82,3 +82,5 @@ Casos de resolución administrativa y transición interna de disputas. El contex
 | com.seashare.m2.disputa.integration.DisputeFinalStateImmutabilityTest | 2 | 0 | 0 | 0 | Parcial para los escenarios relacionados |
 | com.seashare.m2.disputa.integration.DisputePublishingIntegrationTest | 4 | 0 | 0 | 0 | Parcial para los escenarios relacionados |
 | com.seashare.m2.disputa.integration.DisputeWindowCloseIntegrationTest | 4 | 0 | 0 | 0 | Parcial para los escenarios relacionados |
+
+**Decisión aprobada y evidencia local 2026-11-13:** TC-CU17-007-sin-reclamo.md — Decisión aprobada: el administrador no puede resolver sin reclamo; el sistema sí puede cerrar por vencimiento. UpdateDisputeStatusServiceTest#adminCannotAcceptWithoutClaim, #adminCannotRejectWithoutClaim y #systemCloseRejectsWithoutClaimAndWithoutAdminReview pasaron en corrida focalizada de 32 pruebas. Falta autenticación real y prueba HTTP completa.

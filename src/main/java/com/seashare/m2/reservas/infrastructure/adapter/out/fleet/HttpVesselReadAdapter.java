@@ -147,6 +147,7 @@ public class HttpVesselReadAdapter implements VesselReadPort { // lectura de res
         return new VesselDetail(
                 vesselId,
                 name,
+                text(root, "registration_number"),
                 text(root, "type"),
                 imageUrl,
                 integer(root, "max_capacity"),

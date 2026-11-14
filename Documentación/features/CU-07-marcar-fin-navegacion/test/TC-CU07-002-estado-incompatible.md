@@ -61,3 +61,6 @@ Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: Navigatio
 
 #### Traceability
 FR-001, FR-009 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NavigationEndIntegrationTest.java#reservedReservationIsInvalidState | Draft
+
+#### Decisión aprobada — 2026-11-13
+Se aprobó TRIP_ALREADY_COMPLETED para un segundo cierre de una reserva COMPLETED. Esta decisión no modifica automáticamente el veredicto del TC.

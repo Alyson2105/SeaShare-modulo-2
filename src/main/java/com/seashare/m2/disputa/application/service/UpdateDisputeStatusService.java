@@ -55,6 +55,12 @@ public class UpdateDisputeStatusService implements UpdateDisputeStatusUseCase {
         DisputeStatus previous = dispute.status(); // estado previo para la respuesta y el historial
         Instant now = clockPort.now(); // hora unica de la transicion
 
+        if (!dispute.isFinal() && command.actorType() == DisputeActorType.ADMIN && !dispute.hasClaim()
+                && command.targetStatus() != null && command.targetStatus().isFinal()) {
+            throw new DisputeRuleException(ErrorCode.INVALID_RESERVATION_STATE,
+                    "An administrator cannot resolve a dispute without a claim");
+        }
+
         dispute.resolve(command.targetStatus(), command.adminId(), command.reason(), now); // valida y transiciona
 
         if (command.actorType() == DisputeActorType.ADMIN) { // trazabilidad de la revision humana

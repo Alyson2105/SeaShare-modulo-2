@@ -46,8 +46,10 @@ final class ReservationDetailPolicy { // reglas de presentacion del detalle de C
             }
         }
 
-        BigDecimal totalPaid = view.totalAmount(); // solo lo liquidado; nunca un estimado presentado como pagado
-        return new ReservationDetailView.PaymentSummary(title, view.currency(), rental, insurance, deposit, totalPaid, note);
+        // El calculo se guarda antes del cobro y no acredita el importe efectivamente liquidado.
+        BigDecimal totalPaid = null; // M3 aun no entrega un importe confirmado en el contrato local
+        return new ReservationDetailView.PaymentSummary(title, view.currency(), rental, insurance, deposit,
+                view.estimatedTotal(), view.totalAmount(), totalPaid, note);
     }
 
     static ReservationDetailView.AvailableActions actions(ReservationView view,

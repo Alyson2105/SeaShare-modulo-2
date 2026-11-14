@@ -158,6 +158,8 @@ class DisputeWindowCloseIntegrationTest { // cierre automatico de la ventana con
     void doesNotCloseAlreadyResolvedDispute() { // un estado final no se toca
         OpenedDispute dispute = openDispute();
         when(clockPort.now()).thenReturn(BASE.plus(Duration.ofHours(1)));
+        registerDisputeClaimUseCase.register(new RegisterDisputeClaimCommand(
+                dispute.disputeId(), ownerId, "El timon llego con holgura critica por impacto", "structure", List.of()));
         updateDisputeStatusUseCase.update(new UpdateDisputeStatusCommand(
                 dispute.disputeId(), DisputeStatus.REJECTED, UUID.randomUUID(),
                 "desgaste normal", null, DisputeActorType.ADMIN));

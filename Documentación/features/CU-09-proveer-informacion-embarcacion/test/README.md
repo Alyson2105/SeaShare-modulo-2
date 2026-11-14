@@ -79,3 +79,5 @@ Casos para FleetInfoPort y su adaptador HTTP de M1; modo fake activo por defecto
 | com.seashare.m2.reservas.infrastructure.adapter.out.fleet.HttpVesselReadAdapterTest | 3 | 0 | 0 | 0 | Evidencia parcial según TC |
 | com.seashare.m2.reservas.integration.CreateReservationTest | 5 | 0 | 0 | 0 | Evidencia parcial según TC |
 | com.seashare.m2.reservas.integration.ExternalQueryLogRegistrationTest | 19 | 0 | 0 | 0 | Evidencia parcial según TC |
+
+**Actualización local 2026-11-13:** TC-CU09-007 mapea matrícula con fixture WireMock; M1 real y ficha integral continúan pendientes. Veredicto parcial.

@@ -26,7 +26,7 @@ Verificar ficha completa y ubicación gps. Requisitos: FR-001, FR-004. Criterios
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Spec FR-004 exige matrícula; VesselDetail y su adaptador no exponen ese campo. La ruta de ficha completa requerida no está implementada.
+El DTO y el adaptador ahora mapean registration_number según plan CU-09; falta verificar el contrato y la ficha completa con M1 real.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas de HttpVesselReadAdapterTest y VesselDetailControllerTest con proveedores simulados; su cobertura debe evaluarse por escenario.
@@ -63,3 +63,6 @@ Corrida V4 del 2026-11-13: Blocked; estado documental: Blocked; evidencia: HttpV
 
 #### Traceability
 FR-001, FR-004 | SC-005 | Pruebas de detalle ejecutadas | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpVesselReadAdapterTest.java#mapsFullDetail; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselDetailControllerTest.java#vesselDetailReturnsFleetDataWithoutCache | Blocked
+
+#### Evidencia local posterior a V4 — 2026-11-13
+HttpVesselReadAdapterTest#mapsFullDetail verifica registration_number con fixture WireMock, y VesselDetailControllerTest verifica la respuesta local. Ambas clases pasaron en la suite completa de 642 pruebas; M1 real sigue aplazado. Veredicto técnico: Partial.

@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,11 +38,14 @@ public class ReservationRepositoryAdapter implements ReservationRepositoryPort {
     private final ReservationJpaRepository repository; // repositorio spring data jpa
     private final ReservationMapper mapper; // mapeador entre entidad y dominio
     private final EntityManager entityManager; // administrador de persistencia jpa
+    private final JdbcTemplate jdbcTemplate;
 
-    public ReservationRepositoryAdapter(ReservationJpaRepository repository, ReservationMapper mapper, EntityManager entityManager) { // constructor con dependencias
+    public ReservationRepositoryAdapter(ReservationJpaRepository repository, ReservationMapper mapper, EntityManager entityManager,
+                                        JdbcTemplate jdbcTemplate) { // constructor con dependencias
         this.repository = repository; // asigna repositorio
         this.mapper = mapper; // asigna mapeador
         this.entityManager = entityManager; // asigna entity manager
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
@@ -89,6 +93,13 @@ public class ReservationRepositoryAdapter implements ReservationRepositoryPort {
     @Override
     public Optional<Reservation> findByIdForUpdate(UUID id) { // CU-03: lectura con bloqueo pesimista
         return repository.findByIdForUpdate(id).map(mapper::toDomain); // fila bloqueada hasta el commit
+    }
+
+    @Override
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public void lockVesselForPayment(UUID vesselId) {
+        jdbcTemplate.query("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))",
+                rs -> null, vesselId.toString()); // bloqueo hasta el fin de la transaccion
     }
 
     @Override

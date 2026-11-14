@@ -61,3 +61,6 @@ Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: VesselSea
 
 #### Traceability
 FR-002 | SC-003 | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java#overlappingReservationHidesVessel; src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java#excludesVesselsWithOverlappingReservations | Draft
+
+#### Decisión aprobada — 2026-11-13
+Se aprobó filtrar en M2 por reservas locales solapadas cuando existan ambas fechas, conservando la validación transaccional posterior. Esta decisión no modifica automáticamente el veredicto del TC.

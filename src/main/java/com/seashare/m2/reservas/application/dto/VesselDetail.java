@@ -9,6 +9,8 @@ public record VesselDetail( // ficha tecnica de embarcacion para el detalle de C
 
         String name, // nombre comercial
 
+        String registrationNumber, // matricula oficial provista por M1
+
         String type, // tipo de embarcacion segun M1
 
         String imageUrl, // imagen principal; null si el contrato no la entrega

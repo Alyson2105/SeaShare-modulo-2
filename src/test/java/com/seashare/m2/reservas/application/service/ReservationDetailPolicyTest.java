@@ -54,7 +54,7 @@ class ReservationDetailPolicyTest { // reglas de presentacion del detalle sin ca
     }
 
     @Test
-    void reservedShowsBreakdownAndUsesLiquidatedTotal() { // RESERVED conserva los tres rubros persistidos
+    void reservedShowsCalculatedTotalWithoutInventingPaidAmount() {
         Reservation reservation = reservation(ReservationStatus.RESERVED, null);
         reservation.setRentalAmount(new BigDecimal("2800000.00"));
         reservation.setInsuranceAmount(new BigDecimal("350000.00"));
@@ -67,7 +67,8 @@ class ReservationDetailPolicyTest { // reglas de presentacion del detalle sin ca
         assertThat(summary.rentalAmount()).isEqualByComparingTo("2800000.00");
         assertThat(summary.insuranceAmount()).isEqualByComparingTo("350000.00");
         assertThat(summary.guaranteeDepositAmount()).isEqualByComparingTo("300000.00");
-        assertThat(summary.totalPaid()).isEqualByComparingTo("3450000.00");
+        assertThat(summary.calculatedTotal()).isEqualByComparingTo("3450000.00");
+        assertThat(summary.totalPaid()).isNull();
         assertThat(summary.clarifyingNote()).isNull();
     }
 

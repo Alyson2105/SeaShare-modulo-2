@@ -66,7 +66,7 @@ class InternalReservationControllerTest { // pruebas web standalone del endpoint
                 Instant.parse("2026-10-09T15:00:00Z"), // creacion
                 Instant.parse("2026-10-09T15:05:00Z"), // actualizacion
                 null, // actor crudo
-                6, 5, null, false, null); // derivados
+                6, 5, null, null, false, null); // derivados
     }
 
     @Test

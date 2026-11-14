@@ -39,7 +39,7 @@ class VesselDetailServiceTest { // pruebas unitarias de CU-19 sin llamadas reale
     private final VesselDetailService service = new VesselDetailService(vesselReadPort, fleetInfoPort, individualEstimatePort);
 
     private VesselDetail detail(int capacity) { // ficha de prueba
-        return new VesselDetail(VESSEL_ID, "Yate Tayrona", "YACHT", null, capacity, 48.5, 3, true,
+        return new VesselDetail(VESSEL_ID, "Yate Tayrona", "REG-001", "YACHT", null, capacity, 48.5, 3, true,
                 "Marina Santa Marta", null, 11.2443, -74.2125, "America/Bogota",
                 List.of("GPS"), UUID.randomUUID(), "Inversiones Nauticas", true);
     }
@@ -86,6 +86,19 @@ class VesselDetailServiceTest { // pruebas unitarias de CU-19 sin llamadas reale
         assertThat(quotation.warning()).isEqualTo("Valor estimado literal");
         assertThat(quotation.currency()).isEqualTo("COP");
         assertThat(quotation.totalDays()).isEqualTo(3); // 10, 11 y 12 de abril
+    }
+
+    @Test
+    void quotationAcceptsEqualDatesAsOneInclusiveDay() { // CU-11 admite un solo dia; CU-19 no lo rechaza
+        LocalDate day = LocalDate.of(2027, 4, 10);
+        when(fleetInfoPort.getVesselInfo(VESSEL_ID)).thenReturn(new FleetInfo(UUID.randomUUID(), 12, "America/Bogota"));
+        when(individualEstimatePort.getIndividualEstimate(VESSEL_ID, day, day, 4))
+                .thenReturn(new IndividualEstimate(new BigDecimal("3240000.00"), "Valor estimado literal"));
+
+        VesselQuotation quotation = service.getQuotation(VESSEL_ID, day, day, 4, "RENTER");
+
+        assertThat(quotation.totalDays()).isEqualTo(1); // dia inclusivo
+        assertThat(quotation.totalAmount()).isEqualByComparingTo("3240000.00");
     }
 
     @Test

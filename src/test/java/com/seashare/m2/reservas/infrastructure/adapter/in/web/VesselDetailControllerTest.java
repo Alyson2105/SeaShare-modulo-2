@@ -38,6 +38,7 @@ class VesselDetailControllerTest { // pruebas MockMvc de CU-19 con los adaptador
                 .andExpect(header().string("Cache-Control", containsString("no-store")))
                 .andExpect(jsonPath("$.vessel_id").value(VESSEL_ID.toString()))
                 .andExpect(jsonPath("$.name").value(org.hamcrest.Matchers.startsWith("Embarcacion demo")))
+                .andExpect(jsonPath("$.registration_number").value(org.hamcrest.Matchers.startsWith("REG-DEMO-")))
                 .andExpect(jsonPath("$.navigation_type").value("CATAMARAN"))
                 .andExpect(jsonPath("$.max_capacity").value(12))
                 .andExpect(jsonPath("$.length_feet").value(48.5))

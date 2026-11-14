@@ -83,3 +83,7 @@ Casos para GET /api/v1/reservations/{id}, con identidad temporal por headers y d
 | [ReservationQueryTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java) | 13 | 0 | 0 | 0 | XML V4 exitoso; alcance parcial |
 | [ReservationDetailPolicyTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ReservationDetailPolicyTest.java) | 7 | 0 | 0 | 0 | XML V4 exitoso; política unitaria |
 | [PaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java) | 10 | 0 | 0 | 0 | XML V4 exitoso; cálculo simulado |
+
+**Actualización local 2026-11-13:** TC-CU21-004-total-estimado.md — ReservationQueryServiceTest#calculatedTotalIsOnlyShownAsPaidAfterConfirmation; corrida focalizada 2026-11-13, 35 pruebas sin fallos; importes simulados. Resultado parcial; consultar limitaciones del caso.
+
+**Decisión aprobada 2026-11-13 — TC-CU21-004-total-estimado.md:** Se aprobaron estimación, cálculo solicitado y monto confirmado diferenciados. ReservationQueryServiceTest#calculatedTotalIsNeverPresentedAsConfirmedWithoutEvidence y PaymentIntegrationTest#breakdownIsPersistedForDetailView pasaron en 41 pruebas focalizadas; total_paid es nulo hasta contar con un importe confirmado de M3.

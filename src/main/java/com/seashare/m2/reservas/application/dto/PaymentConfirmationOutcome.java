@@ -12,5 +12,7 @@ public enum PaymentConfirmationOutcome { // tratamiento aplicado a una confirmac
 
     DUPLICATE, // la clave (reserva, referencia, resultado) ya se habia procesado
 
+    INVALID_STATE, // el estado actual de la reserva no admite confirmacion de pago
+
     IGNORED // sin resultado definitivo o estado no aplicable
 }

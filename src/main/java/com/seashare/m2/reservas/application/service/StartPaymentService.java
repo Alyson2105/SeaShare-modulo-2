@@ -1,10 +1,12 @@
 package com.seashare.m2.reservas.application.service;
 
 import com.seashare.m2.reservas.application.dto.CalculatedValue;
+import com.seashare.m2.reservas.application.dto.CalculationAuditEntry;
 import com.seashare.m2.reservas.application.dto.StartPaymentCommand;
 import com.seashare.m2.reservas.application.dto.StartPaymentResult;
 import com.seashare.m2.reservas.application.port.in.StartPaymentUseCase;
 import com.seashare.m2.reservas.application.port.out.CalculatedValuePort;
+import com.seashare.m2.reservas.application.port.out.CalculationAuditPort;
 import com.seashare.m2.reservas.application.port.out.FleetOperationalStatusPort;
 import com.seashare.m2.reservas.application.port.out.PaymentAttemptPort;
 import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
@@ -33,6 +35,8 @@ public class StartPaymentService implements StartPaymentUseCase { // CU-03: orqu
 
     private final PaymentAttemptPort paymentAttemptPort; // ultimo resultado del cobro
 
+    private final CalculationAuditPort calculationAuditPort; // asiento auditable de FR-010
+
     private final StartPaymentWriter writer; // frontera transaccional con lock
 
     private final ClockPort clockPort; // reloj unico
@@ -41,12 +45,14 @@ public class StartPaymentService implements StartPaymentUseCase { // CU-03: orqu
                                CalculatedValuePort calculatedValuePort,
                                FleetOperationalStatusPort fleetOperationalStatusPort,
                                PaymentAttemptPort paymentAttemptPort,
+                               CalculationAuditPort calculationAuditPort,
                                StartPaymentWriter writer,
                                ClockPort clockPort) {
         this.reservationRepository = reservationRepository; // asigna repositorio
         this.calculatedValuePort = calculatedValuePort; // asigna M3
         this.fleetOperationalStatusPort = fleetOperationalStatusPort; // asigna M1
         this.paymentAttemptPort = paymentAttemptPort; // asigna historial
+        this.calculationAuditPort = calculationAuditPort; // asigna auditoria de calculo
         this.writer = writer; // asigna escritura transaccional
         this.clockPort = clockPort; // asigna reloj
     }
@@ -80,7 +86,17 @@ public class StartPaymentService implements StartPaymentUseCase { // CU-03: orqu
     }
 
     private StartPaymentResult firstPayment(Reservation reservation, StartPaymentCommand command, Instant now) {
-        CalculatedValue calculation = calculatedValuePort.getCalculatedValue(command.reservationId()); // FR-003 fuera de TX
+        CalculatedValue calculation; // desglose recibido de M3
+        try {
+            calculation = calculatedValuePort.getCalculatedValue(command.reservationId()); // FR-003 fuera de TX
+        } catch (RuntimeException failure) { // fallo de calculo o de integracion
+            calculationAuditPort.record(new CalculationAuditEntry( // FR-010: se audita el intento fallido
+                    command.reservationId(), null, null, null, null, null, "FAILED", now));
+            throw failure; // conserva el error original de M3
+        }
+        calculationAuditPort.record(new CalculationAuditEntry( // FR-010: montos recibidos y estado del calculo
+                command.reservationId(), null, calculation.rentalAmount(), calculation.insuranceAmount(),
+                calculation.guaranteeDepositAmount(), calculation.totalAmount(), "SUCCESS", now));
 
         if (!fleetOperationalStatusPort.isAvailable(reservation.getVesselId())) { // FR-005 fuera de TX
             throw new ReservationRuleException(ErrorCode.VESSEL_NOT_AVAILABLE,

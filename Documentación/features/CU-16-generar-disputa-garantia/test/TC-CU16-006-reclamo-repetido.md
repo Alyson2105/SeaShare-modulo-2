@@ -61,3 +61,6 @@ Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: RegisterD
 
 #### Traceability
 FR-006 | SC-005 | src/test/java/com/seashare/m2/disputa/integration/RegisterDisputeClaimIntegrationTest.java#rejectsSecondClaim | Draft
+
+#### Decisión aprobada y evidencia local — 2026-11-13
+Decisión aprobada: un reclamo editable mediante PUT dentro de 24 h, con historial. RegisterDisputeClaimIntegrationTest#editPreservesOriginalAndAppendsHistory, #editAtExpiryIsRejected y #otherOwnerCannotEdit verifican persistencia, borde y autorización; el segundo POST sigue rechazándose. EditDisputeClaimControllerTest#ownerCanSubmitAnEditedClaim verifica la ruta con identidad simulada. Corrida focalizada 2026-11-13: 32 pruebas, sin fallos. Falta prueba integral de concurrencia edición/resolución y autenticación real. Veredicto técnico: Partial.

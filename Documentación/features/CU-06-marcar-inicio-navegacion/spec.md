@@ -88,7 +88,7 @@ Si se intenta registrar el inicio de la navegación sobre una reserva que ya est
 - **Múltiples intentos por mala conexión en el muelle**:
     - Si por fallas de señal en el puerto el Propietario presiona varias veces el botón de inicio, el sistema procesa una sola solicitud y responde correctamente a los reintentos sin duplicar notificaciones a Módulo 1 y Módulo 3.
 - **Salida ligeramente antes o después de la hora exacta**:
-    - Si el viaje sale unos minutos antes o después de la hora acordada por temas de marea o desembarque, el sistema guarda la hora real de salida, manteniendo la hora contratada original para fines del contrato.
+    - La solicitud y la hora real informada no pueden ser anteriores al zarpe pactado. Una salida posterior se registra manteniendo la hora contratada original.
 - **Prohibición de cobrar dinero o garantías en Módulo 2**:
     - Al entregar el barco, el Módulo 2 **NO realiza cobros adicionales, no cobra depósitos de garantía ni calcula costos de combustible o tiempo extra**. Cualquier gestión de dinero le corresponde de forma exclusiva al Módulo 3.
 

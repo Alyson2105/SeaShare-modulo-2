@@ -89,6 +89,11 @@ public class RequestCancellationService implements RequestCancellationUseCase { 
 
         Instant now = clockPort.now(); // instante unico de la solicitud
 
+        if (!now.isBefore(scheduledDeparture.toInstant())) { // spec US2/FR-002: nadie cancela en el zarpe ni despues
+            throw new ReservationRuleException(ErrorCode.INVALID_RESERVATION_STATE,
+                    "Cancellation is not allowed at or after scheduled departure"); // 409 para RENTER y OWNER
+        }
+
         CancellationSubtype subtype; // clasificacion final
         Integer anticipationMinutes; // minutos para CU-08; null para OWNER
         boolean mechanicalFailure; // averia reportada por el propietario

@@ -100,3 +100,7 @@ Como Arrendatario o Propietario revisando los detalles de una reserva en estado 
 
 - **SC-001**: El 100% de las reservas en estado `Reservada` proveen acceso directo al flujo de cancelación para los actores autorizados.
 - **SC-002**: Cero (0%) filtraciones de reservas: el sistema deniega el acceso a vistas de detalle si el usuario no es parte directa de la transacción (ni propietario ni arrendatario de ese ID específico).
+
+## Decisión aprobada: importes diferenciados
+
+La estimación, el importe solicitado para el cobro y el importe confirmado son conceptos distintos. No se debe describir como pagado un importe previo a la confirmación. El origen y la representación del importe efectivamente liquidado requieren acuerdo con M3; M2 no inventa ese dato ni ejecuta cálculos financieros.

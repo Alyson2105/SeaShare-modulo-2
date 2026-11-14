@@ -61,7 +61,7 @@ class GetInternalReservationServiceTest { // pruebas unitarias del servicio de l
                 FIXED_NOW, // creacion
                 FIXED_NOW, // actualizacion
                 latestCancellationActor, // actor crudo
-                0, 0, null, false, null); // derivados aun sin calcular
+                0, 0, null, null, false, null); // derivados aun sin calcular
     }
 
     @Test
@@ -101,6 +101,27 @@ class GetInternalReservationServiceTest { // pruebas unitarias del servicio de l
 
         assertThat(result.ttlApplies()).isTrue();
         assertThat(result.ttlRemainingSeconds()).isEqualTo(120L);
+    }
+
+    @Test
+    void repeatedReadsKeepStableFieldsAndOnlyTtlChanges() { // el reloj solo altera remaining_seconds; no hay mutaciones
+        UUID id = UUID.randomUUID();
+        Instant expiresAt = FIXED_NOW.plusSeconds(900);
+        when(readPort.findById(id)).thenReturn(Optional.of(view(ReservationStatus.PENDING_PAYMENT, expiresAt,
+                LocalDate.of(2027, 5, 10), LocalDate.of(2027, 5, 15), null)));
+        when(clockPort.now()).thenReturn(FIXED_NOW, FIXED_NOW.plusSeconds(60));
+
+        InternalReservationView first = service.execute(id);
+        InternalReservationView second = service.execute(id);
+
+        assertThat(second.reservationCode()).isEqualTo(first.reservationCode());
+        assertThat(second.status()).isEqualTo(first.status());
+        assertThat(second.durationDays()).isEqualTo(first.durationDays());
+        assertThat(second.ttlExpiresAt()).isEqualTo(first.ttlExpiresAt());
+        assertThat(first.ttlRemainingSeconds()).isEqualTo(900L);
+        assertThat(second.ttlRemainingSeconds()).isEqualTo(840L);
+        org.mockito.Mockito.verify(readPort, org.mockito.Mockito.times(2)).findById(id); // solo lectura
+        org.mockito.Mockito.verifyNoMoreInteractions(readPort); // el puerto no expone escrituras
     }
 
     @Test

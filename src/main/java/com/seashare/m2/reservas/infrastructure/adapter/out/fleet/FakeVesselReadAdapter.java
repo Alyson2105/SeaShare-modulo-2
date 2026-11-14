@@ -48,6 +48,7 @@ public class FakeVesselReadAdapter implements VesselReadPort { // resumen simula
         return new VesselDetail(
                 vesselId,
                 "Embarcacion demo " + shortId,
+                "REG-DEMO-" + shortId,
                 "CATAMARAN",
                 null,
                 12,

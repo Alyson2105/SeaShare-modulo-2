@@ -4,6 +4,7 @@ import com.seashare.m2.reservas.application.dto.CalculatedValue;
 import com.seashare.m2.reservas.application.dto.StartPaymentCommand;
 import com.seashare.m2.reservas.application.dto.StartPaymentResult;
 import com.seashare.m2.reservas.application.port.out.CalculatedValuePort;
+import com.seashare.m2.reservas.application.port.out.CalculationAuditPort;
 import com.seashare.m2.reservas.application.port.out.FleetOperationalStatusPort;
 import com.seashare.m2.reservas.application.port.out.PaymentAttemptPort;
 import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
@@ -58,6 +59,9 @@ class StartPaymentServiceTest { // CU-03: validaciones previas a la transaccion
     private PaymentAttemptPort paymentAttemptPort;
 
     @Mock
+    private CalculationAuditPort calculationAuditPort;
+
+    @Mock
     private StartPaymentWriter writer;
 
     @Mock
@@ -68,7 +72,7 @@ class StartPaymentServiceTest { // CU-03: validaciones previas a la transaccion
     @BeforeEach
     void setUp() {
         service = new StartPaymentService(reservationRepository, calculatedValuePort,
-                fleetOperationalStatusPort, paymentAttemptPort, writer, clockPort);
+                fleetOperationalStatusPort, paymentAttemptPort, calculationAuditPort, writer, clockPort);
     }
 
     private Reservation reservation(ReservationStatus status, Instant ttl) {
@@ -160,6 +164,12 @@ class StartPaymentServiceTest { // CU-03: validaciones previas a la transaccion
                 .isInstanceOfSatisfying(ReservationRuleException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ErrorCode.CALCULATION_UNAVAILABLE.getCode()));
         verify(writer, never()).startPayment(any(), any(), any(), any()); // no se transiciona
+        org.mockito.ArgumentCaptor<com.seashare.m2.reservas.application.dto.CalculationAuditEntry> audit =
+                org.mockito.ArgumentCaptor.forClass(com.seashare.m2.reservas.application.dto.CalculationAuditEntry.class);
+        verify(calculationAuditPort).record(audit.capture()); // FR-010: se audita el calculo fallido
+        assertThat(audit.getValue().calculationStatus()).isEqualTo("FAILED");
+        assertThat(audit.getValue().totalAmount()).isNull(); // sin montos cuando M3 no responde
+        assertThat(audit.getValue().occurredAt()).isEqualTo(NOW);
     }
 
     @Test
@@ -195,6 +205,14 @@ class StartPaymentServiceTest { // CU-03: validaciones previas a la transaccion
 
         assertThat(result.status()).isEqualTo(ReservationStatus.PENDING_PAYMENT);
         verify(writer).startPayment(RESERVATION_ID, value, "tok_123", NOW); // token hacia el evento PENDING
+        org.mockito.ArgumentCaptor<com.seashare.m2.reservas.application.dto.CalculationAuditEntry> audit =
+                org.mockito.ArgumentCaptor.forClass(com.seashare.m2.reservas.application.dto.CalculationAuditEntry.class);
+        verify(calculationAuditPort).record(audit.capture()); // FR-010: montos recibidos auditados
+        assertThat(audit.getValue().calculationStatus()).isEqualTo("SUCCESS");
+        assertThat(audit.getValue().rentalAmount()).isEqualByComparingTo("100");
+        assertThat(audit.getValue().insuranceAmount()).isEqualByComparingTo("10");
+        assertThat(audit.getValue().guaranteeDepositAmount()).isEqualByComparingTo("20");
+        assertThat(audit.getValue().totalAmount()).isEqualByComparingTo("130");
     }
 
     @Test
