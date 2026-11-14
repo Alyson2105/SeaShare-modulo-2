@@ -26,7 +26,7 @@ Verificar inmutabilidad terminal. Requisitos: FR-003. Criterios: SC-002.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La protección del estado final también aplica al cierre automático del sistema.
+Se comprueba ACCEPTED en el servicio simulado y el trigger SQL para REJECTED; faltan la matriz HTTP y la comparación persistida completa para ambos estados.
 
 ##### Dependencies & Assumptions
 Se emplean las dependencias señaladas en la evidencia; los mocks y servicios externos no acreditan el flujo completo.
@@ -38,9 +38,9 @@ Disputas ACCEPTED y REJECTED independientes.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | UpdateDisputeStatusServiceTest#finalDisputeCannotBeChanged: verde con ACCEPTED y repositorio simulado; DisputeFinalStateImmutabilityTest#updateOnFinalDisputeFailsAndRowStaysIntact verifica el trigger sobre REJECTED. No se comprueba HTTP y efectos para ambos estados. |
-| 2 | Ejecutar | Intentar cambiar cada estado terminal. | Datos de las precondiciones | Según el plan, 409 DISPUTE_ALREADY_RESOLVED sin mutación. | Pendiente | UpdateDisputeStatusServiceTest#finalDisputeCannotBeChanged: verde con ACCEPTED y repositorio simulado; DisputeFinalStateImmutabilityTest#updateOnFinalDisputeFailsAndRowStaysIntact verifica el trigger sobre REJECTED. No se comprueba HTTP y efectos para ambos estados. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | UpdateDisputeStatusServiceTest#finalDisputeCannotBeChanged: verde con ACCEPTED y repositorio simulado; DisputeFinalStateImmutabilityTest#updateOnFinalDisputeFailsAndRowStaysIntact verifica el trigger sobre REJECTED. No se comprueba HTTP y efectos para ambos estados. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputeFinalStateImmutabilityTest#updateOnFinalDisputeFailsAndRowStaysIntact (XML V4: passed). Dos intentos SQL de UPDATE sobre REJECTED lanzan DataAccessException; el método no consulta después la fila ni prueba ACCEPTED en PostgreSQL. |
+| 2 | Ejecutar | Intentar cambiar cada estado terminal. | Datos de las precondiciones | Según el plan, 409 DISPUTE_ALREADY_RESOLVED sin mutación. | Pendiente | DisputeFinalStateImmutabilityTest#updateOnFinalDisputeFailsAndRowStaysIntact (XML V4: passed). Dos intentos SQL de UPDATE sobre REJECTED lanzan DataAccessException; el método no consulta después la fila ni prueba ACCEPTED en PostgreSQL. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputeFinalStateImmutabilityTest#updateOnFinalDisputeFailsAndRowStaysIntact (XML V4: passed). Dos intentos SQL de UPDATE sobre REJECTED lanzan DataAccessException; el método no consulta después la fila ni prueba ACCEPTED en PostgreSQL. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ También aplica al cierre automático del sistema.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: DisputeFinalStateImmutabilityTest#updateOnFinalDisputeFailsAndRowStaysIntact. Se comprueba ACCEPTED en el servicio simulado y el trigger SQL para REJECTED; faltan la matriz HTTP y la comparación persistida completa para ambos estados.
 
 #### Traceability
 FR-003 | SC-002 | Evidencia: src/test/java/com/seashare/m2/disputa/application/service/UpdateDisputeStatusServiceTest.java#finalDisputeCannotBeChanged; src/test/java/com/seashare/m2/disputa/integration/DisputeFinalStateImmutabilityTest.java#updateOnFinalDisputeFailsAndRowStaysIntact | In Process

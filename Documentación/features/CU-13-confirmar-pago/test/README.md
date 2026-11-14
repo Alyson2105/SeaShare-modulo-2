@@ -2,7 +2,7 @@
 
 Casos del canal A de notificación y canal B de consulta. La lógica de confirmación y consulta periódica están implementadas; no se encontró endpoint del canal A.
 
-**Estado global**: In Process; cinco casos tienen cobertura parcial y dos dependen del canal A ausente. Evaluado el 2026-11-13.
+**Estado global**: In Process; cuatro casos tienen cobertura parcial y tres requieren el canal A o el resultado FAILED ausentes. Evaluado el 2026-11-13.
 
 ## Trazabilidad
 
@@ -11,7 +11,7 @@ Casos del canal A de notificación y canal B de consulta. La lógica de confirma
 | [TC-CU13-001](TC-CU13-001-aprobacion-vigente.md) | Aprobación con TTL vigente | FR-002, FR-003, FR-004 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [ConfirmPaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | In Process |
 | [TC-CU13-002](TC-CU13-002-aprobacion-tardia.md) | Aprobación tras TTL | FR-003, FR-006 | SC-002, SC-003 | [ttl](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java); [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [ConfirmPaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | In Process |
 | [TC-CU13-003](TC-CU13-003-rechazo-reintentable.md) | Rechazo con TTL vigente | FR-005 | SC-002 | [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); [ConfirmPaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | In Process |
-| [TC-CU13-004](TC-CU13-004-fallo-definitivo.md) | Fallo definitivo | FR-005 | SC-002 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); [ConfirmPaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | In Process |
+| [TC-CU13-004](TC-CU13-004-fallo-definitivo.md) | Fallo definitivo | FR-005 | SC-002 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); [ConfirmPaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | Blocked |
 | [TC-CU13-005](TC-CU13-005-confirmacion-duplicada.md) | Idempotencia de confirmación | FR-007 | SC-004 | [ConfirmPaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | Blocked |
 | [TC-CU13-006](TC-CU13-006-consulta-estados.md) | Consulta del resultado en M3 | FR-001, FR-003, FR-005 | SC-001, SC-002 | [PollPaymentStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/PollPaymentStatusServiceTest.java) | In Process |
 | [TC-CU13-007](TC-CU13-007-payload-invalido.md) | Validación del mensaje | FR-002, FR-003 | SC-001 | Sin prueba de CU-13 | Blocked |
@@ -34,20 +34,20 @@ Casos del canal A de notificación y canal B de consulta. La lógica de confirma
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Parcial | Confirmación probada en integración; plazo y canal externo requieren medición. |
-| SC-002 | Parcial | Reversión tardía y estados probados con puertos simulados. |
-| SC-003 | Parcial | Evento de reversión encolado a puerto simulado; falta entrega a M3. |
-| SC-004 | Parcial | Duplicado probado en lógica interna; falta canal A. |
-| SC-005 | Pendiente | Neutralidad financiera requiere revisión integral. |
+| SC-001 | Parcialmente demostrado | Confirmación probada en integración; plazo y canal externo requieren medición. |
+| SC-002 | Parcialmente demostrado | Reversión tardía y estados probados con espías de outbox. |
+| SC-003 | Parcialmente demostrado | Evento de reversión encolado a espía de outbox; falta entrega a M3. |
+| SC-004 | Parcialmente demostrado | Duplicado probado en lógica interna; falta canal A. |
+| SC-005 | No demostrado | Neutralidad financiera requiere revisión integral. |
 
 ## Checklist de ejecución
 
 | TC | Documentado | Ejecutado | Resultado | Ejecutado por | Fecha | Observaciones |
 |---|---|---|---|---|---|---|
 | TC-CU13-001 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ConfirmPaymentIntegrationTest#approvedWithinTtlReservesWithPaymentReference pasó: RESERVED y referencia persistida; falta comprobar hora y canal externo completo. |
-| TC-CU13-002 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ConfirmPaymentIntegrationTest#lateApprovalPublishesCancelledFlexibleOnceAndKeepsState y #approvedOnExpiredReservationPublishesReversal pasaron: no se reserva y se encola reversión en puerto simulado. Falta entrega real y canal A. |
+| TC-CU13-002 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ConfirmPaymentIntegrationTest#lateApprovalPublishesCancelledFlexibleOnceAndKeepsState y #approvedOnExpiredReservationPublishesReversal pasaron: no se reserva y se encola reversión en espía de outbox. Falta entrega real y canal A. |
 | TC-CU13-003 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ConfirmPaymentIntegrationTest#rejectedChargeKeepsPendingPaymentAndAllowsRetry pasó: estado pendiente y nuevo token. Falta comprobar motivo, TTL original y ausencia de M1 en ese escenario. |
-| TC-CU13-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ConfirmPaymentIntegrationTest#cancelledChargeFailsTheReservation pasó para CANCELLED de M3; unitario: ModuleOneNotificationMatrixTest#expiredAndPaymentFailedNotifyNobody pasó sin M1. Falta canal A FAILED y verificación integrada de notificaciones. |
+| TC-CU13-004 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | Integración: ConfirmPaymentIntegrationTest#cancelledChargeFailsTheReservation pasó para CANCELLED de M3; unitario: ModuleOneNotificationMatrixTest#expiredAndPaymentFailedNotifyNobody pasó sin M1. El caso requiere FAILED, ausente de PaymentStatus y del canal A no implementado; falta verificar notificaciones en integración. |
 | TC-CU13-005 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | Integración: ConfirmPaymentIntegrationTest#duplicateApprovalDoesNotRepeatTransitions pasó para lógica interna y un evento RESERVED. Falta el canal A requerido por el caso y su respuesta HTTP. |
 | TC-CU13-006 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Unitario: PollPaymentStatusServiceTest#inProcessIsSkipped pasó sin confirmar; componente: HttpPaymentStatusAdapterTest#notFoundMeansRetryNextCycle pasó con UNKNOWN. Falta observar ciclos sucesivos completos y persistencia. |
 | TC-CU13-007 | Sí | No | Blocked | — | — | Sin ejecución automatizada; endpoint del canal A ausente. |
@@ -61,17 +61,17 @@ Casos del canal A de notificación y canal B de consulta. La lógica de confirma
 
 - **Draft**: contrato incompleto o inconsistente.
 - **In Process**: ejecutable con implementación actual.
-- **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
+- **Approved**: escenario y postcondiciones demostrados por aserciones de la corrida V4, sin impedimentos de aprobación.
 - **Blocked**: depende de funcionalidad pendiente.
 
 ## Ejecución automatizada — 2026-11-13
 
-`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-13. Las pruebas citadas usan las dependencias indicadas en cada caso; no acreditan servicios externos reales.
+`sg docker -c 'bash ./mvnw -B clean test'`; inicio 2026-11-13T19:02:00-05:00, fin 2026-11-13T19:03:11-05:00; BASELINE_HEAD `568290a0d4334b477a4b0f9d5e949e981da3fa55`; salida 0. La integración usa PostgreSQL y espía de outbox; las pruebas con proveedores simulados no acreditan entrega real a M3.
 
-| Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
+| Clase | Pruebas | Fallos | Errores | Omitidos | Alcance |
 |---|---:|---:|---:|---:|---|
-| [ConfirmPaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | 6 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [ConfirmPaymentServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ConfirmPaymentServiceTest.java) | 10 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [PollPaymentStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/PollPaymentStatusServiceTest.java) | 5 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [HttpPaymentStatusAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpPaymentStatusAdapterTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
+| com.seashare.m2.reservas.application.service.ConfirmPaymentServiceTest | 10 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.application.service.ModuleOneNotificationMatrixTest | 7 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.application.service.PollPaymentStatusServiceTest | 5 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.out.finance.HttpPaymentStatusAdapterTest | 7 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.integration.ConfirmPaymentIntegrationTest | 6 | 0 | 0 | 0 | Evidencia parcial según TC |

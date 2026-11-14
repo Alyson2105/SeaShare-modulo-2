@@ -26,7 +26,7 @@ Verificar reintento de pago rechazado. Requisitos: FR-002, FR-009. Criterios rel
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-No se realiza publicación real ni cobro externo en esta tarea. Spec limita el inicio a INITIATED, pero el plan permite reintento desde PENDING_PAYMENT; confirmar contrato y clave de idempotencia con M3.
+El spec FR-002 limita el inicio a INITIATED; el plan, Notas Transversales «Reintento de pago con otra tarjeta», permite reintento desde PENDING_PAYMENT tras REJECTED.
 
 ##### Dependencies & Assumptions
 CU-03 está implementado; la evidencia usa repositorio y dobles controlados de M1 y M3. Las pruebas citadas aportan evidencia parcial, no demuestran el flujo completo de CU-03.
@@ -38,9 +38,9 @@ Reserva PENDING_PAYMENT con cobro REJECTED y TTL vigente, conforme a la nota del
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Intentar nuevamente con token distinto. | Datos de las precondiciones | El plan propone reutilizar cálculo y TTL, incrementar attempt y publicar nuevo evento; requiere resolver la contradicción con FR-002. | Pendiente | Contrato contradictorio: spec limita a INITIATED y plan permite reintento tras REJECTED. StartPaymentServiceTest#retryAfterRejectedReusesThePersistedCalculation pasó: intento 2 y reutilización; no resuelve el contrato ni verifica el evento. |
-| 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | StartPaymentServiceTest#retryAfterRejectedReusesThePersistedCalculation (XML V4: passed). Aserta attempt 2 y verifica que no se vuelve a consultar el cálculo. El spec FR-002 limita el inicio a INITIATED; el plan, Notas Transversales «Reintento de pago con otra tarjeta», permite reintento desde PENDING_PAYMENT tras REJECTED. |
+| 2 | Ejecutar | Intentar nuevamente con token distinto. | Datos de las precondiciones | El plan propone reutilizar cálculo y TTL, incrementar attempt y publicar nuevo evento; requiere resolver la contradicción con FR-002. | Pendiente | StartPaymentServiceTest#retryAfterRejectedReusesThePersistedCalculation (XML V4: passed). Aserta attempt 2 y verifica que no se vuelve a consultar el cálculo. El spec FR-002 limita el inicio a INITIATED; el plan, Notas Transversales «Reintento de pago con otra tarjeta», permite reintento desde PENDING_PAYMENT tras REJECTED. |
+| 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | StartPaymentServiceTest#retryAfterRejectedReusesThePersistedCalculation (XML V4: passed). Aserta attempt 2 y verifica que no se vuelve a consultar el cálculo. El spec FR-002 limita el inicio a INITIATED; el plan, Notas Transversales «Reintento de pago con otra tarjeta», permite reintento desde PENDING_PAYMENT tras REJECTED. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ Spec limita el inicio a INITIATED, pero el plan permite reintento desde PENDING_
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Draft. Contrato pendiente de aclaración.
+Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: StartPaymentServiceTest#retryAfterRejectedReusesThePersistedCalculation. El spec FR-002 limita el inicio a INITIATED; el plan, Notas Transversales «Reintento de pago con otra tarjeta», permite reintento desde PENDING_PAYMENT tras REJECTED.
 
 #### Traceability
 FR-002, FR-009 | SC-001, SC-003 | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#retryAfterRejectedReusesThePersistedCalculation | Draft

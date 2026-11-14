@@ -26,7 +26,7 @@ Verificar registro y notificación de inasistencia. Requisitos: FR-007, FR-008, 
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Comprueba registro y transición; no inspecciona outbox ni entrega M1/M3 o plazo. El endpoint y servicio existen. Encolar no prueba entrega ni el primer intento en menos de un segundo; payload M3 T-12 pendiente.
+Se demuestra transición y registro persistidos al minuto 30; faltan la inspección del outbox, el primer intento en menos de un segundo y la entrega externa.
 
 ##### Dependencies & Assumptions
 Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); no demuestran el flujo completo de CU-05.
@@ -38,9 +38,9 @@ Reserva RESERVED válida con guarda de bloqueo M1; esperar al menos 30 minutos.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation: verde. Comprueba registro y transición; no inspecciona outbox ni entrega M1/M3 o plazo. |
-| 2 | Ejecutar | Confirmar reporte y revisar registro, outbox y notificaciones de prueba. | Datos de las precondiciones | Registrar propietario, hora, minutos y observaciones; CANCELLED/NO_SHOW; solicitar AVAILABLE a M1 y comunicar subtipo a M3 sin calcular dinero. | Pendiente | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation: verde. Comprueba registro y transición; no inspecciona outbox ni entrega M1/M3 o plazo. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation: verde. Comprueba registro y transición; no inspecciona outbox ni entrega M1/M3 o plazo. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pasó | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation (XML V4: passed). Aserta CANCELLED y NO_SHOW en respuesta y reserva, una fila de evento con propietario, espera y observaciones; no consulta outbox ni entregas. |
+| 2 | Ejecutar | Confirmar reporte y revisar registro, outbox y notificaciones de prueba. | Datos de las precondiciones | Registrar propietario, hora, minutos y observaciones; CANCELLED/NO_SHOW; solicitar AVAILABLE a M1 y comunicar subtipo a M3 sin calcular dinero. | Pendiente | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation (XML V4: passed). Aserta CANCELLED y NO_SHOW en respuesta y reserva, una fila de evento con propietario, espera y observaciones; no consulta outbox ni entregas. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation (XML V4: passed). Aserta CANCELLED y NO_SHOW en respuesta y reserva, una fila de evento con propietario, espera y observaciones; no consulta outbox ni entregas. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Encolar no prueba entrega ni el primer intento en menos de un segundo; payload M
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation. Se demuestra transición y registro persistidos al minuto 30; faltan la inspección del outbox, el primer intento en menos de un segundo y la entrega externa.
 
 #### Traceability
 FR-007, FR-008, FR-009, FR-010, FR-011 | SC-004, SC-005 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NoShowIntegrationTest.java#successfulNoShowPersistsEventAndCancelsReservation | In Process

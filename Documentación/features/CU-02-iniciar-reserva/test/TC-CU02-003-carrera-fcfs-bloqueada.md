@@ -23,7 +23,7 @@ Verificar en el futuro la exclusividad FCFS al iniciar pago. Trazabilidad: FR-01
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-03 implementa el inicio de pago y bloqueo pesimista; falta evidencia ejecutada de la carrera simultánea entre reservas distintas.
+La colisión se ejecuta secuencialmente; no demuestra la carrera de dos transacciones simultáneas.
 
 ##### Dependencies & Assumptions
 La corrida utilizó backend y base de datos de pruebas; identidad temporal por headers sin Spring Security. La prueba existente de pago de reservas solapadas es secuencial.
@@ -35,7 +35,7 @@ Solicitud válida: `POST /api/v1/reservations`, `Content-Type: application/json`
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Ejecutar escenario | Iniciar simultáneamente pago para dos reservas INITIATED con mismas fechas y embarcación. | Solicitud válida y variaciones descritas | Una transacción gana; competidor perdedor recibe 409 Conflict según spec. | Pendiente | Integración: PaymentIntegrationTest#overlappingReservationLosesTheFcfsRace pasó: primer pago 200 y segundo 409 CONCURRENCY_CONFLICT, de forma secuencial. Falta ejecutar y verificar la carrera simultánea. |
+| 1 | Ejecutar escenario | Iniciar simultáneamente pago para dos reservas INITIATED con mismas fechas y embarcación. | Solicitud válida y variaciones descritas | Una transacción gana; competidor perdedor recibe 409 Conflict según spec. | Pendiente | PaymentIntegrationTest#overlappingReservationLosesTheFcfsRace (XML V4: passed). Aserta primer pago 200 y segundo pago 409 CONCURRENCY_CONFLICT. La colisión se ejecuta secuencialmente; no demuestra la carrera de dos transacciones simultáneas. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica como comportamiento principal adicional; consultar límites abajo.
@@ -52,7 +52,7 @@ IdempotencyClaimConcurrencyTest solo prueba concurrencia de reclamo de clave y n
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; los resultados pendientes se detallan en el flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: PaymentIntegrationTest#overlappingReservationLosesTheFcfsRace. La colisión se ejecuta secuencialmente; no demuestra la carrera de dos transacciones simultáneas.
 
 #### Traceability
 FR-014 | SC-002 | PaymentIntegrationTest#overlappingReservationLosesTheFcfsRace | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#overlappingReservationLosesTheFcfsRace | In Process

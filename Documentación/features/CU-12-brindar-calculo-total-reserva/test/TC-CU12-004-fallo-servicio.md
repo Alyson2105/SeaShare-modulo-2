@@ -26,7 +26,7 @@ Verificar fallo del servicio financiero. Requisitos: FR-007, FR-008. Criterios: 
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-12 es integración saliente; M3 se simula y el modo fake es el predeterminado. CU-03 está implementado; falta verificar persistencia y ausencia de bloqueo M1 en el flujo de error integrado.
+readTimeoutThrowsCalculationUnavailableWithoutRetry y calculationFailureAbortsWithoutTransition cubren componentes separados; faltan estado persistido y ausencia de bloqueo M1 en el flujo.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ M3 simulado devuelve 422, 503 o error de conexión.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar cálculo para cada fallo. | Datos de las precondiciones | El adaptador lanza CALCULATION_UNAVAILABLE; ante ConnectException admite un reintento. | Pendiente | Componente WireMock: HttpCalculatedValueAdapterTest#serviceUnavailable503ThrowsCalculationUnavailable y #readTimeoutThrowsCalculationUnavailableWithoutRetry pasaron; unitario: StartPaymentServiceTest#calculationFailureAbortsWithoutTransition pasó con escritor no invocado. Falta comprobar reserva y M1 persistidos en integración. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | HttpCalculatedValueAdapterTest#serviceUnavailable503ThrowsCalculationUnavailable (XML V4: passed). Aserta CALCULATION_UNAVAILABLE y un POST ante HTTP 503 con WireMock. readTimeoutThrowsCalculationUnavailableWithoutRetry y calculationFailureAbortsWithoutTransition cubren componentes separados; faltan estado persistido y ausencia de bloqueo M1 en el flujo. |
+| 2 | Ejecutar | Consultar cálculo para cada fallo. | Datos de las precondiciones | El adaptador lanza CALCULATION_UNAVAILABLE; ante ConnectException admite un reintento. | Pendiente | HttpCalculatedValueAdapterTest#serviceUnavailable503ThrowsCalculationUnavailable (XML V4: passed). Aserta CALCULATION_UNAVAILABLE y un POST ante HTTP 503 con WireMock. readTimeoutThrowsCalculationUnavailableWithoutRetry y calculationFailureAbortsWithoutTransition cubren componentes separados; faltan estado persistido y ausencia de bloqueo M1 en el flujo. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | HttpCalculatedValueAdapterTest#serviceUnavailable503ThrowsCalculationUnavailable (XML V4: passed). Aserta CALCULATION_UNAVAILABLE y un POST ante HTTP 503 con WireMock. readTimeoutThrowsCalculationUnavailableWithoutRetry y calculationFailureAbortsWithoutTransition cubren componentes separados; faltan estado persistido y ausencia de bloqueo M1 en el flujo. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ CU-03 está implementado; falta verificar persistencia y ausencia de bloqueo M1 
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial, consultar el flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: HttpCalculatedValueAdapterTest#serviceUnavailable503ThrowsCalculationUnavailable. readTimeoutThrowsCalculationUnavailableWithoutRetry y calculationFailureAbortsWithoutTransition cubren componentes separados; faltan estado persistido y ausencia de bloqueo M1 en el flujo.
 
 #### Traceability
 FR-007, FR-008 | SC-004 | [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#serviceUnavailable503ThrowsCalculationUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#readTimeoutThrowsCalculationUnavailableWithoutRetry; src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#calculationFailureAbortsWithoutTransition | In Process

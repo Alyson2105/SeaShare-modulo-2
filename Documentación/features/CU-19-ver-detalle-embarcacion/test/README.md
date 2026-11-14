@@ -19,33 +19,33 @@ Los endpoints de detalle y cotización están implementados; las pruebas usan do
 
 | FR | Cobertura | TC | Alcance | Motivo / Observación |
 |---|---|---|---|---|
-| FR-001 | Parcial — implementación y pruebas con dobles | 001, 005 | Backend | Identificador |
-| FR-002 | Parcial — implementación y pruebas con dobles | 001, 005 | Backend | Ficha M1 |
-| FR-003 | Sin cobertura backend | — | UI | UI: selectores |
-| FR-004 | Parcial — implementación y pruebas con dobles | 002 | Backend | Capacidad backend; UI fuera |
-| FR-005 | Parcial — implementación y pruebas con dobles | 002, 003, 004, 006 | Backend | Cotización |
-| FR-006 | Parcial — implementación y pruebas con dobles | 003, 006 | Backend | Monto literal; presentación UI fuera |
-| FR-007 | Parcial — implementación y pruebas con dobles | 004 | Backend | Requiere integración de CU-02 |
-| FR-008 | Sin cobertura backend | — | UI | UI: navegación |
-| FR-009 | Sin cobertura backend | — | UI | UI: ficha técnica |
-| FR-010 | Sin cobertura backend | — | UI | UI: amenidades |
+| FR-001 | Parcial | 001, 005 | Backend | Identificador |
+| FR-002 | Parcial | 001, 005 | Backend | Ficha M1 |
+| FR-003 | Sin evidencia | — | UI | UI: selectores |
+| FR-004 | Parcial | 002 | Backend | Capacidad backend; UI fuera |
+| FR-005 | Parcial | 002, 003, 004, 006 | Backend | Cotización |
+| FR-006 | Parcial | 003, 006 | Backend | Monto literal; presentación UI fuera |
+| FR-007 | Parcial | 004 | Backend | Requiere integración de CU-02 |
+| FR-008 | Sin evidencia | — | UI | UI: navegación |
+| FR-009 | Sin evidencia | — | UI | UI: ficha técnica |
+| FR-010 | Sin evidencia | — | UI | UI: amenidades |
 
 
 ## Criterios de éxito
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Parcial | TC-003, 004 y 006; no prueba ausencia global de aritmética. |
-| SC-002 | Fuera de alcance UI | TC-002 cubre la validación backend; requiere prueba UI. |
-| SC-003 | Parcial | TC-001 y 005; sin persistencia local de ficha. |
+| SC-001 | Parcialmente demostrado | TC-003, 004 y 006; no prueba ausencia global de aritmética. |
+| SC-002 | Parcialmente demostrado | TC-002 cubre la validación backend; requiere prueba UI. |
+| SC-003 | Parcialmente demostrado | TC-001 y 005; sin persistencia local de ficha. |
 
 ## Checklist de ejecución
 
 | TC | Documentado | Ejecutado | Resultado | Ejecutado por | Fecha | Observaciones |
 |---|---|---|---|---|---|---|
 | TC-CU19-001 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | MockMvc verifica ficha y no-store con datos falsos; no verifica ausencia de persistencia ni M1 real. |
-| TC-CU19-002 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Prueba unitaria verifica rechazo previo a M3; UI no verificada. |
-| TC-CU19-003 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | MockMvc verifica importe literal y tres días con adaptadores falsos; plan exige quotation_id y vencimiento que CU-11 indica que M3 no devuelve. |
+| TC-CU19-002 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | VesselDetailServiceTest#capacityExceededIsRejectedBeforeM3 verifica rechazo previo a M3; VesselDetailControllerTest#capacityExceededIs409 aserta HTTP 409 por separado. UI no verificada. |
+| TC-CU19-003 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | MockMvc verifica importe numérico y tres días con adaptadores falsos; plan exige quotation_id y vencimiento que CU-11 indica que M3 no devuelve. |
 | TC-CU19-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Prueba unitaria verifica propagación de QUOTATION_UNAVAILABLE; respuesta HTTP y efectos no verificados. |
 | TC-CU19-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | WireMock verifica traducción del 404; flujo HTTP completo y ausencia de persistencia no verificados. |
 | TC-CU19-006 | Sí | No | Draft | — | — | Plan CU-19 contradice CU-11 sobre fecha final igual e intervalo inclusivo; no hay prueba ejecutada del caso de un día. |
@@ -63,16 +63,16 @@ Los endpoints de detalle y cotización están implementados; las pruebas usan do
 
 - **Draft**: contrato incompleto o inconsistente.
 - **In Process**: ejecutable con implementación actual.
-- **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
+- **Approved**: escenario y postcondiciones demostrados por aserciones de la corrida V4, sin impedimentos de aprobación.
 - **Blocked**: depende de funcionalidad pendiente.
 
 ## Ejecución automatizada — 2026-11-13
 
-`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-19. Los dobles y simulaciones no acreditan servicios externos reales.
+`sg docker -c 'bash ./mvnw -B clean test'`; inicio 2026-11-13T19:02:00-05:00, fin 2026-11-13T19:03:11-05:00; BASELINE_HEAD `568290a0d4334b477a4b0f9d5e949e981da3fa55`; salida 0. Flota y finanzas se simulan; no se acredita integración externa ni UI.
 
-| Clase | Tests | Fallos | Errores | Omitidos | Resultado |
+| Clase | Pruebas | Fallos | Errores | Omitidos | Alcance |
 |---|---:|---:|---:|---:|---|
-| [VesselDetailControllerTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselDetailControllerTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [VesselDetailServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/VesselDetailServiceTest.java) | 8 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [HttpVesselReadAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpVesselReadAdapterTest.java) | 3 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [HttpIndividualEstimateAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java) | 15 | 0 | 0 | 0 | Verde; cobertura según TC |
+| com.seashare.m2.reservas.application.service.VesselDetailServiceTest | 8 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.in.web.VesselDetailControllerTest | 7 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.out.finance.HttpIndividualEstimateAdapterTest | 15 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.out.fleet.HttpVesselReadAdapterTest | 3 | 0 | 0 | 0 | Evidencia parcial según TC |

@@ -26,7 +26,7 @@ Verificar inadmisibilidad después del inicio. Requisitos: FR-009. Criterios: SC
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Verifica rechazo de cancelación tras inicio; no ejecuta inicio seguido de no-show. El endpoint y servicio existen. CU-04 y CU-05 tienen endpoints; la prueba no demuestra todos los flujos.
+La prueba ejercita inicio seguido de cancelación, pero no inicio seguido de inasistencia ni comprueba los efectos persistidos de ambos rechazos.
 
 ##### Dependencies & Assumptions
 Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-06.
@@ -38,9 +38,9 @@ Reserva que pasó a IN_NAVIGATION.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NavigationStartIntegrationTest#renterCancellationAfterStartIsRejected: verde. Verifica rechazo de cancelación tras inicio; no ejecuta inicio seguido de no-show. |
-| 2 | Ejecutar | Intentar cancelación y reporte de inasistencia en solicitudes separadas. | Datos de las precondiciones | Ambas operaciones se rechazan sin transición adicional. | Pendiente | NavigationStartIntegrationTest#renterCancellationAfterStartIsRejected: verde. Verifica rechazo de cancelación tras inicio; no ejecuta inicio seguido de no-show. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NavigationStartIntegrationTest#renterCancellationAfterStartIsRejected: verde. Verifica rechazo de cancelación tras inicio; no ejecuta inicio seguido de no-show. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pasó | NavigationStartIntegrationTest#renterCancellationAfterStartIsRejected (XML V4: passed). Aserta HTTP 200 al inicio y 409 INVALID_RESERVATION_STATE en la cancelación posterior. |
+| 2 | Ejecutar | Intentar cancelación y reporte de inasistencia en solicitudes separadas. | Datos de las precondiciones | Ambas operaciones se rechazan sin transición adicional. | Pendiente | NavigationStartIntegrationTest#renterCancellationAfterStartIsRejected (XML V4: passed). Aserta HTTP 200 al inicio y 409 INVALID_RESERVATION_STATE en la cancelación posterior. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NavigationStartIntegrationTest#renterCancellationAfterStartIsRejected (XML V4: passed). Aserta HTTP 200 al inicio y 409 INVALID_RESERVATION_STATE en la cancelación posterior. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ CU-04 y CU-05 tienen endpoints; la prueba no demuestra todos los flujos.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: NavigationStartIntegrationTest#renterCancellationAfterStartIsRejected. La prueba ejercita inicio seguido de cancelación, pero no inicio seguido de inasistencia ni comprueba los efectos persistidos de ambos rechazos.
 
 #### Traceability
 FR-009 | SC-003 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NavigationStartIntegrationTest.java#renterCancellationAfterStartIsRejected | In Process

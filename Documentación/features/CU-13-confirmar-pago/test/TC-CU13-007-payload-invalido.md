@@ -27,10 +27,10 @@ Verificar validación del mensaje. Requisitos: FR-002, FR-003. Criterios: SC-001
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La lógica de CU-13 y la consulta periódica existen; el endpoint de canal A no se encontró. Autenticación servicio a servicio y endpoint de canal A no están implementados.
+El plan.md, Endpoint — Notificación de Resultado de Pago, exige canal A HTTP; no se encontró controlador para payment-confirmation ni prueba pertinente del payload.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-13; no demuestran el flujo completo de CU-13.
+Sin ejecución automatizada pertinente; el caso depende del endpoint de canal A y autenticación de servicio.
 
 ##### Preconditions & Default Setup
 Canal A disponible y payload sin referencia, resultado inválido o fecha inválida.
@@ -39,9 +39,9 @@ Canal A disponible y payload sin referencia, resultado inválido o fecha inváli
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Enviar cada variante. | Datos de las precondiciones | El plan prevé 400 INVALID_PARAMETERS sin modificar reserva. | Pendiente | Contrato futuro |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | Sin ejecución automatizada pertinente. El plan.md, Endpoint — Notificación de Resultado de Pago, exige canal A HTTP; no se encontró controlador para payment-confirmation ni prueba pertinente del payload. |
+| 2 | Ejecutar | Enviar cada variante. | Datos de las precondiciones | El plan prevé 400 INVALID_PARAMETERS sin modificar reserva. | Pendiente | Sin ejecución automatizada pertinente. El plan.md, Endpoint — Notificación de Resultado de Pago, exige canal A HTTP; no se encontró controlador para payment-confirmation ni prueba pertinente del payload. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | Sin ejecución automatizada pertinente. El plan.md, Endpoint — Notificación de Resultado de Pago, exige canal A HTTP; no se encontró controlador para payment-confirmation ni prueba pertinente del payload. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -58,7 +58,7 @@ Autenticación servicio a servicio y endpoint de canal A no están implementados
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada pertinente. El plan.md, Endpoint — Notificación de Resultado de Pago, exige canal A HTTP; no se encontró controlador para payment-confirmation ni prueba pertinente del payload.
 
 #### Traceability
 FR-002, FR-003 | SC-001 | Sin prueba de CU-13 | Blocked

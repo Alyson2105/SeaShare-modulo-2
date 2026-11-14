@@ -26,7 +26,7 @@ Verificar autorización del propietario. Requisitos: FR-002. Criterios: SC-006.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Verifica 403; identidad temporal por headers, no JWT ni efectos persistidos posteriores. El endpoint y servicio existen. Autenticación JWT descrita en el plan aún no implementada.
+La integración verifica dos rechazos con identidad por cabeceras; no prueba JWT ni consulta efectos persistidos después del rechazo.
 
 ##### Dependencies & Assumptions
 Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: La prueba citada cubre solo parte del escenario; no demuestra el flujo completo de CU-06.
@@ -38,9 +38,9 @@ Reserva RESERVED y solicitante distinto del propietario registrado.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NavigationStartIntegrationTest#renterAndForeignOwnerAreForbiddenAndUnknownIs404: verde. Verifica 403; identidad temporal por headers, no JWT ni efectos persistidos posteriores. |
-| 2 | Ejecutar | Solicitar inicio. | Datos de las precondiciones | Según el plan, 403 PROFILE_NOT_AUTHORIZED; sin transición. | Pendiente | NavigationStartIntegrationTest#renterAndForeignOwnerAreForbiddenAndUnknownIs404: verde. Verifica 403; identidad temporal por headers, no JWT ni efectos persistidos posteriores. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NavigationStartIntegrationTest#renterAndForeignOwnerAreForbiddenAndUnknownIs404: verde. Verifica 403; identidad temporal por headers, no JWT ni efectos persistidos posteriores. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pasó | NavigationStartIntegrationTest#renterAndForeignOwnerAreForbiddenAndUnknownIs404 (XML V4: passed). Aserta 403 PROFILE_NOT_AUTHORIZED para arrendatario y otro propietario; no consulta estado posterior. |
+| 2 | Ejecutar | Solicitar inicio. | Datos de las precondiciones | Según el plan, 403 PROFILE_NOT_AUTHORIZED; sin transición. | Pendiente | NavigationStartIntegrationTest#renterAndForeignOwnerAreForbiddenAndUnknownIs404 (XML V4: passed). Aserta 403 PROFILE_NOT_AUTHORIZED para arrendatario y otro propietario; no consulta estado posterior. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NavigationStartIntegrationTest#renterAndForeignOwnerAreForbiddenAndUnknownIs404 (XML V4: passed). Aserta 403 PROFILE_NOT_AUTHORIZED para arrendatario y otro propietario; no consulta estado posterior. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Autenticación JWT descrita en el plan aún no implementada.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: NavigationStartIntegrationTest#renterAndForeignOwnerAreForbiddenAndUnknownIs404. La integración verifica dos rechazos con identidad por cabeceras; no prueba JWT ni consulta efectos persistidos después del rechazo.
 
 #### Traceability
 FR-002 | SC-006 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NavigationStartIntegrationTest.java#renterAndForeignOwnerAreForbiddenAndUnknownIs404 | In Process

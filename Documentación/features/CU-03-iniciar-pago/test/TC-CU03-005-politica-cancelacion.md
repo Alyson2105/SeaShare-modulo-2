@@ -26,7 +26,7 @@ Verificar consentimiento obligatorio. Requisitos: FR-013, FR-014. Criterios rela
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-No se realiza publicación real ni cobro externo en esta tarea. La selección visual del checkbox es responsabilidad de UI y se prueba por separado.
+No cubre aceptación ausente ni comprueba ausencia de transición y envío para ambas variantes.
 
 ##### Dependencies & Assumptions
 CU-03 está implementado; la evidencia usa repositorio y dobles controlados de M1 y M3. Las pruebas citadas aportan evidencia parcial, no demuestran el flujo completo de CU-03.
@@ -38,9 +38,9 @@ Reserva INITIATED válida; preparar solicitudes independientes con accepts_cance
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Enviar cada variante al endpoint y revisar efectos. | Datos de las precondiciones | Según el plan, 400 POLICY_NOT_ACCEPTED; sin transición ni envío a M3. | Pendiente | Integración: PaymentIntegrationTest#policyNotAcceptedIs400 pasó: 400 POLICY_NOT_ACCEPTED. Faltan demás variantes y comprobación de ausencia de transición y envío. |
-| 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | PaymentIntegrationTest#policyNotAcceptedIs400 (XML V4: passed). Aserta HTTP 400 POLICY_NOT_ACCEPTED con consentimiento falso. No cubre aceptación ausente ni comprueba ausencia de transición y envío para ambas variantes. |
+| 2 | Ejecutar | Enviar cada variante al endpoint y revisar efectos. | Datos de las precondiciones | Según el plan, 400 POLICY_NOT_ACCEPTED; sin transición ni envío a M3. | Pendiente | PaymentIntegrationTest#policyNotAcceptedIs400 (XML V4: passed). Aserta HTTP 400 POLICY_NOT_ACCEPTED con consentimiento falso. No cubre aceptación ausente ni comprueba ausencia de transición y envío para ambas variantes. |
+| 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | PaymentIntegrationTest#policyNotAcceptedIs400 (XML V4: passed). Aserta HTTP 400 POLICY_NOT_ACCEPTED con consentimiento falso. No cubre aceptación ausente ni comprueba ausencia de transición y envío para ambas variantes. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ La selección visual del checkbox es responsabilidad de UI y se prueba por separ
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: PaymentIntegrationTest#policyNotAcceptedIs400. No cubre aceptación ausente ni comprueba ausencia de transición y envío para ambas variantes.
 
 #### Traceability
 FR-013, FR-014 | SC-004 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#policyNotAcceptedIs400 | In Process

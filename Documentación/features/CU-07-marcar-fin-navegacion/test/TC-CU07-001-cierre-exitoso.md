@@ -26,10 +26,10 @@ Verificar cierre de navegación. Requisitos: FR-001, FR-003, FR-004, FR-005. Cri
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Verifica HTTP, llegada y checkout persistido; no prueba todas las variantes ni entrega externa. El endpoint y servicio existen. Regreso temprano o tardío conserva la hora real sin cálculo monetario.
+La integración HTTP verifica el cierre con novedades y el registro persistido; no demuestra el caso sin novedades en una segunda reserva ni la notificación externa y su plazo de SC-002.
 
 ##### Dependencies & Assumptions
-Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-07.
+Evidencia V4 de componentes con dependencias controladas; los límites del escenario se detallan en Comments.
 
 ##### Preconditions & Default Setup
 Reserva IN_NAVIGATION y solicitante propietario registrado.
@@ -38,9 +38,9 @@ Reserva IN_NAVIGATION y solicitante propietario registrado.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NavigationEndIntegrationTest#successfulEndPersistsArrivalCompletedStateAndCheckoutEvent: verde. Verifica HTTP, llegada y checkout persistido; no prueba todas las variantes ni entrega externa. |
-| 2 | Ejecutar | Registrar fin con y sin novedades en reservas separadas. | Datos de las precondiciones | Según el plan, 200 y COMPLETED; hora real y novedades se registran mediante CU-08 y check-out. | Pendiente | NavigationEndIntegrationTest#successfulEndPersistsArrivalCompletedStateAndCheckoutEvent: verde. Verifica HTTP, llegada y checkout persistido; no prueba todas las variantes ni entrega externa. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NavigationEndIntegrationTest#successfulEndPersistsArrivalCompletedStateAndCheckoutEvent: verde. Verifica HTTP, llegada y checkout persistido; no prueba todas las variantes ni entrega externa. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pasó | NavigationEndIntegrationTest#successfulEndPersistsArrivalCompletedStateAndCheckoutEvent (XML V4: passed). HTTP 200 y COMPLETED; compara hora real, propietario, novedades y una fila checkout en PostgreSQL. Falta ejecución integrada sin novedades y el primer intento a M1 en menos de un segundo. |
+| 2 | Ejecutar | Registrar fin con y sin novedades en reservas separadas. | Datos de las precondiciones | Según el plan, 200 y COMPLETED; hora real y novedades se registran mediante CU-08 y check-out. | Pendiente | NavigationEndIntegrationTest#successfulEndPersistsArrivalCompletedStateAndCheckoutEvent (XML V4: passed). HTTP 200 y COMPLETED; compara hora real, propietario, novedades y una fila checkout en PostgreSQL. Falta ejecución integrada sin novedades y el primer intento a M1 en menos de un segundo. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NavigationEndIntegrationTest#successfulEndPersistsArrivalCompletedStateAndCheckoutEvent (XML V4: passed). HTTP 200 y COMPLETED; compara hora real, propietario, novedades y una fila checkout en PostgreSQL. Falta ejecución integrada sin novedades y el primer intento a M1 en menos de un segundo. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Regreso temprano o tardío conserva la hora real sin cálculo monetario.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: NavigationEndIntegrationTest#successfulEndPersistsArrivalCompletedStateAndCheckoutEvent. La integración HTTP verifica el cierre con novedades y el registro persistido; no demuestra el caso sin novedades en una segunda reserva ni la notificación externa y su plazo de SC-002.
 
 #### Traceability
 FR-001, FR-003, FR-004, FR-005 | SC-002, SC-004 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NavigationEndIntegrationTest.java#successfulEndPersistsArrivalCompletedStateAndCheckoutEvent | In Process

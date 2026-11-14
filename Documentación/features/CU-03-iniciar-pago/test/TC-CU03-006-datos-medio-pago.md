@@ -26,7 +26,7 @@ Verificar datos obligatorios de pago. Requisitos: FR-009, FR-014. Criterios rela
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-No se realiza publicación real ni cobro externo en esta tarea. El token debe ser de prueba; no introducir tarjeta real ni CVV.
+No cubre todos los campos incompletos exigidos ni comprueba ausencia de efectos persistidos.
 
 ##### Dependencies & Assumptions
 CU-03 está implementado; la evidencia usa repositorio y dobles controlados de M1 y M3. Las pruebas citadas aportan evidencia parcial, no demuestran el flujo completo de CU-03.
@@ -38,9 +38,9 @@ Consentimiento verdadero; preparar variantes independientes omitiendo token, pay
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Enviar cada solicitud al endpoint y revisar estado y outbox. | Datos de las precondiciones | Según el plan, 400 PAYMENT_DATA_INCOMPLETE y no se inicia el cobro. | Pendiente | Integración: PaymentIntegrationTest#missingPaymentTokenIs400 pasó: 400 PAYMENT_DATA_INCOMPLETE. Faltan variantes y comprobación de estado y outbox. |
-| 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | PaymentIntegrationTest#missingPaymentTokenIs400 (XML V4: passed). Aserta HTTP 400 PAYMENT_DATA_INCOMPLETE cuando falta el token. No cubre todos los campos incompletos exigidos ni comprueba ausencia de efectos persistidos. |
+| 2 | Ejecutar | Enviar cada solicitud al endpoint y revisar estado y outbox. | Datos de las precondiciones | Según el plan, 400 PAYMENT_DATA_INCOMPLETE y no se inicia el cobro. | Pendiente | PaymentIntegrationTest#missingPaymentTokenIs400 (XML V4: passed). Aserta HTTP 400 PAYMENT_DATA_INCOMPLETE cuando falta el token. No cubre todos los campos incompletos exigidos ni comprueba ausencia de efectos persistidos. |
+| 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | PaymentIntegrationTest#missingPaymentTokenIs400 (XML V4: passed). Aserta HTTP 400 PAYMENT_DATA_INCOMPLETE cuando falta el token. No cubre todos los campos incompletos exigidos ni comprueba ausencia de efectos persistidos. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ El token debe ser de prueba; no introducir tarjeta real ni CVV.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: PaymentIntegrationTest#missingPaymentTokenIs400. No cubre todos los campos incompletos exigidos ni comprueba ausencia de efectos persistidos.
 
 #### Traceability
 FR-009, FR-014 | SC-004 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#missingPaymentTokenIs400 | In Process

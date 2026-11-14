@@ -26,10 +26,10 @@ Verificar búsqueda con filtros. Requisitos: FR-001, FR-002, FR-003. Criterios: 
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Existen endpoint y orquestación; las pruebas usan dobles de catálogo y cotización.
+Las pruebas de servicio aíslan tipo y capacidad con puertos simulados; faltan la combinación de fechas, pasajeros y tipo y la respuesta HTTP completa.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java); no demuestran el flujo completo de CU-01.
+Ejecución V4 con dependencias controladas. Pruebas parciales de componentes: [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java); no demuestran el flujo completo de CU-01.
 
 ##### Preconditions & Default Setup
 Catálogo simulado M1 y cotización lote simulada M3 con valores conocidos.
@@ -38,9 +38,9 @@ Catálogo simulado M1 y cotización lote simulada M3 con valores conocidos.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar GET /api/v1/vessels con fechas, pasajeros y tipo válidos. | Datos de las precondiciones | El plan prevé 200 con embarcaciones coincidentes y estimaciones de M3 sin cálculo local. | Pendiente | Unitario: VesselSearchServiceTest#filtersByTypeLocally y #filtersByCapacity pasaron con puertos simulados. Falta verificar la combinación de fechas, pasajeros y tipo y la respuesta HTTP completa. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | VesselSearchServiceTest#filtersByTypeLocally (XML V4: passed). Aserta que solo queda YACHT y que su tarifa simulada es 100; filtersByCapacity comprueba el filtro de capacidad por separado. |
+| 2 | Ejecutar | Consultar GET /api/v1/vessels con fechas, pasajeros y tipo válidos. | Datos de las precondiciones | El plan prevé 200 con embarcaciones coincidentes y estimaciones de M3 sin cálculo local. | Pendiente | VesselSearchServiceTest#filtersByTypeLocally (XML V4: passed). Aserta que solo queda YACHT y que su tarifa simulada es 100; filtersByCapacity comprueba el filtro de capacidad por separado. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | VesselSearchServiceTest#filtersByTypeLocally (XML V4: passed). Aserta que solo queda YACHT y que su tarifa simulada es 100; filtersByCapacity comprueba el filtro de capacidad por separado. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Existen endpoint y orquestación; las pruebas usan dobles de catálogo y cotizac
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Cobertura parcial; faltan las comprobaciones indicadas en el flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: VesselSearchServiceTest#filtersByTypeLocally. Las pruebas de servicio aíslan tipo y capacidad con puertos simulados; faltan la combinación de fechas, pasajeros y tipo y la respuesta HTTP completa.
 
 #### Traceability
 FR-001, FR-002, FR-003 | SC-001 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java#filtersByTypeLocally; src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java#filtersByCapacity | In Process

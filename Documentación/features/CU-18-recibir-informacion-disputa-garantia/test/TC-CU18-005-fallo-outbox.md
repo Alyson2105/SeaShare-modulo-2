@@ -26,7 +26,7 @@ Verificar atomicidad de transición y outbox. Requisitos: FR-001, FR-005. Criter
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-UpdateDisputeStatusService#update y DisputeOutboxAdapter#enqueue comparten la transacción; falta prueba de fallo y rollback de disputa, historial, revisión y outbox.
+La transición y el outbox están conectados transaccionalmente en código; no se identificó prueba que fuerce un fallo de inserción de outbox de disputa y compruebe el rollback persistido.
 
 ##### Dependencies & Assumptions
 La evidencia identifica las dependencias usadas; un broker de prueba no demuestra consumo por M3.
@@ -38,9 +38,9 @@ Disputa PENDING y fallo simulado al persistir evento final.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | Sin prueba ejecutada que fuerce fallo al insertar outbox de disputa y compruebe rollback persistido. |
-| 2 | Ejecutar | Resolver disputa y forzar fallo de outbox. | Datos de las precondiciones | El plan exige rollback de la transición completa si no se puede escribir el evento. | Pendiente | Sin prueba ejecutada que fuerce fallo al insertar outbox de disputa y compruebe rollback persistido. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | Sin prueba ejecutada que fuerce fallo al insertar outbox de disputa y compruebe rollback persistido. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | Sin ejecución automatizada pertinente de fallo de inserción del outbox de disputa con verificación de rollback. |
+| 2 | Ejecutar | Resolver disputa y forzar fallo de outbox. | Datos de las precondiciones | El plan exige rollback de la transición completa si no se puede escribir el evento. | Pendiente | Sin ejecución automatizada pertinente de fallo de inserción del outbox de disputa con verificación de rollback. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | Sin ejecución automatizada pertinente de fallo de inserción del outbox de disputa con verificación de rollback. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ La topología de cola y el flujo de publicación existen; falta prueba de rollba
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Pendiente; sin ejecución automatizada pertinente.
+Evaluado el 2026-11-13: Pendiente; sin ejecución automatizada pertinente. La transición y el outbox están conectados transaccionalmente en código; no se identificó prueba que fuerce un fallo de inserción de outbox de disputa y compruebe el rollback persistido.
 
 #### Traceability
 FR-001, FR-005 | SC-001, SC-004 | Sin prueba automatizada pertinente | In Process

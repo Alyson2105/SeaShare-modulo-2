@@ -26,10 +26,10 @@ Verificar filtro de pestañas. Requisitos: FR-007, FR-012. Criterios: SC-002.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. El filtro está implementado; faltan pruebas de todos los estados y de UI.
+No cubre todos los estados ni la interfaz; SC-002 no está completamente demostrado.
 
 ##### Dependencies & Assumptions
-Ejecución con dependencias controladas. Pruebas relacionadas: Sin prueba de CU-20; su cobertura debe evaluarse por escenario.
+Ejecución con dependencias controladas. Pruebas relacionadas: [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java); su cobertura debe evaluarse por escenario.
 
 ##### Preconditions & Default Setup
 Reservas propias en estados activos y cancelados.
@@ -38,9 +38,9 @@ Reservas propias en estados activos y cancelados.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar filter=history y filter=cancelled. | Datos de las precondiciones | El plan espera subconjuntos distintos por filtro y metadatos correspondientes. | Pendiente | ReservationQueryTest#listsWithAppliedFilter: exitosa. Comprueba subconjuntos history y cancelled, contadores y estado CANCELLED; no todos los estados del contrato. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ReservationQueryTest#listsWithAppliedFilter (XML V4: passed). Aserta filtros history y cancelled, contadores y estado CANCELLED. No cubre todos los estados ni la interfaz; SC-002 no está completamente demostrado. |
+| 2 | Ejecutar | Solicitar filter=history y filter=cancelled. | Datos de las precondiciones | El plan espera subconjuntos distintos por filtro y metadatos correspondientes. | Pendiente | ReservationQueryTest#listsWithAppliedFilter (XML V4: passed). Aserta filtros history y cancelled, contadores y estado CANCELLED. No cubre todos los estados ni la interfaz; SC-002 no está completamente demostrado. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ReservationQueryTest#listsWithAppliedFilter (XML V4: passed). Aserta filtros history y cancelled, contadores y estado CANCELLED. No cubre todos los estados ni la interfaz; SC-002 no está completamente demostrado. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ El filtro está implementado; faltan pruebas de todos los estados y de UI.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; Comprueba subconjuntos history y cancelled, contadores y estado CANCELLED; no todos los estados del contrato.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ReservationQueryTest#listsWithAppliedFilter. No cubre todos los estados ni la interfaz; SC-002 no está completamente demostrado.
 
 #### Traceability
 FR-007, FR-012 | SC-002 | Prueba parcial ejecutada  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#listsWithAppliedFilter | In Process

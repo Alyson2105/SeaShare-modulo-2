@@ -21,43 +21,43 @@ Casos para estimación individual y en lote de M3; modo fake activo por defecto.
 
 | FR | Cobertura | TC | Alcance | Motivo / Observación |
 |---|---|---|---|---|
-| FR-001 | Parcial — ver caso y brechas | 001, 002 | Backend | Modos individual y lote |
-| FR-002 | Parcial — ver caso y brechas | 001, 002 | Backend | Transporte sin aritmética |
-| FR-003 | Parcial — ver caso y brechas | 002 | Backend | Lote |
-| FR-004 | Parcial — ver caso y brechas | 002 | Backend | Deduplicación y lista vacía |
-| FR-005 | Parcial — ver caso y brechas | 002 | Backend | Fragmentación |
-| FR-006 | Parcial — ver caso y brechas | 003 | Backend | Valor de lote; contenido contradictorio |
-| FR-007 | Parcial — ver caso y brechas | 003 | Backend | No disponibles |
-| FR-008 | Parcial — ver caso y brechas | 004 | Backend | Degradación del lote |
-| FR-009 | Parcial — ver caso y brechas | 007 | Backend | Recotización UI pendiente |
-| FR-010 | Parcial — ver caso y brechas | 001, 006 | Backend | Parámetros y errores |
-| FR-011 | Parcial — ver caso y brechas | 006 | Backend | Mensaje específico no conservado |
-| FR-012 | Parcial — ver caso y brechas | 001, 008 | Backend | Advertencia y duración parciales |
-| FR-013 | Parcial — ver caso y brechas | 008 | Backend | UI y flujo completo pendientes |
-| FR-014 | Parcial — ver caso y brechas | 007 | Backend | Recotización pendiente |
-| FR-015 | Parcial — ver caso y brechas | 005 | Backend | Importe inválido |
-| FR-016 | Parcial — ver caso y brechas | 005 | Backend | Bloqueo del flujo completo pendiente |
-| FR-017 | Parcial — ver caso y brechas | 001, 002 | Backend | Solo lectura requiere verificar M3 |
+| FR-001 | Parcial | 001, 002 | Backend | Modos individual y lote |
+| FR-002 | Parcial | 001, 002 | Backend | Transporte sin aritmética |
+| FR-003 | Parcial | 002 | Backend | Lote |
+| FR-004 | Parcial | 002 | Backend | Deduplicación y lista vacía |
+| FR-005 | Parcial | 002 | Backend | Fragmentación |
+| FR-006 | Parcial | 003 | Backend | Valor de lote; contenido contradictorio |
+| FR-007 | Parcial | 003 | Backend | No disponibles |
+| FR-008 | Parcial | 004 | Backend | Degradación del lote |
+| FR-009 | Parcial | 007 | Backend | Recotización UI pendiente |
+| FR-010 | Parcial | 001, 006 | Backend | Parámetros y errores |
+| FR-011 | Parcial | 006 | Backend | Mensaje específico no conservado |
+| FR-012 | Parcial | 001, 008 | Backend | Advertencia y duración parciales |
+| FR-013 | Parcial | 008 | Backend | UI y flujo completo pendientes |
+| FR-014 | Parcial | 007 | Backend | Recotización pendiente |
+| FR-015 | Parcial | 005 | Backend | Importe inválido |
+| FR-016 | Parcial | 005 | Backend | Bloqueo del flujo completo pendiente |
+| FR-017 | Parcial | 001, 002 | Backend | Solo lectura requiere verificar M3 |
 
 ## Criterios de éxito
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Parcial | TC-001 a 003; no prueba todos los precios ni UI. |
-| SC-002 | Parcial | TC-008; la advertencia no es obligatoria en el adaptador y falta UI. |
-| SC-003 | Parcial | TC-002; partición de ejemplo, no garantía universal. |
-| SC-004 | Parcial | TC-003 y 004; catálogo backend existente; falta UI. |
-| SC-005 | Parcial | TC-006 prueba el rechazo del adaptador; no conserva el motivo específico ni demuestra el flujo completo. |
-| SC-006 | Bloqueado | TC-005; CU-03 implementado; CU-02 no consulta directamente. |
+| SC-001 | Parcialmente demostrado | TC-001 a 003; no prueba todos los precios ni UI. |
+| SC-002 | Parcialmente demostrado | TC-008; la advertencia no es obligatoria en el adaptador y falta UI. |
+| SC-003 | Parcialmente demostrado | TC-002; partición de ejemplo, no garantía universal. |
+| SC-004 | Parcialmente demostrado | TC-003 y 004; catálogo backend existente; falta UI. |
+| SC-005 | Parcialmente demostrado | TC-006 prueba el rechazo del adaptador; no conserva el motivo específico ni demuestra el flujo completo. |
+| SC-006 | Parcialmente demostrado | TC-005; CU-03 implementado; CU-02 no consulta directamente. |
 | SC-007 | Bloqueado | TC-007; CU-19 implementado; UI pendiente. |
-| SC-008 | Draft | SLA individual y lote pendientes de ratificación; requiere medición. |
+| SC-008 | No verificable | SLA individual y lote pendientes de ratificación; requiere medición. |
 
 ## Checklist de ejecución
 
 | TC | Documentado | Ejecutado | Resultado | Ejecutado por | Fecha | Observaciones |
 |---|---|---|---|---|---|---|
 | TC-CU11-001 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpIndividualEstimateAdapterTest#successful200WithWarning pasó: monto y warning arbitrario se conservan. No verifica todos los parámetros ni el texto contractual obligatorio. |
-| TC-CU11-002 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpBatchEstimateAdapterTest#duplicateIdsAreDeduplicatedBeforeSend y #sixtyIdsSplitIntoTwoBlocksOfFifty pasaron: deduplicación y 60 IDs en dos llamadas. Falta probar otros tamaños y M3 real. |
+| TC-CU11-002 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpBatchEstimateAdapterTest#duplicateIdsAreDeduplicatedBeforeSend y #sixtyIdsSplitIntoTwoBlocksOfFifty pasaron: deduplicación y 60 IDs en dos llamadas. El caso requiere 120 UUID más duplicados; solo se prueban 60 y duplicados en pruebas separadas, sin inspección del tamaño de los cuerpos. |
 | TC-CU11-003 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | Componente WireMock: HttpBatchEstimateAdapterTest#batch200PartialMarksUnavailable, #unknownIdInResponseBecomesUnavailable y #invalidEstimatedTotalMakesVesselUnavailable pasaron. El contrato de contenido del precio lote es contradictorio; no se prueba composición financiera. |
 | TC-CU11-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpBatchEstimateAdapterTest#failedBlockMakesItsIdsUnavailableAndKeepsGoing y #readTimeoutMarksBlockUnavailableWithSingleCall pasaron: otros bloques siguen y timeout se consulta una vez. No se verifica UI real. |
 | TC-CU11-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpIndividualEstimateAdapterTest#zeroTotalThrowsQuotationUnavailable, #negativeTotalThrowsQuotationUnavailable y #unparseableTotalThrowsQuotationUnavailable pasaron. Falta demostrar bloqueo completo de reserva. |
@@ -78,16 +78,16 @@ Casos para estimación individual y en lote de M3; modo fake activo por defecto.
 
 - **Draft**: contrato incompleto o inconsistente.
 - **In Process**: ejecutable con implementación actual.
-- **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
+- **Approved**: escenario y postcondiciones demostrados por aserciones de la corrida V4, sin impedimentos de aprobación.
 - **Blocked**: depende de funcionalidad pendiente.
 
 ## Ejecución automatizada — 2026-11-13
 
-`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-11. Las pruebas citadas usan las dependencias indicadas en cada caso; no acreditan servicios externos reales.
+`sg docker -c 'bash ./mvnw -B clean test'`; inicio 2026-11-13T19:02:00-05:00, fin 2026-11-13T19:03:11-05:00; BASELINE_HEAD `568290a0d4334b477a4b0f9d5e949e981da3fa55`; salida 0. Las pruebas de adaptador usan WireMock; no acreditan integración con M3 real.
 
-| Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
+| Clase | Pruebas | Fallos | Errores | Omitidos | Alcance |
 |---|---:|---:|---:|---:|---|
-| [HttpBatchEstimateAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | 10 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [HttpIndividualEstimateAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java) | 15 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [VesselDetailServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/VesselDetailServiceTest.java) | 8 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [VesselSearchServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
+| com.seashare.m2.reservas.application.service.VesselDetailServiceTest | 8 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.application.service.VesselSearchServiceTest | 7 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.out.finance.HttpBatchEstimateAdapterTest | 10 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.out.finance.HttpIndividualEstimateAdapterTest | 15 | 0 | 0 | 0 | Evidencia parcial según TC |

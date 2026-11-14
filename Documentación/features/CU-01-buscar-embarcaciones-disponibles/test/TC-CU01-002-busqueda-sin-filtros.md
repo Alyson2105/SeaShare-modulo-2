@@ -26,10 +26,10 @@ Verificar catálogo sin filtros. Requisitos: FR-001, FR-002, FR-009. Criterios: 
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-No equivale a garantizar disponibilidad del calendario ni estado operativo.
+MockMvc con proveedores en memoria verifica la primera página, no la totalidad de páginas del catálogo ni proveedores reales.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java); no demuestran el flujo completo de CU-01.
+Ejecución V4 con dependencias controladas. Pruebas parciales de componentes: [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java); no demuestran el flujo completo de CU-01.
 
 ##### Preconditions & Default Setup
 Catálogo con varias embarcaciones y cotizaciones simuladas.
@@ -38,9 +38,9 @@ Catálogo con varias embarcaciones y cotizaciones simuladas.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar GET /api/v1/vessels sin fechas ni pasajeros. | Datos de las precondiciones | El plan prevé 200 y catálogo completo paginado sin filtros de fecha ni capacidad. | Pendiente | Componente MockMvc: VesselSearchControllerTest#searchWithoutFiltersReturnsFirstPageOfTwenty pasó: 200, 20 resultados de 25 y cotización simulada. Falta verificar el catálogo completo y proveedores reales. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pasó | VesselSearchControllerTest#searchWithoutFiltersReturnsFirstPageOfTwenty (XML V4: passed). Aserta HTTP 200, página 1, tamaño 20, 25 elementos totales y precio del primer resultado con proveedores simulados. |
+| 2 | Ejecutar | Consultar GET /api/v1/vessels sin fechas ni pasajeros. | Datos de las precondiciones | El plan prevé 200 y catálogo completo paginado sin filtros de fecha ni capacidad. | Pendiente | VesselSearchControllerTest#searchWithoutFiltersReturnsFirstPageOfTwenty (XML V4: passed). Aserta HTTP 200, página 1, tamaño 20, 25 elementos totales y precio del primer resultado con proveedores simulados. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | VesselSearchControllerTest#searchWithoutFiltersReturnsFirstPageOfTwenty (XML V4: passed). Aserta HTTP 200, página 1, tamaño 20, 25 elementos totales y precio del primer resultado con proveedores simulados. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ No equivale a garantizar disponibilidad del calendario ni estado operativo.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Cobertura parcial; faltan las comprobaciones indicadas en el flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: VesselSearchControllerTest#searchWithoutFiltersReturnsFirstPageOfTwenty. MockMvc con proveedores en memoria verifica la primera página, no la totalidad de páginas del catálogo ni proveedores reales.
 
 #### Traceability
 FR-001, FR-002, FR-009 | SC-003 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java#searchWithoutFiltersReturnsFirstPageOfTwenty | In Process

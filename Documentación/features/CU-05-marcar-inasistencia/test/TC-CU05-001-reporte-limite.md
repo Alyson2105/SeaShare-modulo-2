@@ -26,7 +26,7 @@ Verificar reporte al cumplir la tolerancia. Requisitos: FR-001, FR-003, FR-004, 
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Comprueba HTTP, estado y evento persistidos; no demuestra el escenario de 35 minutos completo. El endpoint y servicio existen. Repetir con 35 minutos y observación opcional; el motor interno no valida por sí mismo la espera de CU-05.
+El HTTP integrado comprueba el límite de 30 minutos y efectos persistidos. No demuestra la consulta a CU-09 ni el primer intento externo de SC-004 en menos de un segundo; 35 minutos se prueban solo con mocks.
 
 ##### Dependencies & Assumptions
 Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-05.
@@ -38,15 +38,15 @@ Reserva RESERVED del propietario, con zarpe conocido y reloj controlado en zona 
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation: verde. Comprueba HTTP, estado y evento persistidos; no demuestra el escenario de 35 minutos completo. |
-| 2 | Ejecutar | Reportar la inasistencia exactamente 30 minutos después del zarpe. | Datos de las precondiciones | Según el plan, 200; CANCELLED, subtipo NO_SHOW y 30 minutos registrados; se invoca CU-08. | Pendiente | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation: verde. Comprueba HTTP, estado y evento persistidos; no demuestra el escenario de 35 minutos completo. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation: verde. Comprueba HTTP, estado y evento persistidos; no demuestra el escenario de 35 minutos completo. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pasó | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation (XML V4: passed). Aserta HTTP 200, CANCELLED, NO_SHOW, 30 minutos y AVAILABLE; consulta en PostgreSQL estado, subtipo y una fila con propietario, espera y observaciones. |
+| 2 | Ejecutar | Reportar la inasistencia exactamente 30 minutos después del zarpe. | Datos de las precondiciones | Según el plan, 200; CANCELLED, subtipo NO_SHOW y 30 minutos registrados; se invoca CU-08. | Pasó | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation (XML V4: passed). Aserta HTTP 200, CANCELLED, NO_SHOW, 30 minutos y AVAILABLE; consulta en PostgreSQL estado, subtipo y una fila con propietario, espera y observaciones. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pasó | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation (XML V4: passed). Aserta HTTP 200, CANCELLED, NO_SHOW, 30 minutos y AVAILABLE; consulta en PostgreSQL estado, subtipo y una fila con propietario, espera y observaciones. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-Repetir con 35 minutos y observación opcional; el motor interno no valida por sí mismo la espera de CU-05.
+El caso de 35 minutos y 40 segundos se comprueba en ReportNoShowServiceTest#thirtyFiveMinutesFortySecondsRecords35Minutes con dependencias simuladas; no demuestra integración completa.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ Repetir con 35 minutos y observación opcional; el motor interno no valida por s
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation. El HTTP integrado comprueba el límite de 30 minutos y efectos persistidos. No demuestra la consulta a CU-09 ni el primer intento externo de SC-004 en menos de un segundo; 35 minutos se prueban solo con mocks.
 
 #### Traceability
-FR-001, FR-003, FR-004, FR-007, FR-008 | SC-001, SC-004 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NoShowIntegrationTest.java#successfulNoShowPersistsEventAndCancelsReservation | In Process
+FR-001, FR-003, FR-004, FR-007, FR-008 | SC-001, SC-004 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NoShowIntegrationTest.java#successfulNoShowPersistsEventAndCancelsReservation; src/test/java/com/seashare/m2/reservas/application/service/ReportNoShowServiceTest.java#thirtyFiveMinutesFortySecondsRecords35Minutes | In Process

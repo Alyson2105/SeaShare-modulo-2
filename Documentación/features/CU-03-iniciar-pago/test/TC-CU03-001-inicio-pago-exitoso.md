@@ -26,7 +26,7 @@ Verificar inicio exitoso. Requisitos: FR-002, FR-003, FR-004, FR-005, FR-006. Cr
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-No se realiza publicación real ni cobro externo en esta tarea. La máquina de estados y el motor prueban transiciones internas, no la orquestación de pago.
+No demuestra proveedor real ni todos los efectos de retención persistidos.
 
 ##### Dependencies & Assumptions
 CU-03 está implementado; la evidencia usa repositorio y dobles controlados de M1 y M3. Evidencia parcial de componentes internos: [estado](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java); no demuestra el flujo completo de CU-03.
@@ -38,9 +38,9 @@ Una reserva INITIATED vigente y de su titular; M3 devuelve cálculo oficial y M1
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Enviar solicitud válida según el plan al endpoint de pagos. | Datos de las precondiciones | 200 OK, PENDING_PAYMENT, cálculo y desglose literales de M3; transición vía CU-08 y retención interna. | Pendiente | Integración: PaymentIntegrationTest#startPaymentTransitionsAndReturnsBreakdown pasó: 200, PENDING_PAYMENT y desglose simulado. No demuestra el proveedor real ni todos los efectos de retención. |
-| 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | PaymentIntegrationTest#startPaymentTransitionsAndReturnsBreakdown (XML V4: passed). Aserta 200, PENDING_PAYMENT y desglose monetario de cálculo simulado. No demuestra proveedor real ni todos los efectos de retención persistidos. |
+| 2 | Ejecutar | Enviar solicitud válida según el plan al endpoint de pagos. | Datos de las precondiciones | 200 OK, PENDING_PAYMENT, cálculo y desglose literales de M3; transición vía CU-08 y retención interna. | Pendiente | PaymentIntegrationTest#startPaymentTransitionsAndReturnsBreakdown (XML V4: passed). Aserta 200, PENDING_PAYMENT y desglose monetario de cálculo simulado. No demuestra proveedor real ni todos los efectos de retención persistidos. |
+| 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | PaymentIntegrationTest#startPaymentTransitionsAndReturnsBreakdown (XML V4: passed). Aserta 200, PENDING_PAYMENT y desglose monetario de cálculo simulado. No demuestra proveedor real ni todos los efectos de retención persistidos. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ La máquina de estados y el motor prueban transiciones internas, no la orquestac
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Cobertura parcial; consultar el flujo para las comprobaciones pendientes.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: PaymentIntegrationTest#startPaymentTransitionsAndReturnsBreakdown. No demuestra proveedor real ni todos los efectos de retención persistidos.
 
 #### Traceability
 FR-002, FR-003, FR-004, FR-005, FR-006 | SC-001, SC-003 | [estado](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#startPaymentTransitionsAndReturnsBreakdown | In Process

@@ -26,7 +26,7 @@ Verificar autorización del titular. Requisitos: FR-001, FR-002. Criterios relac
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-No se realiza publicación real ni cobro externo en esta tarea. La autenticación Bearer descrita por el plan no está implementada; no se presenta como header ejecutable actual.
+El plan, Elementos de la Petición, exige Bearer JWT y el setup exige usuario autenticado; el resolver actual solo lee cabeceras de identidad. Falta además comprobar que no haya transición persistida.
 
 ##### Dependencies & Assumptions
 CU-03 está implementado; la evidencia usa repositorio y dobles controlados de M1 y M3. Las pruebas citadas aportan evidencia parcial, no demuestran el flujo completo de CU-03.
@@ -38,9 +38,9 @@ Reserva INITIATED vigente perteneciente a un arrendatario; usar otro usuario aut
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Intentar iniciar pago de la reserva ajena. | Datos de las precondiciones | Según el plan, 403 RESERVATION_NOT_OWNED sin transición. | Pendiente | Unitario: StartPaymentServiceTest#otherRenterIsForbidden pasó con RESERVATION_NOT_OWNED. Falta comprobar HTTP 403 y ausencia de transición persistida para otro arrendatario. |
-| 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Configurar precondiciones y registrar estado, TTL y outbox iniciales. | Datos aislados | Condiciones preparadas para la prueba futura. | Pendiente | PaymentIntegrationTest#ownerCannotPay (XML V4: passed). Aserta HTTP 403 RESERVATION_NOT_OWNED usando X-User-Id y X-User-Role de un usuario ajeno. El plan, Elementos de la Petición, exige Bearer JWT y el setup exige usuario autenticado; el resolver actual solo lee cabeceras de identidad. Falta además comprobar que no haya transición persistida. |
+| 2 | Ejecutar | Intentar iniciar pago de la reserva ajena. | Datos de las precondiciones | Según el plan, 403 RESERVATION_NOT_OWNED sin transición. | Pendiente | PaymentIntegrationTest#ownerCannotPay (XML V4: passed). Aserta HTTP 403 RESERVATION_NOT_OWNED usando X-User-Id y X-User-Role de un usuario ajeno. El plan, Elementos de la Petición, exige Bearer JWT y el setup exige usuario autenticado; el resolver actual solo lee cabeceras de identidad. Falta además comprobar que no haya transición persistida. |
+| 3 | Inspeccionar | Comparar respuesta y efectos persistidos con lo esperado. | Reserva y eventos del escenario | Resultado coherente con el paso 2. | Pendiente | PaymentIntegrationTest#ownerCannotPay (XML V4: passed). Aserta HTTP 403 RESERVATION_NOT_OWNED usando X-User-Id y X-User-Role de un usuario ajeno. El plan, Elementos de la Petición, exige Bearer JWT y el setup exige usuario autenticado; el resolver actual solo lee cabeceras de identidad. Falta además comprobar que no haya transición persistida. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ La autenticación Bearer descrita por el plan no está implementada; no se prese
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Blocked. La prueba unitaria cubre pertenencia con identidad simulada; falta autenticación Bearer para el usuario de la precondición.
+Corrida V4 del 2026-11-13: Blocked; estado documental: Blocked; evidencia: PaymentIntegrationTest#ownerCannotPay. El plan, Elementos de la Petición, exige Bearer JWT y el setup exige usuario autenticado; el resolver actual solo lee cabeceras de identidad. Falta además comprobar que no haya transición persistida.
 
 #### Traceability
-FR-001, FR-002 | SC-001 | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#otherRenterIsForbidden | Blocked
+FR-001, FR-002 | SC-001 | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#otherRenterIsForbidden; src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#ownerCannotPay | Blocked

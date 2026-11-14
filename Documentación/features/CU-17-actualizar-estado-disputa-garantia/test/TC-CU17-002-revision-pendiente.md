@@ -26,7 +26,7 @@ Verificar revisión en curso. Requisitos: FR-001, FR-002, FR-007. Criterios: SC-
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-El SLA de 24 horas requiere medición del flujo completo; la identidad administrativa usa cabeceras de prueba, no JWT.
+El servicio comprueba PENDING con repositorio simulado y hay prueba de ausencia de mensaje; no se verifica la persistencia real de la nota administrativa.
 
 ##### Dependencies & Assumptions
 Se emplean las dependencias señaladas en la evidencia; los mocks y servicios externos no acreditan el flujo completo.
@@ -38,9 +38,9 @@ Disputa PENDING con revisión administrativa sin terminar.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | UpdateDisputeStatusServiceTest#adminKeepsPendingWithoutTransition y DisputePublishingIntegrationTest#pendingDisputeNeverPublishes: verdes; prueban revisión con repositorio simulado y ausencia de mensaje en RabbitMQ. No se verifica persistencia real de la nota. |
-| 2 | Ejecutar | Actualizar a PENDING con nota interna. | Datos de las precondiciones | Se conserva PENDING y se registra actividad sin evento final a M3. | Pendiente | UpdateDisputeStatusServiceTest#adminKeepsPendingWithoutTransition y DisputePublishingIntegrationTest#pendingDisputeNeverPublishes: verdes; prueban revisión con repositorio simulado y ausencia de mensaje en RabbitMQ. No se verifica persistencia real de la nota. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | UpdateDisputeStatusServiceTest#adminKeepsPendingWithoutTransition y DisputePublishingIntegrationTest#pendingDisputeNeverPublishes: verdes; prueban revisión con repositorio simulado y ausencia de mensaje en RabbitMQ. No se verifica persistencia real de la nota. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | UpdateDisputeStatusServiceTest#adminKeepsPendingWithoutTransition (XML V4: passed). Aserta PENDING y m3EventPublished falso; verifica saveAdminReview y que no se llame save, recordStatusChange ni enqueue, con puertos simulados. |
+| 2 | Ejecutar | Actualizar a PENDING con nota interna. | Datos de las precondiciones | Se conserva PENDING y se registra actividad sin evento final a M3. | Pendiente | UpdateDisputeStatusServiceTest#adminKeepsPendingWithoutTransition (XML V4: passed). Aserta PENDING y m3EventPublished falso; verifica saveAdminReview y que no se llame save, recordStatusChange ni enqueue, con puertos simulados. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | UpdateDisputeStatusServiceTest#adminKeepsPendingWithoutTransition (XML V4: passed). Aserta PENDING y m3EventPublished falso; verifica saveAdminReview y que no se llame save, recordStatusChange ni enqueue, con puertos simulados. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ El SLA de 24 horas requiere medición del flujo completo.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: UpdateDisputeStatusServiceTest#adminKeepsPendingWithoutTransition. El servicio comprueba PENDING con repositorio simulado y hay prueba de ausencia de mensaje; no se verifica la persistencia real de la nota administrativa.
 
 #### Traceability
 FR-001, FR-002, FR-007 | SC-001 | Evidencia: src/test/java/com/seashare/m2/disputa/application/service/UpdateDisputeStatusServiceTest.java#adminKeepsPendingWithoutTransition; src/test/java/com/seashare/m2/disputa/integration/DisputePublishingIntegrationTest.java#pendingDisputeNeverPublishes | In Process

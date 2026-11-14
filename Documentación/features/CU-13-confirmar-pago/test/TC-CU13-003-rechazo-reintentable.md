@@ -27,10 +27,10 @@ Verificar rechazo con ttl vigente. Requisitos: FR-005. Criterios: SC-002.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La lógica de CU-13 y la consulta periódica existen; el endpoint de canal A no se encontró. Reintento de cobro depende de CU-03 y de clave por intento.
+No comprueba motivo, TTL original ni ausencia de notificación M1 en ese escenario.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); no demuestran el flujo completo de CU-13.
+Ejecución V4 con dependencias controladas. Pruebas parciales de componentes: [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); no demuestran el flujo completo de CU-13.
 
 ##### Preconditions & Default Setup
 Reserva PENDING_PAYMENT vigente y resultado REJECTED con motivo.
@@ -39,9 +39,9 @@ Reserva PENDING_PAYMENT vigente y resultado REJECTED con motivo.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Procesar resultado. | Datos de las precondiciones | La reserva permanece PENDING_PAYMENT con motivo registrado y TTL original; no se notifica a M1. | Pendiente | Integración: ConfirmPaymentIntegrationTest#rejectedChargeKeepsPendingPaymentAndAllowsRetry pasó: estado pendiente y nuevo token. Falta comprobar motivo, TTL original y ausencia de M1 en ese escenario. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ConfirmPaymentIntegrationTest#rejectedChargeKeepsPendingPaymentAndAllowsRetry (XML V4: passed). Aserta PENDING_RETRY y PENDING_PAYMENT persistido; verifica evento de nuevo token mediante espía de outbox. No comprueba motivo, TTL original ni ausencia de notificación M1 en ese escenario. |
+| 2 | Ejecutar | Procesar resultado. | Datos de las precondiciones | La reserva permanece PENDING_PAYMENT con motivo registrado y TTL original; no se notifica a M1. | Pendiente | ConfirmPaymentIntegrationTest#rejectedChargeKeepsPendingPaymentAndAllowsRetry (XML V4: passed). Aserta PENDING_RETRY y PENDING_PAYMENT persistido; verifica evento de nuevo token mediante espía de outbox. No comprueba motivo, TTL original ni ausencia de notificación M1 en ese escenario. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ConfirmPaymentIntegrationTest#rejectedChargeKeepsPendingPaymentAndAllowsRetry (XML V4: passed). Aserta PENDING_RETRY y PENDING_PAYMENT persistido; verifica evento de nuevo token mediante espía de outbox. No comprueba motivo, TTL original ni ausencia de notificación M1 en ese escenario. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -58,7 +58,7 @@ Reintento de cobro depende de CU-03 y de clave por intento.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial, consultar el flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ConfirmPaymentIntegrationTest#rejectedChargeKeepsPendingPaymentAndAllowsRetry. No comprueba motivo, TTL original ni ausencia de notificación M1 en ese escenario.
 
 #### Traceability
 FR-005 | SC-002 | [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java#rejectedChargeKeepsPendingPaymentAndAllowsRetry | In Process

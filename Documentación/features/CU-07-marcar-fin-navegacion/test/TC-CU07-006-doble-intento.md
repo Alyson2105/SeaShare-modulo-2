@@ -26,10 +26,10 @@ Verificar duplicación de cierre. Requisitos: FR-001, FR-004, FR-005. Criterios:
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Verifica primer 200 y segundo 409; spec exige respuesta correcta al reintento y plan precisa 409, queda decisión contractual y efectos completos sin verificar. El endpoint y servicio existen. Edge case dice responder correctamente al reintento, pero el plan prevé 409 TRIP_ALREADY_COMPLETED; no define respuesta idempotente.
+El plan de CU-07, tabla de errores, incluye COMPLETED tanto en INVALID_RESERVATION_STATE como en TRIP_ALREADY_COMPLETED; el edge case del spec solo exige responder correctamente. La ambigüedad afecta la respuesta esperada.
 
 ##### Dependencies & Assumptions
-Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-07.
+Evidencia V4 de componentes con dependencias controladas; los límites del escenario se detallan en Comments.
 
 ##### Preconditions & Default Setup
 Reserva IN_NAVIGATION; solicitudes repetidas de cierre bajo mala conexión.
@@ -38,15 +38,15 @@ Reserva IN_NAVIGATION; solicitudes repetidas de cierre bajo mala conexión.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NavigationEndIntegrationTest#secondClickReturnsTripAlreadyCompleted: verde. Verifica primer 200 y segundo 409; spec exige respuesta correcta al reintento y plan precisa 409, queda decisión contractual y efectos completos sin verificar. |
-| 2 | Ejecutar | Enviar cierre y repetir solicitud idéntica. | Datos de las precondiciones | Solo un cierre y un conjunto de efectos; la respuesta repetida requiere resolver el contrato. | Pendiente | NavigationEndIntegrationTest#secondClickReturnsTripAlreadyCompleted: verde. Verifica primer 200 y segundo 409; spec exige respuesta correcta al reintento y plan precisa 409, queda decisión contractual y efectos completos sin verificar. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NavigationEndIntegrationTest#secondClickReturnsTripAlreadyCompleted: verde. Verifica primer 200 y segundo 409; spec exige respuesta correcta al reintento y plan precisa 409, queda decisión contractual y efectos completos sin verificar. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pasó | NavigationEndIntegrationTest#secondClickReturnsTripAlreadyCompleted (XML V4: passed). El método ejecutado comprueba primer HTTP 200 y segundo 409 TRIP_ALREADY_COMPLETED; no cuenta efectos persistidos ni resuelve la contradicción del plan. |
+| 2 | Ejecutar | Enviar cierre y repetir solicitud idéntica. | Datos de las precondiciones | Solo un cierre y un conjunto de efectos; la respuesta repetida requiere resolver el contrato. | Pendiente | NavigationEndIntegrationTest#secondClickReturnsTripAlreadyCompleted (XML V4: passed). El método ejecutado comprueba primer HTTP 200 y segundo 409 TRIP_ALREADY_COMPLETED; no cuenta efectos persistidos ni resuelve la contradicción del plan. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NavigationEndIntegrationTest#secondClickReturnsTripAlreadyCompleted (XML V4: passed). El método ejecutado comprueba primer HTTP 200 y segundo 409 TRIP_ALREADY_COMPLETED; no cuenta efectos persistidos ni resuelve la contradicción del plan. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-Edge case dice responder correctamente al reintento, pero el plan prevé 409 TRIP_ALREADY_COMPLETED; no define respuesta idempotente.
+El spec exige no duplicar registros y el plan presenta dos códigos para COMPLETED en su tabla de errores.
 
 #### Defect Severity Reference
 
@@ -57,7 +57,7 @@ Edge case dice responder correctamente al reintento, pero el plan prevé 409 TRI
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Draft; evidencia parcial.
+Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: NavigationEndIntegrationTest#secondClickReturnsTripAlreadyCompleted. El plan de CU-07, tabla de errores, incluye COMPLETED tanto en INVALID_RESERVATION_STATE como en TRIP_ALREADY_COMPLETED; el edge case del spec solo exige responder correctamente. La ambigüedad afecta la respuesta esperada.
 
 #### Traceability
 FR-001, FR-004, FR-005 | SC-001, SC-004 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NavigationEndIntegrationTest.java#secondClickReturnsTripAlreadyCompleted | Draft

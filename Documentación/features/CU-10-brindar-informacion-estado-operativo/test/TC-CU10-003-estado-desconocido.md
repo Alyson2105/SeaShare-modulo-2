@@ -26,7 +26,7 @@ Verificar estado desconocido. Requisitos: FR-003, FR-004, FR-009. Criterios: SC-
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-10 es integración saliente; M1 se simula y el modo fake es el predeterminado. Estado desconocido no es lo mismo que estado ausente.
+No comprueba que un consumidor detenga la reserva ni M1 real.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ M1 responde un operational_status textual no reconocido.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar mediante el puerto. | Datos de las precondiciones | El adaptador devuelve false y registra el valor crudo con resultado OK. | Pendiente | Integración: ExternalQueryLogRegistrationTest#statusUnknownRawStatusRegistersOkRow pasó: false y registro OK con valor crudo WEIRD_STATE. M1 se simula con WireMock. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ExternalQueryLogRegistrationTest#statusUnknownRawStatusRegistersOkRow (XML V4: passed). Aserta false y fila OK con WEIRD_STATE en PostgreSQL, usando WireMock. No comprueba que un consumidor detenga la reserva ni M1 real. |
+| 2 | Ejecutar | Consultar mediante el puerto. | Datos de las precondiciones | El adaptador devuelve false y registra el valor crudo con resultado OK. | Pendiente | ExternalQueryLogRegistrationTest#statusUnknownRawStatusRegistersOkRow (XML V4: passed). Aserta false y fila OK con WEIRD_STATE en PostgreSQL, usando WireMock. No comprueba que un consumidor detenga la reserva ni M1 real. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ExternalQueryLogRegistrationTest#statusUnknownRawStatusRegistersOkRow (XML V4: passed). Aserta false y fila OK con WEIRD_STATE en PostgreSQL, usando WireMock. No comprueba que un consumidor detenga la reserva ni M1 real. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Estado desconocido no es lo mismo que estado ausente.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ExternalQueryLogRegistrationTest#statusUnknownRawStatusRegistersOkRow. No comprueba que un consumidor detenga la reserva ni M1 real.
 
 #### Traceability
 FR-003, FR-004, FR-009 | SC-002 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#statusUnknownRawStatusRegistersOkRow | In Process

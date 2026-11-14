@@ -26,10 +26,10 @@ Verificar filtrado por disponibilidad temporal. Requisitos: FR-002. Criterios: S
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La discrepancia afecta resultados y debe resolverse antes de fijar expectativa ejecutable.
+El spec, Edge Cases «Disponibilidad por rango de fechas fuera de alcance», excluye el filtrado; el plan, Notas Transversales «Disponibilidad por rango de fechas y filtrado en M2», lo exige.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: el flujo completo con proveedores reales queda pendiente.
+Ejecución V4 con dependencias controladas. Pruebas parciales de componentes: el flujo completo con proveedores reales queda pendiente.
 
 ##### Preconditions & Default Setup
 Barco con reserva solapada y búsqueda por el mismo rango.
@@ -38,9 +38,9 @@ Barco con reserva solapada y búsqueda por el mismo rango.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar catálogo con fechas. | Datos de las precondiciones | El spec excluye verificación de disponibilidad por rango; el plan describe filtrado local por solapamiento. | Pendiente | Contrato contradictorio: spec excluye filtro por rango y plan lo exige. VesselSearchControllerTest#overlappingReservationHidesVessel y VesselSearchServiceTest#excludesVesselsWithOverlappingReservations pasaron y confirman el filtrado implementado; no resuelven el contrato. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | VesselSearchControllerTest#overlappingReservationHidesVessel (XML V4: passed). MockMvc aserta 200 y lista vacía con solapamiento simulado; no resuelve la contradicción entre contratos. |
+| 2 | Ejecutar | Consultar catálogo con fechas. | Datos de las precondiciones | El spec excluye verificación de disponibilidad por rango; el plan describe filtrado local por solapamiento. | Pendiente | VesselSearchControllerTest#overlappingReservationHidesVessel (XML V4: passed). MockMvc aserta 200 y lista vacía con solapamiento simulado; no resuelve la contradicción entre contratos. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | VesselSearchControllerTest#overlappingReservationHidesVessel (XML V4: passed). MockMvc aserta 200 y lista vacía con solapamiento simulado; no resuelve la contradicción entre contratos. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ La discrepancia afecta resultados y debe resolverse antes de fijar expectativa e
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Draft. Existe evidencia parcial; el contrato requiere aclaración.
+Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: VesselSearchControllerTest#overlappingReservationHidesVessel. El spec, Edge Cases «Disponibilidad por rango de fechas fuera de alcance», excluye el filtrado; el plan, Notas Transversales «Disponibilidad por rango de fechas y filtrado en M2», lo exige.
 
 #### Traceability
 FR-002 | SC-003 | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselSearchControllerTest.java#overlappingReservationHidesVessel; src/test/java/com/seashare/m2/reservas/application/service/VesselSearchServiceTest.java#excludesVesselsWithOverlappingReservations | Draft

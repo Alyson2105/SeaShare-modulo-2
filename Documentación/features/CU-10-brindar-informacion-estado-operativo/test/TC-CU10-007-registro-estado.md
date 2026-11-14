@@ -26,7 +26,7 @@ Verificar registro de consulta. Requisitos: FR-009. Criterios: SC-004.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-10 es integración saliente; M1 se simula y el modo fake es el predeterminado. Fallo de registro solo produce advertencia; no garantiza el 100 % de auditoría.
+No comprueba todos los campos requeridos ni SC-004 sobre acceso a base M1 y cálculo; fallo del registro no detiene la consulta.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Modo HTTP y puerto de registro observable.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar un estado válido y verificar registro. | Datos de las precondiciones | Se intenta registrar OPERATIONAL_STATUS, identificador, resultado y estado crudo. | Pendiente | Integración: ExternalQueryLogRegistrationTest#statusAvailableRegistersOkWithRawStatus pasó: estado AVAILABLE, resultado OK y tipo OPERATIONAL_STATUS persistidos. No demuestra registro ante toda falla de almacenamiento. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ExternalQueryLogRegistrationTest#statusAvailableRegistersOkWithRawStatus (XML V4: passed). Aserta true y una fila OPERATIONAL_STATUS con OK y AVAILABLE. No comprueba todos los campos requeridos ni SC-004 sobre acceso a base M1 y cálculo; fallo del registro no detiene la consulta. |
+| 2 | Ejecutar | Consultar un estado válido y verificar registro. | Datos de las precondiciones | Se intenta registrar OPERATIONAL_STATUS, identificador, resultado y estado crudo. | Pendiente | ExternalQueryLogRegistrationTest#statusAvailableRegistersOkWithRawStatus (XML V4: passed). Aserta true y una fila OPERATIONAL_STATUS con OK y AVAILABLE. No comprueba todos los campos requeridos ni SC-004 sobre acceso a base M1 y cálculo; fallo del registro no detiene la consulta. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ExternalQueryLogRegistrationTest#statusAvailableRegistersOkWithRawStatus (XML V4: passed). Aserta true y una fila OPERATIONAL_STATUS con OK y AVAILABLE. No comprueba todos los campos requeridos ni SC-004 sobre acceso a base M1 y cálculo; fallo del registro no detiene la consulta. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Fallo de registro solo produce advertencia; no garantiza el 100 % de auditoría.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ExternalQueryLogRegistrationTest#statusAvailableRegistersOkWithRawStatus. No comprueba todos los campos requeridos ni SC-004 sobre acceso a base M1 y cálculo; fallo del registro no detiene la consulta.
 
 #### Traceability
 FR-009 | SC-004 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#statusAvailableRegistersOkWithRawStatus | In Process

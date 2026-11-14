@@ -10,9 +10,9 @@ Casos para el GET interno a M3. CU-15 está implementado con identidad temporal 
 |---|---|---|---|---|---|
 | [TC-CU15-001](TC-CU15-001-consulta-reserva-activa.md) | Consulta de reserva activa | FR-001, FR-002, FR-007 | SC-001, SC-002 | [InternalReservationControllerTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/InternalReservationControllerTest.java) | In Process |
 | [TC-CU15-002](TC-CU15-002-consulta-ttl.md) | Consulta de reserva pendiente | FR-002, FR-005, FR-007 | SC-002 | [GetInternalReservationServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/GetInternalReservationServiceTest.java) | Draft |
-| [TC-CU15-003](TC-CU15-003-consulta-cierre.md) | Consulta de reserva completada | FR-003, FR-006 | SC-003 | [cierre](../../../../src/test/java/com/seashare/m2/reservas/application/service/EndNavigationServiceTest.java) | In Process |
+| [TC-CU15-003](TC-CU15-003-consulta-cierre.md) | Consulta de reserva completada | FR-003, FR-006 | SC-003 | Sin prueba pertinente del GET; [antecedente de escritura](../../../../src/test/java/com/seashare/m2/reservas/application/service/EndNavigationServiceTest.java) | In Process |
 | [TC-CU15-004](TC-CU15-004-consulta-cancelacion.md) | Consulta de reserva cancelada | FR-004, FR-006 | SC-003 | [InternalReservationReadIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/InternalReservationReadIntegrationTest.java) | Blocked |
-| [TC-CU15-005](TC-CU15-005-acceso-y-reserva-inexistente.md) | Autorización de consulta | FR-001, FR-007 | SC-002 | [InternalReservationControllerTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/InternalReservationControllerTest.java) | In Process |
+| [TC-CU15-005](TC-CU15-005-acceso-y-reserva-inexistente.md) | Autorización de consulta | FR-001, FR-007 | SC-002 | [InternalReservationControllerTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/InternalReservationControllerTest.java) | Blocked |
 
 ## Cobertura de requisitos
 
@@ -31,9 +31,9 @@ Casos para el GET interno a M3. CU-15 está implementado con identidad temporal 
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Parcial | Endpoint probado con vista simulada; latencia menor a 200 ms requiere medición. |
-| SC-002 | Parcial | Respuesta y autorización temporal probadas; falta verificar ausencia de escrituras en integración. |
-| SC-003 | Parcial | Respuesta simulada sin montos; faltan flujos completos de cierre y cancelación. |
+| SC-001 | Parcialmente demostrado | Endpoint probado con vista simulada; latencia menor a 200 ms requiere medición. |
+| SC-002 | Parcialmente demostrado | Respuesta y autorización temporal probadas; falta verificar ausencia de escrituras en integración. |
+| SC-003 | Parcialmente demostrado | Respuesta simulada sin montos; faltan flujos completos de cierre y cancelación. |
 
 ## Checklist de ejecución
 
@@ -41,9 +41,9 @@ Casos para el GET interno a M3. CU-15 está implementado con identidad temporal 
 |---|---|---|---|---|---|---|
 | TC-CU15-001 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente MockMvc: InternalReservationControllerTest#responseHasExactFieldsAndNoMoney pasó con vista simulada: 200, estructura y ausencia de montos. Falta comprobar escritura y notificaciones con persistencia real. |
 | TC-CU15-002 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | Contrato requiere aclaración: spec pide respuestas exactamente iguales y el plan expone segundos restantes variables. GetInternalReservationServiceTest#ttlAppliesForPendingPayment pasó con reloj fijo para segundos restantes; no verifica respuesta HTTP ni invariancia. |
-| TC-CU15-003 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | EndNavigationServiceTest#remarksArePassedAsCompletionNotesAndChangeMessage y #writesReservationThenCallsCu08ThenInsertsCheckout pasaron con puertos simulados; no prueban el GET integrado. |
+| TC-CU15-003 | Sí | No | Pendiente | — | — | Las pruebas de escritura de CU-07 no comprueban la consulta GET de una reserva completada. |
 | TC-CU15-004 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | Integración: InternalReservationReadIntegrationTest#cancelledByOwnerIsReportedWithOwnerActor pasó para subtipo y actor desde auditoría; InternalReservationResponse#from devuelve null para anticipación pese a que CU-04 está implementado. |
-| TC-CU15-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente MockMvc: InternalReservationControllerTest#nonFinanceRoleIs403 y #unknownReservationIs404 pasaron con headers temporales y servicio simulado. No prueban JWT de servicio ni ausencia de escritura en base de datos. |
+| TC-CU15-005 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | Componente MockMvc: InternalReservationControllerTest#nonFinanceRoleIs403 y #unknownReservationIs404 pasaron con headers temporales y servicio simulado. Falta autenticación JWT de servicio exigida por el plan; no prueban ausencia de escritura en base de datos. |
 
 ## Brechas detectadas
 
@@ -57,16 +57,16 @@ Casos para el GET interno a M3. CU-15 está implementado con identidad temporal 
 
 - **Draft**: contrato incompleto o inconsistente.
 - **In Process**: ejecutable con implementación actual.
-- **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
+- **Approved**: escenario y postcondiciones demostrados por aserciones de la corrida V4, sin impedimentos de aprobación.
 - **Blocked**: depende de funcionalidad pendiente.
 
 ## Ejecución automatizada — 2026-11-13
 
-`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-15. Las pruebas citadas usan las dependencias indicadas en cada caso; no acreditan servicios externos reales.
+`sg docker -c 'bash ./mvnw -B clean test'`; inicio 2026-11-13T19:02:00-05:00, fin 2026-11-13T19:03:11-05:00; BASELINE_HEAD `568290a0d4334b477a4b0f9d5e949e981da3fa55`; salida 0. Las pruebas HTTP usan identidad temporal y vistas simuladas; la integración de lectura utiliza PostgreSQL.
 
-| Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
+| Clase | Pruebas | Fallos | Errores | Omitidos | Alcance |
 |---|---:|---:|---:|---:|---|
-| [InternalReservationControllerTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/InternalReservationControllerTest.java) | 5 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [GetInternalReservationServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/GetInternalReservationServiceTest.java) | 10 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [InternalReservationReadIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/InternalReservationReadIntegrationTest.java) | 2 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [EndNavigationServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/EndNavigationServiceTest.java) | 19 | 0 | 0 | 0 | Verde; escritura con puertos simulados |
+| com.seashare.m2.reservas.application.service.EndNavigationServiceTest | 21 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.application.service.GetInternalReservationServiceTest | 10 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.in.web.InternalReservationControllerTest | 5 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.integration.InternalReservationReadIntegrationTest | 2 | 0 | 0 | 0 | Evidencia parcial según TC |

@@ -26,7 +26,7 @@ Verificar notificación por cancelación. Requisitos: FR-003, FR-007. Criterios:
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-08 es un puerto interno, sin endpoint HTTP. Los destinos son decisiones del motor, no entrega confirmada.
+Las variantes sin avería y sin guarda no se demuestran conjuntamente en flujo integrado.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas cuando corresponda. Pruebas relacionadas: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Reserva RESERVED con m1_blocked verdadero; preparar cancelaciones independientes
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Cancelar con actor y subtipo válidos. | Datos de las precondiciones | Sin avería se encola AVAILABLE; avería del propietario encola MAINTENANCE_CLEANING; sin guarda no se libera M1. | Pendiente | Integración: ChangeReservationStatusServiceTest#cancelledByOwnerWithMechanicalFailureEnqueuesMaintenance pasó; unitario: ModuleOneNotificationMatrixTest#cancelledAfterReservedNotifiesAvailable y #cancelledBeforeReservedDoesNotNotifyModuleOne pasaron. Falta comprobar ambas decisiones de cancelación en flujo integrado. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ChangeReservationStatusServiceTest#cancelledByOwnerWithMechanicalFailureEnqueuesMaintenance (XML V4: passed). Captura mediante espía el evento operativo y aserta MAINTENANCE_CLEANING. Las variantes sin avería y sin guarda no se demuestran conjuntamente en flujo integrado. |
+| 2 | Ejecutar | Cancelar con actor y subtipo válidos. | Datos de las precondiciones | Sin avería se encola AVAILABLE; avería del propietario encola MAINTENANCE_CLEANING; sin guarda no se libera M1. | Pendiente | ChangeReservationStatusServiceTest#cancelledByOwnerWithMechanicalFailureEnqueuesMaintenance (XML V4: passed). Captura mediante espía el evento operativo y aserta MAINTENANCE_CLEANING. Las variantes sin avería y sin guarda no se demuestran conjuntamente en flujo integrado. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ChangeReservationStatusServiceTest#cancelledByOwnerWithMechanicalFailureEnqueuesMaintenance (XML V4: passed). Captura mediante espía el evento operativo y aserta MAINTENANCE_CLEANING. Las variantes sin avería y sin guarda no se demuestran conjuntamente en flujo integrado. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Los destinos son decisiones del motor, no entrega confirmada.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ChangeReservationStatusServiceTest#cancelledByOwnerWithMechanicalFailureEnqueuesMaintenance. Las variantes sin avería y sin guarda no se demuestran conjuntamente en flujo integrado.
 
 #### Traceability
 FR-003, FR-007 | SC-003 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#cancelledByOwnerWithMechanicalFailureEnqueuesMaintenance; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#cancelledAfterReservedNotifiesAvailable; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#cancelledBeforeReservedDoesNotNotifyModuleOne | In Process

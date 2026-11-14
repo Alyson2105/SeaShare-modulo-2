@@ -26,7 +26,7 @@ Verificar ausencia de evento pending. Requisitos: FR-001. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-El outbox y la publicación existen; ausencia de mensaje en cola después del relay no demuestra por sí sola ausencia de fila al crear.
+El test abre, reclama, mantiene PENDING y verifica ausencia de mensaje en RabbitMQ tras el relay; no inspecciona directamente el outbox al crear, como exige el paso.
 
 ##### Dependencies & Assumptions
 La evidencia identifica las dependencias usadas; un broker de prueba no demuestra consumo por M3.
@@ -38,9 +38,9 @@ Nueva disputa creada en PENDING.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputePublishingIntegrationTest#pendingDisputeNeverPublishes: verde tras abrir, reclamar, mantener PENDING y ejecutar relay; no inspecciona directamente el outbox al crear. |
-| 2 | Ejecutar | Inspeccionar outbox asociado a la creación. | Datos de las precondiciones | No se encola evento de disputa hacia M3 al crear PENDING. | Pendiente | DisputePublishingIntegrationTest#pendingDisputeNeverPublishes: verde tras abrir, reclamar, mantener PENDING y ejecutar relay; no inspecciona directamente el outbox al crear. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputePublishingIntegrationTest#pendingDisputeNeverPublishes: verde tras abrir, reclamar, mantener PENDING y ejecutar relay; no inspecciona directamente el outbox al crear. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputePublishingIntegrationTest#pendingDisputeNeverPublishes (XML V4: passed). assertThat(messagesFor(messages, disputeId)).isEmpty() tras el relay; no comprueba directamente filas de outbox ni consumo de M3. |
+| 2 | Ejecutar | Inspeccionar outbox asociado a la creación. | Datos de las precondiciones | No se encola evento de disputa hacia M3 al crear PENDING. | Pendiente | DisputePublishingIntegrationTest#pendingDisputeNeverPublishes (XML V4: passed). assertThat(messagesFor(messages, disputeId)).isEmpty() tras el relay; no comprueba directamente filas de outbox ni consumo de M3. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputePublishingIntegrationTest#pendingDisputeNeverPublishes (XML V4: passed). assertThat(messagesFor(messages, disputeId)).isEmpty() tras el relay; no comprueba directamente filas de outbox ni consumo de M3. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ El contexto de disputa y su outbox existen; no se consultó directamente la fila
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: DisputePublishingIntegrationTest#pendingDisputeNeverPublishes. El test abre, reclama, mantiene PENDING y verifica ausencia de mensaje en RabbitMQ tras el relay; no inspecciona directamente el outbox al crear, como exige el paso.
 
 #### Traceability
 FR-001 | SC-001 | Evidencia: src/test/java/com/seashare/m2/disputa/integration/DisputePublishingIntegrationTest.java#pendingDisputeNeverPublishes; src/test/java/com/seashare/m2/disputa/application/service/UpdateDisputeStatusServiceTest.java#adminKeepsPendingWithoutTransition | In Process

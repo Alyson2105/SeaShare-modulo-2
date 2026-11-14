@@ -19,25 +19,25 @@ Casos de mapeo de estado operativo, outbox y despacho M1_HTTP. El adaptador de e
 
 | FR | Cobertura | TC | Alcance | Motivo / Observación |
 |---|---|---|---|---|
-| FR-001 | Parcial — ver caso y brechas | 001, 002, 003 | Backend | Encolado condicionado |
-| FR-002 | Parcial — ver caso y brechas | 001, 002, 003 | Backend | Matriz de flota |
-| FR-003 | Parcial — ver caso y brechas | 004 | Backend | Campos operativos |
-| FR-004 | Parcial — ver caso y brechas | 004 | Backend | Identidad de evento |
-| FR-005 | Parcial — ver caso y brechas | 004 | Backend | Outbox transaccional |
-| FR-006 | Parcial — ver caso y brechas | 005, 006 | Backend | Relay parcial; DLQ y HTTP reales pendientes |
-| FR-007 | Parcial — ver caso y brechas | 004 | Backend | Sin dinero |
-| FR-008 | Parcial — ver caso y brechas | 005, 006 | Backend | Entrega asíncrona |
-| FR-009 | Parcial — ver caso y brechas | — | Backend | FCFS corresponde a CU-03 |
+| FR-001 | Parcial | 001, 002, 003 | Backend | Encolado condicionado |
+| FR-002 | Parcial | 001, 002, 003 | Backend | Matriz de flota |
+| FR-003 | Parcial | 004 | Backend | Campos operativos |
+| FR-004 | Parcial | 004 | Backend | Identidad de evento |
+| FR-005 | Parcial | 004 | Backend | Outbox transaccional |
+| FR-006 | Parcial | 005, 006 | Backend | Relay parcial; DLQ y HTTP reales pendientes |
+| FR-007 | Parcial | 004 | Backend | Sin dinero |
+| FR-008 | Parcial | 005, 006 | Backend | Entrega asíncrona |
+| FR-009 | Parcial | — | Backend | FCFS corresponde a CU-03 |
 
 ## Criterios de éxito
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Parcial | TC-001 a 003, 005 y 006; entrega real pendiente. |
-| SC-002 | No verificado | TC-006; primer intento en 500 ms requiere implementación y medición. |
-| SC-003 | Parcial | TC-004; payload operativo sin montos. |
-| SC-004 | Parcial | TC-004; deduplicación del receptor no demostrada. |
-| SC-005 | Parcial | TC-001 y 003; mapeo local. |
+| SC-001 | Parcialmente demostrado | TC-001 a 003, 005 y 006; entrega real pendiente. |
+| SC-002 | No demostrado | TC-006; primer intento en 500 ms requiere implementación y medición. |
+| SC-003 | Parcialmente demostrado | TC-004; payload operativo sin montos. |
+| SC-004 | Parcialmente demostrado | TC-004; deduplicación del receptor no demostrada. |
+| SC-005 | Parcialmente demostrado | TC-001 y 003; mapeo local. |
 
 ## Checklist de ejecución
 
@@ -63,17 +63,17 @@ Casos de mapeo de estado operativo, outbox y despacho M1_HTTP. El adaptador de e
 
 - **Draft**: contrato incompleto o inconsistente.
 - **In Process**: ejecutable con implementación actual.
-- **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
+- **Approved**: escenario y postcondiciones con FR/SC demostrados por aserciones de pruebas V4 ejecutadas.
 - **Blocked**: depende de funcionalidad pendiente.
 
 ## Ejecución automatizada — 2026-11-13
 
-`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-22. Los dobles y simulaciones no acreditan servicios externos reales.
+`sg docker -c 'bash ./mvnw -B clean test'`; inicio 2026-11-13T19:02:00-05:00, fin 2026-11-13T19:03:11-05:00, salida 0; código base `568290a0d4334b477a4b0f9d5e949e981da3fa55`. El puerto M1 es fake, no hay HTTP real.
 
 | Clase | Tests | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| [ChangeReservationStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | 28 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [OutboxAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java) | 15 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [PublishPendingOutboxServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java) | 10 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [OutboxRelayIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/OutboxRelayIntegrationTest.java) | 4 | 0 | 0 | 0 | Verde; cobertura según TC |
+| [ChangeReservationStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | 28 | 0 | 0 | 0 | XML V4 exitoso; integración con spies |
+| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | XML V4 exitoso; matriz unitaria |
+| [OutboxAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java) | 15 | 0 | 0 | 0 | XML V4 exitoso; repositorio simulado |
+| [PublishPendingOutboxServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java) | 10 | 0 | 0 | 0 | XML V4 exitoso; puertos simulados |
+| [OutboxRelayIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/OutboxRelayIntegrationTest.java) | 4 | 0 | 0 | 0 | XML V4 exitoso; despacho a puerto falso |

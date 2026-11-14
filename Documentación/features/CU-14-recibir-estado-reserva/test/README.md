@@ -19,20 +19,20 @@ Casos de notificación de estado mediante outbox y relay; el payload tiene discr
 
 | FR | Cobertura | TC | Alcance | Motivo / Observación |
 |---|---|---|---|---|
-| FR-001 | Parcial — ver caso y brechas | 001, 002, 006 | Backend | Estados y reversión tardía |
-| FR-002 | Parcial — ver caso y brechas | 002 | Backend | Spec y plan discrepan sobre campos |
-| FR-003 | Parcial — ver caso y brechas | 002 | Backend | No se serializan subtipo separado ni anticipación |
-| FR-004 | Parcial — ver caso y brechas | 002 | Backend | No se serializan notas en payload |
-| FR-005 | Parcial — ver caso y brechas | 003, 004, 005 | Backend | Relay y consumidor de prueba |
-| FR-006 | Parcial — ver caso y brechas | 001 | Backend | Sin dinero requiere auditoría integral |
+| FR-001 | Parcial | 001, 002, 006 | Backend | Estados y reversión tardía |
+| FR-002 | Parcial | 002 | Backend | Spec y plan discrepan sobre campos |
+| FR-003 | Parcial | 002 | Backend | No se serializan subtipo separado ni anticipación |
+| FR-004 | Parcial | 002 | Backend | No se serializan notas en payload |
+| FR-005 | Parcial | 003, 004, 005 | Backend | Relay y consumidor de prueba |
+| FR-006 | Parcial | 001 | Backend | Sin dinero requiere auditoría integral |
 
 ## Criterios de éxito
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Parcial | TC-001, 003 a 006; broker confirm no garantiza consumo M3. |
-| SC-002 | Fuera de alcance | Primer intento en 500 ms requiere medición real; scheduler tiene configuración propia. |
-| SC-003 | Parcial | TC-001; ausencia global de datos financieros requiere auditoría. |
+| SC-001 | Parcialmente demostrado | TC-001, 003 a 006; broker confirm no garantiza consumo M3. |
+| SC-002 | No demostrado | Primer intento en 500 ms requiere medición real; scheduler tiene configuración propia. |
+| SC-003 | Parcialmente demostrado | TC-001; ausencia global de datos financieros requiere auditoría. |
 
 ## Checklist de ejecución
 
@@ -43,7 +43,7 @@ Casos de notificación de estado mediante outbox y relay; el payload tiene discr
 | TC-CU14-003 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Unitario: PublishPendingOutboxServiceTest#backoffExactoUnoCincoVeinticincoCientoVeinticincoSegundos y #quintoFalloMarcaDeadConAlerta pasaron con reloj y jitter controlados; falta confirmar los cinco intentos con broker real. |
 | TC-CU14-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: OutboxRelayIntegrationTest#publicaEnRabbitYMarcaPublishedAt pasó con PostgreSQL y RabbitMQ; EventDeduplicationTest#publicarElMismoEventoDosVecesSeProcesaUnaSolaVez comprobó Message-Id en consumidor de prueba. Falta consumo de M3 real. |
 | TC-CU14-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: EventDeduplicationTest#publicarElMismoEventoDosVecesSeProcesaUnaSolaVez pasó con RabbitMQ: dos copias, una procesada y Message-Id igual al event_id; consumidor es de prueba; no se verifican los efectos persistidos del paso 3 ni el consumidor M3. |
-| TC-CU14-006 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ConfirmPaymentIntegrationTest#approvedOnExpiredReservationPublishesReversal pasó: EXPIRED se conserva y se encola evento de reversión en puerto simulado. Falta verificar payload y entrega real a M3. |
+| TC-CU14-006 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: ConfirmPaymentIntegrationTest#approvedOnExpiredReservationPublishesReversal pasó: EXPIRED se conserva y se verifica llamada de reversión mediante espía de outbox. Falta verificar payload y entrega real a M3. |
 
 ## Brechas detectadas
 
@@ -56,19 +56,19 @@ Casos de notificación de estado mediante outbox y relay; el payload tiene discr
 
 - **Draft**: contrato incompleto o inconsistente.
 - **In Process**: ejecutable con implementación actual.
-- **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
+- **Approved**: escenario y postcondiciones demostrados por aserciones de la corrida V4, sin impedimentos de aprobación.
 - **Blocked**: depende de funcionalidad pendiente.
 
 ## Ejecución automatizada — 2026-11-13
 
-`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-14. Las pruebas citadas usan las dependencias indicadas en cada caso; no acreditan servicios externos reales.
+`sg docker -c 'bash ./mvnw -B clean test'`; inicio 2026-11-13T19:02:00-05:00, fin 2026-11-13T19:03:11-05:00; BASELINE_HEAD `568290a0d4334b477a4b0f9d5e949e981da3fa55`; salida 0. RabbitMQ y PostgreSQL se usaron en pruebas integradas; el consumidor M3 real no se probó.
 
-| Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
+| Clase | Pruebas | Fallos | Errores | Omitidos | Alcance |
 |---|---:|---:|---:|---:|---|
-| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [OutboxAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java) | 15 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [FinanceStatusMapperTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/FinanceStatusMapperTest.java) | 13 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [PublishPendingOutboxServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java) | 10 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [OutboxRelayIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/OutboxRelayIntegrationTest.java) | 4 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [EventDeduplicationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/EventDeduplicationTest.java) | 1 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [ConfirmPaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java) | 6 | 0 | 0 | 0 | Verde; cobertura según TC |
+| com.seashare.m2.reservas.application.service.ModuleOneNotificationMatrixTest | 7 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.application.service.PublishPendingOutboxServiceTest | 10 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.out.messaging.FinanceStatusMapperTest | 13 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.out.messaging.outbox.OutboxAdapterTest | 15 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.integration.ConfirmPaymentIntegrationTest | 6 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.integration.EventDeduplicationTest | 1 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.integration.OutboxRelayIntegrationTest | 4 | 0 | 0 | 0 | Evidencia parcial según TC |

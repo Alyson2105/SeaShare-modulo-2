@@ -26,7 +26,7 @@ Verificar entrega http a m1. Requisitos: FR-006, FR-008. Criterios: SC-001, SC-0
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-22 encola destino M1_HTTP; el adaptador actual es fake y no realiza HTTP real. Solo existe adaptador fake; el plan mezcla HTTP y AMQP, falta acordar último salto y semántica de confirmación.
+plan.md §§1, 3 y decisiones finales exige PATCH; §§2, 3.3 y 8 describen RabbitMQ y confirmación de broker. spec.md Edge Cases exige confirmación del broker. No hay HTTP real ni medición de 500 ms.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas cuando corresponda. Prueba parcial relacionada: OutboxRelayIntegrationTest#m1HttpUsaElPuertoFalsoYMarcaPublished; su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ M1 real o simulador contractual disponible y adaptador HTTP implementado.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Despachar notificación encolada y medir primer intento. | Datos de las precondiciones | Contrato propone PATCH y entrega con política de reintentos sin revertir transición local. | Pendiente | OutboxRelayIntegrationTest#m1HttpUsaElPuertoFalsoYMarcaPublished pasó: fila insertada manualmente, puerto simulado invocado y published_at persistido; no hubo HTTP ni medición de SLA. El plan mezcla confirmación de broker y PATCH. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | OutboxRelayIntegrationTest#m1HttpUsaElPuertoFalsoYMarcaPublished (XML V4: passed). Inserta fila outbox y comprueba invocación del puerto falso y published_at. plan.md §§1, 3 y decisiones finales exige PATCH; §§2, 3.3 y 8 describen RabbitMQ y confirmación de broker. spec.md Edge Cases exige confirmación del broker. No hay HTTP real ni medición de 500 ms. |
+| 2 | Ejecutar | Despachar notificación encolada y medir primer intento. | Datos de las precondiciones | Contrato propone PATCH y entrega con política de reintentos sin revertir transición local. | Pendiente | OutboxRelayIntegrationTest#m1HttpUsaElPuertoFalsoYMarcaPublished (XML V4: passed). Inserta fila outbox y comprueba invocación del puerto falso y published_at. plan.md §§1, 3 y decisiones finales exige PATCH; §§2, 3.3 y 8 describen RabbitMQ y confirmación de broker. spec.md Edge Cases exige confirmación del broker. No hay HTTP real ni medición de 500 ms. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | OutboxRelayIntegrationTest#m1HttpUsaElPuertoFalsoYMarcaPublished (XML V4: passed). Inserta fila outbox y comprueba invocación del puerto falso y published_at. plan.md §§1, 3 y decisiones finales exige PATCH; §§2, 3.3 y 8 describen RabbitMQ y confirmación de broker. spec.md Edge Cases exige confirmación del broker. No hay HTTP real ni medición de 500 ms. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Solo existe adaptador fake; el plan mezcla HTTP y AMQP, falta acordar último sa
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Draft; ejecución parcial con puerto falso. OutboxRelayIntegrationTest#m1HttpUsaElPuertoFalsoYMarcaPublished pasó: fila insertada manualmente, puerto simulado invocado y published_at persistido; no hubo HTTP ni medición de SLA. El plan mezcla confirmación de broker y PATCH.
+Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: OutboxRelayIntegrationTest#m1HttpUsaElPuertoFalsoYMarcaPublished. plan.md §§1, 3 y decisiones finales exige PATCH; §§2, 3.3 y 8 describen RabbitMQ y confirmación de broker. spec.md Edge Cases exige confirmación del broker. No hay HTTP real ni medición de 500 ms.
 
 #### Traceability
 FR-006, FR-008 | SC-001, SC-002 | Evidencia parcial: src/test/java/com/seashare/m2/reservas/integration/OutboxRelayIntegrationTest.java#m1HttpUsaElPuertoFalsoYMarcaPublished | Draft

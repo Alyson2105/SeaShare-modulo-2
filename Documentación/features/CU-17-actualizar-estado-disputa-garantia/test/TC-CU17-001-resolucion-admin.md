@@ -26,7 +26,7 @@ Verificar resolución administrativa. Requisitos: FR-001, FR-002, FR-004, FR-005
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Endpoint y servicio existen. La notificación final depende de CU-18; no implica liquidación confirmada.
+El servicio comprueba ambos destinos con repositorio simulado; faltan JWT y la combinación completa de motivos con persistencia real.
 
 ##### Dependencies & Assumptions
 Se emplean las dependencias señaladas en la evidencia; los mocks y servicios externos no acreditan el flujo completo.
@@ -38,9 +38,9 @@ Disputa PENDING con reclamo y usuario ADMIN autorizado.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | UpdateDisputeStatusServiceTest#adminAcceptsDisputeWithClaim y #adminRejectsWithReason: verdes con repositorio y outbox simulados; controlador prueba 200 con caso de uso simulado. No se demuestra toda la combinación de motivos y destinos con persistencia y JWT reales. |
-| 2 | Ejecutar | Resolver a ACCEPTED y REJECTED en disputas separadas, con y sin motivo. | Datos de las precondiciones | El plan prevé 200, estado final correspondiente y motivo opcional local, sin cálculos monetarios. | Pendiente | UpdateDisputeStatusServiceTest#adminAcceptsDisputeWithClaim y #adminRejectsWithReason: verdes con repositorio y outbox simulados; controlador prueba 200 con caso de uso simulado. No se demuestra toda la combinación de motivos y destinos con persistencia y JWT reales. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | UpdateDisputeStatusServiceTest#adminAcceptsDisputeWithClaim y #adminRejectsWithReason: verdes con repositorio y outbox simulados; controlador prueba 200 con caso de uso simulado. No se demuestra toda la combinación de motivos y destinos con persistencia y JWT reales. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | UpdateDisputeStatusServiceTest#adminAcceptsDisputeWithClaim (XML V4: passed). Aserta PENDING → ACCEPTED, actor y hora; captura revisión, historial y encolado en puertos simulados. No demuestra HTTP autenticado ni todos los casos con persistencia real. |
+| 2 | Ejecutar | Resolver a ACCEPTED y REJECTED en disputas separadas, con y sin motivo. | Datos de las precondiciones | El plan prevé 200, estado final correspondiente y motivo opcional local, sin cálculos monetarios. | Pendiente | UpdateDisputeStatusServiceTest#adminAcceptsDisputeWithClaim (XML V4: passed). Aserta PENDING → ACCEPTED, actor y hora; captura revisión, historial y encolado en puertos simulados. No demuestra HTTP autenticado ni todos los casos con persistencia real. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | UpdateDisputeStatusServiceTest#adminAcceptsDisputeWithClaim (XML V4: passed). Aserta PENDING → ACCEPTED, actor y hora; captura revisión, historial y encolado en puertos simulados. No demuestra HTTP autenticado ni todos los casos con persistencia real. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ La notificación final depende de CU-18; no implica liquidación confirmada.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: UpdateDisputeStatusServiceTest#adminAcceptsDisputeWithClaim. El servicio comprueba ambos destinos con repositorio simulado; faltan JWT y la combinación completa de motivos con persistencia real.
 
 #### Traceability
 FR-001, FR-002, FR-004, FR-005 | SC-001, SC-003, SC-004 | Evidencia: src/test/java/com/seashare/m2/disputa/application/service/UpdateDisputeStatusServiceTest.java#adminAcceptsDisputeWithClaim; src/test/java/com/seashare/m2/disputa/application/service/UpdateDisputeStatusServiceTest.java#adminRejectsWithReason; src/test/java/com/seashare/m2/disputa/infrastructure/adapter/in/web/DisputeAdminControllerTest.java#acceptedReturns200WithContractFields | In Process

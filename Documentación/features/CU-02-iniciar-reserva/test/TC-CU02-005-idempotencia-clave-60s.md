@@ -23,7 +23,7 @@ Verificar que repetir una solicitud dentro de la ventana devuelve la reserva ori
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La clave se reclama por endpoint y ventana de 60 segundos.
+CreateReservationTest#sameIdempotencyKeyReturnsSameReservation comprueba una sola reserva por separado; no controla el límite temporal de 60 segundos en las peticiones ni todo SC-001.
 
 ##### Dependencies & Assumptions
 La corrida utilizó backend y base de datos de pruebas; identidad temporal por headers sin Spring Security. [IdempotencyAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/integration/IdempotencyAdapterTest.java); [IdempotencyClaimConcurrencyTest](../../../../src/test/java/com/seashare/m2/reservas/integration/IdempotencyClaimConcurrencyTest.java); [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java).
@@ -35,7 +35,7 @@ Solicitud válida: `POST /api/v1/reservations`, `Content-Type: application/json`
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Ejecutar escenario | Enviar dos veces el mismo cuerpo y clave UUID dentro de 60 segundos; consultar reservation y outbox. | Solicitud válida y variaciones descritas | Ambas respuestas 201 identifican la misma reserva; existe una sola reserva y un solo evento outbox correspondiente. | Pendiente | Integración: CreateReservationTest#sameIdempotencyKeyReturnsSameReservation pasó: dos 201, mismo ID y una reserva; CreateReservationOutboxIntegrationTest#idempotentRepeatDoesNotEnqueueAdditionalMessage pasó: mismo ID y un evento. No se controla el límite temporal exacto en estas peticiones. |
+| 1 | Ejecutar escenario | Enviar dos veces el mismo cuerpo y clave UUID dentro de 60 segundos; consultar reservation y outbox. | Solicitud válida y variaciones descritas | Ambas respuestas 201 identifican la misma reserva; existe una sola reserva y un solo evento outbox correspondiente. | Pendiente | CreateReservationOutboxIntegrationTest#idempotentRepeatDoesNotEnqueueAdditionalMessage (XML V4: passed). Aserta dos HTTP 201, mismo reservation_id y una fila outbox. CreateReservationTest#sameIdempotencyKeyReturnsSameReservation comprueba una sola reserva por separado; no controla el límite temporal de 60 segundos en las peticiones ni todo SC-001. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica como comportamiento principal adicional; consultar límites abajo.
@@ -52,7 +52,7 @@ El adaptador cubre reclamo de clave vencida; la prueba de concurrencia cubre sol
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; los resultados pendientes se detallan en el flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: CreateReservationOutboxIntegrationTest#idempotentRepeatDoesNotEnqueueAdditionalMessage. CreateReservationTest#sameIdempotencyKeyReturnsSameReservation comprueba una sola reserva por separado; no controla el límite temporal de 60 segundos en las peticiones ni todo SC-001.
 
 #### Traceability
 FR-011 | SC-001 | [IdempotencyAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/integration/IdempotencyAdapterTest.java); [IdempotencyClaimConcurrencyTest](../../../../src/test/java/com/seashare/m2/reservas/integration/IdempotencyClaimConcurrencyTest.java); [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java#sameIdempotencyKeyReturnsSameReservation; src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java#idempotentRepeatDoesNotEnqueueAdditionalMessage | In Process

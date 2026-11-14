@@ -26,7 +26,7 @@ Verificar listado de arrendatario. Requisitos: FR-001, FR-002, FR-003. Criterios
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. Identidad por headers es temporal; JWT no está implementado.
+No afirma los identificadores individuales ni todos los campos exigidos; identidad por headers, no JWT.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Dos arrendatarios con reservas distintas; cabeceras X-User-Id UUID y X-User-Role
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar GET /api/v1/reservations como uno de ellos. | Datos de las precondiciones | 200 con items pertenecientes al arrendatario, fechas, estado, vessel_id y estimated_total; excluye reservas del otro. | Pendiente | ReservationQueryTest#listsOnlyOwnReservations: exitosa. Comprueba dos reservas propias frente a una ajena y campos de respuesta con headers; no verifica JWT ni todos los campos del paso. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ReservationQueryTest#listsOnlyOwnReservations (XML V4: passed). Aserta HTTP 200, total 2 y longitud 2 con dos reservas propias y una ajena; comprueba campos de respuesta. No afirma los identificadores individuales ni todos los campos exigidos; identidad por headers, no JWT. |
+| 2 | Ejecutar | Consultar GET /api/v1/reservations como uno de ellos. | Datos de las precondiciones | 200 con items pertenecientes al arrendatario, fechas, estado, vessel_id y estimated_total; excluye reservas del otro. | Pendiente | ReservationQueryTest#listsOnlyOwnReservations (XML V4: passed). Aserta HTTP 200, total 2 y longitud 2 con dos reservas propias y una ajena; comprueba campos de respuesta. No afirma los identificadores individuales ni todos los campos exigidos; identidad por headers, no JWT. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ReservationQueryTest#listsOnlyOwnReservations (XML V4: passed). Aserta HTTP 200, total 2 y longitud 2 con dos reservas propias y una ajena; comprueba campos de respuesta. No afirma los identificadores individuales ni todos los campos exigidos; identidad por headers, no JWT. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Identidad por headers es temporal; JWT no está implementado.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; Comprueba dos reservas propias frente a una ajena y campos de respuesta con headers; no verifica JWT ni todos los campos del paso.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ReservationQueryTest#listsOnlyOwnReservations. No afirma los identificadores individuales ni todos los campos exigidos; identidad por headers, no JWT.
 
 #### Traceability
 FR-001, FR-002, FR-003 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#listsOnlyOwnReservations | In Process

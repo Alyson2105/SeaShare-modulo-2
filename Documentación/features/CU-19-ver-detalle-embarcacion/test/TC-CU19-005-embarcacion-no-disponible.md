@@ -26,10 +26,10 @@ Verificar fallo de datos de flota. Requisitos: FR-001, FR-002. Criterios: SC-003
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Endpoints de detalle y cotización implementados; cobertura parcial con dobles, sin verificar servicios reales ni UI. WireMock verifica traducción del 404; flujo HTTP completo y ausencia de persistencia no verificados.
+No verifica respuesta del endpoint ni ausencia de persistencia; la capacidad cero se prueba separadamente.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [flota](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); no demuestran el flujo completo de CU-19.
+Ejecución V4 con dependencias controladas. Pruebas parciales de componentes: [flota](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); no demuestran el flujo completo de CU-19.
 
 ##### Preconditions & Default Setup
 M1 simulado retorna 404 o capacidad cero.
@@ -38,9 +38,9 @@ M1 simulado retorna 404 o capacidad cero.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar detalle con cada variante. | Datos de las precondiciones | El plan propone 404 VESSEL_NOT_FOUND; no se persiste ficha técnica. | Pendiente | WireMock verifica traducción del 404; flujo HTTP completo y ausencia de persistencia no verificados. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | HttpVesselReadAdapterTest#notFoundMapsToVesselNotFound (XML V4: passed). Aserta excepción VESSEL_NOT_FOUND ante 404 de WireMock. No verifica respuesta del endpoint ni ausencia de persistencia; la capacidad cero se prueba separadamente. |
+| 2 | Ejecutar | Consultar detalle con cada variante. | Datos de las precondiciones | El plan propone 404 VESSEL_NOT_FOUND; no se persiste ficha técnica. | Pendiente | HttpVesselReadAdapterTest#notFoundMapsToVesselNotFound (XML V4: passed). Aserta excepción VESSEL_NOT_FOUND ante 404 de WireMock. No verifica respuesta del endpoint ni ausencia de persistencia; la capacidad cero se prueba separadamente. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | HttpVesselReadAdapterTest#notFoundMapsToVesselNotFound (XML V4: passed). Aserta excepción VESSEL_NOT_FOUND ante 404 de WireMock. No verifica respuesta del endpoint ni ausencia de persistencia; la capacidad cero se prueba separadamente. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ FleetInfo actual solo valida que max_capacity sea numérico, no su positividad.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; WireMock verifica traducción del 404; flujo HTTP completo y ausencia de persistencia no verificados.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: HttpVesselReadAdapterTest#notFoundMapsToVesselNotFound. No verifica respuesta del endpoint ni ausencia de persistencia; la capacidad cero se prueba separadamente.
 
 #### Traceability
 FR-001, FR-002 | SC-003 | [flota](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java)  | src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpVesselReadAdapterTest.java#notFoundMapsToVesselNotFound | In Process

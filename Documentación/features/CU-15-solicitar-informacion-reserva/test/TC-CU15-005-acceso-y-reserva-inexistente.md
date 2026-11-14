@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU15-005 — Autorización de consulta
-**Status**: In Process
+**Status**: Blocked
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -26,10 +26,10 @@ Verificar autorización de consulta. Requisitos: FR-001, FR-007. Criterios: SC-0
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-15 expone un endpoint interno con identidad temporal por headers; JWT de servicio está pendiente. El endpoint utiliza identidad temporal por headers; JWT de servicio está pendiente.
+El plan.md Seguridad exige JWT de servicio; el resolver solo lee headers temporales y no implementa autenticación de credenciales de servicio.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-15; no demuestran el flujo completo de CU-15.
+Ejecución V4 con dependencias controladas; las pruebas citadas cubren solo parte del escenario.
 
 ##### Preconditions & Default Setup
 Reserva existente y credenciales de servicio no autorizadas.
@@ -38,9 +38,9 @@ Reserva existente y credenciales de servicio no autorizadas.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Intentar consulta con identidad distinta de M3. | Datos de las precondiciones | El plan prevé 403 PROFILE_NOT_AUTHORIZED; no hay mutación. | Pendiente | Componente MockMvc: InternalReservationControllerTest#nonFinanceRoleIs403 y #unknownReservationIs404 pasaron con headers temporales y servicio simulado. No prueban JWT de servicio ni ausencia de escritura en base de datos. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | InternalReservationControllerTest#nonFinanceRoleIs403 (XML V4: passed). Aserta HTTP 403 PROFILE_NOT_AUTHORIZED con identidad por cabeceras y servicio simulado. El plan.md Seguridad exige JWT de servicio; el resolver solo lee headers temporales y no implementa autenticación de credenciales de servicio. |
+| 2 | Ejecutar | Intentar consulta con identidad distinta de M3. | Datos de las precondiciones | El plan prevé 403 PROFILE_NOT_AUTHORIZED; no hay mutación. | Pendiente | InternalReservationControllerTest#nonFinanceRoleIs403 (XML V4: passed). Aserta HTTP 403 PROFILE_NOT_AUTHORIZED con identidad por cabeceras y servicio simulado. El plan.md Seguridad exige JWT de servicio; el resolver solo lee headers temporales y no implementa autenticación de credenciales de servicio. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | InternalReservationControllerTest#nonFinanceRoleIs403 (XML V4: passed). Aserta HTTP 403 PROFILE_NOT_AUTHORIZED con identidad por cabeceras y servicio simulado. El plan.md Seguridad exige JWT de servicio; el resolver solo lee headers temporales y no implementa autenticación de credenciales de servicio. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ El endpoint utiliza identidad temporal por headers; JWT de servicio está pendie
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial, consultar el flujo.
+Corrida V4 del 2026-11-13: Blocked; estado documental: Blocked; evidencia: InternalReservationControllerTest#nonFinanceRoleIs403. El plan.md Seguridad exige JWT de servicio; el resolver solo lee headers temporales y no implementa autenticación de credenciales de servicio.
 
 #### Traceability
-FR-001, FR-007 | SC-002 | Prueba parcial ejecutada | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/InternalReservationControllerTest.java#nonFinanceRoleIs403; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/InternalReservationControllerTest.java#unknownReservationIs404 | In Process
+FR-001, FR-007 | SC-002 | Prueba parcial ejecutada | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/InternalReservationControllerTest.java#nonFinanceRoleIs403; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/InternalReservationControllerTest.java#unknownReservationIs404 | Blocked

@@ -26,10 +26,10 @@ Verificar cierre sin reclamo. Requisitos: FR-007, FR-008, FR-011. Criterios: SC-
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-El spec CU-16 FR-011 exige REJECTED → APPROVED, pero plan CU-18 y DisputeEventMapper#finalEvent usan REJECTED → REJECTED; resolver contrato. El barrido de vencimiento sí existe.
+El spec CU-16 FR-011 exige REJECTED → APPROVED; el plan CU-18 mapea REJECTED → REJECTED. El desacuerdo afecta el evento obligatorio. El barrido se prueba sin novedades de CU-07.
 
 ##### Dependencies & Assumptions
-La prueba usa componentes controlados; no demuestra el flujo completo.
+La evidencia V4 y sus límites se indican en Comments.
 
 ##### Preconditions & Default Setup
 Disputa PENDING sin reclamo, con texto informativo de check-out y reloj controlado.
@@ -38,9 +38,9 @@ Disputa PENDING sin reclamo, con texto informativo de check-out y reloj controla
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd: verde con PostgreSQL; no parte de CU-07 ni de novedades de check-out. |
-| 2 | Ejecutar | Al vencer 24 horas ejecutar cierre automático. | Datos de las precondiciones | Por CU-17 pasa a REJECTED con motivo de sistema; novedades de check-out no cuentan como reclamo; evento final se deriva a CU-18. | Pendiente | DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd: verde con PostgreSQL; no parte de CU-07 ni de novedades de check-out. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd: verde con PostgreSQL; no parte de CU-07 ni de novedades de check-out. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd (XML V4: passed). Aserciones: un cierre, REJECTED persistido, motivo de sistema, resolvedBy nulo y transición SYSTEM en historial. No parte de CU-07 con novedades ni resuelve el mapeo contractual. |
+| 2 | Ejecutar | Al vencer 24 horas ejecutar cierre automático. | Datos de las precondiciones | Por CU-17 pasa a REJECTED con motivo de sistema; novedades de check-out no cuentan como reclamo; evento final se deriva a CU-18. | Pendiente | DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd (XML V4: passed). Aserciones: un cierre, REJECTED persistido, motivo de sistema, resolvedBy nulo y transición SYSTEM en historial. No parte de CU-07 con novedades ni resuelve el mapeo contractual. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd (XML V4: passed). Aserciones: un cierre, REJECTED persistido, motivo de sistema, resolvedBy nulo y transición SYSTEM en historial. No parte de CU-07 con novedades ni resuelve el mapeo contractual. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Política de reintentos del job sin definir; en PENDING no se publica.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Draft; evidencia parcial, pasos completos pendientes.
+Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: DisputeWindowCloseIntegrationTest#closesAtExactWindowEnd. El spec CU-16 FR-011 exige REJECTED → APPROVED; el plan CU-18 mapea REJECTED → REJECTED. El desacuerdo afecta el evento obligatorio. El barrido se prueba sin novedades de CU-07.
 
 #### Traceability
 FR-007, FR-008, FR-011 | SC-003 | src/test/java/com/seashare/m2/disputa/integration/DisputeWindowCloseIntegrationTest.java#closesAtExactWindowEnd | Draft

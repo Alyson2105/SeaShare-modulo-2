@@ -26,10 +26,10 @@ Verificar segundo reclamo o edición. Requisitos: FR-006. Criterios: SC-005.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-El spec D-01 deja abierta la política de segundo reclamo y edición; plan.md prevé 409 CLAIM_ALREADY_EXISTS y el servicio rechaza el segundo.
+El spec CU-16, edge case segundo reclamo y duda D-01, no define segundo registro ni edición; el plan propone 409 CLAIM_ALREADY_EXISTS. El resultado esperado para edición sigue indeterminado.
 
 ##### Dependencies & Assumptions
-La prueba usa componentes controlados; no demuestra el flujo completo.
+La evidencia V4 y sus límites se indican en Comments.
 
 ##### Preconditions & Default Setup
 Disputa PENDING con reclamo ya registrado y ventana aún vigente.
@@ -38,9 +38,9 @@ Disputa PENDING con reclamo ya registrado y ventana aún vigente.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | RegisterDisputeClaimIntegrationTest#rejectsSecondClaim: verde con PostgreSQL; no evalúa edición. |
-| 2 | Ejecutar | Intentar segundo registro o edición. | Datos de las precondiciones | El plan prevé 409 CLAIM_ALREADY_EXISTS para segundo registro; el spec mantiene abierta la política. | Pendiente | RegisterDisputeClaimIntegrationTest#rejectsSecondClaim: verde con PostgreSQL; no evalúa edición. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | RegisterDisputeClaimIntegrationTest#rejectsSecondClaim: verde con PostgreSQL; no evalúa edición. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pasó | RegisterDisputeClaimIntegrationTest#rejectsSecondClaim (XML V4: passed). Comprueba la excepción CLAIM_ALREADY_EXISTS al segundo registro; no comprueba edición ni postcondiciones persistidas completas. |
+| 2 | Ejecutar | Intentar segundo registro o edición. | Datos de las precondiciones | El plan prevé 409 CLAIM_ALREADY_EXISTS para segundo registro; el spec mantiene abierta la política. | Pendiente | RegisterDisputeClaimIntegrationTest#rejectsSecondClaim (XML V4: passed). Comprueba la excepción CLAIM_ALREADY_EXISTS al segundo registro; no comprueba edición ni postcondiciones persistidas completas. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | RegisterDisputeClaimIntegrationTest#rejectsSecondClaim (XML V4: passed). Comprueba la excepción CLAIM_ALREADY_EXISTS al segundo registro; no comprueba edición ni postcondiciones persistidas completas. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ No está definido en spec si se admite edición u otro reclamo; resolver D-01 an
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Draft; evidencia parcial, pasos completos pendientes.
+Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: RegisterDisputeClaimIntegrationTest#rejectsSecondClaim. El spec CU-16, edge case segundo reclamo y duda D-01, no define segundo registro ni edición; el plan propone 409 CLAIM_ALREADY_EXISTS. El resultado esperado para edición sigue indeterminado.
 
 #### Traceability
 FR-006 | SC-005 | src/test/java/com/seashare/m2/disputa/integration/RegisterDisputeClaimIntegrationTest.java#rejectsSecondClaim | Draft

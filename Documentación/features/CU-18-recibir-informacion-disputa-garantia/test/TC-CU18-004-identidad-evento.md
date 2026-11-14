@@ -26,7 +26,7 @@ Verificar identificador y reenvío. Requisitos: FR-004, FR-005. Criterios: SC-00
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La deduplicación efectiva corresponde a M3; publisher confirm no demuestra consumo. Spec FR-005 pide reintentar hasta confirmar; plan sección 6 y PublishPendingOutboxService#registerFailure agotan tras cinco fallos.
+CU-18 spec FR-005 exige reintentar hasta confirmar; su plan sección 6.10 limita a cinco intentos y alarma. El paso de un fallo seguido de éxito es evaluable en ambos contratos; el agotamiento conserva esa divergencia y el reenvío específico de disputa sigue sin prueba.
 
 ##### Dependencies & Assumptions
 La evidencia identifica las dependencias usadas; un broker de prueba no demuestra consumo por M3.
@@ -38,9 +38,9 @@ Evento final con event_key y Message-Id según plan; broker simulado.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputeEventMapperTest#eventIdIsDeterministicPerDisputeAndStatus y OutboxRelayIntegrationTest#falloSimuladoReintentaHastaPublicar: verdes; el segundo prueba relay genérico, no reenvío de una disputa con comparación de identificadores. |
-| 2 | Ejecutar | Fallar publicación y reintentar observando identificadores. | Datos de las precondiciones | Se conserva la identidad del evento y se marca publicado tras confirmación del broker. | Pendiente | DisputeEventMapperTest#eventIdIsDeterministicPerDisputeAndStatus y OutboxRelayIntegrationTest#falloSimuladoReintentaHastaPublicar: verdes; el segundo prueba relay genérico, no reenvío de una disputa con comparación de identificadores. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputeEventMapperTest#eventIdIsDeterministicPerDisputeAndStatus y OutboxRelayIntegrationTest#falloSimuladoReintentaHastaPublicar: verdes; el segundo prueba relay genérico, no reenvío de una disputa con comparación de identificadores. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputeEventMapperTest#eventIdIsDeterministicPerDisputeAndStatus (XML V4: passed). Aserta que dos conversiones del mismo estado tienen el UUID esperado; OutboxRelayIntegrationTest#falloSimuladoReintentaHastaPublicar verifica un reintento genérico, no la identidad de un reenvío de disputa. |
+| 2 | Ejecutar | Fallar publicación y reintentar observando identificadores. | Datos de las precondiciones | Se conserva la identidad del evento y se marca publicado tras confirmación del broker. | Pendiente | DisputeEventMapperTest#eventIdIsDeterministicPerDisputeAndStatus (XML V4: passed). Aserta que dos conversiones del mismo estado tienen el UUID esperado; OutboxRelayIntegrationTest#falloSimuladoReintentaHastaPublicar verifica un reintento genérico, no la identidad de un reenvío de disputa. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputeEventMapperTest#eventIdIsDeterministicPerDisputeAndStatus (XML V4: passed). Aserta que dos conversiones del mismo estado tienen el UUID esperado; OutboxRelayIntegrationTest#falloSimuladoReintentaHastaPublicar verifica un reintento genérico, no la identidad de un reenvío de disputa. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ La deduplicación efectiva corresponde a M3; no se demuestra con publisher confi
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: DisputeEventMapperTest#eventIdIsDeterministicPerDisputeAndStatus. CU-18 spec FR-005 exige reintentar hasta confirmar; su plan sección 6.10 limita a cinco intentos y alarma. El paso de un fallo seguido de éxito es evaluable en ambos contratos; el agotamiento conserva esa divergencia y el reenvío específico de disputa sigue sin prueba.
 
 #### Traceability
 FR-004, FR-005 | SC-003, SC-004 | Evidencia: src/test/java/com/seashare/m2/disputa/application/service/DisputeEventMapperTest.java#eventIdIsDeterministicPerDisputeAndStatus; src/test/java/com/seashare/m2/disputa/integration/DisputePublishingIntegrationTest.java#acceptedIsPublishedAsCompletedWithoutAmounts; src/test/java/com/seashare/m2/reservas/integration/OutboxRelayIntegrationTest.java#falloSimuladoReintentaHastaPublicar | In Process

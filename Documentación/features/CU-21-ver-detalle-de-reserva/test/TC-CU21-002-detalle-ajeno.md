@@ -26,7 +26,7 @@ Verificar rechazo de detalle ajeno. Requisitos: FR-001, FR-002. Criterios: SC-00
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. Headers temporales no demuestran autenticación JWT ni impiden suplantación.
+No prueba propietario ajeno ni autenticación JWT.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Reserva de un arrendatario y propietario distintos de la identidad de prueba.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar con rol RENTER y OWNER ajenos en solicitudes separadas. | Datos de las precondiciones | 403 RESERVATION_NOT_OWNED para cada identidad ajena. | Pendiente | ReservationQueryTest#detailOfOtherUserIs403: exitosa. Comprueba 403 para arrendatario ajeno; no comprueba propietario ajeno ni JWT. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ReservationQueryTest#detailOfOtherUserIs403 (XML V4: passed). Aserta 403 RESERVATION_NOT_OWNED para otro arrendatario. No prueba propietario ajeno ni autenticación JWT. |
+| 2 | Ejecutar | Consultar con rol RENTER y OWNER ajenos en solicitudes separadas. | Datos de las precondiciones | 403 RESERVATION_NOT_OWNED para cada identidad ajena. | Pendiente | ReservationQueryTest#detailOfOtherUserIs403 (XML V4: passed). Aserta 403 RESERVATION_NOT_OWNED para otro arrendatario. No prueba propietario ajeno ni autenticación JWT. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ReservationQueryTest#detailOfOtherUserIs403 (XML V4: passed). Aserta 403 RESERVATION_NOT_OWNED para otro arrendatario. No prueba propietario ajeno ni autenticación JWT. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Headers temporales no demuestran autenticación JWT ni impiden suplantación.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; Comprueba 403 para arrendatario ajeno; no comprueba propietario ajeno ni JWT.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ReservationQueryTest#detailOfOtherUserIs403. No prueba propietario ajeno ni autenticación JWT.
 
 #### Traceability
 FR-001, FR-002 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#detailOfOtherUserIs403 | In Process

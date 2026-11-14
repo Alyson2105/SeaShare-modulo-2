@@ -26,7 +26,7 @@ Verificar inicio de navegación. Requisitos: FR-001, FR-003, FR-005, FR-006. Cri
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Verifica HTTP y check-in persistido; no verifica conservación de hora pactada ni entrega externa. El endpoint y servicio existen. Llegada tardía después de 30 minutos también es admisible mientras siga RESERVED.
+Se verifica el inicio y check-in persistidos, pero no la conservación de la hora contratada ni el primer intento a M1 en menos de un segundo exigido por SC-002.
 
 ##### Dependencies & Assumptions
 Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-06.
@@ -38,9 +38,9 @@ Reserva RESERVED del propietario y reloj controlado en la hora exacta del zarpe.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NavigationStartIntegrationTest#successfulStartPersistsDepartureStateAndCheckinEvent: verde. Verifica HTTP y check-in persistido; no verifica conservación de hora pactada ni entrega externa. |
-| 2 | Ejecutar | Solicitar inicio con hora real y notas válidas. | Datos de las precondiciones | Según el plan, 200 e IN_NAVIGATION; se registra check-in y hora real, conservando la hora contratada. | Pendiente | NavigationStartIntegrationTest#successfulStartPersistsDepartureStateAndCheckinEvent: verde. Verifica HTTP y check-in persistido; no verifica conservación de hora pactada ni entrega externa. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NavigationStartIntegrationTest#successfulStartPersistsDepartureStateAndCheckinEvent: verde. Verifica HTTP y check-in persistido; no verifica conservación de hora pactada ni entrega externa. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pasó | NavigationStartIntegrationTest#successfulStartPersistsDepartureStateAndCheckinEvent (XML V4: passed). Aserta HTTP 200, IN_NAVIGATION, hora real y fila de check-in; no compara la hora pactada ni mide entrega a M1. |
+| 2 | Ejecutar | Solicitar inicio con hora real y notas válidas. | Datos de las precondiciones | Según el plan, 200 e IN_NAVIGATION; se registra check-in y hora real, conservando la hora contratada. | Pendiente | NavigationStartIntegrationTest#successfulStartPersistsDepartureStateAndCheckinEvent (XML V4: passed). Aserta HTTP 200, IN_NAVIGATION, hora real y fila de check-in; no compara la hora pactada ni mide entrega a M1. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NavigationStartIntegrationTest#successfulStartPersistsDepartureStateAndCheckinEvent (XML V4: passed). Aserta HTTP 200, IN_NAVIGATION, hora real y fila de check-in; no compara la hora pactada ni mide entrega a M1. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Llegada tardía después de 30 minutos también es admisible mientras siga RESER
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: NavigationStartIntegrationTest#successfulStartPersistsDepartureStateAndCheckinEvent. Se verifica el inicio y check-in persistidos, pero no la conservación de la hora contratada ni el primer intento a M1 en menos de un segundo exigido por SC-002.
 
 #### Traceability
 FR-001, FR-003, FR-005, FR-006 | SC-002 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NavigationStartIntegrationTest.java#successfulStartPersistsDepartureStateAndCheckinEvent | In Process

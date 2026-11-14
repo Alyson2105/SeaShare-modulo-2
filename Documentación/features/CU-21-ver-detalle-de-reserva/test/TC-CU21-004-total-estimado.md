@@ -26,7 +26,7 @@ Verificar total estimado persistido. Requisitos: FR-003, FR-004. Criterios: SC-0
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. Es estimación recibida del cliente, no demuestra desglose oficial de M3.
+spec.md FR-004 exige valores de M3 al pago; plan.md §2 admite estimación previa para INITIATED. El caso no fija estado y pide estimated_total como cadena; el plan define total_paid numérico o nulo.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Reserva propia con estimated_total conocido.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar detalle y comparar el total con el valor persistido. | Datos de las precondiciones | estimated_total se devuelve como cadena decimal del valor guardado sin cálculo de devolución. | Pendiente | ReservationQueryTest#detailIncludesContractFields: exitosa. Comprueba que total_paid es numérico; no compara el valor persistido ni verifica ausencia de cálculos. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ReservationQueryTest#detailIncludesContractFields (XML V4: passed). Aserta total_paid nulo para RESERVED sin liquidación, no un valor numérico. spec.md FR-004 exige valores de M3 al pago; plan.md §2 admite estimación previa para INITIATED. El caso no fija estado y pide estimated_total como cadena; el plan define total_paid numérico o nulo. |
+| 2 | Ejecutar | Consultar detalle y comparar el total con el valor persistido. | Datos de las precondiciones | estimated_total se devuelve como cadena decimal del valor guardado sin cálculo de devolución. | Pendiente | ReservationQueryTest#detailIncludesContractFields (XML V4: passed). Aserta total_paid nulo para RESERVED sin liquidación, no un valor numérico. spec.md FR-004 exige valores de M3 al pago; plan.md §2 admite estimación previa para INITIATED. El caso no fija estado y pide estimated_total como cadena; el plan define total_paid numérico o nulo. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ReservationQueryTest#detailIncludesContractFields (XML V4: passed). Aserta total_paid nulo para RESERVED sin liquidación, no un valor numérico. spec.md FR-004 exige valores de M3 al pago; plan.md §2 admite estimación previa para INITIATED. El caso no fija estado y pide estimated_total como cadena; el plan define total_paid numérico o nulo. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -59,7 +59,7 @@ Es estimación recibida del cliente, no demuestra desglose oficial de M3.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Draft; Comprueba que total_paid es numérico; no compara el valor persistido ni verifica ausencia de cálculos.
+Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: ReservationQueryTest#detailIncludesContractFields. spec.md FR-004 exige valores de M3 al pago; plan.md §2 admite estimación previa para INITIATED. El caso no fija estado y pide estimated_total como cadena; el plan define total_paid numérico o nulo.
 
 #### Traceability
 FR-003, FR-004 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#detailIncludesContractFields | Draft

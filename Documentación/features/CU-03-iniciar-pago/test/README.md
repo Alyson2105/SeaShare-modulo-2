@@ -32,21 +32,21 @@ Casos documentales para `POST /api/v1/reservations/{reservation_id}/payments`. E
 | FR-007 | Parcial | 004, 007 | Backend | TTL original |
 | FR-008 | Parcial | 003 | Backend | Colisión FCFS |
 | FR-009 | Parcial | 006, 008, 010 | Backend | Datos y evento para cobro; reintento en Draft |
-| FR-010 | Sin cobertura backend | — | UI | Resumen visual |
-| FR-011 | Sin cobertura backend | — | UI | Temporizador visual |
+| FR-010 | Sin evidencia | — | UI | Resumen visual |
+| FR-011 | Sin evidencia | — | UI | Temporizador visual |
 | FR-012 | Parcial | 001 | Backend/UI | Datos backend; presentación visual fuera |
 | FR-013 | Parcial | 005 | Backend/UI | Consentimiento backend; componente UI fuera |
 | FR-014 | Parcial | 005, 006 | Backend/UI | Validación backend; habilitación UI fuera |
-| FR-015 | Sin cobertura backend | — | UI | Panel y retroalimentación visual |
+| FR-015 | Sin evidencia | — | UI | Panel y retroalimentación visual |
 
 ## Criterios de éxito
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Parcial | Inicio y TTL de respuesta probados; falta demostrar el 100 % y persistencia completa. |
-| SC-002 | Parcial | Conflicto secuencial probado; carrera simultánea no demostrada. |
-| SC-003 | Parcial | Desglose simulado probado; no demuestra ausencia global de cálculos ni todos los cobros. |
-| SC-004 | Parcial | Se probó rechazo de consentimiento falso; no se demuestran todas las transacciones ni la UI. |
+| SC-001 | Parcialmente demostrado | Inicio y TTL de respuesta probados; falta demostrar el 100 % y persistencia completa. |
+| SC-002 | Parcialmente demostrado | Conflicto secuencial probado; carrera simultánea no demostrada. |
+| SC-003 | Parcialmente demostrado | Desglose simulado probado; no demuestra ausencia global de cálculos ni todos los cobros. |
+| SC-004 | Parcialmente demostrado | Se probó rechazo de consentimiento falso; no se demuestran todas las transacciones ni la UI. |
 
 ## Checklist de ejecución
 
@@ -60,7 +60,7 @@ Casos documentales para `POST /api/v1/reservations/{reservation_id}/payments`. E
 | TC-CU03-006 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: PaymentIntegrationTest#missingPaymentTokenIs400 pasó: 400 PAYMENT_DATA_INCOMPLETE. Faltan variantes y comprobación de estado y outbox. |
 | TC-CU03-007 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Unitario: StartPaymentServiceTest#nonInitiatedReservationIsConflict y #expiredTtlIsConflict pasaron con los códigos de dominio esperados. Falta comprobar HTTP 409 y ausencia de efectos persistidos. |
 | TC-CU03-008 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración con outbox simulado: PaymentIntegrationTest#pendingEventCarriesPaymentToken pasó para estado interno y token; unitario: ModuleOneNotificationMatrixTest#initiatedAndPendingPaymentNotifyNobody pasó sin destino M1. Falta inspección de payload y ausencia de M1 en flujo integrado. |
-| TC-CU03-009 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | Unitario: StartPaymentServiceTest#otherRenterIsForbidden pasó con RESERVATION_NOT_OWNED. Falta autenticación Bearer; 403 HTTP y ausencia de transición persistida siguen sin prueba. |
+| TC-CU03-009 | Sí | Sí | Blocked | Agente automatizado | 2026-11-13 | Unitario: StartPaymentServiceTest#otherRenterIsForbidden pasó con RESERVATION_NOT_OWNED. PaymentIntegrationTest#ownerCannotPay verifica 403 HTTP con cabeceras temporales. Falta autenticación Bearer y no se comprueba ausencia de transición persistida. |
 | TC-CU03-010 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | Contrato contradictorio: spec limita a INITIATED y plan permite reintento tras REJECTED. StartPaymentServiceTest#retryAfterRejectedReusesThePersistedCalculation pasó: intento 2 y reutilización; no resuelve el contrato ni verifica el evento. |
 
 ## Brechas detectadas
@@ -75,18 +75,18 @@ Casos documentales para `POST /api/v1/reservations/{reservation_id}/payments`. E
 
 - **Draft**: información insuficiente o inconsistencia contractual que impide cerrar el caso.
 - **In Process**: caso ejecutable contra implementación actual con contrato suficiente.
-- **Approved**: aprobación posterior a ejecución y revisión; ninguno se aprueba aquí.
+- **Approved**: escenario y postcondiciones demostrados por aserciones de la corrida V4, sin impedimentos de aprobación.
 - **Blocked**: depende de una funcionalidad pendiente.
 
 ## Ejecución automatizada — 2026-11-13
 
-`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-03. Las pruebas citadas usan las dependencias indicadas en cada caso; no acreditan servicios externos reales.
+`sg docker -c 'bash ./mvnw -B clean test'`; inicio 2026-11-13T19:02:00-05:00, fin 2026-11-13T19:03:11-05:00; BASELINE_HEAD `568290a0d4334b477a4b0f9d5e949e981da3fa55`; salida 0. Las integraciones utilizan dependencias simuladas; no acreditan cobro externo real.
 
-| Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
+| Clase | Pruebas | Fallos | Errores | Omitidos | Alcance |
 |---|---:|---:|---:|---:|---|
-| [PaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java) | 9 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [StartPaymentServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java) | 10 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [ChangeReservationStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | 28 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [TtlExpiryIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/TtlExpiryIntegrationTest.java) | 8 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [ReservationStateMachineTest](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
+| com.seashare.m2.reservas.application.service.ModuleOneNotificationMatrixTest | 7 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.application.service.StartPaymentServiceTest | 10 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.domain.state.ReservationStateMachineTest | 7 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.integration.ChangeReservationStatusServiceTest | 28 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.integration.PaymentIntegrationTest | 10 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.integration.TtlExpiryIntegrationTest | 8 | 0 | 0 | 0 | Evidencia parcial según TC |

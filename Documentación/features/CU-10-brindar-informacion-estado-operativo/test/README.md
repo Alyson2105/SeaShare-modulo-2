@@ -20,25 +20,25 @@ Casos para FleetOperationalStatusPort y su adaptador HTTP de M1; modo fake activ
 
 | FR | Cobertura | TC | Alcance | Motivo / Observación |
 |---|---|---|---|---|
-| FR-001 | Parcial — ver caso y brechas | 001, 006 | Backend | Identificador |
-| FR-002 | Parcial — ver caso y brechas | 001, 004, 005, 006 | Backend | Consulta HTTP |
-| FR-003 | Parcial — ver caso y brechas | 001, 002, 003 | Backend | Estados |
-| FR-004 | Parcial — ver caso y brechas | 001, 002, 003 | Backend | Solo AVAILABLE es apto |
-| FR-005 | Parcial — ver caso y brechas | 002 | Backend | El booleano no informa motivo |
-| FR-006 | Parcial — ver caso y brechas | 004, 005, 006 | Backend | Fallo seguro |
-| FR-007 | Parcial — ver caso y brechas | 001 | Backend | Sin acceso directo requiere auditoría integral |
-| FR-008 | Parcial — ver caso y brechas | 001 | Backend | Sin dinero requiere auditoría integral |
-| FR-009 | Parcial — ver caso y brechas | 003, 007 | Backend | Registro de consulta |
+| FR-001 | Parcial | 001, 006 | Backend | Identificador |
+| FR-002 | Parcial | 001, 004, 005, 006 | Backend | Consulta HTTP |
+| FR-003 | Parcial | 001, 002, 003 | Backend | Estados |
+| FR-004 | Parcial | 001, 002, 003 | Backend | Solo AVAILABLE es apto |
+| FR-005 | Parcial | 002 | Backend | El booleano no informa motivo |
+| FR-006 | Parcial | 004, 005, 006 | Backend | Fallo seguro |
+| FR-007 | Parcial | 001 | Backend | Sin acceso directo requiere auditoría integral |
+| FR-008 | Parcial | 001 | Backend | Sin dinero requiere auditoría integral |
+| FR-009 | Parcial | 003, 007 | Backend | Registro de consulta |
 
 ## Criterios de éxito
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Fuera de alcance | Timeout de lectura no demuestra latencia extremo a extremo menor a 300 ms. |
-| SC-002 | Parcial | TC-001 a 003; no demuestra todas las reservas. |
-| SC-003 | Parcial | TC-004 y 005; no cubre toda falla posible. |
-| SC-004 | Parcial | TC-001 y 007; requiere auditoría integral de accesos y cálculos. |
-| SC-005 | Parcial | TC-006; no demuestra todas las consultas inexistentes. |
+| SC-001 | No demostrado | Timeout de lectura no demuestra latencia extremo a extremo menor a 300 ms. |
+| SC-002 | Parcialmente demostrado | TC-001 a 003; no demuestra todas las reservas. |
+| SC-003 | Parcialmente demostrado | TC-004 y 005; no cubre toda falla posible. |
+| SC-004 | Parcialmente demostrado | TC-001 y 007; requiere auditoría integral de accesos y cálculos. |
+| SC-005 | Parcialmente demostrado | TC-006; no demuestra todas las consultas inexistentes. |
 
 ## Checklist de ejecución
 
@@ -65,16 +65,16 @@ Casos para FleetOperationalStatusPort y su adaptador HTTP de M1; modo fake activ
 
 - **Draft**: contrato incompleto o inconsistente.
 - **In Process**: ejecutable con implementación actual.
-- **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
+- **Approved**: escenario y postcondiciones demostrados por aserciones de la corrida V4, sin impedimentos de aprobación.
 - **Blocked**: depende de funcionalidad pendiente.
 
 ## Ejecución automatizada — 2026-11-13
 
-`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-10. Las pruebas citadas usan las dependencias indicadas en cada caso; no acreditan servicios externos reales.
+`sg docker -c 'bash ./mvnw -B clean test'`; inicio 2026-11-13T19:02:00-05:00, fin 2026-11-13T19:03:11-05:00; BASELINE_HEAD `568290a0d4334b477a4b0f9d5e949e981da3fa55`; salida 0. Las pruebas HTTP usan WireMock; no acreditan integración con M1 real.
 
-| Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
+| Clase | Pruebas | Fallos | Errores | Omitidos | Alcance |
 |---|---:|---:|---:|---:|---|
-| [HttpFleetClientTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | 5 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [FleetUnavailableTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | 10 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [ExternalQueryLogRegistrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java) | 19 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [CreateReservationValidationTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java) | 13 | 0 | 0 | 0 | Verde; cobertura según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.in.web.CreateReservationValidationTest | 13 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.out.fleet.FleetUnavailableTest | 10 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.out.fleet.HttpFleetClientTest | 5 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.integration.ExternalQueryLogRegistrationTest | 19 | 0 | 0 | 0 | Evidencia parcial según TC |

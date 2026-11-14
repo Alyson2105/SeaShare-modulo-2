@@ -26,7 +26,7 @@ Verificar identificador inválido o inexistente. Requisitos: FR-001, FR-002. Cri
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. No se asume UUID versión específica en el parser actual.
+No compara persistencia ni demuestra el SC-002 completo.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Identidad de prueba válida y UUID inexistente.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar con identificador malformado y luego con UUID inexistente. | Datos de las precondiciones | 400 INVALID_UUID para formato malformado; 404 RESERVATION_NOT_FOUND para UUID inexistente. | Pendiente | ReservationQueryTest#invalidUuidIs400: exitosa. Comprueba 400 INVALID_UUID; unknownIdIs404 comprueba 404 RESERVATION_NOT_FOUND. No verifica efectos persistidos. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ReservationQueryTest#invalidUuidIs400 (XML V4: passed). Aserta 400 INVALID_UUID; ReservationQueryTest#unknownIdIs404 aserta 404 RESERVATION_NOT_FOUND. No compara persistencia ni demuestra el SC-002 completo. |
+| 2 | Ejecutar | Consultar con identificador malformado y luego con UUID inexistente. | Datos de las precondiciones | 400 INVALID_UUID para formato malformado; 404 RESERVATION_NOT_FOUND para UUID inexistente. | Pendiente | ReservationQueryTest#invalidUuidIs400 (XML V4: passed). Aserta 400 INVALID_UUID; ReservationQueryTest#unknownIdIs404 aserta 404 RESERVATION_NOT_FOUND. No compara persistencia ni demuestra el SC-002 completo. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ReservationQueryTest#invalidUuidIs400 (XML V4: passed). Aserta 400 INVALID_UUID; ReservationQueryTest#unknownIdIs404 aserta 404 RESERVATION_NOT_FOUND. No compara persistencia ni demuestra el SC-002 completo. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ No se asume UUID versión específica en el parser actual.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; Comprueba 400 INVALID_UUID; unknownIdIs404 comprueba 404 RESERVATION_NOT_FOUND. No verifica efectos persistidos.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ReservationQueryTest#invalidUuidIs400. No compara persistencia ni demuestra el SC-002 completo.
 
 #### Traceability
 FR-001, FR-002 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#invalidUuidIs400 | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#unknownIdIs404 | In Process

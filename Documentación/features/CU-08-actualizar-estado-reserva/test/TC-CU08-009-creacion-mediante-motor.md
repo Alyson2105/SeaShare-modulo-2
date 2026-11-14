@@ -26,10 +26,10 @@ Verificar creación por cu-08. Requisitos: FR-001, FR-002, FR-003. Criterios: SC
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-08 es un puerto interno, sin endpoint HTTP. CU-02 delega la creación en CU-08; el caso requiere verificar directamente el motor con reloj controlado.
+La delegación a CU-08 se prueba separadamente con mocks; falta invocación directa con reloj controlado y comprobación del TTL persistido.
 
 ##### Dependencies & Assumptions
-Ejecución con dependencias controladas cuando corresponda. Pruebas relacionadas: Sin prueba de CU-08; su cobertura debe evaluarse por escenario.
+Ejecución con dependencias controladas cuando corresponda. Pruebas relacionadas: CreateReservationTest y ChangeReservationStatusServiceTest; su cobertura debe evaluarse por escenario.
 
 ##### Preconditions & Default Setup
 Solicitud de creación desde CU-02.
@@ -38,9 +38,9 @@ Solicitud de creación desde CU-02.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Invocar la creación por CU-08. | Datos de las precondiciones | Reserva nace INITIATED por el motor, con TTL de 15 minutos. | Pendiente | Integración: CreateReservationTest#createsReservationInInitiated pasó con TTL en respuesta; ChangeReservationStatusServiceTest#creationWritesAuditRow pasó; unitario: CreateReservationServiceTest#creationDelegatesToInitiateUseCase pasó con escritor simulado. Falta invocación directa del motor con reloj controlado y TTL persistido. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | CreateReservationTest#createsReservationInInitiated (XML V4: passed). Aserta estado INITIATED persistido y TTL de 15 minutos en respuesta. La delegación a CU-08 se prueba separadamente con mocks; falta invocación directa con reloj controlado y comprobación del TTL persistido. |
+| 2 | Ejecutar | Invocar la creación por CU-08. | Datos de las precondiciones | Reserva nace INITIATED por el motor, con TTL de 15 minutos. | Pendiente | CreateReservationTest#createsReservationInInitiated (XML V4: passed). Aserta estado INITIATED persistido y TTL de 15 minutos en respuesta. La delegación a CU-08 se prueba separadamente con mocks; falta invocación directa con reloj controlado y comprobación del TTL persistido. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | CreateReservationTest#createsReservationInInitiated (XML V4: passed). Aserta estado INITIATED persistido y TTL de 15 minutos en respuesta. La delegación a CU-08 se prueba separadamente con mocks; falta invocación directa con reloj controlado y comprobación del TTL persistido. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ CU-02 delega la creación en CU-08; el caso requiere verificar directamente el m
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: CreateReservationTest#createsReservationInInitiated. La delegación a CU-08 se prueba separadamente con mocks; falta invocación directa con reloj controlado y comprobación del TTL persistido.
 
 #### Traceability
 FR-001, FR-002, FR-003 | SC-001 | Pruebas de creación ejecutadas | Evidencia: src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java#createsReservationInInitiated; src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#creationWritesAuditRow; src/test/java/com/seashare/m2/reservas/application/service/CreateReservationServiceTest.java#creationDelegatesToInitiateUseCase | In Process

@@ -26,10 +26,10 @@ Verificar fallo de cotización. Requisitos: FR-005, FR-007. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Endpoints de detalle y cotización implementados; cobertura parcial con dobles, sin verificar servicios reales ni UI. Prueba unitaria verifica propagación de QUOTATION_UNAVAILABLE; respuesta HTTP y efectos no verificados.
+No comprueba respuesta HTTP 503 ni efectos del flujo de reserva.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [cotizacion](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java); no demuestran el flujo completo de CU-19.
+Ejecución V4 con dependencias controladas. Pruebas parciales de componentes: [cotizacion](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java); no demuestran el flujo completo de CU-19.
 
 ##### Preconditions & Default Setup
 M3 simulado falla para una solicitud válida.
@@ -38,9 +38,9 @@ M3 simulado falla para una solicitud válida.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar cotización de detalle. | Datos de las precondiciones | Según el plan, 503 QUOTATION_UNAVAILABLE; no se produce una cotización exitosa. | Pendiente | Prueba unitaria verifica propagación de QUOTATION_UNAVAILABLE; respuesta HTTP y efectos no verificados. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | VesselDetailServiceTest#financeFailurePropagates (XML V4: passed). Aserta excepción QUOTATION_UNAVAILABLE con proveedor financiero simulado. No comprueba respuesta HTTP 503 ni efectos del flujo de reserva. |
+| 2 | Ejecutar | Consultar cotización de detalle. | Datos de las precondiciones | Según el plan, 503 QUOTATION_UNAVAILABLE; no se produce una cotización exitosa. | Pendiente | VesselDetailServiceTest#financeFailurePropagates (XML V4: passed). Aserta excepción QUOTATION_UNAVAILABLE con proveedor financiero simulado. No comprueba respuesta HTTP 503 ni efectos del flujo de reserva. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | VesselDetailServiceTest#financeFailurePropagates (XML V4: passed). Aserta excepción QUOTATION_UNAVAILABLE con proveedor financiero simulado. No comprueba respuesta HTTP 503 ni efectos del flujo de reserva. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Mantener ficha y deshabilitar botón son pruebas UI; CU-02 actualmente no compru
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; Prueba unitaria verifica propagación de QUOTATION_UNAVAILABLE; respuesta HTTP y efectos no verificados.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: VesselDetailServiceTest#financeFailurePropagates. No comprueba respuesta HTTP 503 ni efectos del flujo de reserva.
 
 #### Traceability
 FR-005, FR-007 | SC-001 | [cotizacion](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java)  | src/test/java/com/seashare/m2/reservas/application/service/VesselDetailServiceTest.java#financeFailurePropagates | In Process

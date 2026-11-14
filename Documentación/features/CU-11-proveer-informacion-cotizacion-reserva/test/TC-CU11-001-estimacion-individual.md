@@ -27,7 +27,7 @@ Verificar estimación individual. Requisitos: FR-001, FR-002, FR-010, FR-012. Cr
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-11 es integración saliente; M3 se simula y el modo fake es el predeterminado. El DTO no devuelve duration_days; warning ausente se acepta como null pese al spec.
+No comprueba todos los parámetros ni el texto obligatorio o su presentación; el DTO no contiene duration_days y M3 real no se ejercita.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [individual](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java); su cobertura debe evaluarse por escenario.
@@ -39,9 +39,9 @@ Modo seashare.finance.mode=http; M3 simulado devuelve importe positivo y warning
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar estimación individual con embarcación, fechas y pasajeros. | Datos de las precondiciones | El adaptador envía parámetros y devuelve BigDecimal y warning sin cálculo monetario local. | Pendiente | Componente WireMock: HttpIndividualEstimateAdapterTest#successful200WithWarning pasó: monto y warning arbitrario se conservan. No verifica todos los parámetros ni el texto contractual obligatorio. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | HttpIndividualEstimateAdapterTest#successful200WithWarning (XML V4: passed). Aserta monto 150000.00 y warning arbitrario literal con WireMock. No comprueba todos los parámetros ni el texto obligatorio o su presentación; el DTO no contiene duration_days y M3 real no se ejercita. |
+| 2 | Ejecutar | Solicitar estimación individual con embarcación, fechas y pasajeros. | Datos de las precondiciones | El adaptador envía parámetros y devuelve BigDecimal y warning sin cálculo monetario local. | Pendiente | HttpIndividualEstimateAdapterTest#successful200WithWarning (XML V4: passed). Aserta monto 150000.00 y warning arbitrario literal con WireMock. No comprueba todos los parámetros ni el texto obligatorio o su presentación; el DTO no contiene duration_days y M3 real no se ejercita. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | HttpIndividualEstimateAdapterTest#successful200WithWarning (XML V4: passed). Aserta monto 150000.00 y warning arbitrario literal con WireMock. No comprueba todos los parámetros ni el texto obligatorio o su presentación; el DTO no contiene duration_days y M3 real no se ejercita. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -58,7 +58,7 @@ El DTO no devuelve duration_days; warning ausente se acepta como null pese al sp
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial, consultar el flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: HttpIndividualEstimateAdapterTest#successful200WithWarning. No comprueba todos los parámetros ni el texto obligatorio o su presentación; el DTO no contiene duration_days y M3 real no se ejercita.
 
 #### Traceability
 FR-001, FR-002, FR-010, FR-012 | SC-001, SC-002 | [individual](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java#successful200WithWarning | In Process

@@ -26,7 +26,7 @@ Verificar respuesta ilegible. Requisitos: FR-002, FR-006. Criterios: SC-003.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-10 es integración saliente; M1 se simula y el modo fake es el predeterminado. No se convierte el error en false; se propaga excepción de dominio.
+Los métodos statusInvalidJsonThrowsAndRegistersSingleErrorRow y statusMissingFieldThrowsAndRegistersSingleErrorRow comprueban otras variantes; no prueban el bloqueo de reserva completo.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ M1 simulado devuelve cuerpo vacío, JSON inválido o operational_status ausente.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar cada variante. | Datos de las precondiciones | El adaptador lanza FLEET_SERVICE_UNAVAILABLE y no considera disponible la embarcación. | Pendiente | Integración: ExternalQueryLogRegistrationTest#statusEmptyBodyThrowsAndRegistersSingleErrorRow, #statusInvalidJsonThrowsAndRegistersSingleErrorRow y #statusMissingFieldThrowsAndRegistersSingleErrorRow pasaron: error FLEET_SERVICE_UNAVAILABLE y registro ERROR. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ExternalQueryLogRegistrationTest#statusEmptyBodyThrowsAndRegistersSingleErrorRow (XML V4: passed). Aserta FLEET_SERVICE_UNAVAILABLE y fila ERROR con estado nulo. Los métodos statusInvalidJsonThrowsAndRegistersSingleErrorRow y statusMissingFieldThrowsAndRegistersSingleErrorRow comprueban otras variantes; no prueban el bloqueo de reserva completo. |
+| 2 | Ejecutar | Consultar cada variante. | Datos de las precondiciones | El adaptador lanza FLEET_SERVICE_UNAVAILABLE y no considera disponible la embarcación. | Pendiente | ExternalQueryLogRegistrationTest#statusEmptyBodyThrowsAndRegistersSingleErrorRow (XML V4: passed). Aserta FLEET_SERVICE_UNAVAILABLE y fila ERROR con estado nulo. Los métodos statusInvalidJsonThrowsAndRegistersSingleErrorRow y statusMissingFieldThrowsAndRegistersSingleErrorRow comprueban otras variantes; no prueban el bloqueo de reserva completo. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ExternalQueryLogRegistrationTest#statusEmptyBodyThrowsAndRegistersSingleErrorRow (XML V4: passed). Aserta FLEET_SERVICE_UNAVAILABLE y fila ERROR con estado nulo. Los métodos statusInvalidJsonThrowsAndRegistersSingleErrorRow y statusMissingFieldThrowsAndRegistersSingleErrorRow comprueban otras variantes; no prueban el bloqueo de reserva completo. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ No se convierte el error en false; se propaga excepción de dominio.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ExternalQueryLogRegistrationTest#statusEmptyBodyThrowsAndRegistersSingleErrorRow. Los métodos statusInvalidJsonThrowsAndRegistersSingleErrorRow y statusMissingFieldThrowsAndRegistersSingleErrorRow comprueban otras variantes; no prueban el bloqueo de reserva completo.
 
 #### Traceability
 FR-002, FR-006 | SC-003 | [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#statusEmptyBodyThrowsAndRegistersSingleErrorRow; src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#statusInvalidJsonThrowsAndRegistersSingleErrorRow; src/test/java/com/seashare/m2/reservas/integration/ExternalQueryLogRegistrationTest.java#statusMissingFieldThrowsAndRegistersSingleErrorRow | In Process

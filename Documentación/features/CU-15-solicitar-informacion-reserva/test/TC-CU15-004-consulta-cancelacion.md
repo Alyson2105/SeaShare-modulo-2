@@ -26,7 +26,7 @@ Verificar consulta de reserva cancelada. Requisitos: FR-004, FR-006. Criterios: 
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-15 expone un endpoint interno con identidad temporal por headers; JWT de servicio está pendiente. CU-04 está implementado; InternalReservationResponse#from devuelve null para anticipación.
+InternalReservationResponse#from devuelve null para cancellation_anticipation_hours; el dato obligatorio de FR-004 no se expone.
 
 ##### Dependencies & Assumptions
 La lectura integrada prueba subtipo y actor; no acredita anticipación.
@@ -38,9 +38,9 @@ Reserva CANCELLED con subtipo, actor y anticipación registrados.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar la reserva como M3. | Datos de las precondiciones | El plan prevé subtipo, actor y anticipación sin cálculo de reembolso. | Pendiente | Integración: InternalReservationReadIntegrationTest#cancelledByOwnerIsReportedWithOwnerActor pasó para subtipo y actor desde auditoría; InternalReservationResponse#from devuelve null para anticipación pese a que CU-04 está implementado. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | InternalReservationReadIntegrationTest#cancelledByOwnerIsReportedWithOwnerActor (XML V4: passed). Aserta CANCELLED, BY_OWNER y actor OWNER desde auditoría persistida. InternalReservationResponse#from devuelve null para cancellation_anticipation_hours; el dato obligatorio de FR-004 no se expone. |
+| 2 | Ejecutar | Consultar la reserva como M3. | Datos de las precondiciones | El plan prevé subtipo, actor y anticipación sin cálculo de reembolso. | Pendiente | InternalReservationReadIntegrationTest#cancelledByOwnerIsReportedWithOwnerActor (XML V4: passed). Aserta CANCELLED, BY_OWNER y actor OWNER desde auditoría persistida. InternalReservationResponse#from devuelve null para cancellation_anticipation_hours; el dato obligatorio de FR-004 no se expone. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | InternalReservationReadIntegrationTest#cancelledByOwnerIsReportedWithOwnerActor (XML V4: passed). Aserta CANCELLED, BY_OWNER y actor OWNER desde auditoría persistida. InternalReservationResponse#from devuelve null para cancellation_anticipation_hours; el dato obligatorio de FR-004 no se expone. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ CU-04 está implementado; InternalReservationResponse#from devuelve null para an
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Blocked; evidencia parcial, consultar el flujo.
+Corrida V4 del 2026-11-13: Blocked; estado documental: Blocked; evidencia: InternalReservationReadIntegrationTest#cancelledByOwnerIsReportedWithOwnerActor. InternalReservationResponse#from devuelve null para cancellation_anticipation_hours; el dato obligatorio de FR-004 no se expone.
 
 #### Traceability
 FR-004, FR-006 | SC-003 | Prueba parcial ejecutada | Evidencia: src/test/java/com/seashare/m2/reservas/integration/InternalReservationReadIntegrationTest.java#cancelledByOwnerIsReportedWithOwnerActor | Blocked

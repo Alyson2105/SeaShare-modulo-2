@@ -27,10 +27,10 @@ Verificar idempotencia de confirmación. Requisitos: FR-007. Criterios: SC-004.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La lógica de CU-13 y la consulta periódica existen; el endpoint de canal A no se encontró. La idempotencia de creación CU-02 no cubre confirmación; canal A y B comparten clave propuesta.
+El caso exige repetir por ambos canales y respuesta HTTP del canal A; no existe su controlador de entrada.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-13; no demuestran el flujo completo de CU-13.
+Ejecución V4 con dependencias controladas. Las pruebas citadas son parciales y no demuestran el flujo completo del caso.
 
 ##### Preconditions & Default Setup
 Confirmación APPROVED ya procesada con reserva y referencia conocidas.
@@ -39,9 +39,9 @@ Confirmación APPROVED ya procesada con reserva y referencia conocidas.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Repetir el mismo par external_transaction_id y result para la reserva por ambos canales. | Datos de las precondiciones | El plan exige éxito sin nueva transición ni duplicar efectos. | Pendiente | Integración: ConfirmPaymentIntegrationTest#duplicateApprovalDoesNotRepeatTransitions pasó para lógica interna y un evento RESERVED. Falta el canal A requerido por el caso y su respuesta HTTP. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ConfirmPaymentIntegrationTest#duplicateApprovalDoesNotRepeatTransitions (XML V4: passed). Aserta resultado DUPLICATE y verifica una llamada de evento RESERVED mediante espía de outbox. El caso exige repetir por ambos canales y respuesta HTTP del canal A; no existe su controlador de entrada. |
+| 2 | Ejecutar | Repetir el mismo par external_transaction_id y result para la reserva por ambos canales. | Datos de las precondiciones | El plan exige éxito sin nueva transición ni duplicar efectos. | Pendiente | ConfirmPaymentIntegrationTest#duplicateApprovalDoesNotRepeatTransitions (XML V4: passed). Aserta resultado DUPLICATE y verifica una llamada de evento RESERVED mediante espía de outbox. El caso exige repetir por ambos canales y respuesta HTTP del canal A; no existe su controlador de entrada. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ConfirmPaymentIntegrationTest#duplicateApprovalDoesNotRepeatTransitions (XML V4: passed). Aserta resultado DUPLICATE y verifica una llamada de evento RESERVED mediante espía de outbox. El caso exige repetir por ambos canales y respuesta HTTP del canal A; no existe su controlador de entrada. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -58,7 +58,7 @@ La idempotencia de creación CU-02 no cubre confirmación; canal A y B comparten
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Blocked; evidencia parcial, consultar el flujo.
+Corrida V4 del 2026-11-13: Blocked; estado documental: Blocked; evidencia: ConfirmPaymentIntegrationTest#duplicateApprovalDoesNotRepeatTransitions. El caso exige repetir por ambos canales y respuesta HTTP del canal A; no existe su controlador de entrada.
 
 #### Traceability
 FR-007 | SC-004 | Lógica de confirmación probada | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java#duplicateApprovalDoesNotRepeatTransitions | Blocked

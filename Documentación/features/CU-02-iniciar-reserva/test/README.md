@@ -20,14 +20,14 @@ Esta carpeta documenta pruebas backend de `POST /api/v1/reservations`; no sustit
 | FR | Cobertura | TC | Alcance | Motivo / Observación |
 |---|---|---|---|---|
 | FR-001 | Parcial | 001 | Backend | Recepción de parámetros |
-| FR-002 | Sin cobertura backend | — | UI | Modal requiere pruebas frontend |
-| FR-003 | Sin cobertura backend | — | UI | Tarjeta requiere pruebas frontend |
+| FR-002 | Sin evidencia | — | UI | Modal requiere pruebas frontend |
+| FR-003 | Sin evidencia | — | UI | Tarjeta requiere pruebas frontend |
 | FR-004 | Parcial | 001 | Backend/UI | Monto conservado; presentación y duration_days pendientes de aclaración |
-| FR-005 | Sin cobertura backend | — | UI | Banner requiere pruebas frontend |
+| FR-005 | Sin evidencia | — | UI | Banner requiere pruebas frontend |
 | FR-006 | Parcial | 002 | Backend/UI | Nombre y teléfono no vacíos; formato telefónico y formulario pendientes |
 | FR-007 | Parcial | 002 | Backend/UI | Email opcional validado; presentación UI fuera |
 | FR-008 | Parcial | 002 | Backend/UI | Rechazo backend; validación visual fuera |
-| FR-009 | Sin cobertura backend | — | UI | Botón requiere pruebas frontend |
+| FR-009 | Sin evidencia | — | UI | Botón requiere pruebas frontend |
 | FR-010 | Parcial | 001 | Backend | Consulta disponible; adaptadores fake por defecto |
 | FR-011 | Parcial | 001, 005 | Backend | Creación delegada a CU-08; integración y prueba unitaria ejecutadas |
 | FR-012 | Parcial | 004 | Backend | TTL de respuesta y reloj unitario verificados; comparación persistida con reloj controlado pendiente |
@@ -40,9 +40,9 @@ FR-002, FR-003, FR-005 y FR-009 requieren pruebas frontend o integración UI, fu
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Parcial | Pruebas ejecutadas sobre creación, TTL y decisión de notificación; no demuestran el 100 % ni el flujo integrado completo. |
-| SC-002 | Parcial | Existe rechazo de solapamiento secuencial; falta prueba de competencia simultánea y demostración de cero sobreventas. |
-| SC-003 | Parcial | TC-001 verifica conservación del monto; no demuestra ausencia global de aritmética ni presentación UI. |
+| SC-001 | Parcialmente demostrado | Pruebas ejecutadas sobre creación, TTL y decisión de notificación; no demuestran el 100 % ni el flujo integrado completo. |
+| SC-002 | Parcialmente demostrado | Existe rechazo de solapamiento secuencial; falta prueba de competencia simultánea y demostración de cero sobreventas. |
+| SC-003 | Parcialmente demostrado | TC-001 verifica conservación del monto; no demuestra ausencia global de aritmética ni presentación UI. |
 
 ## Checklist de ejecución
 
@@ -72,21 +72,21 @@ Contexto de implementación: [implementContext](../../../context/implementContex
 
 - **Draft**: contrato insuficiente o inconsistente para cerrar el caso.
 - **In Process**: contrato suficiente para ejecutarlo contra la implementación actual; aún no aprobado.
-- **Approved**: caso aprobado tras el proceso correspondiente, nunca por esta validación documental.
+- **Approved**: escenario y postcondiciones demostrados por aserciones de la corrida V4, sin impedimentos de aprobación.
 - **Blocked**: depende de una funcionalidad pendiente.
 
 ## Ejecución automatizada — 2026-11-13
 
-`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-02. Las pruebas citadas usan las dependencias indicadas en cada caso; no acreditan servicios externos reales.
+`sg docker -c 'bash ./mvnw -B clean test'`; inicio 2026-11-13T19:02:00-05:00, fin 2026-11-13T19:03:11-05:00; BASELINE_HEAD `568290a0d4334b477a4b0f9d5e949e981da3fa55`; salida 0. Las integraciones utilizan PostgreSQL y flota simulada; no acreditan entrega externa real.
 
-| Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
+| Clase | Pruebas | Fallos | Errores | Omitidos | Alcance |
 |---|---:|---:|---:|---:|---|
-| [CreateReservationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java) | 5 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java) | 3 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [PaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java) | 9 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [IdempotencyAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/integration/IdempotencyAdapterTest.java) | 5 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [IdempotencyClaimConcurrencyTest](../../../../src/test/java/com/seashare/m2/reservas/integration/IdempotencyClaimConcurrencyTest.java) | 1 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [CreateReservationServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/CreateReservationServiceTest.java) | 4 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [TtlPolicyTest](../../../../src/test/java/com/seashare/m2/reservas/domain/service/TtlPolicyTest.java) | 3 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [CreateReservationValidationTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java) | 13 | 0 | 0 | 0 | Verde; cobertura según TC |
+| com.seashare.m2.reservas.application.service.CreateReservationServiceTest | 4 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.application.service.ModuleOneNotificationMatrixTest | 7 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.domain.service.TtlPolicyTest | 3 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.in.web.CreateReservationValidationTest | 13 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.integration.CreateReservationOutboxIntegrationTest | 3 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.integration.CreateReservationTest | 5 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.integration.IdempotencyAdapterTest | 5 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.integration.IdempotencyClaimConcurrencyTest | 1 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.integration.PaymentIntegrationTest | 10 | 0 | 0 | 0 | Evidencia parcial según TC |

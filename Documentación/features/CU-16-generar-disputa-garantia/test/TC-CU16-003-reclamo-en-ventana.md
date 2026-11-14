@@ -26,10 +26,10 @@ Verificar reclamo dentro de ventana. Requisitos: FR-005, FR-006, FR-010, FR-011.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-El endpoint y el servicio existen. Las pruebas separadas no acreditan el recorrido completo autenticado ni la ausencia integral de operaciones financieras.
+El servicio integrado persiste reclamo y PENDING; DisputeWindowCloseIntegrationTest#doesNotCloseWhenClaimWasRegistered ejecuta el barrido tras el reclamo. No se demuestra conjuntamente el HTTP real con persistencia, ausencia de publicación y neutralidad financiera.
 
 ##### Dependencies & Assumptions
-La prueba usa componentes controlados; no demuestra el flujo completo.
+La evidencia V4 y sus límites se indican en Comments.
 
 ##### Preconditions & Default Setup
 Disputa PENDING con ventana vigente y propietario registrado.
@@ -38,9 +38,9 @@ Disputa PENDING con ventana vigente y propietario registrado.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | RegisterDisputeClaimIntegrationTest#registersClaimInsideWindowAndKeepsPending: verde con PostgreSQL y reloj simulado; no prueba HTTP ni publicación. |
-| 2 | Ejecutar | Registrar reclamo válido antes de window_end. | Datos de las precondiciones | Plan prevé 201; reclamo queda asociado, disputa permanece PENDING, se desactiva cierre automático y no se publica estado PENDING a M3. | Pendiente | RegisterDisputeClaimIntegrationTest#registersClaimInsideWindowAndKeepsPending: verde con PostgreSQL y reloj simulado; no prueba HTTP ni publicación. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | RegisterDisputeClaimIntegrationTest#registersClaimInsideWindowAndKeepsPending: verde con PostgreSQL y reloj simulado; no prueba HTTP ni publicación. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pasó | RegisterDisputeClaimIntegrationTest#registersClaimInsideWindowAndKeepsPending (XML V4: passed). Aserciones: PENDING y autoCloseDisabled en la vista; descripción, categoría, URL, fecha y estado PENDING en PostgreSQL. No prueba HTTP integrado ni ausencia de publicación. |
+| 2 | Ejecutar | Registrar reclamo válido antes de window_end. | Datos de las precondiciones | Plan prevé 201; reclamo queda asociado, disputa permanece PENDING, se desactiva cierre automático y no se publica estado PENDING a M3. | Pendiente | RegisterDisputeClaimIntegrationTest#registersClaimInsideWindowAndKeepsPending (XML V4: passed). Aserciones: PENDING y autoCloseDisabled en la vista; descripción, categoría, URL, fecha y estado PENDING en PostgreSQL. No prueba HTTP integrado ni ausencia de publicación. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | RegisterDisputeClaimIntegrationTest#registersClaimInsideWindowAndKeepsPending (XML V4: passed). Aserciones: PENDING y autoCloseDisabled en la vista; descripción, categoría, URL, fecha y estado PENDING en PostgreSQL. No prueba HTTP integrado ni ausencia de publicación. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ El plan limita description a 10–2000 caracteres; no ejecutar operaciones finan
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial, pasos completos pendientes.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: RegisterDisputeClaimIntegrationTest#registersClaimInsideWindowAndKeepsPending. El servicio integrado persiste reclamo y PENDING; DisputeWindowCloseIntegrationTest#doesNotCloseWhenClaimWasRegistered ejecuta el barrido tras el reclamo. No se demuestra conjuntamente el HTTP real con persistencia, ausencia de publicación y neutralidad financiera.
 
 #### Traceability
-FR-005, FR-006, FR-010, FR-011 | SC-004, SC-005 | src/test/java/com/seashare/m2/disputa/integration/RegisterDisputeClaimIntegrationTest.java#registersClaimInsideWindowAndKeepsPending | In Process
+FR-005, FR-006, FR-010, FR-011 | SC-004, SC-005 | src/test/java/com/seashare/m2/disputa/integration/RegisterDisputeClaimIntegrationTest.java#registersClaimInsideWindowAndKeepsPending; src/test/java/com/seashare/m2/disputa/integration/DisputeWindowCloseIntegrationTest.java#doesNotCloseWhenClaimWasRegistered | In Process

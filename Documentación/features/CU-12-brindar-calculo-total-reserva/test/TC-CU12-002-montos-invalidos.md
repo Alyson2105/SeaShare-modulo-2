@@ -26,7 +26,7 @@ Verificar desglose inválido. Requisitos: FR-005, FR-007. Criterios: SC-002, SC-
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-12 es integración saliente; M3 se simula y el modo fake es el predeterminado. CU-03 está implementado; la ausencia de transición se prueba a nivel unitario con escritor simulado.
+Hay pruebas separadas de total y alquiler cero y seguro y depósito cero; no cubren todas las variantes ni la ausencia de transición persistida.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ M3 responde importes ausentes, no numéricos o negativos.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar variantes con cada campo inválido. | Datos de las precondiciones | El adaptador lanza CALCULATION_UNAVAILABLE; alquiler y total cero se rechazan, seguro y depósito cero se aceptan. | Pendiente | Componente WireMock: HttpCalculatedValueAdapterTest#missingFieldThrowsCalculationUnavailable, #zeroTotalThrowsCalculationUnavailable, #zeroRentalThrowsCalculationUnavailable y #zeroInsuranceAndDepositAreAccepted pasaron. No cubren todas las variantes ni el flujo persistido. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | HttpCalculatedValueAdapterTest#missingFieldThrowsCalculationUnavailable (XML V4: passed). Aserta CALCULATION_UNAVAILABLE cuando falta rental_amount con WireMock. Hay pruebas separadas de total y alquiler cero y seguro y depósito cero; no cubren todas las variantes ni la ausencia de transición persistida. |
+| 2 | Ejecutar | Consultar variantes con cada campo inválido. | Datos de las precondiciones | El adaptador lanza CALCULATION_UNAVAILABLE; alquiler y total cero se rechazan, seguro y depósito cero se aceptan. | Pendiente | HttpCalculatedValueAdapterTest#missingFieldThrowsCalculationUnavailable (XML V4: passed). Aserta CALCULATION_UNAVAILABLE cuando falta rental_amount con WireMock. Hay pruebas separadas de total y alquiler cero y seguro y depósito cero; no cubren todas las variantes ni la ausencia de transición persistida. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | HttpCalculatedValueAdapterTest#missingFieldThrowsCalculationUnavailable (XML V4: passed). Aserta CALCULATION_UNAVAILABLE cuando falta rental_amount con WireMock. Hay pruebas separadas de total y alquiler cero y seguro y depósito cero; no cubren todas las variantes ni la ausencia de transición persistida. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ CU-03 está implementado; la ausencia de transición se prueba a nivel unitario 
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial, consultar el flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: HttpCalculatedValueAdapterTest#missingFieldThrowsCalculationUnavailable. Hay pruebas separadas de total y alquiler cero y seguro y depósito cero; no cubren todas las variantes ni la ausencia de transición persistida.
 
 #### Traceability
 FR-005, FR-007 | SC-002, SC-003 | [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#missingFieldThrowsCalculationUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#zeroTotalThrowsCalculationUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#zeroRentalThrowsCalculationUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#zeroInsuranceAndDepositAreAccepted | In Process

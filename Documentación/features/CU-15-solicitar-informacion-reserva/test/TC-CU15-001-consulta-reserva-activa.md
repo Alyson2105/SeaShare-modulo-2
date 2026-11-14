@@ -26,10 +26,10 @@ Verificar consulta de reserva activa. Requisitos: FR-001, FR-002, FR-007. Criter
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-15 expone un endpoint interno con identidad temporal por headers; JWT de servicio está pendiente. El endpoint interno CU-15 existe; sus pruebas usan vista simulada para HTTP.
+No demuestra consulta con reserva persistida, ausencia de escrituras y notificaciones ni latencia menor a 200 ms.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-15; no demuestran el flujo completo de CU-15.
+Ejecución V4 con dependencias controladas; las pruebas citadas cubren solo parte del escenario.
 
 ##### Preconditions & Default Setup
 Reserva RESERVED o IN_NAVIGATION y servicio M3 autorizado.
@@ -38,9 +38,9 @@ Reserva RESERVED o IN_NAVIGATION y servicio M3 autorizado.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar GET interno por reservation_id y comparar estado previo y posterior. | Datos de las precondiciones | El plan prevé 200 con identificadores, fechas, pasajeros y estado; sin escritura ni notificaciones. | Pendiente | Componente MockMvc: InternalReservationControllerTest#responseHasExactFieldsAndNoMoney pasó con vista simulada: 200, estructura y ausencia de montos. Falta comprobar escritura y notificaciones con persistencia real. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | InternalReservationControllerTest#responseHasExactFieldsAndNoMoney (XML V4: passed). Aserta HTTP 200, estructura y ausencia de varios montos con vista simulada. No demuestra consulta con reserva persistida, ausencia de escrituras y notificaciones ni latencia menor a 200 ms. |
+| 2 | Ejecutar | Consultar GET interno por reservation_id y comparar estado previo y posterior. | Datos de las precondiciones | El plan prevé 200 con identificadores, fechas, pasajeros y estado; sin escritura ni notificaciones. | Pendiente | InternalReservationControllerTest#responseHasExactFieldsAndNoMoney (XML V4: passed). Aserta HTTP 200, estructura y ausencia de varios montos con vista simulada. No demuestra consulta con reserva persistida, ausencia de escrituras y notificaciones ni latencia menor a 200 ms. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | InternalReservationControllerTest#responseHasExactFieldsAndNoMoney (XML V4: passed). Aserta HTTP 200, estructura y ausencia de varios montos con vista simulada. No demuestra consulta con reserva persistida, ausencia de escrituras y notificaciones ni latencia menor a 200 ms. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ El endpoint interno CU-15 existe; sus pruebas usan vista simulada para HTTP.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial, consultar el flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: InternalReservationControllerTest#responseHasExactFieldsAndNoMoney. No demuestra consulta con reserva persistida, ausencia de escrituras y notificaciones ni latencia menor a 200 ms.
 
 #### Traceability
 FR-001, FR-002, FR-007 | SC-001, SC-002 | Prueba parcial ejecutada | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/InternalReservationControllerTest.java#responseHasExactFieldsAndNoMoney | In Process

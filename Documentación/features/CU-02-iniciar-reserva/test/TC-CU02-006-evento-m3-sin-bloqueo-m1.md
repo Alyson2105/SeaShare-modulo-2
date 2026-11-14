@@ -23,7 +23,7 @@ Verificar el destino de información de creación y la ausencia de notificación
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-El relay efectivo requiere servicios y queda fuera; la matriz verifica ausencia de notificación M1 para INITIATED.
+La matriz se prueba separadamente; el flujo integrado no comprueba ausencia de fila M1_HTTP ni de envío o bloqueo en M1.
 
 ##### Dependencies & Assumptions
 La corrida utilizó backend y base de datos de pruebas; identidad temporal por headers sin Spring Security. [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java); [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java).
@@ -35,7 +35,7 @@ Solicitud válida: `POST /api/v1/reservations`, `Content-Type: application/json`
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Ejecutar escenario | Crear reserva y consultar outbox por reservation_id; inspeccionar la decisión de la matriz para INITIATED. | Solicitud válida y variaciones descritas | Una fila AMQP reservation.info.provided para M3; ninguna fila M1_HTTP ni envío o bloqueo de inventario M1 en INITIATED. | Pendiente | Integración: CreateReservationOutboxIntegrationTest#createsOutboxMessageWithExactSevenFieldsAndBoatId pasó: fila AMQP y payload; unitario: ModuleOneNotificationMatrixTest#initiatedAndPendingPaymentNotifyNobody pasó: decisión sin M1. Falta comprobar ausencia de filas M1_HTTP y de envío o bloqueo M1 en el flujo integrado. |
+| 1 | Ejecutar escenario | Crear reserva y consultar outbox por reservation_id; inspeccionar la decisión de la matriz para INITIATED. | Solicitud válida y variaciones descritas | Una fila AMQP reservation.info.provided para M3; ninguna fila M1_HTTP ni envío o bloqueo de inventario M1 en INITIATED. | Pendiente | CreateReservationOutboxIntegrationTest#createsOutboxMessageWithExactSevenFieldsAndBoatId (XML V4: passed). Encuentra al menos una fila AMQP para la reserva y aserta exchange, routing key y siete campos; no cuenta las filas coincidentes. La matriz se prueba separadamente; el flujo integrado no comprueba ausencia de fila M1_HTTP ni de envío o bloqueo en M1. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica como comportamiento principal adicional; consultar límites abajo.
@@ -52,7 +52,7 @@ Evento AMQP para M3 y notificación HTTP a M1 son mecanismos distintos.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; los resultados pendientes se detallan en el flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: CreateReservationOutboxIntegrationTest#createsOutboxMessageWithExactSevenFieldsAndBoatId. La matriz se prueba separadamente; el flujo integrado no comprueba ausencia de fila M1_HTTP ni de envío o bloqueo en M1.
 
 #### Traceability
 FR-013 | SC-001 | [CreateReservationOutboxIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java); [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/CreateReservationOutboxIntegrationTest.java#createsOutboxMessageWithExactSevenFieldsAndBoatId; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#initiatedAndPendingPaymentNotifyNobody (clase ModuleOneNotificationMatrixTest) | In Process

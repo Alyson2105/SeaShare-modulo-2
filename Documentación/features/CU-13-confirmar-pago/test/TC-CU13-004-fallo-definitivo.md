@@ -1,5 +1,5 @@
 ### Test Case Specification: TC-CU13-004 — Fallo definitivo
-**Status**: In Process
+**Status**: Blocked
 **Created** : 2026-11-10  **Spec/Plan Link** : [Spec](../spec.md) · [Plan](../plan.md)
 
 #### Test Overview  *(mandatory)*
@@ -27,10 +27,10 @@ Verificar fallo definitivo. Requisitos: FR-005. Criterios: SC-002.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La lógica de CU-13 y la consulta periódica existen; el endpoint de canal A no se encontró. Motor existente no prueba procesamiento de confirmaciones.
+El caso requiere FAILED, pero PaymentStatus no contiene FAILED y el canal A HTTP no está implementado; CANCELLED es otra entrada probada. Falta verificar ausencia de notificación M1.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); no demuestran el flujo completo de CU-13.
+Ejecución V4 con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); no demuestran el flujo completo de CU-13.
 
 ##### Preconditions & Default Setup
 Reserva PENDING_PAYMENT con resultado FAILED definitivo.
@@ -39,15 +39,15 @@ Reserva PENDING_PAYMENT con resultado FAILED definitivo.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Procesar resultado. | Datos de las precondiciones | Según spec se transiciona a PAYMENT_FAILED sin notificación M1. | Pendiente | Integración: ConfirmPaymentIntegrationTest#cancelledChargeFailsTheReservation pasó para CANCELLED de M3; unitario: ModuleOneNotificationMatrixTest#expiredAndPaymentFailedNotifyNobody pasó sin M1. Falta canal A FAILED y verificación integrada de notificaciones. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ConfirmPaymentIntegrationTest#cancelledChargeFailsTheReservation (XML V4: passed). Aserta PAYMENT_FAILED en resultado y reserva ante CANCELLED de M3. El caso requiere FAILED, pero PaymentStatus no contiene FAILED y el canal A HTTP no está implementado; CANCELLED es otra entrada probada. Falta verificar ausencia de notificación M1. |
+| 2 | Ejecutar | Procesar resultado. | Datos de las precondiciones | Según spec se transiciona a PAYMENT_FAILED sin notificación M1. | Pendiente | ConfirmPaymentIntegrationTest#cancelledChargeFailsTheReservation (XML V4: passed). Aserta PAYMENT_FAILED en resultado y reserva ante CANCELLED de M3. El caso requiere FAILED, pero PaymentStatus no contiene FAILED y el canal A HTTP no está implementado; CANCELLED es otra entrada probada. Falta verificar ausencia de notificación M1. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ConfirmPaymentIntegrationTest#cancelledChargeFailsTheReservation (XML V4: passed). Aserta PAYMENT_FAILED en resultado y reserva ante CANCELLED de M3. El caso requiere FAILED, pero PaymentStatus no contiene FAILED y el canal A HTTP no está implementado; CANCELLED es otra entrada probada. Falta verificar ausencia de notificación M1. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
 
 ##### Edge Cases & Boundary Conditions
-Motor existente no prueba procesamiento de confirmaciones.
+La confirmación interna ante CANCELLED está probada; FAILED del canal A carece de implementación.
 
 #### Defect Severity Reference
 
@@ -58,7 +58,7 @@ Motor existente no prueba procesamiento de confirmaciones.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial, consultar el flujo.
+Corrida V4 del 2026-11-13: Blocked; estado documental: Blocked; evidencia: ConfirmPaymentIntegrationTest#cancelledChargeFailsTheReservation. El caso requiere FAILED, pero PaymentStatus no contiene FAILED y el canal A HTTP no está implementado; CANCELLED es otra entrada probada. Falta verificar ausencia de notificación M1.
 
 #### Traceability
-FR-005 | SC-002 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java#cancelledChargeFailsTheReservation; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#expiredAndPaymentFailedNotifyNobody | In Process
+FR-005 | SC-002 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java#cancelledChargeFailsTheReservation; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#expiredAndPaymentFailedNotifyNobody | Blocked

@@ -27,7 +27,7 @@ Verificar error de parámetros m3. Requisitos: FR-010, FR-011. Criterios: SC-005
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-11 es integración saliente; M3 se simula y el modo fake es el predeterminado. No conserva el mensaje específico de M3; CU-19 consume el puerto pero falta verificar ausencia de reserva en el flujo.
+No comprueba que llegue el motivo concreto de M3 al usuario ni que se impida crear reserva.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [individual](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java); su cobertura debe evaluarse por escenario.
@@ -39,9 +39,9 @@ M3 simulado responde 400 por parámetros o fechas.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar estimación individual. | Datos de las precondiciones | El adaptador lanza INVALID_PARAMETERS sin reintentar. | Pendiente | Componente WireMock: HttpIndividualEstimateAdapterTest#badRequest400ThrowsInvalidParameters pasó: código INVALID_PARAMETERS y una llamada. No comprueba mensaje específico ni ausencia de reserva. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | HttpIndividualEstimateAdapterTest#badRequest400ThrowsInvalidParameters (XML V4: passed). Aserta INVALID_PARAMETERS y una llamada al proveedor simulado ante HTTP 400. No comprueba que llegue el motivo concreto de M3 al usuario ni que se impida crear reserva. |
+| 2 | Ejecutar | Solicitar estimación individual. | Datos de las precondiciones | El adaptador lanza INVALID_PARAMETERS sin reintentar. | Pendiente | HttpIndividualEstimateAdapterTest#badRequest400ThrowsInvalidParameters (XML V4: passed). Aserta INVALID_PARAMETERS y una llamada al proveedor simulado ante HTTP 400. No comprueba que llegue el motivo concreto de M3 al usuario ni que se impida crear reserva. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | HttpIndividualEstimateAdapterTest#badRequest400ThrowsInvalidParameters (XML V4: passed). Aserta INVALID_PARAMETERS y una llamada al proveedor simulado ante HTTP 400. No comprueba que llegue el motivo concreto de M3 al usuario ni que se impida crear reserva. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -58,7 +58,7 @@ No conserva el mensaje específico de M3; CU-19 consume el puerto pero falta ver
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial, consultar el flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: HttpIndividualEstimateAdapterTest#badRequest400ThrowsInvalidParameters. No comprueba que llegue el motivo concreto de M3 al usuario ni que se impida crear reserva.
 
 #### Traceability
 FR-010, FR-011 | SC-005 | [individual](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpIndividualEstimateAdapterTest.java#badRequest400ThrowsInvalidParameters | In Process

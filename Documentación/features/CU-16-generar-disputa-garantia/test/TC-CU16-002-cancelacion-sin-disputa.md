@@ -26,10 +26,10 @@ Verificar reserva cancelada sin disputa. Requisitos: FR-002. Criterios: SC-002.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Existen flujos de cancelación e inasistencia; no se verificó ausencia de disputa después del cierre.
+La implementación de cancelación e inasistencia existe; no se encontró prueba que consulte las disputas después de ambos flujos.
 
 ##### Dependencies & Assumptions
-El escenario requiere CU-04 o CU-05 y consulta de disputas; no se identificó prueba pertinente.
+La evidencia V4 y sus límites se indican en Comments.
 
 ##### Preconditions & Default Setup
 Reserva que finaliza en CANCELLED por cancelación o inasistencia.
@@ -38,9 +38,9 @@ Reserva que finaliza en CANCELLED por cancelación o inasistencia.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | Sin prueba ejecutada que consulte disputas tras cancelación o inasistencia. |
-| 2 | Ejecutar | Consolidar cierre y consultar disputas asociadas. | Datos de las precondiciones | No se crea disputa de garantía. | Pendiente | Sin prueba ejecutada que consulte disputas tras cancelación o inasistencia. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | Sin prueba ejecutada que consulte disputas tras cancelación o inasistencia. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | Sin ejecución automatizada pertinente que verifique la ausencia de disputa después de cancelación e inasistencia. |
+| 2 | Ejecutar | Consolidar cierre y consultar disputas asociadas. | Datos de las precondiciones | No se crea disputa de garantía. | Pendiente | Sin ejecución automatizada pertinente que verifique la ausencia de disputa después de cancelación e inasistencia. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | Sin ejecución automatizada pertinente que verifique la ausencia de disputa después de cancelación e inasistencia. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Requiere CU-04 o CU-05 y contexto disputa.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Pendiente; sin ejecución automatizada pertinente.
+Evaluado el 2026-11-13: Pendiente; sin ejecución automatizada pertinente. La implementación de cancelación e inasistencia existe; no se encontró prueba que consulte las disputas después de ambos flujos.
 
 #### Traceability
 FR-002 | SC-002 | Sin prueba ejecutada pertinente | In Process

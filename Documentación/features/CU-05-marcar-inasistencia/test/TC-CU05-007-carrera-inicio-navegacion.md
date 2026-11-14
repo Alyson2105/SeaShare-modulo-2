@@ -26,7 +26,7 @@ Verificar carrera con inicio de viaje. Requisitos: FR-001, FR-006, FR-007. Crite
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Prueba no-show seguido de inicio de forma secuencial; no demuestra carrera concurrente. El endpoint y servicio existen. CU-05 y CU-06 tienen endpoints; la prueba secuencial no demuestra esta carrera completa.
+La prueba ejecuta inasistencia seguida de inicio, no dos operaciones concurrentes ni la variante en que el inicio gana la carrera.
 
 ##### Dependencies & Assumptions
 Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-05.
@@ -38,9 +38,9 @@ Reserva RESERVED tras tolerancia; solicitudes concurrentes de inasistencia e ini
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState: verde. Prueba no-show seguido de inicio de forma secuencial; no demuestra carrera concurrente. |
-| 2 | Ejecutar | Coordinar ambas operaciones y revisar estado final y efectos. | Datos de las precondiciones | Solo una transición prevalece; si navegación se confirma primero, el reporte es rechazado. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState: verde. Prueba no-show seguido de inicio de forma secuencial; no demuestra carrera concurrente. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState: verde. Prueba no-show seguido de inicio de forma secuencial; no demuestra carrera concurrente. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState (XML V4: passed). Aserta primer HTTP 200 y posterior 409 INVALID_RESERVATION_STATE; no ejecuta transacciones simultáneas. |
+| 2 | Ejecutar | Coordinar ambas operaciones y revisar estado final y efectos. | Datos de las precondiciones | Solo una transición prevalece; si navegación se confirma primero, el reporte es rechazado. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState (XML V4: passed). Aserta primer HTTP 200 y posterior 409 INVALID_RESERVATION_STATE; no ejecuta transacciones simultáneas. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState (XML V4: passed). Aserta primer HTTP 200 y posterior 409 INVALID_RESERVATION_STATE; no ejecuta transacciones simultáneas. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ CU-05 y CU-06 tienen endpoints; la prueba secuencial no demuestra esta carrera c
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState. La prueba ejecuta inasistencia seguida de inicio, no dos operaciones concurrentes ni la variante en que el inicio gana la carrera.
 
 #### Traceability
 FR-001, FR-006, FR-007 | SC-002 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NoShowIntegrationTest.java#navigationStartAfterNoShowIsInvalidState | In Process

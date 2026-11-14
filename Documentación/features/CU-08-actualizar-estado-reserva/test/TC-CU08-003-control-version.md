@@ -26,7 +26,7 @@ Verificar conflicto de versión. Requisitos: FR-004, FR-006. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-08 es un puerto interno, sin endpoint HTTP. El motor interno no es endpoint HTTP; 409 es contrato de presentación, no resultado directo.
+No compara el resto de campos ni los eventos tras el rechazo.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas cuando corresponda. Pruebas relacionadas: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Reserva existente con versión conocida y comando con expected_version diferente
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Invocar transición interna válida con versión obsoleta. | Datos de las precondiciones | El servicio rechaza con VersionConflictException sin sobrescribir la reserva. | Pendiente | Integración: ChangeReservationStatusServiceTest#expectedVersionMismatchIsRejected pasó al invocar el servicio con versión 99 y comprobar VERSION_CONFLICT y estado INITIATED; #versionConflictRaisesVERSION_CONFLICT también comprobó la versión obsoleta en el repositorio. No verifica todos los campos ni eventos. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ChangeReservationStatusServiceTest#expectedVersionMismatchIsRejected (XML V4: passed). Aserta VersionConflictException con VERSION_CONFLICT y estado persistido INITIATED. No compara el resto de campos ni los eventos tras el rechazo. |
+| 2 | Ejecutar | Invocar transición interna válida con versión obsoleta. | Datos de las precondiciones | El servicio rechaza con VersionConflictException sin sobrescribir la reserva. | Pendiente | ChangeReservationStatusServiceTest#expectedVersionMismatchIsRejected (XML V4: passed). Aserta VersionConflictException con VERSION_CONFLICT y estado persistido INITIATED. No compara el resto de campos ni los eventos tras el rechazo. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ChangeReservationStatusServiceTest#expectedVersionMismatchIsRejected (XML V4: passed). Aserta VersionConflictException con VERSION_CONFLICT y estado persistido INITIATED. No compara el resto de campos ni los eventos tras el rechazo. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ El motor interno no es endpoint HTTP; 409 es contrato de presentación, no resul
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ChangeReservationStatusServiceTest#expectedVersionMismatchIsRejected. No compara el resto de campos ni los eventos tras el rechazo.
 
 #### Traceability
 FR-004, FR-006 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#versionConflictRaisesVERSION_CONFLICT, src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#expectedVersionMismatchIsRejected | In Process

@@ -28,7 +28,7 @@ Casos para el contrato propuesto `POST /api/v1/reservations/{reservation_id}/no-
 | FR-006 | Parcial | 003, 007 | Backend | Evidencia parcial y límites concretos en los TC asociados. |
 | FR-007 | Parcial | 001, 006, 007 | Backend | Evidencia parcial y límites concretos en los TC asociados. |
 | FR-008 | Parcial | 001, 006 | Backend | Evidencia parcial y límites concretos en los TC asociados. |
-| FR-009 | Sin evidencia integral | 006 | Backend | La ausencia de operaciones financieras requiere verificación integral. |
+| FR-009 | Sin evidencia | 006 | Backend | La ausencia de operaciones financieras requiere verificación integral. |
 | FR-010 | Parcial | 006 | Backend | Evidencia parcial y límites concretos en los TC asociados. |
 | FR-011 | Parcial | 006 | Backend | Evidencia parcial y límites concretos en los TC asociados. |
 | FR-012 | Parcial | 005 | Backend | Evidencia parcial y límites concretos en los TC asociados. |
@@ -44,18 +44,18 @@ Casos para el contrato propuesto `POST /api/v1/reservations/{reservation_id}/no-
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Parcial | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
-| SC-002 | Parcial | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
-| SC-003 | Parcial | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
-| SC-004 | Parcial | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
-| SC-005 | Sin evidencia integral | La ausencia de operaciones financieras requiere verificación integral. |
-| SC-006 | Parcial | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
+| SC-001 | Parcialmente demostrado | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
+| SC-002 | Parcialmente demostrado | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
+| SC-003 | Parcialmente demostrado | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
+| SC-004 | Parcialmente demostrado | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
+| SC-005 | No demostrado | La ausencia de operaciones financieras requiere verificación integral. |
+| SC-006 | Parcialmente demostrado | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
 
 ## Checklist de ejecución
 
 | TC | Documentado | Ejecutado | Resultado | Ejecutado por | Fecha | Observaciones |
 |---|---|---|---|---|---|---|
-| TC-CU05-001 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation: verde; Comprueba HTTP, estado y evento persistidos; no demuestra el escenario de 35 minutos completo. |
+| TC-CU05-001 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | NoShowIntegrationTest#successfulNoShowPersistsEventAndCancelsReservation: verde; Comprueba HTTP, estado y evento persistidos al minuto 30; el caso de 35 minutos solo tiene evidencia unitaria y faltan consulta CU-09 y SLA externo. |
 | TC-CU05-002 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | NoShowIntegrationTest#oneSecondBeforeGraceEndIsRejected: verde; Comprueba 409, estado y ausencia de evento; no comprueba outbox ni texto completo. |
 | TC-CU05-003 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | ReportNoShowServiceTest#invalidStatesAreRejectedWithoutClockOrWrites: verde; Prueba cuatro estados con mocks; no prueba todos los estados de la ficha. |
 | TC-CU05-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | NoShowIntegrationTest#renterAndForeignOwnerAreForbiddenAndUnknownIs404: verde; Comprueba ambos 403; identidad por cabeceras, no JWT ni persistencia posterior al rechazo. |
@@ -78,15 +78,17 @@ Discrepancias verificadas: La zona se lee de la reserva, no de CU-09; el plan pr
 
 - **Draft**: contrato incompleto o inconsistente.
 - **In Process**: ejecutable con implementación actual.
-- **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
+- **Approved**: escenario y postcondiciones demostrados por aserciones de la corrida V4, sin impedimentos de aprobación.
 - **Blocked**: depende de funcionalidad pendiente.
 
 ## Ejecución automatizada — 2026-11-13
 
-`sg docker -c 'bash ./mvnw -B clean test'`; salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-05. Las pruebas individuales no demuestran los flujos completos ni entrega externa.
+`sg docker -c 'bash ./mvnw -B clean test'`; inicio 2026-11-13T19:02:00-05:00, fin 2026-11-13T19:03:11-05:00; BASELINE_HEAD `568290a0d4334b477a4b0f9d5e949e981da3fa55`; salida 0. Las pruebas integradas usan PostgreSQL y dependencias simuladas; no prueban entrega externa real.
 
 | Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| com.seashare.m2.reservas.application.service.ReportNoShowServiceTest | 18 | 0 | 0 | 0 | Verde; cobertura parcial |
-| com.seashare.m2.reservas.infrastructure.adapter.in.web.NoShowControllerTest | 6 | 0 | 0 | 0 | Verde; cobertura parcial |
-| com.seashare.m2.reservas.integration.NoShowIntegrationTest | 9 | 0 | 0 | 0 | Verde; cobertura parcial |
+| com.seashare.m2.reservas.application.service.ModuleOneNotificationMatrixTest | 7 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.application.service.ReportNoShowServiceTest | 18 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.in.web.NoShowControllerTest | 6 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.integration.ChangeReservationStatusServiceTest | 28 | 0 | 0 | 0 | Evidencia parcial según TC |
+| com.seashare.m2.reservas.integration.NoShowIntegrationTest | 9 | 0 | 0 | 0 | Evidencia parcial según TC |
