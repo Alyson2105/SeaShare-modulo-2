@@ -26,7 +26,7 @@ Verificar autorización de actor. Trazabilidad: FR-003; SC-008.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad JWT sigue pendiente; el controlador usa identidad temporal por cabeceras.
+La prueba con repositorio simulado rechaza al arrendatario ajeno; no comprueba JWT ni persistencia posterior integrada.
 
 ##### Dependencies & Assumptions
 Se requieren dependencias controladas; la evidencia descrita no acredita el flujo completo.
@@ -38,9 +38,9 @@ Reserva RESERVED; usuario distinto del arrendatario titular y del propietario re
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | RequestCancellationServiceTest#foreignRenterIsRejected: verde con repositorio y CU-08 simulados; no prueba JWT ni persistencia real. |
-| 2 | Ejecutar | Solicitar cancelación como tercero. | Datos de las precondiciones | Según el plan, 403 RESERVATION_NOT_OWNED; no se cancela la reserva. | Pendiente | RequestCancellationServiceTest#foreignRenterIsRejected: verde con repositorio y CU-08 simulados; no prueba JWT ni persistencia real. |
-| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | RequestCancellationServiceTest#foreignRenterIsRejected: verde con repositorio y CU-08 simulados; no prueba JWT ni persistencia real. |
+| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | RequestCancellationServiceTest#foreignRenterIsRejected (XML V4: passed). Aserta RESERVATION_NOT_OWNED y verifica que no se invoca CU-08; no prueba la respuesta y los efectos persistidos conjuntamente. |
+| 2 | Ejecutar | Solicitar cancelación como tercero. | Datos de las precondiciones | Según el plan, 403 RESERVATION_NOT_OWNED; no se cancela la reserva. | Pendiente | RequestCancellationServiceTest#foreignRenterIsRejected (XML V4: passed). Aserta RESERVATION_NOT_OWNED y verifica que no se invoca CU-08; no prueba la respuesta y los efectos persistidos conjuntamente. |
+| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | RequestCancellationServiceTest#foreignRenterIsRejected (XML V4: passed). Aserta RESERVATION_NOT_OWNED y verifica que no se invoca CU-08; no prueba la respuesta y los efectos persistidos conjuntamente. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ La identidad por JWT es propuesta y aún no implementada.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: RequestCancellationServiceTest#foreignRenterIsRejected. La prueba con repositorio simulado rechaza al arrendatario ajeno; no comprueba JWT ni persistencia posterior integrada.
 
 #### Traceability
 FR-003 | SC-008 | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/RequestCancellationServiceTest.java#foreignRenterIsRejected | In Process

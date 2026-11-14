@@ -26,7 +26,7 @@ Verificar destino operativo m1. Trazabilidad: FR-010, FR-011, FR-012; SC-005.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Existe decisión y encolado operativo; el adaptador M1 es fake. La entrega y el primer intento en menos de un segundo requieren medición.
+Las decisiones AVAILABLE y MAINTENANCE_CLEANING se prueban con CU-08 simulado; no se acredita el encolado y entrega a M1 ni que reservas futuras permanezcan intactas.
 
 ##### Dependencies & Assumptions
 Se requieren dependencias controladas; la evidencia descrita no acredita el flujo completo.
@@ -38,9 +38,9 @@ Reservas RESERVED con m1_blocked verdadero; causas logística y mecánica en sol
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | RequestCancellationServiceTest#ownerWithMechanicalFailureAndM1BlockedNotifiesMaintenance: verde con CU-08 simulado; no acredita entrega M1 ni reservas futuras. |
-| 2 | Ejecutar | Cancelar como propietario y observar mensajes encolados para M1. | Datos de las precondiciones | La causa logística solicita AVAILABLE; avería solicita MAINTENANCE_CLEANING; otras reservas futuras permanecen intactas. | Pendiente | RequestCancellationServiceTest#ownerWithMechanicalFailureAndM1BlockedNotifiesMaintenance: verde con CU-08 simulado; no acredita entrega M1 ni reservas futuras. |
-| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | RequestCancellationServiceTest#ownerWithMechanicalFailureAndM1BlockedNotifiesMaintenance: verde con CU-08 simulado; no acredita entrega M1 ni reservas futuras. |
+| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | RequestCancellationServiceTest#ownerWithMechanicalFailureAndM1BlockedNotifiesMaintenance (XML V4: passed). Captura mechanicalFailure verdadero y aserta MAINTENANCE_CLEANING en el resultado; CU-08 y el evento están simulados. |
+| 2 | Ejecutar | Cancelar como propietario y observar mensajes encolados para M1. | Datos de las precondiciones | La causa logística solicita AVAILABLE; avería solicita MAINTENANCE_CLEANING; otras reservas futuras permanecen intactas. | Pendiente | RequestCancellationServiceTest#ownerWithMechanicalFailureAndM1BlockedNotifiesMaintenance (XML V4: passed). Captura mechanicalFailure verdadero y aserta MAINTENANCE_CLEANING en el resultado; CU-08 y el evento están simulados. |
+| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | RequestCancellationServiceTest#ownerWithMechanicalFailureAndM1BlockedNotifiesMaintenance (XML V4: passed). Captura mechanicalFailure verdadero y aserta MAINTENANCE_CLEANING en el resultado; CU-08 y el evento están simulados. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ El primer intento en menos de un segundo requiere ejecución y medición con rel
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: RequestCancellationServiceTest#ownerWithMechanicalFailureAndM1BlockedNotifiesMaintenance. Las decisiones AVAILABLE y MAINTENANCE_CLEANING se prueban con CU-08 simulado; no se acredita el encolado y entrega a M1 ni que reservas futuras permanezcan intactas.
 
 #### Traceability
 FR-010, FR-011, FR-012 | SC-005 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/RequestCancellationServiceTest.java#ownerWithMechanicalFailureAndM1BlockedNotifiesMaintenance | In Process

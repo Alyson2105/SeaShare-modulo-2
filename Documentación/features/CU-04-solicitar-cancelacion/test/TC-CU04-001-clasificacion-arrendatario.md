@@ -26,7 +26,7 @@ Verificar clasificación por anticipación. Trazabilidad: FR-005, FR-006, FR-007
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-El endpoint y servicio existen; pruebas unitarias cubren umbrales. FR-005 exige consultar CU-09; RequestCancellationService#resolveZone usa zona guardada.
+El clasificador cubre umbrales en pruebas unitarias, pero no hay evidencia HTTP y persistida para las cinco solicitudes; FR-005 exige CU-09 y el servicio usa la zona guardada.
 
 ##### Dependencies & Assumptions
 Se requieren dependencias controladas; la evidencia descrita no acredita el flujo completo.
@@ -38,9 +38,9 @@ Reserva RESERVED de arrendatario titular, hora de zarpe conocida y zona horaria 
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | CancellationClassifierTest#exactly72HoursIsFlexible: verde, unidad; pruebas separadas de umbrales no demuestran cada transición ni HTTP. |
-| 2 | Ejecutar | Enviar solicitudes independientes con anticipación de 72 h exactas, un segundo antes de 72 h, 24 h exactas, un segundo antes de 24 h y un minuto antes del zarpe. | Datos de las precondiciones | Clasificaciones respectivas FLEXIBLE, MODERATE, MODERATE, LATE y LATE; cada reserva cambia a CANCELLED. | Pendiente | CancellationClassifierTest#exactly72HoursIsFlexible: verde, unidad; pruebas separadas de umbrales no demuestran cada transición ni HTTP. |
-| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | CancellationClassifierTest#exactly72HoursIsFlexible: verde, unidad; pruebas separadas de umbrales no demuestran cada transición ni HTTP. |
+| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | CancellationClassifierTest#exactly72HoursIsFlexible (XML V4: passed). Comprueba que exactamente 72 horas produce FLEXIBLE; no demuestra la transición ni persistencia de las cinco reservas. |
+| 2 | Ejecutar | Enviar solicitudes independientes con anticipación de 72 h exactas, un segundo antes de 72 h, 24 h exactas, un segundo antes de 24 h y un minuto antes del zarpe. | Datos de las precondiciones | Clasificaciones respectivas FLEXIBLE, MODERATE, MODERATE, LATE y LATE; cada reserva cambia a CANCELLED. | Pendiente | CancellationClassifierTest#exactly72HoursIsFlexible (XML V4: passed). Comprueba que exactamente 72 horas produce FLEXIBLE; no demuestra la transición ni persistencia de las cinco reservas. |
+| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | CancellationClassifierTest#exactly72HoursIsFlexible (XML V4: passed). Comprueba que exactamente 72 horas produce FLEXIBLE; no demuestra la transición ni persistencia de las cinco reservas. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ El plan especifica truncar a minutos antes de comparar; CancellationClassifierTe
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: CancellationClassifierTest#exactly72HoursIsFlexible. El clasificador cubre umbrales en pruebas unitarias, pero no hay evidencia HTTP y persistida para las cinco solicitudes; FR-005 exige CU-09 y el servicio usa la zona guardada.
 
 #### Traceability
-FR-005, FR-006, FR-007, FR-008, FR-011 | SC-002 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/domain/service/CancellationClassifierTest.java#exactly72HoursIsFlexible | In Process
+FR-005, FR-006, FR-007, FR-008, FR-011 | SC-002 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/domain/service/CancellationClassifierTest.java#exactly72HoursIsFlexible; src/test/java/com/seashare/m2/reservas/domain/service/CancellationClassifierTest.java#oneSecondLessThan72HoursIsModerate; src/test/java/com/seashare/m2/reservas/domain/service/CancellationClassifierTest.java#exactly24HoursIsModerate; src/test/java/com/seashare/m2/reservas/domain/service/CancellationClassifierTest.java#oneSecondLessThan24HoursIsLate; src/test/java/com/seashare/m2/reservas/domain/service/CancellationClassifierTest.java#oneMinuteBeforeIsLateWithOneMinute | In Process

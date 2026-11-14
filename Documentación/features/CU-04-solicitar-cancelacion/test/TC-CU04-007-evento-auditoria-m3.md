@@ -26,7 +26,7 @@ Verificar auditoría y notificación m3. Trazabilidad: FR-013, FR-014, FR-015; S
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-PUBLISHED se deriva del destino encolado en RequestCancellationService#execute; no demuestra confirmación de M3. El payload completo y la ausencia integral de cálculos requieren evidencia.
+La prueba captura los datos enviados al motor y al puerto de eventos simulados; no demuestra la auditoría persistida ni la entrega confirmada a M3 o neutralidad financiera integral.
 
 ##### Dependencies & Assumptions
 Se requieren dependencias controladas; la evidencia descrita no acredita el flujo completo.
@@ -38,9 +38,9 @@ Reserva RESERVED válida; observar auditoría y eventos relacionados con la rese
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | RequestCancellationServiceTest#renterWith72HoursCancelsFlexible: verde con puertos simulados; no acredita persistencia real ni entrega a M3. |
-| 2 | Ejecutar | Solicitar cancelación y consultar auditoría y outbox. | Datos de las precondiciones | Se registra actor, fecha, clasificación y datos aplicables; se comunica a M3 el estado y subtipo sin cálculos monetarios en M2. | Pendiente | RequestCancellationServiceTest#renterWith72HoursCancelsFlexible: verde con puertos simulados; no acredita persistencia real ni entrega a M3. |
-| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | RequestCancellationServiceTest#renterWith72HoursCancelsFlexible: verde con puertos simulados; no acredita persistencia real ni entrega a M3. |
+| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | RequestCancellationServiceTest#renterWith72HoursCancelsFlexible (XML V4: passed). Captura actor, hora, anticipación, subtipo y justificación en CancellationEventRecord simulado; no consulta persistencia ni M3. |
+| 2 | Ejecutar | Solicitar cancelación y consultar auditoría y outbox. | Datos de las precondiciones | Se registra actor, fecha, clasificación y datos aplicables; se comunica a M3 el estado y subtipo sin cálculos monetarios en M2. | Pendiente | RequestCancellationServiceTest#renterWith72HoursCancelsFlexible (XML V4: passed). Captura actor, hora, anticipación, subtipo y justificación en CancellationEventRecord simulado; no consulta persistencia ni M3. |
+| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | RequestCancellationServiceTest#renterWith72HoursCancelsFlexible (XML V4: passed). Captura actor, hora, anticipación, subtipo y justificación en CancellationEventRecord simulado; no consulta persistencia ni M3. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ El contrato final de payload M3 T-12 está pendiente; PUBLISHED en plan no demue
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: RequestCancellationServiceTest#renterWith72HoursCancelsFlexible. La prueba captura los datos enviados al motor y al puerto de eventos simulados; no demuestra la auditoría persistida ni la entrega confirmada a M3 o neutralidad financiera integral.
 
 #### Traceability
 FR-013, FR-014, FR-015 | SC-006, SC-007 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/RequestCancellationServiceTest.java#renterWith72HoursCancelsFlexible | In Process

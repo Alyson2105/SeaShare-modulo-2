@@ -26,7 +26,7 @@ Verificar rechazo por estado. Trazabilidad: FR-002, FR-004; SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Existe validación de estado; la expiración pasiva pertenece a CU-08.
+El servicio rechaza PENDING_PAYMENT con repositorio simulado; faltan los demás estados y su resultado HTTP y persistido.
 
 ##### Dependencies & Assumptions
 Se requieren dependencias controladas; la evidencia descrita no acredita el flujo completo.
@@ -38,9 +38,9 @@ Preparar reservas individuales en INITIATED, PENDING_PAYMENT, PAYMENT_FAILED, IN
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | RequestCancellationServiceTest#reservationNotReservedIsRejected: verde con repositorio simulado para PENDING_PAYMENT; no cubre todos los estados ni HTTP real. |
-| 2 | Ejecutar | Solicitar cancelación activa de cada una. | Datos de las precondiciones | Según el plan, 409 INVALID_RESERVATION_STATE sin nueva transición. | Pendiente | RequestCancellationServiceTest#reservationNotReservedIsRejected: verde con repositorio simulado para PENDING_PAYMENT; no cubre todos los estados ni HTTP real. |
-| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | RequestCancellationServiceTest#reservationNotReservedIsRejected: verde con repositorio simulado para PENDING_PAYMENT; no cubre todos los estados ni HTTP real. |
+| 1 | Preparar | Registrar reserva, reloj y efectos iniciales. | Precondiciones | Entorno aislado disponible. | Pendiente | RequestCancellationServiceTest#reservationNotReservedIsRejected (XML V4: passed). Comprueba INVALID_RESERVATION_STATE y que CU-08 no se invoca para PENDING_PAYMENT; no prueba todos los estados. |
+| 2 | Ejecutar | Solicitar cancelación activa de cada una. | Datos de las precondiciones | Según el plan, 409 INVALID_RESERVATION_STATE sin nueva transición. | Pendiente | RequestCancellationServiceTest#reservationNotReservedIsRejected (XML V4: passed). Comprueba INVALID_RESERVATION_STATE y que CU-08 no se invoca para PENDING_PAYMENT; no prueba todos los estados. |
+| 3 | Comprobar | Inspeccionar respuesta y persistencia correspondientes. | Reserva y mensajes del escenario | Se cumplen los resultados del paso 2. | Pendiente | RequestCancellationServiceTest#reservationNotReservedIsRejected (XML V4: passed). Comprueba INVALID_RESERVATION_STATE y que CU-08 no se invoca para PENDING_PAYMENT; no prueba todos los estados. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica otro comportamiento principal; los límites se indican abajo.
@@ -57,7 +57,7 @@ La expiración pasiva pertenece a CU-08.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: RequestCancellationServiceTest#reservationNotReservedIsRejected. El servicio rechaza PENDING_PAYMENT con repositorio simulado; faltan los demás estados y su resultado HTTP y persistido.
 
 #### Traceability
 FR-002, FR-004 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/RequestCancellationServiceTest.java#reservationNotReservedIsRejected | In Process
