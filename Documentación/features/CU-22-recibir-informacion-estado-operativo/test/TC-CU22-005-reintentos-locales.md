@@ -26,7 +26,7 @@ Verificar reintentos del relay. Requisitos: FR-006, FR-008. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-22 encola destino M1_HTTP; el adaptador actual es fake y no realiza HTTP real. DLQ real no se publica actualmente; comportamiento verificado solo al nivel de puerto simulado.
+Puertos simulados; faltan fallo HTTP real y publicación real a DLQ.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas cuando corresponda. Pruebas relacionadas: [relay](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Puerto M1 simulado devuelve fallo transitorio o permanente.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Ejecutar relay con reloj controlado y observar intentos. | Datos de las precondiciones | Fallo transitorio reintenta; quinto fallo o 4xx permanente marca dead sin revertir transición local. | Pendiente | PublishPendingOutboxServiceTest.java); PublishPendingOutboxServiceTest#backoffExactoUnoCincoVeinticincoCientoVeinticincoSegundos; PublishPendingOutboxServiceTest#quintoFalloMarcaDeadConAlerta; PublishPendingOutboxServiceTest#cuarentaYCuatroDeM1VaDirectoDeadSinReintento: exitosa. Pruebas unitarias cubren backoff y dead con puertos simulados; no prueban DLQ real ni fallo HTTP real. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | PublishPendingOutboxServiceTest#cincoCientosDeM1ReagendaConBackoff (XML V4: passed). Aserta reprogramación ante fallo temporal; #cuarentaYCuatroDeM1VaDirectoDeadSinReintento comprueba dead sin reintento. Puertos simulados; faltan fallo HTTP real y publicación real a DLQ. |
+| 2 | Ejecutar | Ejecutar relay con reloj controlado y observar intentos. | Datos de las precondiciones | Fallo transitorio reintenta; quinto fallo o 4xx permanente marca dead sin revertir transición local. | Pendiente | PublishPendingOutboxServiceTest#cincoCientosDeM1ReagendaConBackoff (XML V4: passed). Aserta reprogramación ante fallo temporal; #cuarentaYCuatroDeM1VaDirectoDeadSinReintento comprueba dead sin reintento. Puertos simulados; faltan fallo HTTP real y publicación real a DLQ. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | PublishPendingOutboxServiceTest#cincoCientosDeM1ReagendaConBackoff (XML V4: passed). Aserta reprogramación ante fallo temporal; #cuarentaYCuatroDeM1VaDirectoDeadSinReintento comprueba dead sin reintento. Puertos simulados; faltan fallo HTTP real y publicación real a DLQ. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ DLQ real no se publica actualmente; comportamiento verificado solo al nivel de p
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; Pruebas unitarias cubren backoff y dead con puertos simulados; no prueban DLQ real ni fallo HTTP real.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: PublishPendingOutboxServiceTest#cincoCientosDeM1ReagendaConBackoff. Puertos simulados; faltan fallo HTTP real y publicación real a DLQ.
 
 #### Traceability
 FR-006, FR-008 | SC-001 | [relay](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java)  | src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#cincoCientosDeM1ReagendaConBackoff | src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#cuarentaYCuatroDeM1VaDirectoDeadSinReintento | In Process

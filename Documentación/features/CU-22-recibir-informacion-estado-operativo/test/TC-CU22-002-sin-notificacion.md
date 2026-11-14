@@ -26,7 +26,7 @@ Verificar estados sin notificación m1. Requisitos: FR-001, FR-002. Criterios: S
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-22 encola destino M1_HTTP; el adaptador actual es fake y no realiza HTTP real. CU-02 sí encola evento AMQP de información a M3 al crear; es distinto.
+No demuestra todas las transiciones en outbox real.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas cuando corresponda. Pruebas relacionadas: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Reservas en INITIATED y PENDING_PAYMENT con transiciones válidas a EXPIRED o PA
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Inspeccionar notificaciones M1 de creación, pago pendiente, expiración y fallo. | Datos de las precondiciones | No se encola M1_HTTP en esas etapas. | Pendiente | ChangeReservationStatusServiceTest.java);; ModuleNotificationMatrixTest.java); ModuleNotificationMatrixTest#initiatedAndPendingPaymentNotifyNobody; ModuleNotificationMatrixTest#expiredAndPaymentFailedNotifyNobody: exitosa. Matriz unitaria comprueba ausencia de destino M1; no comprueba cada transición en outbox real. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ModuleOneNotificationMatrixTest#initiatedAndPendingPaymentNotifyNobody (XML V4: passed). Aserta moduleOneStatus nulo en INITIATED y PENDING_PAYMENT; ModuleOneNotificationMatrixTest#expiredAndPaymentFailedNotifyNobody hace lo mismo para EXPIRED y PAYMENT_FAILED. No demuestra todas las transiciones en outbox real. |
+| 2 | Ejecutar | Inspeccionar notificaciones M1 de creación, pago pendiente, expiración y fallo. | Datos de las precondiciones | No se encola M1_HTTP en esas etapas. | Pendiente | ModuleOneNotificationMatrixTest#initiatedAndPendingPaymentNotifyNobody (XML V4: passed). Aserta moduleOneStatus nulo en INITIATED y PENDING_PAYMENT; ModuleOneNotificationMatrixTest#expiredAndPaymentFailedNotifyNobody hace lo mismo para EXPIRED y PAYMENT_FAILED. No demuestra todas las transiciones en outbox real. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ModuleOneNotificationMatrixTest#initiatedAndPendingPaymentNotifyNobody (XML V4: passed). Aserta moduleOneStatus nulo en INITIATED y PENDING_PAYMENT; ModuleOneNotificationMatrixTest#expiredAndPaymentFailedNotifyNobody hace lo mismo para EXPIRED y PAYMENT_FAILED. No demuestra todas las transiciones en outbox real. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ CU-02 sí encola evento AMQP de información a M3 al crear; es distinto.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; Matriz unitaria comprueba ausencia de destino M1; no comprueba cada transición en outbox real.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ModuleOneNotificationMatrixTest#initiatedAndPendingPaymentNotifyNobody. No demuestra todas las transiciones en outbox real.
 
 #### Traceability
 FR-001, FR-002 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java)  | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#initiatedAndPendingPaymentNotifyNobody | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#expiredAndPaymentFailedNotifyNobody | In Process

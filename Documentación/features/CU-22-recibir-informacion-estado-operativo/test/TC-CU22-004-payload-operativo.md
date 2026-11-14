@@ -26,7 +26,7 @@ Verificar payload operativo e identidad. Requisitos: FR-003, FR-004, FR-005, FR-
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-22 encola destino M1_HTTP; el adaptador actual es fake y no realiza HTTP real. No confundir identidad de evento con deduplicación demostrada por M1.
+Repositorio simulado; no compara ID con auditoría ni demuestra transacción y deduplicación de M1.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas cuando corresponda. Pruebas relacionadas: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [outbox](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Transición notificable con evento M1_HTTP.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar outbox y auditoría. | Datos de las precondiciones | Payload contiene vessel_id, operational_status, occurred_at y event_id; ID coincide con auditoría y no hay importes. | Pendiente | ChangeReservationStatusServiceTest.java);; OutboxAdapterTest.java); OutboxAdapterTest#enqueuesOperationalStatusToM1HttpWithExactFourFields: exitosa. Prueba unitaria verifica los cuatro campos del payload y exclusión de campos adicionales; no demuestra deduplicación real de M1. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | OutboxAdapterTest#enqueuesOperationalStatusToM1HttpWithExactFourFields (XML V4: passed). Captura la entidad guardada y aserta exactamente vessel_id, operational_status, occurred_at y event_id, con sus valores. Repositorio simulado; no compara ID con auditoría ni demuestra transacción y deduplicación de M1. |
+| 2 | Ejecutar | Consultar outbox y auditoría. | Datos de las precondiciones | Payload contiene vessel_id, operational_status, occurred_at y event_id; ID coincide con auditoría y no hay importes. | Pendiente | OutboxAdapterTest#enqueuesOperationalStatusToM1HttpWithExactFourFields (XML V4: passed). Captura la entidad guardada y aserta exactamente vessel_id, operational_status, occurred_at y event_id, con sus valores. Repositorio simulado; no compara ID con auditoría ni demuestra transacción y deduplicación de M1. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | OutboxAdapterTest#enqueuesOperationalStatusToM1HttpWithExactFourFields (XML V4: passed). Captura la entidad guardada y aserta exactamente vessel_id, operational_status, occurred_at y event_id, con sus valores. Repositorio simulado; no compara ID con auditoría ni demuestra transacción y deduplicación de M1. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ No confundir identidad de evento con deduplicación demostrada por M1.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; Prueba unitaria verifica los cuatro campos del payload y exclusión de campos adicionales; no demuestra deduplicación real de M1.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: OutboxAdapterTest#enqueuesOperationalStatusToM1HttpWithExactFourFields. Repositorio simulado; no compara ID con auditoría ni demuestra transacción y deduplicación de M1.
 
 #### Traceability
 FR-003, FR-004, FR-005, FR-007 | SC-003, SC-004 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [outbox](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java)  | src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java#enqueuesOperationalStatusToM1HttpWithExactFourFields | In Process
