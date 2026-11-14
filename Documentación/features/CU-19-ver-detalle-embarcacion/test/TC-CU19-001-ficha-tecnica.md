@@ -26,10 +26,10 @@ Verificar ficha técnica. Requisitos: FR-001, FR-002. Criterios: SC-003.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Endpoints de detalle y cotización implementados; cobertura parcial con dobles, sin verificar servicios reales ni UI. MockMvc verifica ficha y no-store con datos falsos; no verifica ausencia de persistencia ni M1 real.
+No verifica que no exista persistencia de ficha ni M1 real.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: [flota](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); no demuestran el flujo completo de CU-19.
+Ejecución V4 con dependencias controladas. Pruebas parciales de componentes: [flota](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); no demuestran el flujo completo de CU-19.
 
 ##### Preconditions & Default Setup
 Embarcación existente y M1 disponible con ficha completa.
@@ -38,9 +38,9 @@ Embarcación existente y M1 disponible con ficha completa.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar GET de detalle propuesto. | Datos de las precondiciones | Según plan, 200 con datos técnicos y puerto sin persistir ficha local. | Pendiente | MockMvc verifica ficha y no-store con datos falsos; no verifica ausencia de persistencia ni M1 real. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | VesselDetailControllerTest#vesselDetailReturnsFleetDataWithoutCache (XML V4: passed). Aserta 200, no-store y campos de ficha con flota fake. No verifica que no exista persistencia de ficha ni M1 real. |
+| 2 | Ejecutar | Consultar GET de detalle propuesto. | Datos de las precondiciones | Según plan, 200 con datos técnicos y puerto sin persistir ficha local. | Pendiente | VesselDetailControllerTest#vesselDetailReturnsFleetDataWithoutCache (XML V4: passed). Aserta 200, no-store y campos de ficha con flota fake. No verifica que no exista persistencia de ficha ni M1 real. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | VesselDetailControllerTest#vesselDetailReturnsFleetDataWithoutCache (XML V4: passed). Aserta 200, no-store y campos de ficha con flota fake. No verifica que no exista persistencia de ficha ni M1 real. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ El adaptador de ficha obtiene más datos que FleetInfo; falta comprobar persiste
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; MockMvc verifica ficha y no-store con datos falsos; no verifica ausencia de persistencia ni M1 real.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: VesselDetailControllerTest#vesselDetailReturnsFleetDataWithoutCache. No verifica que no exista persistencia de ficha ni M1 real.
 
 #### Traceability
 FR-001, FR-002 | SC-003 | [flota](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java)  | src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/VesselDetailControllerTest.java#vesselDetailReturnsFleetDataWithoutCache | In Process

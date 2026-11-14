@@ -26,10 +26,10 @@ Verificar duración de un día. Requisitos: FR-005, FR-006. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Endpoints de detalle y cotización implementados; cobertura parcial con dobles, sin verificar servicios reales ni UI. Plan CU-19 contradice CU-11 sobre fecha final igual e intervalo inclusivo; no hay prueba ejecutada del caso de un día.
+plan.md CU-19, Manejo de Errores del Endpoint 2, rechaza end_at igual a start_at; spec.md CU-11 User Story 2 admite un día inclusivo con fechas iguales. No se encontró ejecución del caso.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-19; no demuestran el flujo completo de CU-19.
+Sin ejecución automatizada pertinente para fechas iguales; el resultado contractual requiere aclaración.
 
 ##### Preconditions & Default Setup
 Fecha inicial y final coinciden.
@@ -38,9 +38,9 @@ Fecha inicial y final coinciden.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar cotización individual para un día. | Datos de las precondiciones | El contrato CU-11 acepta un día inclusivo; el plan CU-19 parece rechazar fechas iguales. | Pendiente | Plan CU-19 contradice CU-11 sobre fecha final igual e intervalo inclusivo; no hay prueba ejecutada del caso de un día. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | Sin ejecución automatizada pertinente. plan.md CU-19, Manejo de Errores del Endpoint 2, rechaza end_at igual a start_at; spec.md CU-11 User Story 2 admite un día inclusivo con fechas iguales. No se encontró ejecución del caso. |
+| 2 | Ejecutar | Solicitar cotización individual para un día. | Datos de las precondiciones | El contrato CU-11 acepta un día inclusivo; el plan CU-19 parece rechazar fechas iguales. | Pendiente | Sin ejecución automatizada pertinente. plan.md CU-19, Manejo de Errores del Endpoint 2, rechaza end_at igual a start_at; spec.md CU-11 User Story 2 admite un día inclusivo con fechas iguales. No se encontró ejecución del caso. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | Sin ejecución automatizada pertinente. plan.md CU-19, Manejo de Errores del Endpoint 2, rechaza end_at igual a start_at; spec.md CU-11 User Story 2 admite un día inclusivo con fechas iguales. No se encontró ejecución del caso. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Debe aclararse la regla y el cálculo de total_days antes de cerrar el contrato.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Draft; sin ejecución automatizada. Plan CU-19 contradice CU-11 sobre fecha final igual e intervalo inclusivo; no hay prueba ejecutada del caso de un día.
+Evaluado el 2026-11-13: Draft; sin ejecución automatizada pertinente. plan.md CU-19, Manejo de Errores del Endpoint 2, rechaza end_at igual a start_at; spec.md CU-11 User Story 2 admite un día inclusivo con fechas iguales. No se encontró ejecución del caso.
 
 #### Traceability
 FR-005, FR-006 | SC-001 | Sin prueba de CU-19  | Draft
