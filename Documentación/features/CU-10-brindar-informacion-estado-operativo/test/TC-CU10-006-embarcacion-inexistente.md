@@ -26,7 +26,7 @@ Verificar embarcación inexistente. Requisitos: FR-001, FR-002, FR-006. Criterio
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-10 es integración saliente; M1 se simula y el modo fake es el predeterminado. El error de dominio no es por sí solo una respuesta HTTP.
+SC-005 exige mensaje claro y continuidad del sistema; no se demuestra respuesta de los consumidores.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ M1 simulado responde 404.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar identificador inexistente. | Datos de las precondiciones | El adaptador lanza VESSEL_NOT_FOUND sin reintento. | Pendiente | Componente WireMock: FleetUnavailableTest#operationalStatusNotFoundOn404 pasó: VESSEL_NOT_FOUND y una llamada; falta verificar respuesta de cada consumidor. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | FleetUnavailableTest#operationalStatusNotFoundOn404 (XML V4: passed). Aserta VESSEL_NOT_FOUND y verifica una llamada HTTP con WireMock. SC-005 exige mensaje claro y continuidad del sistema; no se demuestra respuesta de los consumidores. |
+| 2 | Ejecutar | Consultar identificador inexistente. | Datos de las precondiciones | El adaptador lanza VESSEL_NOT_FOUND sin reintento. | Pendiente | FleetUnavailableTest#operationalStatusNotFoundOn404 (XML V4: passed). Aserta VESSEL_NOT_FOUND y verifica una llamada HTTP con WireMock. SC-005 exige mensaje claro y continuidad del sistema; no se demuestra respuesta de los consumidores. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | FleetUnavailableTest#operationalStatusNotFoundOn404 (XML V4: passed). Aserta VESSEL_NOT_FOUND y verifica una llamada HTTP con WireMock. SC-005 exige mensaje claro y continuidad del sistema; no se demuestra respuesta de los consumidores. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ El error de dominio no es por sí solo una respuesta HTTP.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: FleetUnavailableTest#operationalStatusNotFoundOn404. SC-005 exige mensaje claro y continuidad del sistema; no se demuestra respuesta de los consumidores.
 
 #### Traceability
 FR-001, FR-002, FR-006 | SC-005 | [fallos](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/FleetUnavailableTest.java#operationalStatusNotFoundOn404 | In Process

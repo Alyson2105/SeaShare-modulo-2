@@ -26,7 +26,7 @@ Verificar estado disponible. Requisitos: FR-001, FR-002, FR-003, FR-004. Criteri
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-10 es integración saliente; M1 se simula y el modo fake es el predeterminado. La consulta es puntual y no establece exclusividad FCFS.
+No comprueba M1 real ni demuestra SC-002 para estados no disponibles.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Modo HTTP; M1 simulado responde operational_status AVAILABLE.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Invocar FleetOperationalStatusPort.isAvailable con UUID. | Datos de las precondiciones | El adaptador consulta /api/v1/vessels/{vessel_id}/operational-status y devuelve true. | Pendiente | Componente WireMock: HttpFleetClientTest#availableStatusIsTrue pasó: AVAILABLE produce true y se verifica ruta y token. No se consulta M1 real. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | HttpFleetClientTest#availableStatusIsTrue (XML V4: passed). Aserta true para AVAILABLE y verifica ruta y token de servicio con WireMock. No comprueba M1 real ni demuestra SC-002 para estados no disponibles. |
+| 2 | Ejecutar | Invocar FleetOperationalStatusPort.isAvailable con UUID. | Datos de las precondiciones | El adaptador consulta /api/v1/vessels/{vessel_id}/operational-status y devuelve true. | Pendiente | HttpFleetClientTest#availableStatusIsTrue (XML V4: passed). Aserta true para AVAILABLE y verifica ruta y token de servicio con WireMock. No comprueba M1 real ni demuestra SC-002 para estados no disponibles. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | HttpFleetClientTest#availableStatusIsTrue (XML V4: passed). Aserta true para AVAILABLE y verifica ruta y token de servicio con WireMock. No comprueba M1 real ni demuestra SC-002 para estados no disponibles. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ La consulta es puntual y no establece exclusividad FCFS.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: HttpFleetClientTest#availableStatusIsTrue. No comprueba M1 real ni demuestra SC-002 para estados no disponibles.
 
 #### Traceability
 FR-001, FR-002, FR-003, FR-004 | SC-002 | [cliente](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/fleet/HttpFleetClientTest.java#availableStatusIsTrue | In Process
