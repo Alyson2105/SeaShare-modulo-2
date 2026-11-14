@@ -26,7 +26,7 @@ Verificar rechazo de transición inválida. Requisitos: FR-002, FR-003, FR-005. 
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-08 es un puerto interno, sin endpoint HTTP. El conflicto de disponibilidad FCFS es CU-03, no este caso.
+La persistencia sin mutación para cada salida terminal no se demuestra; cancelFromPendingPaymentIsRejected cubre otra transición con espías sobre los puertos.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas cuando corresponda. Pruebas relacionadas: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Reservas en estados terminales o PENDING_PAYMENT.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Intentar salidas desde COMPLETED, CANCELLED, EXPIRED y PAYMENT_FAILED y cancelación desde PENDING_PAYMENT. | Datos de las precondiciones | El motor rechaza cada transición sin modificar estado. | Pendiente | Unitario: ReservationStateMachineTest#finalStatesHaveNoExit pasó para estados terminales; integración: ChangeReservationStatusServiceTest#cancelFromPendingPaymentIsRejected pasó sin mutación ni eventos. Falta verificar persistencia para cada salida terminal. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ReservationStateMachineTest#finalStatesHaveNoExit (XML V4: passed). Comprueba que los estados terminales no tienen transiciones salientes en la máquina de estados. La persistencia sin mutación para cada salida terminal no se demuestra; cancelFromPendingPaymentIsRejected cubre otra transición con espías sobre los puertos. |
+| 2 | Ejecutar | Intentar salidas desde COMPLETED, CANCELLED, EXPIRED y PAYMENT_FAILED y cancelación desde PENDING_PAYMENT. | Datos de las precondiciones | El motor rechaza cada transición sin modificar estado. | Pendiente | ReservationStateMachineTest#finalStatesHaveNoExit (XML V4: passed). Comprueba que los estados terminales no tienen transiciones salientes en la máquina de estados. La persistencia sin mutación para cada salida terminal no se demuestra; cancelFromPendingPaymentIsRejected cubre otra transición con espías sobre los puertos. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ReservationStateMachineTest#finalStatesHaveNoExit (XML V4: passed). Comprueba que los estados terminales no tienen transiciones salientes en la máquina de estados. La persistencia sin mutación para cada salida terminal no se demuestra; cancelFromPendingPaymentIsRejected cubre otra transición con espías sobre los puertos. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ El conflicto de disponibilidad FCFS es CU-03, no este caso.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ReservationStateMachineTest#finalStatesHaveNoExit. La persistencia sin mutación para cada salida terminal no se demuestra; cancelFromPendingPaymentIsRejected cubre otra transición con espías sobre los puertos.
 
 #### Traceability
 FR-002, FR-003, FR-005 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [maquina](../../../../src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/domain/state/ReservationStateMachineTest.java#finalStatesHaveNoExit; src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#cancelFromPendingPaymentIsRejected | In Process

@@ -26,7 +26,7 @@ Verificar notificación según destino. Requisitos: FR-007, FR-008, FR-011. Crit
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-08 es un puerto interno, sin endpoint HTTP. Outbox no prueba entrega; matriz excluye EXPIRED y PAYMENT_FAILED en M3 pese a FR-008 general.
+Los demás destinos se prueban separadamente; no se inspeccionan filas persistidas ni toda la secuencia. FR-008 y la tabla de flujos alternos discrepan para EXPIRED y PAYMENT_FAILED, fuera de esta secuencia concreta.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas cuando corresponda. Pruebas relacionadas: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Reservas preparadas para transiciones válidas y outbox aislado.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Transicionar a PENDING_PAYMENT, RESERVED e IN_NAVIGATION en orden. | Datos de las precondiciones | PENDING_PAYMENT encola AMQP sin M1; RESERVED e IN_NAVIGATION encolan AMQP y M1_HTTP con estado operativo correspondiente. | Pendiente | Integración: ChangeReservationStatusServiceTest#initiatedAndPendingPaymentDoNotEnqueueModuleOne, #enqueuesReservedToModuleOneOnPaymentConfirmed y #checkInAndCheckOutTransitionsWork pasaron con puertos simulados. Falta verificar cada destino operativo y fila persistida en una secuencia completa. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ChangeReservationStatusServiceTest#initiatedAndPendingPaymentDoNotEnqueueModuleOne (XML V4: passed). Verifica ausencia de OperationalStatusEvent, presencia de StatusChangedEvent y guarda M1 false para PENDING_PAYMENT, con un espía sobre outbox. Los demás destinos se prueban separadamente; no se inspeccionan filas persistidas ni toda la secuencia. FR-008 y la tabla de flujos alternos discrepan para EXPIRED y PAYMENT_FAILED, fuera de esta secuencia concreta. |
+| 2 | Ejecutar | Transicionar a PENDING_PAYMENT, RESERVED e IN_NAVIGATION en orden. | Datos de las precondiciones | PENDING_PAYMENT encola AMQP sin M1; RESERVED e IN_NAVIGATION encolan AMQP y M1_HTTP con estado operativo correspondiente. | Pendiente | ChangeReservationStatusServiceTest#initiatedAndPendingPaymentDoNotEnqueueModuleOne (XML V4: passed). Verifica ausencia de OperationalStatusEvent, presencia de StatusChangedEvent y guarda M1 false para PENDING_PAYMENT, con un espía sobre outbox. Los demás destinos se prueban separadamente; no se inspeccionan filas persistidas ni toda la secuencia. FR-008 y la tabla de flujos alternos discrepan para EXPIRED y PAYMENT_FAILED, fuera de esta secuencia concreta. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ChangeReservationStatusServiceTest#initiatedAndPendingPaymentDoNotEnqueueModuleOne (XML V4: passed). Verifica ausencia de OperationalStatusEvent, presencia de StatusChangedEvent y guarda M1 false para PENDING_PAYMENT, con un espía sobre outbox. Los demás destinos se prueban separadamente; no se inspeccionan filas persistidas ni toda la secuencia. FR-008 y la tabla de flujos alternos discrepan para EXPIRED y PAYMENT_FAILED, fuera de esta secuencia concreta. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Outbox no prueba entrega; matriz excluye EXPIRED y PAYMENT_FAILED en M3 pese a F
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ChangeReservationStatusServiceTest#initiatedAndPendingPaymentDoNotEnqueueModuleOne. Los demás destinos se prueban separadamente; no se inspeccionan filas persistidas ni toda la secuencia. FR-008 y la tabla de flujos alternos discrepan para EXPIRED y PAYMENT_FAILED, fuera de esta secuencia concreta.
 
 #### Traceability
 FR-007, FR-008, FR-011 | SC-003 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); [matriz](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#initiatedAndPendingPaymentDoNotEnqueueModuleOne; src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#enqueuesReservedToModuleOneOnPaymentConfirmed; src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#checkInAndCheckOutTransitionsWork | In Process

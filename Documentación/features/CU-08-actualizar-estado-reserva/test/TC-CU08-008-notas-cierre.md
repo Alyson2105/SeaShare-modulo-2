@@ -26,7 +26,7 @@ Verificar novedades de cierre. Requisitos: FR-009, FR-010. Criterios: SC-002.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-08 es un puerto interno, sin endpoint HTTP. Payload definitivo de M3 pendiente T-12; el SLA de primer intento no se prueba aquí.
+checkInAndCheckOutTransitionsWork captura las notas del DTO por separado; no acredita el primer intento externo en 500 ms de SC-002 ni ausencia global de cálculo.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas cuando corresponda. Pruebas relacionadas: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Reserva IN_NAVIGATION; comando COMPLETED con completion_notes.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Ejecutar transición y consultar reserva y evento encolado. | Datos de las precondiciones | Se conservan novedades en el dominio y se incluyen en el DTO del evento; M2 no calcula dinero. | Pendiente | Integración: ChangeReservationStatusServiceTest#persistsCompletionNotesOnCompleted y #checkInAndCheckOutTransitionsWork pasaron: notas persistidas y DTO en puerto simulado. No se demuestra ausencia global de cálculo monetario. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ChangeReservationStatusServiceTest#persistsCompletionNotesOnCompleted (XML V4: passed). Aserta notas de cierre persistidas en reserva. checkInAndCheckOutTransitionsWork captura las notas del DTO por separado; no acredita el primer intento externo en 500 ms de SC-002 ni ausencia global de cálculo. |
+| 2 | Ejecutar | Ejecutar transición y consultar reserva y evento encolado. | Datos de las precondiciones | Se conservan novedades en el dominio y se incluyen en el DTO del evento; M2 no calcula dinero. | Pendiente | ChangeReservationStatusServiceTest#persistsCompletionNotesOnCompleted (XML V4: passed). Aserta notas de cierre persistidas en reserva. checkInAndCheckOutTransitionsWork captura las notas del DTO por separado; no acredita el primer intento externo en 500 ms de SC-002 ni ausencia global de cálculo. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ChangeReservationStatusServiceTest#persistsCompletionNotesOnCompleted (XML V4: passed). Aserta notas de cierre persistidas en reserva. checkInAndCheckOutTransitionsWork captura las notas del DTO por separado; no acredita el primer intento externo en 500 ms de SC-002 ni ausencia global de cálculo. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Payload definitivo de M3 pendiente T-12; el SLA de primer intento no se prueba a
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; consultar las comprobaciones pendientes del flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ChangeReservationStatusServiceTest#persistsCompletionNotesOnCompleted. checkInAndCheckOutTransitionsWork captura las notas del DTO por separado; no acredita el primer intento externo en 500 ms de SC-002 ni ausencia global de cálculo.
 
 #### Traceability
 FR-009, FR-010 | SC-002 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#persistsCompletionNotesOnCompleted; src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java#checkInAndCheckOutTransitionsWork | In Process
