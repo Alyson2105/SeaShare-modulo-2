@@ -26,7 +26,7 @@ Verificar rechazo antes de la tolerancia. Requisitos: FR-003, FR-004, FR-005. Cr
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Comprueba 409, estado y ausencia de evento; no comprueba outbox ni texto completo. El endpoint y servicio existen. Antes de la hora de zarpe el plan prevé 409 TRIP_NOT_STARTED.
+El límite de 29:59 se verifica mediante HTTP y PostgreSQL; 18 minutos se verifica con mocks. El plan requiere campos separados de tiempo restante y no se inspecciona outbox.
 
 ##### Dependencies & Assumptions
 Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: La prueba citada cubre solo parte del escenario; no demuestra el flujo completo de CU-05.
@@ -38,9 +38,9 @@ Reserva RESERVED y reloj controlado; zarpe ya ocurrió.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NoShowIntegrationTest#oneSecondBeforeGraceEndIsRejected: verde. Comprueba 409, estado y ausencia de evento; no comprueba outbox ni texto completo. |
-| 2 | Ejecutar | Intentar reportar a los 29 minutos y 59 segundos y en otra solicitud a los 18 minutos. | Datos de las precondiciones | Según el plan, 409 GRACE_PERIOD_NOT_ELAPSED con tiempo restante exacto; reserva y notificaciones sin cambios. | Pendiente | NoShowIntegrationTest#oneSecondBeforeGraceEndIsRejected: verde. Comprueba 409, estado y ausencia de evento; no comprueba outbox ni texto completo. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NoShowIntegrationTest#oneSecondBeforeGraceEndIsRejected: verde. Comprueba 409, estado y ausencia de evento; no comprueba outbox ni texto completo. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pasó | NoShowIntegrationTest#oneSecondBeforeGraceEndIsRejected (XML V4: passed). Aserta 409 GRACE_PERIOD_NOT_ELAPSED, reserva RESERVED y cero filas noshow_event; no verifica los campos de tiempo restante. |
+| 2 | Ejecutar | Intentar reportar a los 29 minutos y 59 segundos y en otra solicitud a los 18 minutos. | Datos de las precondiciones | Según el plan, 409 GRACE_PERIOD_NOT_ELAPSED con tiempo restante exacto; reserva y notificaciones sin cambios. | Pendiente | NoShowIntegrationTest#oneSecondBeforeGraceEndIsRejected (XML V4: passed). Aserta 409 GRACE_PERIOD_NOT_ELAPSED, reserva RESERVED y cero filas noshow_event; no verifica los campos de tiempo restante. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NoShowIntegrationTest#oneSecondBeforeGraceEndIsRejected (XML V4: passed). Aserta 409 GRACE_PERIOD_NOT_ELAPSED, reserva RESERVED y cero filas noshow_event; no verifica los campos de tiempo restante. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Antes de la hora de zarpe el plan prevé 409 TRIP_NOT_STARTED.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: NoShowIntegrationTest#oneSecondBeforeGraceEndIsRejected. El límite de 29:59 se verifica mediante HTTP y PostgreSQL; 18 minutos se verifica con mocks. El plan requiere campos separados de tiempo restante y no se inspecciona outbox.
 
 #### Traceability
-FR-003, FR-004, FR-005 | SC-001, SC-003 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NoShowIntegrationTest.java#oneSecondBeforeGraceEndIsRejected | In Process
+FR-003, FR-004, FR-005 | SC-001, SC-003 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NoShowIntegrationTest.java#oneSecondBeforeGraceEndIsRejected; src/test/java/com/seashare/m2/reservas/application/service/ReportNoShowServiceTest.java#eighteenMinutesAfterDepartureShowsTwelveMinutesAndZeroSeconds | In Process

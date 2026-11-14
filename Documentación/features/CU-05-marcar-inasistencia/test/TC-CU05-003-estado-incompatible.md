@@ -26,7 +26,7 @@ Verificar rechazo por estado incompatible. Requisitos: FR-001, FR-006. Criterios
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Prueba cuatro estados con mocks; no prueba todos los estados de la ficha. El endpoint y servicio existen. La expiración pasiva corresponde a CU-08.
+La prueba de servicio cubre cuatro estados no permitidos con dependencias simuladas; no verifica todos los estados de la ficha mediante HTTP y persistencia real.
 
 ##### Dependencies & Assumptions
 Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-05.
@@ -38,9 +38,9 @@ Preparar reservas en INITIATED, PENDING_PAYMENT, PAYMENT_FAILED, IN_NAVIGATION, 
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ReportNoShowServiceTest#invalidStatesAreRejectedWithoutClockOrWrites: verde. Prueba cuatro estados con mocks; no prueba todos los estados de la ficha. |
-| 2 | Ejecutar | Intentar reportar por separado cada reserva. | Datos de las precondiciones | Según el plan, 409 INVALID_RESERVATION_STATE sin cambio de estado. | Pendiente | ReportNoShowServiceTest#invalidStatesAreRejectedWithoutClockOrWrites: verde. Prueba cuatro estados con mocks; no prueba todos los estados de la ficha. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ReportNoShowServiceTest#invalidStatesAreRejectedWithoutClockOrWrites: verde. Prueba cuatro estados con mocks; no prueba todos los estados de la ficha. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ReportNoShowServiceTest#invalidStatesAreRejectedWithoutClockOrWrites (XML V4: passed). En cuatro estados aserta INVALID_RESERVATION_STATE y verifica que no se invocan reloj, CU-08 ni inserción de evento. |
+| 2 | Ejecutar | Intentar reportar por separado cada reserva. | Datos de las precondiciones | Según el plan, 409 INVALID_RESERVATION_STATE sin cambio de estado. | Pendiente | ReportNoShowServiceTest#invalidStatesAreRejectedWithoutClockOrWrites (XML V4: passed). En cuatro estados aserta INVALID_RESERVATION_STATE y verifica que no se invocan reloj, CU-08 ni inserción de evento. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ReportNoShowServiceTest#invalidStatesAreRejectedWithoutClockOrWrites (XML V4: passed). En cuatro estados aserta INVALID_RESERVATION_STATE y verifica que no se invocan reloj, CU-08 ni inserción de evento. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ La expiración pasiva corresponde a CU-08.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ReportNoShowServiceTest#invalidStatesAreRejectedWithoutClockOrWrites. La prueba de servicio cubre cuatro estados no permitidos con dependencias simuladas; no verifica todos los estados de la ficha mediante HTTP y persistencia real.
 
 #### Traceability
 FR-001, FR-006 | SC-002 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/ReportNoShowServiceTest.java#invalidStatesAreRejectedWithoutClockOrWrites | In Process
