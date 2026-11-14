@@ -26,10 +26,10 @@ Verificar autorización del propietario. Requisitos: FR-002. Criterios: SC-005.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Verifica ambos 403; usa identidad por cabeceras, sin comprobar JWT ni efectos posteriores. El endpoint y servicio existen. JWT es propuesto y aún no está implementado.
+La integración con identidades por cabecera comprueba los 403 de arrendatario y propietario ajeno; el plan exige JWT y no se comprueba la ausencia de efectos persistidos.
 
 ##### Dependencies & Assumptions
-Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: La prueba citada cubre solo parte del escenario; no demuestra el flujo completo de CU-07.
+Evidencia V4 de componentes con dependencias controladas; los límites del escenario se detallan en Comments.
 
 ##### Preconditions & Default Setup
 Reserva IN_NAVIGATION; solicitante distinto del propietario registrado.
@@ -38,9 +38,9 @@ Reserva IN_NAVIGATION; solicitante distinto del propietario registrado.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NavigationEndIntegrationTest#renterRoleAndForeignOwnerAreForbidden: verde. Verifica ambos 403; usa identidad por cabeceras, sin comprobar JWT ni efectos posteriores. |
-| 2 | Ejecutar | Solicitar cierre. | Datos de las precondiciones | Según el plan, 403 PROFILE_NOT_AUTHORIZED; sin transición. | Pendiente | NavigationEndIntegrationTest#renterRoleAndForeignOwnerAreForbidden: verde. Verifica ambos 403; usa identidad por cabeceras, sin comprobar JWT ni efectos posteriores. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NavigationEndIntegrationTest#renterRoleAndForeignOwnerAreForbidden: verde. Verifica ambos 403; usa identidad por cabeceras, sin comprobar JWT ni efectos posteriores. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pasó | NavigationEndIntegrationTest#renterRoleAndForeignOwnerAreForbidden (XML V4: passed). Aserciones de 403 y PROFILE_NOT_AUTHORIZED para ambos solicitantes; no comprueba JWT ni el estado persistido posterior. |
+| 2 | Ejecutar | Solicitar cierre. | Datos de las precondiciones | Según el plan, 403 PROFILE_NOT_AUTHORIZED; sin transición. | Pendiente | NavigationEndIntegrationTest#renterRoleAndForeignOwnerAreForbidden (XML V4: passed). Aserciones de 403 y PROFILE_NOT_AUTHORIZED para ambos solicitantes; no comprueba JWT ni el estado persistido posterior. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NavigationEndIntegrationTest#renterRoleAndForeignOwnerAreForbidden (XML V4: passed). Aserciones de 403 y PROFILE_NOT_AUTHORIZED para ambos solicitantes; no comprueba JWT ni el estado persistido posterior. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ JWT es propuesto y aún no está implementado.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: NavigationEndIntegrationTest#renterRoleAndForeignOwnerAreForbidden. La integración con identidades por cabecera comprueba los 403 de arrendatario y propietario ajeno; el plan exige JWT y no se comprueba la ausencia de efectos persistidos.
 
 #### Traceability
 FR-002 | SC-005 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NavigationEndIntegrationTest.java#renterRoleAndForeignOwnerAreForbidden | In Process
