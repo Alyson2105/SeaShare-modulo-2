@@ -26,10 +26,10 @@ Verificar asociación al pago. Requisitos: FR-001, FR-006, FR-009. Criterios: SC
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-12 es integración saliente; M3 se simula y el modo fake es el predeterminado. CU-03 invoca el puerto y asocia los montos; las pruebas usan cálculo simulado.
+No verifica M3 real ni recepción del evento previo de reserva; no demuestra ausencia global de aritmética.
 
 ##### Dependencies & Assumptions
-Ejecución con dependencias controladas. Pruebas relacionadas: Sin prueba de CU-12; su cobertura debe evaluarse por escenario.
+Ejecución con dependencias controladas. Pruebas relacionadas: PaymentIntegrationTest y StartPaymentServiceTest con cálculo simulado; su cobertura debe evaluarse por escenario.
 
 ##### Preconditions & Default Setup
 Reserva INITIATED y cálculo oficial de M3.
@@ -38,9 +38,9 @@ Reserva INITIATED y cálculo oficial de M3.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Iniciar pago y revisar transición y montos asociados. | Datos de las precondiciones | El spec exige asociar valores sin alteración antes de PENDING_PAYMENT. | Pendiente | Integración: PaymentIntegrationTest#startPaymentTransitionsAndReturnsBreakdown y #breakdownIsPersistedForDetailView pasaron con cálculo simulado; unitario: StartPaymentServiceTest#validPaymentDelegatesToTransactionalWriter pasó. No se verifica M3 real ni la entrega del evento previo. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | PaymentIntegrationTest#breakdownIsPersistedForDetailView (XML V4: passed). Tras iniciar pago, aserta en detalle alquiler, seguro, depósito y total proveniente de cálculo simulado. No verifica M3 real ni recepción del evento previo de reserva; no demuestra ausencia global de aritmética. |
+| 2 | Ejecutar | Iniciar pago y revisar transición y montos asociados. | Datos de las precondiciones | El spec exige asociar valores sin alteración antes de PENDING_PAYMENT. | Pendiente | PaymentIntegrationTest#breakdownIsPersistedForDetailView (XML V4: passed). Tras iniciar pago, aserta en detalle alquiler, seguro, depósito y total proveniente de cálculo simulado. No verifica M3 real ni recepción del evento previo de reserva; no demuestra ausencia global de aritmética. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | PaymentIntegrationTest#breakdownIsPersistedForDetailView (XML V4: passed). Tras iniciar pago, aserta en detalle alquiler, seguro, depósito y total proveniente de cálculo simulado. No verifica M3 real ni recepción del evento previo de reserva; no demuestra ausencia global de aritmética. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ CU-03 invoca el puerto y asocia los montos; las pruebas usan cálculo simulado.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial, consultar el flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: PaymentIntegrationTest#breakdownIsPersistedForDetailView. No verifica M3 real ni recepción del evento previo de reserva; no demuestra ausencia global de aritmética.
 
 #### Traceability
 FR-001, FR-006, FR-009 | SC-001, SC-003 | Pruebas de pago ejecutadas | Evidencia: src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#startPaymentTransitionsAndReturnsBreakdown; src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#breakdownIsPersistedForDetailView; src/test/java/com/seashare/m2/reservas/application/service/StartPaymentServiceTest.java#validPaymentDelegatesToTransactionalWriter | In Process

@@ -26,7 +26,7 @@ Verificar auditoría de cálculo. Requisitos: FR-010. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-12 es integración saliente; M3 se simula y el modo fake es el predeterminado. Auditoría FR-010 no implementada; falta definir persistencia del asiento.
+FR-010 exige asiento con reservation_id, montos y fecha; HttpCalculatedValueAdapter no registra solicitud ni respuesta y no se encontró prueba pertinente.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: Sin prueba de CU-12; su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Solicitud de cálculo con respuesta de M3.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Solicitar cálculo y consultar registro auditable. | Datos de las precondiciones | El spec exige registrar reservation_id, montos y fecha. | Pendiente | No ejecutado |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | Sin ejecución automatizada pertinente. FR-010 exige asiento con reservation_id, montos y fecha; HttpCalculatedValueAdapter no registra solicitud ni respuesta y no se encontró prueba pertinente. |
+| 2 | Ejecutar | Solicitar cálculo y consultar registro auditable. | Datos de las precondiciones | El spec exige registrar reservation_id, montos y fecha. | Pendiente | Sin ejecución automatizada pertinente. FR-010 exige asiento con reservation_id, montos y fecha; HttpCalculatedValueAdapter no registra solicitud ni respuesta y no se encontró prueba pertinente. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | Sin ejecución automatizada pertinente. FR-010 exige asiento con reservation_id, montos y fecha; HttpCalculatedValueAdapter no registra solicitud ni respuesta y no se encontró prueba pertinente. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Auditoría FR-010 no implementada; falta definir persistencia del asiento.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada pertinente. FR-010 exige asiento con reservation_id, montos y fecha; HttpCalculatedValueAdapter no registra solicitud ni respuesta y no se encontró prueba pertinente.
 
 #### Traceability
 FR-010 | SC-001 | Sin prueba de CU-12 | Blocked

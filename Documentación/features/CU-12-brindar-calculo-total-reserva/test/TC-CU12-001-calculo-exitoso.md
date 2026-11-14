@@ -26,7 +26,7 @@ Verificar cálculo vinculante. Requisitos: FR-002, FR-003, FR-004, FR-005. Crite
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-12 es integración saliente; M3 se simula y el modo fake es el predeterminado. FR-005 exige identificador de cálculo pero el plan dice que M3 no lo envía; DTO no lo contiene.
+Spec FR-005 exige identificador de liquidación; plan.md §3 punto 6 y §9 punto 2 indican que M3 no envía calculation_id. No se verifica el cuerpo vacío.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Modo seashare.finance.mode=http; M3 simulado devuelve cuatro montos decimales v�
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Invocar CalculatedValuePort con reservation_id. | Datos de las precondiciones | El adaptador envía POST sin cuerpo y devuelve alquiler, seguro, depósito y total como BigDecimal sin recomponerlos. | Pendiente | Contrato contradictorio: FR-005 exige ID de cálculo y plan y entidades indican que M3 no lo envía. Componente WireMock: HttpCalculatedValueAdapterTest#correct200ReturnsBreakdown pasó para cuatro montos; no aclara el ID ni verifica cuerpo vacío. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | HttpCalculatedValueAdapterTest#correct200ReturnsBreakdown (XML V4: passed). Aserta cuatro montos literales y ruta POST con WireMock. Spec FR-005 exige identificador de liquidación; plan.md §3 punto 6 y §9 punto 2 indican que M3 no envía calculation_id. No se verifica el cuerpo vacío. |
+| 2 | Ejecutar | Invocar CalculatedValuePort con reservation_id. | Datos de las precondiciones | El adaptador envía POST sin cuerpo y devuelve alquiler, seguro, depósito y total como BigDecimal sin recomponerlos. | Pendiente | HttpCalculatedValueAdapterTest#correct200ReturnsBreakdown (XML V4: passed). Aserta cuatro montos literales y ruta POST con WireMock. Spec FR-005 exige identificador de liquidación; plan.md §3 punto 6 y §9 punto 2 indican que M3 no envía calculation_id. No se verifica el cuerpo vacío. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | HttpCalculatedValueAdapterTest#correct200ReturnsBreakdown (XML V4: passed). Aserta cuatro montos literales y ruta POST con WireMock. Spec FR-005 exige identificador de liquidación; plan.md §3 punto 6 y §9 punto 2 indican que M3 no envía calculation_id. No se verifica el cuerpo vacío. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ FR-005 exige identificador de cálculo pero el plan dice que M3 no lo envía; DT
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Draft; evidencia parcial, consultar el flujo.
+Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: HttpCalculatedValueAdapterTest#correct200ReturnsBreakdown. Spec FR-005 exige identificador de liquidación; plan.md §3 punto 6 y §9 punto 2 indican que M3 no envía calculation_id. No se verifica el cuerpo vacío.
 
 #### Traceability
 FR-002, FR-003, FR-004, FR-005 | SC-001, SC-002 | [adaptador](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpCalculatedValueAdapterTest.java#correct200ReturnsBreakdown | Draft
