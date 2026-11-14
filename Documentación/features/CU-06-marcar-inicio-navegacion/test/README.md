@@ -30,23 +30,23 @@ Casos para el contrato propuesto `POST /api/v1/reservations/{reservation_id}/nav
 | FR-007 | Parcial | 006 | Backend | Evidencia parcial y límites concretos en los TC asociados. |
 | FR-008 | Parcial | 006 | Backend | Evidencia parcial y límites concretos en los TC asociados. |
 | FR-009 | Parcial | 007, 008 | Backend | Evidencia parcial y límites concretos en los TC asociados. |
-| FR-010 | Sin evidencia integral | 006 | Backend | No se ha probado la ausencia integral de operaciones financieras. |
-| FR-011 | Sin cobertura backend | — | UI | Visualización e interacción requieren pruebas frontend. |
-| FR-012 | Sin cobertura backend | — | UI | Visualización e interacción requieren pruebas frontend. |
-| FR-013 | Sin cobertura backend | — | UI | Visualización e interacción requieren pruebas frontend. |
-| FR-014 | Sin cobertura backend | — | UI | Visualización e interacción requieren pruebas frontend. |
-| FR-015 | Sin cobertura backend | — | UI | Visualización e interacción requieren pruebas frontend. |
+| FR-010 | Sin evidencia | 006 | Backend | No se ha probado la ausencia integral de operaciones financieras. |
+| FR-011 | Sin evidencia | — | UI | Visualización e interacción requieren pruebas frontend. |
+| FR-012 | Sin evidencia | — | UI | Visualización e interacción requieren pruebas frontend. |
+| FR-013 | Sin evidencia | — | UI | Visualización e interacción requieren pruebas frontend. |
+| FR-014 | Sin evidencia | — | UI | Visualización e interacción requieren pruebas frontend. |
+| FR-015 | Sin evidencia | — | UI | Visualización e interacción requieren pruebas frontend. |
 
 ## Criterios de éxito
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Parcial | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
-| SC-002 | Parcial | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
-| SC-003 | Parcial | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
-| SC-004 | Parcial | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
-| SC-005 | Sin evidencia integral | La ausencia integral de operaciones financieras requiere verificación. |
-| SC-006 | Parcial | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
+| SC-001 | Parcialmente demostrado | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
+| SC-002 | Parcialmente demostrado | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
+| SC-003 | Parcialmente demostrado | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
+| SC-004 | Parcialmente demostrado | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
+| SC-005 | No demostrado | La ausencia integral de operaciones financieras requiere verificación. |
+| SC-006 | Parcialmente demostrado | Evidencia parcial; revisar límites y pruebas de los TC asociados. |
 
 ## Checklist de ejecución
 
@@ -56,7 +56,7 @@ Casos para el contrato propuesto `POST /api/v1/reservations/{reservation_id}/nav
 | TC-CU06-002 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | NavigationStartIntegrationTest#clockBeforeScheduledDepartureReturnsEarlyDeparture: verde; Verifica rechazo 409; el edge case del spec admite salida ligeramente anterior y FR-003 la prohíbe. |
 | TC-CU06-003 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | StartNavigationServiceTest#pendingPaymentCancelledAndCompletedAreInvalidStateWithoutWrites: verde; Cubre tres estados con mocks, no todos los de la ficha. |
 | TC-CU06-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | NavigationStartIntegrationTest#renterAndForeignOwnerAreForbiddenAndUnknownIs404: verde; Verifica 403; identidad temporal por headers, no JWT ni efectos persistidos posteriores. |
-| TC-CU06-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | NavigationStartIntegrationTest#anotherReservationOfSameVesselInNavigationIsRejected: verde; Verifica dos reservas secuenciales y rechazo; no demuestra inicios simultáneos. |
+| TC-CU06-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | NavigationStartIntegrationTest#anotherReservationOfSameVesselInNavigationIsRejected: verde; Comprueba el rechazo de la segunda reserva y ambos estados persistidos; SC-001 sobre reservas que no están en RESERVED requiere cobertura adicional. |
 | TC-CU06-006 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | NavigationStartIntegrationTest#successfulStartPersistsDepartureStateAndCheckinEvent: verde; Verifica check-in persistido; no acredita entrega externa, seguro real ni plazo a M1. |
 | TC-CU06-007 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | NavigationStartIntegrationTest#renterCancellationAfterStartIsRejected: verde; Verifica rechazo de cancelación tras inicio; no ejecuta inicio seguido de no-show. |
 | TC-CU06-008 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState: verde; Prueba no-show seguido de inicio secuencial; no prueba simultaneidad ni un único ganador. |
@@ -76,16 +76,16 @@ Discrepancias verificadas: El spec FR-003 prohíbe salida temprana, pero su edge
 
 - **Draft**: contrato incompleto o inconsistente.
 - **In Process**: ejecutable con implementación actual.
-- **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
+- **Approved**: escenario y postcondiciones demostrados por aserciones de la corrida V4, sin impedimentos de aprobación.
 - **Blocked**: depende de funcionalidad pendiente.
 
 ## Ejecución automatizada — 2026-11-13
 
-`sg docker -c 'bash ./mvnw -B clean test'`; salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-06. Las pruebas individuales no demuestran los flujos completos ni entrega externa.
+`sg docker -c 'bash ./mvnw -B clean test'`; inicio 2026-11-13T19:02:00-05:00, fin 2026-11-13T19:03:11-05:00; BASELINE_HEAD `568290a0d4334b477a4b0f9d5e949e981da3fa55`; salida 0. Se muestran suites pertinentes; los servicios externos simulados no demuestran entregas reales.
 
 | Clase | Pruebas | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| com.seashare.m2.reservas.application.service.StartNavigationServiceTest | 21 | 0 | 0 | 0 | Verde; cobertura parcial |
-| com.seashare.m2.reservas.infrastructure.adapter.in.web.NavigationStartControllerTest | 7 | 0 | 0 | 0 | Verde; cobertura parcial |
-| com.seashare.m2.reservas.integration.NavigationStartIntegrationTest | 10 | 0 | 0 | 0 | Verde; cobertura parcial |
-| com.seashare.m2.reservas.integration.NoShowIntegrationTest | 9 | 0 | 0 | 0 | Verde; cobertura parcial |
+| com.seashare.m2.reservas.application.service.StartNavigationServiceTest | 21 | 0 | 0 | 0 | Cobertura parcial según TC |
+| com.seashare.m2.reservas.infrastructure.adapter.in.web.NavigationStartControllerTest | 7 | 0 | 0 | 0 | Cobertura parcial según TC |
+| com.seashare.m2.reservas.integration.NavigationStartIntegrationTest | 10 | 0 | 0 | 0 | Cobertura parcial según TC |
+| com.seashare.m2.reservas.integration.NoShowIntegrationTest | 9 | 0 | 0 | 0 | Cobertura parcial según TC |

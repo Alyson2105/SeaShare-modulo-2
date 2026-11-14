@@ -26,7 +26,7 @@ Verificar travesía anterior sin cerrar. Requisitos: FR-001, FR-004. Criterios: 
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Verifica dos reservas secuenciales y rechazo; no demuestra inicios simultáneos. El endpoint y servicio existen. La validación del endpoint depende de CU-06 y la finalización de CU-07.
+El escenario concreto de travesía previa se comprueba mediante HTTP y persistencia. El SC-001 asociado exige además cero inicios en estados distintos de RESERVED; este método inicia una reserva RESERVED y no lo demuestra.
 
 ##### Dependencies & Assumptions
 Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: La prueba citada cubre solo parte del escenario; no demuestra el flujo completo de CU-06.
@@ -38,9 +38,9 @@ Otra reserva de la misma embarcación permanece IN_NAVIGATION sin check-out.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NavigationStartIntegrationTest#anotherReservationOfSameVesselInNavigationIsRejected: verde. Verifica dos reservas secuenciales y rechazo; no demuestra inicios simultáneos. |
-| 2 | Ejecutar | Solicitar inicio de la reserva RESERVED. | Datos de las precondiciones | Según el plan, 409 VESSEL_CURRENTLY_IN_NAVIGATION sin transición. | Pendiente | NavigationStartIntegrationTest#anotherReservationOfSameVesselInNavigationIsRejected: verde. Verifica dos reservas secuenciales y rechazo; no demuestra inicios simultáneos. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NavigationStartIntegrationTest#anotherReservationOfSameVesselInNavigationIsRejected: verde. Verifica dos reservas secuenciales y rechazo; no demuestra inicios simultáneos. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pasó | NavigationStartIntegrationTest#anotherReservationOfSameVesselInNavigationIsRejected (XML V4: passed). Aserta HTTP 409 VESSEL_CURRENTLY_IN_NAVIGATION, primera reserva IN_NAVIGATION, segunda RESERVED y cero check-in de la segunda. |
+| 2 | Ejecutar | Solicitar inicio de la reserva RESERVED. | Datos de las precondiciones | Según el plan, 409 VESSEL_CURRENTLY_IN_NAVIGATION sin transición. | Pasó | NavigationStartIntegrationTest#anotherReservationOfSameVesselInNavigationIsRejected (XML V4: passed). Aserta HTTP 409 VESSEL_CURRENTLY_IN_NAVIGATION, primera reserva IN_NAVIGATION, segunda RESERVED y cero check-in de la segunda. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pasó | NavigationStartIntegrationTest#anotherReservationOfSameVesselInNavigationIsRejected (XML V4: passed). Aserta HTTP 409 VESSEL_CURRENTLY_IN_NAVIGATION, primera reserva IN_NAVIGATION, segunda RESERVED y cero check-in de la segunda. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ La validación del endpoint depende de CU-06 y la finalización de CU-07.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: NavigationStartIntegrationTest#anotherReservationOfSameVesselInNavigationIsRejected. El escenario concreto de travesía previa se comprueba mediante HTTP y persistencia. El SC-001 asociado exige además cero inicios en estados distintos de RESERVED; este método inicia una reserva RESERVED y no lo demuestra.
 
 #### Traceability
 FR-001, FR-004 | SC-001 | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NavigationStartIntegrationTest.java#anotherReservationOfSameVesselInNavigationIsRejected | In Process

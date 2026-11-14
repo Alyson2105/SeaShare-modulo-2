@@ -26,7 +26,7 @@ Verificar carrera con inasistencia. Requisitos: FR-001, FR-005, FR-009. Criterio
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Prueba no-show seguido de inicio secuencial; no prueba simultaneidad ni un único ganador. El endpoint y servicio existen. Las pruebas secuenciales no demuestran la carrera concurrente.
+La ejecución es secuencial: inasistencia seguida de inicio. No demuestra transacciones concurrentes ni la variante en que gana el inicio.
 
 ##### Dependencies & Assumptions
 Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-06.
@@ -38,9 +38,9 @@ Reserva RESERVED después de la tolerancia; solicitudes concurrentes de inicio y
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState: verde. Prueba no-show seguido de inicio secuencial; no prueba simultaneidad ni un único ganador. |
-| 2 | Ejecutar | Coordinar ambas solicitudes y consultar estado y efectos. | Datos de las precondiciones | Solo una transición se confirma; si gana no-show, inicio es rechazado. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState: verde. Prueba no-show seguido de inicio secuencial; no prueba simultaneidad ni un único ganador. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState: verde. Prueba no-show seguido de inicio secuencial; no prueba simultaneidad ni un único ganador. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState (XML V4: passed). Aserta HTTP 200 para inasistencia y 409 INVALID_RESERVATION_STATE para el inicio posterior. |
+| 2 | Ejecutar | Coordinar ambas solicitudes y consultar estado y efectos. | Datos de las precondiciones | Solo una transición se confirma; si gana no-show, inicio es rechazado. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState (XML V4: passed). Aserta HTTP 200 para inasistencia y 409 INVALID_RESERVATION_STATE para el inicio posterior. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState (XML V4: passed). Aserta HTTP 200 para inasistencia y 409 INVALID_RESERVATION_STATE para el inicio posterior. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Las pruebas secuenciales no demuestran la carrera concurrente.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: NoShowIntegrationTest#navigationStartAfterNoShowIsInvalidState. La ejecución es secuencial: inasistencia seguida de inicio. No demuestra transacciones concurrentes ni la variante en que gana el inicio.
 
 #### Traceability
 FR-001, FR-005, FR-009 | SC-001, SC-003 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/NoShowIntegrationTest.java#navigationStartAfterNoShowIsInvalidState | In Process

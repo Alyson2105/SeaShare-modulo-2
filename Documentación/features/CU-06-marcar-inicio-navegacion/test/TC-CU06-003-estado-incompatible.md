@@ -26,7 +26,7 @@ Verificar estado no admisible. Requisitos: FR-001, FR-004. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-Cubre tres estados con mocks, no todos los de la ficha. El endpoint y servicio existen. Para IN_NAVIGATION el plan prevé 409 TRIP_ALREADY_STARTED, sin duplicar efectos.
+La prueba de servicio cubre tres estados con mocks; no acredita todos los estados enumerados en FR-004 con respuesta HTTP y persistencia.
 
 ##### Dependencies & Assumptions
 Evidencia de la corrida con dependencias controladas. Pruebas parciales de componentes: [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java); no demuestran el flujo completo de CU-06.
@@ -38,9 +38,9 @@ Reservas en INITIATED, PENDING_PAYMENT, PAYMENT_FAILED, CANCELLED, COMPLETED y E
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | StartNavigationServiceTest#pendingPaymentCancelledAndCompletedAreInvalidStateWithoutWrites: verde. Cubre tres estados con mocks, no todos los de la ficha. |
-| 2 | Ejecutar | Intentar iniciar navegación para cada reserva. | Datos de las precondiciones | Según el plan, 409 INVALID_RESERVATION_STATE y sin mutación. | Pendiente | StartNavigationServiceTest#pendingPaymentCancelledAndCompletedAreInvalidStateWithoutWrites: verde. Cubre tres estados con mocks, no todos los de la ficha. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | StartNavigationServiceTest#pendingPaymentCancelledAndCompletedAreInvalidStateWithoutWrites: verde. Cubre tres estados con mocks, no todos los de la ficha. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | StartNavigationServiceTest#pendingPaymentCancelledAndCompletedAreInvalidStateWithoutWrites (XML V4: passed). Aserta INVALID_RESERVATION_STATE para tres estados y verifica ausencia de escrituras sobre dependencias simuladas. |
+| 2 | Ejecutar | Intentar iniciar navegación para cada reserva. | Datos de las precondiciones | Según el plan, 409 INVALID_RESERVATION_STATE y sin mutación. | Pendiente | StartNavigationServiceTest#pendingPaymentCancelledAndCompletedAreInvalidStateWithoutWrites (XML V4: passed). Aserta INVALID_RESERVATION_STATE para tres estados y verifica ausencia de escrituras sobre dependencias simuladas. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | StartNavigationServiceTest#pendingPaymentCancelledAndCompletedAreInvalidStateWithoutWrites (XML V4: passed). Aserta INVALID_RESERVATION_STATE para tres estados y verifica ausencia de escrituras sobre dependencias simuladas. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Para IN_NAVIGATION el plan prevé 409 TRIP_ALREADY_STARTED, sin duplicar efectos
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: StartNavigationServiceTest#pendingPaymentCancelledAndCompletedAreInvalidStateWithoutWrites. La prueba de servicio cubre tres estados con mocks; no acredita todos los estados enumerados en FR-004 con respuesta HTTP y persistencia.
 
 #### Traceability
 FR-001, FR-004 | SC-001 | [motor](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/StartNavigationServiceTest.java#pendingPaymentCancelledAndCompletedAreInvalidStateWithoutWrites | In Process
