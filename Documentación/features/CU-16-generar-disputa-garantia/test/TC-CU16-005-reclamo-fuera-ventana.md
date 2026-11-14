@@ -26,10 +26,10 @@ Verificar reclamo fuera de ventana. Requisitos: FR-005, FR-009. Criterios: SC-00
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-El endpoint y la regla temporal existen. El job puede ejecutarse con retraso: no asumir que ya se consolidó REJECTED.
+La prueba de servicio con PostgreSQL comprueba WINDOW_EXPIRED y ausencia de reclamo en el límite; no comprueba todos los campos de la disputa ni el flujo HTTP real.
 
 ##### Dependencies & Assumptions
-La prueba usa componentes controlados; no demuestra el flujo completo.
+La evidencia V4 y sus límites se indican en Comments.
 
 ##### Preconditions & Default Setup
 Disputa PENDING sin reclamo y reloj exactamente en window_end o posterior.
@@ -38,9 +38,9 @@ Disputa PENDING sin reclamo y reloj exactamente en window_end o posterior.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | RegisterDisputeClaimIntegrationTest#rejectsClaimAtExactWindowEnd: verde con PostgreSQL; comprueba rechazo y ausencia de reclamo, no el estado completo ni HTTP real. |
-| 2 | Ejecutar | Intentar registrar reclamo. | Datos de las precondiciones | El plan exige now < window_end y prevé 409 WINDOW_EXPIRED; no se acepta reclamo ni se altera la disputa por la solicitud. | Pendiente | RegisterDisputeClaimIntegrationTest#rejectsClaimAtExactWindowEnd: verde con PostgreSQL; comprueba rechazo y ausencia de reclamo, no el estado completo ni HTTP real. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | RegisterDisputeClaimIntegrationTest#rejectsClaimAtExactWindowEnd: verde con PostgreSQL; comprueba rechazo y ausencia de reclamo, no el estado completo ni HTTP real. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pasó | RegisterDisputeClaimIntegrationTest#rejectsClaimAtExactWindowEnd (XML V4: passed). assertCode verifica WINDOW_EXPIRED; hasClaim es falso y la consulta de reclamo está vacía. El controlador HTTP se prueba aparte con un caso de uso simulado. |
+| 2 | Ejecutar | Intentar registrar reclamo. | Datos de las precondiciones | El plan exige now < window_end y prevé 409 WINDOW_EXPIRED; no se acepta reclamo ni se altera la disputa por la solicitud. | Pendiente | RegisterDisputeClaimIntegrationTest#rejectsClaimAtExactWindowEnd (XML V4: passed). assertCode verifica WINDOW_EXPIRED; hasClaim es falso y la consulta de reclamo está vacía. El controlador HTTP se prueba aparte con un caso de uso simulado. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | RegisterDisputeClaimIntegrationTest#rejectsClaimAtExactWindowEnd (XML V4: passed). assertCode verifica WINDOW_EXPIRED; hasClaim es falso y la consulta de reclamo está vacía. El controlador HTTP se prueba aparte con un caso de uso simulado. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ El job puede ejecutarse con retraso: no asumir que ya se consolidó REJECTED.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial, pasos completos pendientes.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: RegisterDisputeClaimIntegrationTest#rejectsClaimAtExactWindowEnd. La prueba de servicio con PostgreSQL comprueba WINDOW_EXPIRED y ausencia de reclamo en el límite; no comprueba todos los campos de la disputa ni el flujo HTTP real.
 
 #### Traceability
 FR-005, FR-009 | SC-005 | src/test/java/com/seashare/m2/disputa/integration/RegisterDisputeClaimIntegrationTest.java#rejectsClaimAtExactWindowEnd | In Process
