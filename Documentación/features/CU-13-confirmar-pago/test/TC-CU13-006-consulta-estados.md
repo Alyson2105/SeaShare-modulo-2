@@ -27,10 +27,10 @@ Verificar consulta del resultado en m3. Requisitos: FR-001, FR-003, FR-005. Crit
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La lógica de CU-13 y la consulta periódica existen; el endpoint de canal A no se encontró. El job de consulta y la lógica del canal B están implementados.
+HttpPaymentStatusAdapterTest#notFoundMeansRetryNextCycle demuestra UNKNOWN por separado; no comprueba ciclos sucesivos completos ni persistencia.
 
 ##### Dependencies & Assumptions
-Ejecución futura con dependencias controladas. Pruebas parciales de componentes: Sin prueba de CU-13; no demuestran el flujo completo de CU-13.
+Ejecución V4 con dependencias controladas. Las pruebas citadas son parciales y no demuestran el flujo completo del caso.
 
 ##### Preconditions & Default Setup
 Reserva PENDING_PAYMENT vigente y M3 simulado responde IN_PROCESS, UNKNOWN o error.
@@ -39,9 +39,9 @@ Reserva PENDING_PAYMENT vigente y M3 simulado responde IN_PROCESS, UNKNOWN o err
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Ejecutar ciclos del canal B. | Datos de las precondiciones | El plan prevé no cambiar el estado y consultar en siguiente ciclo sin asumir aprobación. | Pendiente | Unitario: PollPaymentStatusServiceTest#inProcessIsSkipped pasó sin confirmar; componente: HttpPaymentStatusAdapterTest#notFoundMeansRetryNextCycle pasó con UNKNOWN. Falta observar ciclos sucesivos completos y persistencia. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | PollPaymentStatusServiceTest#inProcessIsSkipped (XML V4: passed). Aserta cero procesadas y verifica que no se invoque confirmación, con dependencias simuladas. HttpPaymentStatusAdapterTest#notFoundMeansRetryNextCycle demuestra UNKNOWN por separado; no comprueba ciclos sucesivos completos ni persistencia. |
+| 2 | Ejecutar | Ejecutar ciclos del canal B. | Datos de las precondiciones | El plan prevé no cambiar el estado y consultar en siguiente ciclo sin asumir aprobación. | Pendiente | PollPaymentStatusServiceTest#inProcessIsSkipped (XML V4: passed). Aserta cero procesadas y verifica que no se invoque confirmación, con dependencias simuladas. HttpPaymentStatusAdapterTest#notFoundMeansRetryNextCycle demuestra UNKNOWN por separado; no comprueba ciclos sucesivos completos ni persistencia. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | PollPaymentStatusServiceTest#inProcessIsSkipped (XML V4: passed). Aserta cero procesadas y verifica que no se invoque confirmación, con dependencias simuladas. HttpPaymentStatusAdapterTest#notFoundMeansRetryNextCycle demuestra UNKNOWN por separado; no comprueba ciclos sucesivos completos ni persistencia. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -58,7 +58,7 @@ El job de consulta y la lógica del canal B están implementados.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; evidencia parcial, consultar el flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: PollPaymentStatusServiceTest#inProcessIsSkipped. HttpPaymentStatusAdapterTest#notFoundMeansRetryNextCycle demuestra UNKNOWN por separado; no comprueba ciclos sucesivos completos ni persistencia.
 
 #### Traceability
 FR-001, FR-003, FR-005 | SC-001, SC-002 | Lógica de confirmación probada | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/PollPaymentStatusServiceTest.java#inProcessIsSkipped; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpPaymentStatusAdapterTest.java#notFoundMeansRetryNextCycle | In Process
