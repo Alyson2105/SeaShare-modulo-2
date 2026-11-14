@@ -26,7 +26,7 @@ Verificar desglose financiero oficial. Requisitos: FR-003, FR-004, FR-010. Crite
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. CU-03 asocia y persiste el cálculo; la integración probada simula M3, por lo que no acredita su servicio real.
+Cálculo M3 simulado; no demuestra servicio M3 real ni acceso de cancelación de SC-001.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: PaymentIntegrationTest#breakdownIsPersistedForDetailView; su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Reserva con liquidación oficial de M3 supuestamente asociada al pago.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar detalle y verificar rubros y total. | Datos de las precondiciones | El spec exige desglose de alquiler, seguro y depósito literal de M3. | Pendiente | PaymentIntegrationTest#breakdownIsPersistedForDetailView pasó: tras pago comprueba alquiler, seguro, depósito y total en GET con cálculo simulado. No acredita M3 real. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | PaymentIntegrationTest#breakdownIsPersistedForDetailView (XML V4: passed). Tras pago, GET aserta alquiler 9600000, seguro 120000, depósito 320000 y total 10040000. Cálculo M3 simulado; no demuestra servicio M3 real ni acceso de cancelación de SC-001. |
+| 2 | Ejecutar | Consultar detalle y verificar rubros y total. | Datos de las precondiciones | El spec exige desglose de alquiler, seguro y depósito literal de M3. | Pendiente | PaymentIntegrationTest#breakdownIsPersistedForDetailView (XML V4: passed). Tras pago, GET aserta alquiler 9600000, seguro 120000, depósito 320000 y total 10040000. Cálculo M3 simulado; no demuestra servicio M3 real ni acceso de cancelación de SC-001. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | PaymentIntegrationTest#breakdownIsPersistedForDetailView (XML V4: passed). Tras pago, GET aserta alquiler 9600000, seguro 120000, depósito 320000 y total 10040000. Cálculo M3 simulado; no demuestra servicio M3 real ni acceso de cancelación de SC-001. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ CU-03 asocia y persiste el cálculo; la integración probada simula M3, por lo q
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; prueba unitaria parcial con datos introducidos en memoria. PaymentIntegrationTest#breakdownIsPersistedForDetailView pasó: tras pago comprueba alquiler, seguro, depósito y total en GET con cálculo simulado. No acredita M3 real.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: PaymentIntegrationTest#breakdownIsPersistedForDetailView. Cálculo M3 simulado; no demuestra servicio M3 real ni acceso de cancelación de SC-001.
 
 #### Traceability
 FR-003, FR-004, FR-010 | SC-001 | Pruebas parciales ejecutadas  | src/test/java/com/seashare/m2/reservas/application/service/ReservationDetailPolicyTest.java#reservedShowsBreakdownAndUsesLiquidatedTotal; src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java#breakdownIsPersistedForDetailView | In Process

@@ -19,34 +19,34 @@ Casos para GET /api/v1/reservations/{id}, con identidad temporal por headers y d
 
 | FR | Cobertura | TC | Alcance | Motivo / Observación |
 |---|---|---|---|---|
-| FR-001 | Parcial — ver caso y brechas | 001, 003 | Backend | Identificador |
-| FR-002 | Parcial — ver caso y brechas | 001, 002, 003 | Backend | Pertenencia |
-| FR-003 | Parcial — ver caso y brechas | 001, 004, 006 | Backend | Desglose probado con cálculo simulado |
-| FR-004 | Parcial — ver caso y brechas | 004, 006 | Backend | Detalle conserva cálculo del puerto; M3 real sin verificar |
-| FR-005 | Parcial — ver caso y brechas | 005 | Backend | Algunos flags implementados y probados; UI fuera |
-| FR-006 | Sin cobertura backend | — | UI | UI: subestado y total |
-| FR-007 | Sin cobertura backend | — | UI | UI: itinerario |
-| FR-008 | Sin cobertura backend | — | UI | UI: servicios |
-| FR-009 | Sin cobertura backend | — | UI | UI: contraparte |
-| FR-010 | Parcial — ver caso y brechas | 006 | Backend | Rubros probados con cálculo simulado |
-| FR-011 | Sin cobertura backend | — | UI | UI: resumen de pago |
-| FR-012 | Sin cobertura backend | — | UI | UI: desglose navegación |
-| FR-013 | Sin cobertura backend | — | UI | UI: garantía |
-| FR-014 | Sin cobertura backend | — | UI | UI: compensación |
-| FR-015 | Sin cobertura backend | — | UI | UI: acciones y badges |
-| FR-016 | Sin cobertura backend | — | UI | UI: embarque |
-| FR-017 | Sin cobertura backend | — | UI | UI: cortesía |
-| FR-018 | Sin cobertura backend | — | UI | UI: inasistencia |
-| FR-019 | Sin cobertura backend | — | UI | UI: viaje en curso |
-| FR-020 | Sin cobertura backend | — | UI | UI: no-show |
-| FR-021 | Parcial — ver caso y brechas | 005 | Backend | Acción de pago pendiente; UI fuera |
+| FR-001 | Parcial | 001, 003 | Backend | Identificador |
+| FR-002 | Parcial | 001, 002, 003 | Backend | Pertenencia |
+| FR-003 | Parcial | 001, 004, 006 | Backend | Desglose probado con cálculo simulado |
+| FR-004 | Parcial | 004, 006 | Backend | Detalle conserva cálculo del puerto; M3 real sin verificar |
+| FR-005 | Parcial | 005 | Backend | Algunos flags implementados y probados; UI fuera |
+| FR-006 | Sin evidencia | — | UI | UI: subestado y total |
+| FR-007 | Sin evidencia | — | UI | UI: itinerario |
+| FR-008 | Sin evidencia | — | UI | UI: servicios |
+| FR-009 | Sin evidencia | — | UI | UI: contraparte |
+| FR-010 | Parcial | 006 | Backend | Rubros probados con cálculo simulado |
+| FR-011 | Sin evidencia | — | UI | UI: resumen de pago |
+| FR-012 | Sin evidencia | — | UI | UI: desglose navegación |
+| FR-013 | Sin evidencia | — | UI | UI: garantía |
+| FR-014 | Sin evidencia | — | UI | UI: compensación |
+| FR-015 | Sin evidencia | — | UI | UI: acciones y badges |
+| FR-016 | Sin evidencia | — | UI | UI: embarque |
+| FR-017 | Sin evidencia | — | UI | UI: cortesía |
+| FR-018 | Sin evidencia | — | UI | UI: inasistencia |
+| FR-019 | Sin evidencia | — | UI | UI: viaje en curso |
+| FR-020 | Sin evidencia | — | UI | UI: no-show |
+| FR-021 | Parcial | 005 | Backend | Acción de pago pendiente; UI fuera |
 
 ## Criterios de éxito
 
 | SC | Estado | Observación |
 |---|---|---|
-| SC-001 | Parcial / UI | TC-005 prueba flag en RESERVED; no prueba acceso al flujo ni UI. |
-| SC-002 | Parcial | TC-001 a 004; pertenencia según headers temporales, sin autenticación JWT. |
+| SC-001 | Parcialmente demostrado | TC-005 prueba flag en RESERVED; no prueba acceso al flujo ni UI. |
+| SC-002 | Parcialmente demostrado | TC-001 a 004; pertenencia según headers temporales, sin autenticación JWT. |
 
 ## Checklist de ejecución
 
@@ -55,7 +55,7 @@ Casos para GET /api/v1/reservations/{id}, con identidad temporal por headers y d
 | TC-CU21-001 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Comprueba 200 y numerosos campos con identidad por headers y flota fake; no verifica todos los campos ni servicios reales. |
 | TC-CU21-002 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Comprueba 403 para arrendatario ajeno; no comprueba propietario ajeno ni JWT. |
 | TC-CU21-003 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Comprueba 400 INVALID_UUID; unknownIdIs404 comprueba 404 RESERVATION_NOT_FOUND. No verifica efectos persistidos. |
-| TC-CU21-004 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | Comprueba que total_paid es numérico; el TC exige estimated_total como cadena, el plan total_paid numérico; no compara el valor persistido. |
+| TC-CU21-004 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | Comprueba total_paid nulo sin liquidación; spec FR-004 y plan §2 difieren para la estimación previa, y el caso pide estimated_total como cadena. |
 | TC-CU21-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Comprueba can_cancel en RESERVED; no demuestra navegación UI ni acción INITIATED para arrendatario. |
 | TC-CU21-006 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | PaymentIntegrationTest#breakdownIsPersistedForDetailView pasó: rubros y total en GET tras pago con cálculo simulado; M3 real no verificado. |
 
@@ -71,15 +71,15 @@ Casos para GET /api/v1/reservations/{id}, con identidad temporal por headers y d
 
 - **Draft**: contrato incompleto o inconsistente.
 - **In Process**: ejecutable con implementación actual.
-- **Approved**: aprobado tras revisión y ejecución; ninguno aquí.
+- **Approved**: escenario, postcondiciones y FR/SC demostrados por aserciones de pruebas V4 ejecutadas.
 - **Blocked**: depende de funcionalidad pendiente.
 
 ## Ejecución automatizada — 2026-11-13
 
-`sg docker -c 'bash ./mvnw -B clean test'`: salida 1 por ErrorCodeTest#noDuplicateCodes, sin atribuir ese fallo a CU-21. Los dobles y simulaciones no acreditan servicios externos reales.
+`sg docker -c 'bash ./mvnw -B clean test'`; inicio 2026-11-13T19:02:00-05:00, fin 2026-11-13T19:03:11-05:00, salida 0; código base `568290a0d4334b477a4b0f9d5e949e981da3fa55`. Identidad mediante headers; flota y cálculo de M3 simulados.
 
 | Clase | Tests | Fallos | Errores | Omitidos | Resultado |
 |---|---:|---:|---:|---:|---|
-| [ReservationQueryTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java) | 12 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [ReservationDetailPolicyTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ReservationDetailPolicyTest.java) | 6 | 0 | 0 | 0 | Verde; cobertura según TC |
-| [PaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java) | 9 | 0 | 0 | 0 | Verde; cálculo simulado |
+| [ReservationQueryTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java) | 13 | 0 | 0 | 0 | XML V4 exitoso; alcance parcial |
+| [ReservationDetailPolicyTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ReservationDetailPolicyTest.java) | 7 | 0 | 0 | 0 | XML V4 exitoso; política unitaria |
+| [PaymentIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/PaymentIntegrationTest.java) | 10 | 0 | 0 | 0 | XML V4 exitoso; cálculo simulado |

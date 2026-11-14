@@ -26,7 +26,7 @@ Verificar detalle de reserva propia. Requisitos: FR-001, FR-002, FR-003. Criteri
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. La respuesta expone subtipo y campos enriquecidos; no demuestra origen oficial de los importes.
+No comprueba todos los campos del escenario ni servicios reales; identidad por headers.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Reserva existente y cabeceras X-User-Id UUID y X-User-Role RENTER u OWNER perten
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar GET /api/v1/reservations/{id}. | Datos de las precondiciones | 200 con reservation_id, status, vessel_id, fechas, pasajeros, holder y estimated_total. | Pendiente | ReservationQueryTest#detailIncludesContractFields: exitosa. Comprueba 200 y numerosos campos con identidad por headers y flota fake; no verifica todos los campos ni servicios reales. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ReservationQueryTest#detailIncludesContractFields (XML V4: passed). Aserta 200, ID, estado RESERVED, itinerario y datos de embarcación fake. No comprueba todos los campos del escenario ni servicios reales; identidad por headers. |
+| 2 | Ejecutar | Consultar GET /api/v1/reservations/{id}. | Datos de las precondiciones | 200 con reservation_id, status, vessel_id, fechas, pasajeros, holder y estimated_total. | Pendiente | ReservationQueryTest#detailIncludesContractFields (XML V4: passed). Aserta 200, ID, estado RESERVED, itinerario y datos de embarcación fake. No comprueba todos los campos del escenario ni servicios reales; identidad por headers. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ReservationQueryTest#detailIncludesContractFields (XML V4: passed). Aserta 200, ID, estado RESERVED, itinerario y datos de embarcación fake. No comprueba todos los campos del escenario ni servicios reales; identidad por headers. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ La respuesta expone subtipo y campos enriquecidos; no demuestra origen oficial d
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; Comprueba 200 y numerosos campos con identidad por headers y flota fake; no verifica todos los campos ni servicios reales.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ReservationQueryTest#detailIncludesContractFields. No comprueba todos los campos del escenario ni servicios reales; identidad por headers.
 
 #### Traceability
 FR-001, FR-002, FR-003 | SC-002 | [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java)  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#detailIncludesContractFields | In Process

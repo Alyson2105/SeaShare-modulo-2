@@ -26,10 +26,10 @@ Verificar acciones según estado. Requisitos: FR-005, FR-021. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La identidad actual usa headers X-User-Id y X-User-Role, sin Spring Security. La respuesta incluye available_actions; los flujos de cancelación y pago requieren integración y pruebas adicionales.
+No prueba acción de pago para arrendatario INITIATED ni navegación o cancelación en interfaz (SC-001).
 
 ##### Dependencies & Assumptions
-Ejecución con dependencias controladas. Pruebas relacionadas: Sin prueba de CU-21; su cobertura debe evaluarse por escenario.
+Ejecución con dependencias controladas. Pruebas relacionadas: [consulta](../../../../src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java); su cobertura debe evaluarse por escenario.
 
 ##### Preconditions & Default Setup
 Reservas propias en RESERVED e INITIATED.
@@ -38,9 +38,9 @@ Reservas propias en RESERVED e INITIATED.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar detalle y revisar available_actions. | Datos de las precondiciones | El plan exige can_cancel para RESERVED y can_initiate_payment para INITIATED. | Pendiente | ReservationQueryTest#detailIncludesContractFields: exitosa. Comprueba can_cancel en RESERVED; no demuestra navegación UI ni acción INITIATED para arrendatario. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ReservationQueryTest#detailIncludesContractFields (XML V4: passed). Aserta can_cancel=true y can_initiate_payment=false en RESERVED. No prueba acción de pago para arrendatario INITIATED ni navegación o cancelación en interfaz (SC-001). |
+| 2 | Ejecutar | Consultar detalle y revisar available_actions. | Datos de las precondiciones | El plan exige can_cancel para RESERVED y can_initiate_payment para INITIATED. | Pendiente | ReservationQueryTest#detailIncludesContractFields (XML V4: passed). Aserta can_cancel=true y can_initiate_payment=false en RESERVED. No prueba acción de pago para arrendatario INITIATED ni navegación o cancelación en interfaz (SC-001). |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ReservationQueryTest#detailIncludesContractFields (XML V4: passed). Aserta can_cancel=true y can_initiate_payment=false en RESERVED. No prueba acción de pago para arrendatario INITIATED ni navegación o cancelación en interfaz (SC-001). |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ La respuesta incluye available_actions; los flujos de cancelación y pago requie
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial; Comprueba can_cancel en RESERVED; no demuestra navegación UI ni acción INITIATED para arrendatario.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ReservationQueryTest#detailIncludesContractFields. No prueba acción de pago para arrendatario INITIATED ni navegación o cancelación en interfaz (SC-001).
 
 #### Traceability
 FR-005, FR-021 | SC-001 | Prueba parcial ejecutada  | src/test/java/com/seashare/m2/reservas/integration/ReservationQueryTest.java#detailIncludesContractFields | In Process
