@@ -26,7 +26,7 @@ Verificar entrega duplicada. Requisitos: FR-005. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La emisión se inicia desde CU-08 y usa outbox; no hay respuesta de M3. El consumidor real pertenece a M3 y no se demuestra su deduplicación.
+El consumidor es de prueba; no demuestra deduplicación ni efectos persistidos del consumidor M3 real.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas cuando corresponda. Pruebas relacionadas: [deduplicacion](../../../../src/test/java/com/seashare/m2/reservas/integration/EventDeduplicationTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Dos entregas con el mismo Message-Id a consumidor de prueba.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Procesar ambas copias y observar contador de procesamiento. | Datos de las precondiciones | El consumidor de prueba procesa una sola vez; cada copia conserva identificador. | Pasó | Integración: EventDeduplicationTest#publicarElMismoEventoDosVecesSeProcesaUnaSolaVez pasó con RabbitMQ: dos copias, una procesada y Message-Id igual al event_id; consumidor es de prueba. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | EventDeduplicationTest#publicarElMismoEventoDosVecesSeProcesaUnaSolaVez (XML V4: passed). Aserta dos entregas al consumidor de prueba, un procesamiento y Message-Id igual al event_id. El consumidor es de prueba; no demuestra deduplicación ni efectos persistidos del consumidor M3 real. |
+| 2 | Ejecutar | Procesar ambas copias y observar contador de procesamiento. | Datos de las precondiciones | El consumidor de prueba procesa una sola vez; cada copia conserva identificador. | Pasó | EventDeduplicationTest#publicarElMismoEventoDosVecesSeProcesaUnaSolaVez (XML V4: passed). Aserta dos entregas al consumidor de prueba, un procesamiento y Message-Id igual al event_id. El consumidor es de prueba; no demuestra deduplicación ni efectos persistidos del consumidor M3 real. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | EventDeduplicationTest#publicarElMismoEventoDosVecesSeProcesaUnaSolaVez (XML V4: passed). Aserta dos entregas al consumidor de prueba, un procesamiento y Message-Id igual al event_id. El consumidor es de prueba; no demuestra deduplicación ni efectos persistidos del consumidor M3 real. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ El consumidor real pertenece a M3 y no se demuestra su deduplicación.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Se cubre el consumidor de prueba, pero no los efectos persistidos del paso 3 ni el consumidor M3.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: EventDeduplicationTest#publicarElMismoEventoDosVecesSeProcesaUnaSolaVez. El consumidor es de prueba; no demuestra deduplicación ni efectos persistidos del consumidor M3 real.
 
 #### Traceability
 FR-005 | SC-001 | [deduplicacion](../../../../src/test/java/com/seashare/m2/reservas/integration/EventDeduplicationTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/integration/EventDeduplicationTest.java#publicarElMismoEventoDosVecesSeProcesaUnaSolaVez | In Process

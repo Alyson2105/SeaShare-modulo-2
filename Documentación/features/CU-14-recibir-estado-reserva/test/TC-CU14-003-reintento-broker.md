@@ -26,7 +26,7 @@ Verificar reintentos del relay. Requisitos: FR-005. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La emisión se inicia desde CU-08 y usa outbox; no hay respuesta de M3. Broker confirm no demuestra procesamiento por el consumidor de M3.
+quintoFalloMarcaDeadConAlerta verifica el quinto fallo por separado con contador precargado; no ejecuta cinco intentos consecutivos ni entrega a M3.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas cuando corresponda. Pruebas relacionadas: [relay](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java); su cobertura debe evaluarse por escenario.
@@ -38,9 +38,9 @@ Mensaje AMQP pendiente y publicador simulado sin confirmación.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Ejecutar intentos con reloj y jitter controlados. | Datos de las precondiciones | El relay reintenta con backoff; al quinto fallo marca dead y conserva error. | Pendiente | Unitario: PublishPendingOutboxServiceTest#backoffExactoUnoCincoVeinticincoCientoVeinticincoSegundos y #quintoFalloMarcaDeadConAlerta pasaron con reloj y jitter controlados; falta confirmar los cinco intentos con broker real. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | PublishPendingOutboxServiceTest#backoffExactoUnoCincoVeinticincoCientoVeinticincoSegundos (XML V4: passed). Verifica llamadas markFailed con plazos 1, 5, 25 y 125 segundos usando mocks. quintoFalloMarcaDeadConAlerta verifica el quinto fallo por separado con contador precargado; no ejecuta cinco intentos consecutivos ni entrega a M3. |
+| 2 | Ejecutar | Ejecutar intentos con reloj y jitter controlados. | Datos de las precondiciones | El relay reintenta con backoff; al quinto fallo marca dead y conserva error. | Pendiente | PublishPendingOutboxServiceTest#backoffExactoUnoCincoVeinticincoCientoVeinticincoSegundos (XML V4: passed). Verifica llamadas markFailed con plazos 1, 5, 25 y 125 segundos usando mocks. quintoFalloMarcaDeadConAlerta verifica el quinto fallo por separado con contador precargado; no ejecuta cinco intentos consecutivos ni entrega a M3. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | PublishPendingOutboxServiceTest#backoffExactoUnoCincoVeinticincoCientoVeinticincoSegundos (XML V4: passed). Verifica llamadas markFailed con plazos 1, 5, 25 y 125 segundos usando mocks. quintoFalloMarcaDeadConAlerta verifica el quinto fallo por separado con contador precargado; no ejecuta cinco intentos consecutivos ni entrega a M3. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ Broker confirm no demuestra procesamiento por el consumidor de M3.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Consultar las comprobaciones pendientes del flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: PublishPendingOutboxServiceTest#backoffExactoUnoCincoVeinticincoCientoVeinticincoSegundos. quintoFalloMarcaDeadConAlerta verifica el quinto fallo por separado con contador precargado; no ejecuta cinco intentos consecutivos ni entrega a M3.
 
 #### Traceability
 FR-005 | SC-001 | [relay](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#backoffExactoUnoCincoVeinticincoCientoVeinticincoSegundos; src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#quintoFalloMarcaDeadConAlerta | In Process

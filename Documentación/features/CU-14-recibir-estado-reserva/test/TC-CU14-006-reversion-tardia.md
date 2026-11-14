@@ -26,10 +26,10 @@ Verificar reversión de cobro tardío. Requisitos: FR-001. Criterios: SC-001.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La emisión se inicia desde CU-08 y usa outbox; no hay respuesta de M3. CU-13 y el mapeo de reversión existen; falta comprobar entrega a M3 real.
+No inspecciona payload CANCELLED_FLEXIBLE ni entrega real a M3.
 
 ##### Dependencies & Assumptions
-Ejecución con dependencias controladas cuando corresponda. Pruebas relacionadas: Sin prueba de CU-14; su cobertura debe evaluarse por escenario.
+Ejecución con dependencias controladas cuando corresponda. Prueba relacionada: ConfirmPaymentIntegrationTest; su cobertura debe evaluarse por escenario.
 
 ##### Preconditions & Default Setup
 Reserva EXPIRED y aprobación tardía informada por CU-13.
@@ -38,9 +38,9 @@ Reserva EXPIRED y aprobación tardía informada por CU-13.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Procesar resultado tardío y observar evento para M3. | Datos de las precondiciones | El plan propone publicar CANCELLED_FLEXIBLE para solicitar reversión sin cambiar EXPIRED. | Pendiente | Integración: ConfirmPaymentIntegrationTest#approvedOnExpiredReservationPublishesReversal pasó: EXPIRED se conserva y se encola evento de reversión en puerto simulado. Falta verificar payload y entrega real a M3. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | ConfirmPaymentIntegrationTest#approvedOnExpiredReservationPublishesReversal (XML V4: passed). Aserta EXPIRED y LATE_REVERSAL y verifica llamada LatePaymentReversalEvent mediante espía de outbox. No inspecciona payload CANCELLED_FLEXIBLE ni entrega real a M3. |
+| 2 | Ejecutar | Procesar resultado tardío y observar evento para M3. | Datos de las precondiciones | El plan propone publicar CANCELLED_FLEXIBLE para solicitar reversión sin cambiar EXPIRED. | Pendiente | ConfirmPaymentIntegrationTest#approvedOnExpiredReservationPublishesReversal (XML V4: passed). Aserta EXPIRED y LATE_REVERSAL y verifica llamada LatePaymentReversalEvent mediante espía de outbox. No inspecciona payload CANCELLED_FLEXIBLE ni entrega real a M3. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | ConfirmPaymentIntegrationTest#approvedOnExpiredReservationPublishesReversal (XML V4: passed). Aserta EXPIRED y LATE_REVERSAL y verifica llamada LatePaymentReversalEvent mediante espía de outbox. No inspecciona payload CANCELLED_FLEXIBLE ni entrega real a M3. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ CU-13 y el mapeo de reversión existen; falta comprobar entrega a M3 real.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Consultar las comprobaciones pendientes del flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: ConfirmPaymentIntegrationTest#approvedOnExpiredReservationPublishesReversal. No inspecciona payload CANCELLED_FLEXIBLE ni entrega real a M3.
 
 #### Traceability
 FR-001 | SC-001 | Prueba de reversión ejecutada | Evidencia: src/test/java/com/seashare/m2/reservas/integration/ConfirmPaymentIntegrationTest.java#approvedOnExpiredReservationPublishesReversal | In Process
