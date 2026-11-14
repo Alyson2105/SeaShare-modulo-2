@@ -26,7 +26,7 @@ Verificar publicación de estado final. Requisitos: FR-001, FR-002. Criterios: S
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-18 spec FR-002 pide ACCEPTED/REJECTED; plan CU-18 y DisputeEventMapper#finalEvent usan COMPLETED/REJECTED; CU-16 spec FR-011 pide COMPLETADO/APPROVED.
+CU-18 spec FR-002 exige ACCEPTED, mientras CU-18 plan sección 4 y CU-17 spec FR-007 exigen COMPLETED; CU-16 spec FR-011 añade otros valores. La discrepancia afecta el estado del mensaje.
 
 ##### Dependencies & Assumptions
 La evidencia identifica las dependencias usadas; un broker de prueba no demuestra consumo por M3.
@@ -38,9 +38,9 @@ Disputas que alcanzan ACCEPTED y REJECTED por transición válida.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts y #expiryRejectionIsPublishedAsRejected: verdes con PostgreSQL y RabbitMQ; el rechazo no verifica todos los campos y no demuestra consumo por M3. |
-| 2 | Ejecutar | Observar eventos asociados a cada resultado final. | Datos de las precondiciones | El plan propone ACCEPTED → COMPLETED y REJECTED → REJECTED con identificadores y fecha. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts y #expiryRejectionIsPublishedAsRejected: verdes con PostgreSQL y RabbitMQ; el rechazo no verifica todos los campos y no demuestra consumo por M3. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts y #expiryRejectionIsPublishedAsRejected: verdes con PostgreSQL y RabbitMQ; el rechazo no verifica todos los campos y no demuestra consumo por M3. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts (XML V4: passed). PostgreSQL y RabbitMQ: un mensaje, COMPLETED, IDs, fecha, event_key y Message-Id; el mapeo contractual sigue contradictorio. |
+| 2 | Ejecutar | Observar eventos asociados a cada resultado final. | Datos de las precondiciones | El plan propone ACCEPTED → COMPLETED y REJECTED → REJECTED con identificadores y fecha. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts (XML V4: passed). PostgreSQL y RabbitMQ: un mensaje, COMPLETED, IDs, fecha, event_key y Message-Id; el mapeo contractual sigue contradictorio. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts (XML V4: passed). PostgreSQL y RabbitMQ: un mensaje, COMPLETED, IDs, fecha, event_key y Message-Id; el mapeo contractual sigue contradictorio. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ El spec CU-18 usa ACCEPTED, CU-16 propone COMPLETADO/APPROVED; aclarar mapeo ant
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Draft; evidencia parcial.
+Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts. CU-18 spec FR-002 exige ACCEPTED, mientras CU-18 plan sección 4 y CU-17 spec FR-007 exigen COMPLETED; CU-16 spec FR-011 añade otros valores. La discrepancia afecta el estado del mensaje.
 
 #### Traceability
 FR-001, FR-002 | SC-001 | Evidencia: src/test/java/com/seashare/m2/disputa/integration/DisputePublishingIntegrationTest.java#acceptedIsPublishedAsCompletedWithoutAmounts; src/test/java/com/seashare/m2/disputa/integration/DisputePublishingIntegrationTest.java#expiryRejectionIsPublishedAsRejected; src/test/java/com/seashare/m2/disputa/application/service/DisputeEventMapperTest.java#acceptedIsPublishedAsCompleted; src/test/java/com/seashare/m2/disputa/application/service/DisputeEventMapperTest.java#rejectedIsPublishedAsRejected | Draft

@@ -26,7 +26,7 @@ Verificar contenido del evento. Requisitos: FR-002, FR-003, FR-006. Criterios: S
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-18 spec FR-002 permite motivo opcional en REJECTED; plan CU-18 y specs CU-16/CU-17 prohíben transmitirlo. Resolver antes de cerrar contrato.
+CU-18 spec FR-002 admite motivo opcional para REJECTED, mientras CU-18 plan sección 4 y CU-17 spec FR-004 prohíben transmitirlo; también difieren los estados del payload.
 
 ##### Dependencies & Assumptions
 La evidencia identifica las dependencias usadas; un broker de prueba no demuestra consumo por M3.
@@ -38,9 +38,9 @@ Disputa final con motivo administrativo y datos de reclamo.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts: verde; verifica cinco campos y ausencia de reason, owner_id y amount en ACCEPTED, sin inspeccionar rechazo administrativo. |
-| 2 | Ejecutar | Inspeccionar payload serializado dirigido a M3. | Datos de las precondiciones | No incluye montos, instrucciones de pago ni datos de pasarela. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts: verde; verifica cinco campos y ausencia de reason, owner_id y amount en ACCEPTED, sin inspeccionar rechazo administrativo. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts: verde; verifica cinco campos y ausencia de reason, owner_id y amount en ACCEPTED, sin inspeccionar rechazo administrativo. |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts (XML V4: passed). Aserta cinco campos y ausencia de reason, owner_id y amount en ACCEPTED; no inspecciona rechazo administrativo ni resuelve el contrato. |
+| 2 | Ejecutar | Inspeccionar payload serializado dirigido a M3. | Datos de las precondiciones | No incluye montos, instrucciones de pago ni datos de pasarela. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts (XML V4: passed). Aserta cinco campos y ausencia de reason, owner_id y amount en ACCEPTED; no inspecciona rechazo administrativo ni resuelve el contrato. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts (XML V4: passed). Aserta cinco campos y ausencia de reason, owner_id y amount en ACCEPTED; no inspecciona rechazo administrativo ni resuelve el contrato. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -57,7 +57,7 @@ CU-18 FR-002 permite motivo opcional, pero CU-16, CU-17 y el plan de CU-18 proh�
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Draft; evidencia parcial.
+Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: DisputePublishingIntegrationTest#acceptedIsPublishedAsCompletedWithoutAmounts. CU-18 spec FR-002 admite motivo opcional para REJECTED, mientras CU-18 plan sección 4 y CU-17 spec FR-004 prohíben transmitirlo; también difieren los estados del payload.
 
 #### Traceability
 FR-002, FR-003, FR-006 | SC-002 | Evidencia: src/test/java/com/seashare/m2/disputa/integration/DisputePublishingIntegrationTest.java#acceptedIsPublishedAsCompletedWithoutAmounts | Draft
