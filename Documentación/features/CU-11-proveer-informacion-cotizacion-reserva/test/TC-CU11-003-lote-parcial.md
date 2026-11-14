@@ -27,7 +27,7 @@ Verificar estimación parcial. Requisitos: FR-006, FR-007. Criterios: SC-004.
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-11 es integración saliente; M3 se simula y el modo fake es el predeterminado. El catálogo de CU-01 está implementado; no se prueba la presentación UI.
+El spec, User Story 1 y FR-006, excluye seguro del lote; el Independent Test de la misma historia y plan.external.lote.md lo incluyen. La composición contractual del importe no es inequívoca.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java); su cobertura debe evaluarse por escenario.
@@ -39,9 +39,9 @@ Lote con estimaciones válidas y embarcaciones ausentes o sin tarifa.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Consultar lote. | Datos de las precondiciones | Conserva montos válidos y marca como no disponibles IDs ausentes, rechazados o con importe inválido. | Pendiente | Componente WireMock: HttpBatchEstimateAdapterTest#batch200PartialMarksUnavailable, #unknownIdInResponseBecomesUnavailable y #invalidEstimatedTotalMakesVesselUnavailable pasaron. El contrato de contenido del precio lote es contradictorio; no se prueba composición financiera. |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | HttpBatchEstimateAdapterTest#batch200PartialMarksUnavailable (XML V4: passed). Aserta una estimación y un ID no disponible con WireMock. El spec, User Story 1 y FR-006, excluye seguro del lote; el Independent Test de la misma historia y plan.external.lote.md lo incluyen. La composición contractual del importe no es inequívoca. |
+| 2 | Ejecutar | Consultar lote. | Datos de las precondiciones | Conserva montos válidos y marca como no disponibles IDs ausentes, rechazados o con importe inválido. | Pendiente | HttpBatchEstimateAdapterTest#batch200PartialMarksUnavailable (XML V4: passed). Aserta una estimación y un ID no disponible con WireMock. El spec, User Story 1 y FR-006, excluye seguro del lote; el Independent Test de la misma historia y plan.external.lote.md lo incluyen. La composición contractual del importe no es inequívoca. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | HttpBatchEstimateAdapterTest#batch200PartialMarksUnavailable (XML V4: passed). Aserta una estimación y un ID no disponible con WireMock. El spec, User Story 1 y FR-006, excluye seguro del lote; el Independent Test de la misma historia y plan.external.lote.md lo incluyen. La composición contractual del importe no es inequívoca. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -60,7 +60,7 @@ El catálogo de CU-01 está implementado; no se prueba la presentación UI.
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Draft; evidencia parcial, consultar el flujo.
+Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: HttpBatchEstimateAdapterTest#batch200PartialMarksUnavailable. El spec, User Story 1 y FR-006, excluye seguro del lote; el Independent Test de la misma historia y plan.external.lote.md lo incluyen. La composición contractual del importe no es inequívoca.
 
 #### Traceability
 FR-006, FR-007 | SC-004 | [lote](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java#batch200PartialMarksUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java#unknownIdInResponseBecomesUnavailable; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/finance/HttpBatchEstimateAdapterTest.java#invalidEstimatedTotalMakesVesselUnavailable | Draft

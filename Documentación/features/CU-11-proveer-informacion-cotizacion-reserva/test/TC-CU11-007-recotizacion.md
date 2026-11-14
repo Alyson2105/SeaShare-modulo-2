@@ -27,7 +27,7 @@ Verificar recotización al cambiar viaje. Requisitos: FR-009, FR-014. Criterios:
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-CU-11 es integración saliente; M3 se simula y el modo fake es el predeterminado. CU-19 implementa la consulta individual; la lógica UI de recotización y descarte de respuestas obsoletas no está implementada.
+La recotización y descarte de respuestas obsoletas al cambiar parámetros de CU-19 requieren flujo de interfaz no implementado; sin ejecución automatizada pertinente.
 
 ##### Dependencies & Assumptions
 Ejecución con dependencias controladas. Pruebas relacionadas: Sin prueba de CU-11; su cobertura debe evaluarse por escenario.
@@ -39,9 +39,9 @@ Estimación individual previa y nueva selección de fechas o pasajeros.
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | No ejecutado |
-| 2 | Ejecutar | Cambiar parámetros en CU-19 y observar nueva consulta. | Datos de las precondiciones | El spec exige descartar la estimación anterior y solicitar otra con los nuevos parámetros. | Pendiente | No ejecutado |
-| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | No ejecutado |
+| 1 | Preparar | Registrar estado inicial y fijar el reloj cuando corresponda. | Precondiciones | Entorno aislado disponible. | Pendiente | Sin ejecución automatizada pertinente. La recotización y descarte de respuestas obsoletas al cambiar parámetros de CU-19 requieren flujo de interfaz no implementado; sin ejecución automatizada pertinente. |
+| 2 | Ejecutar | Cambiar parámetros en CU-19 y observar nueva consulta. | Datos de las precondiciones | El spec exige descartar la estimación anterior y solicitar otra con los nuevos parámetros. | Pendiente | Sin ejecución automatizada pertinente. La recotización y descarte de respuestas obsoletas al cambiar parámetros de CU-19 requieren flujo de interfaz no implementado; sin ejecución automatizada pertinente. |
+| 3 | Comprobar | Comparar respuesta y efectos persistidos con el estado inicial. | Reserva y eventos relacionados | Se cumplen los resultados del paso 2. | Pendiente | Sin ejecución automatizada pertinente. La recotización y descarte de respuestas obsoletas al cambiar parámetros de CU-19 requieren flujo de interfaz no implementado; sin ejecución automatizada pertinente. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica comportamiento principal adicional.
@@ -58,7 +58,7 @@ CU-19 implementa la consulta individual; la lógica UI de recotización y descar
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Evaluado el 2026-11-13: Blocked; sin ejecución automatizada del escenario.
+Evaluado el 2026-11-13: Blocked; sin ejecución automatizada pertinente. La recotización y descarte de respuestas obsoletas al cambiar parámetros de CU-19 requieren flujo de interfaz no implementado; sin ejecución automatizada pertinente.
 
 #### Traceability
 FR-009, FR-014 | SC-007 | Sin prueba de CU-11 | Blocked
