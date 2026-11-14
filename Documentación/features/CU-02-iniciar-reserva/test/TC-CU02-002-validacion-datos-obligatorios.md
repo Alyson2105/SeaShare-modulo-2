@@ -23,7 +23,7 @@ Verificar el rechazo de entradas inválidas implementadas. Trazabilidad: FR-006,
 
 #### Prerequisites & Environment
 ##### Test Case Limitations
-La validación visual es UI; el formato telefónico no está implementado: solo no vacío y máximo 30 caracteres.
+Hay otras variantes probadas por métodos separados; faltan las demás entradas exigidas, mensaje y ausencia de reservation y outbox para cada rechazo. La validación visual requiere UI y el formato telefónico no está implementado.
 
 ##### Dependencies & Assumptions
 La corrida utilizó backend y base de datos de pruebas; identidad temporal por headers sin Spring Security. [CreateReservationValidationTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java).
@@ -35,7 +35,7 @@ Solicitud válida: `POST /api/v1/reservations`, `Content-Type: application/json`
 ##### Section 1: Primary Functional Journey
 | Step # | Step Description | Path & Action | Test Data | Expected Results | Pass/Fail | Comments |
 | :---: | ------ | ------ | ------ | ------ | :---: | ------ |
-| 1 | Ejecutar escenario | Repetir con una única alteración por solicitud y claves nuevas: full_name ausente o vacío; phone ausente o vacío; email inválido; fechas inválidas o fin anterior a inicio; passengers cero o negativo; vessel_id ausente o UUID malformado; clave ausente o malformada; omitir cada header de identidad. | Solicitud válida y variaciones descritas | 400 para datos inválidos o clave ausente/malformada; 401 si falta identidad. Body con code y message; no se agrega reservation ni outbox. Clave ausente: INVALID_PARAMETERS; clave malformada: INVALID_UUID. | Pendiente | Integración: CreateReservationValidationTest#missingIdempotencyKeyIs400, #invalidIdempotencyKeyIs400InvalidUuid y #missingUserIdIs401 pasaron; CreateReservationTest#rejectsEndBeforeStart pasó. Faltan las demás variantes, message y ausencia de reservation y outbox para cada rechazo. |
+| 1 | Ejecutar escenario | Repetir con una única alteración por solicitud y claves nuevas: full_name ausente o vacío; phone ausente o vacío; email inválido; fechas inválidas o fin anterior a inicio; passengers cero o negativo; vessel_id ausente o UUID malformado; clave ausente o malformada; omitir cada header de identidad. | Solicitud válida y variaciones descritas | 400 para datos inválidos o clave ausente/malformada; 401 si falta identidad. Body con code y message; no se agrega reservation ni outbox. Clave ausente: INVALID_PARAMETERS; clave malformada: INVALID_UUID. | Pendiente | CreateReservationValidationTest#missingIdempotencyKeyIs400 (XML V4: passed). Aserta 400 e INVALID_PARAMETERS para clave ausente. Hay otras variantes probadas por métodos separados; faltan las demás entradas exigidas, mensaje y ausencia de reservation y outbox para cada rechazo. La validación visual requiere UI y el formato telefónico no está implementado. |
 
 ##### Section 2: Secondary Flow / Error Handling
 No aplica como comportamiento principal adicional; consultar límites abajo.
@@ -52,7 +52,7 @@ No exigir rechazo por un teléfono no vacío con formato inválido; es una brech
 | **Small / Minor** | **S** | Cosmetic issue, minor UI alignment, typo, or non-blocking defect. |
 
 #### Post-conditions
-Corrida 2026-11-13: Partial. Evidencia parcial; los resultados pendientes se detallan en el flujo.
+Corrida V4 del 2026-11-13: Partial; estado documental: In Process; evidencia: CreateReservationValidationTest#missingIdempotencyKeyIs400. Hay otras variantes probadas por métodos separados; faltan las demás entradas exigidas, mensaje y ausencia de reservation y outbox para cada rechazo. La validación visual requiere UI y el formato telefónico no está implementado.
 
 #### Traceability
 FR-006, FR-007, FR-008 | SC-001 | [CreateReservationValidationTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java) | Evidencia: src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java#missingIdempotencyKeyIs400; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java#invalidIdempotencyKeyIs400InvalidUuid; src/test/java/com/seashare/m2/reservas/infrastructure/adapter/in/web/CreateReservationValidationTest.java#missingUserIdIs401; src/test/java/com/seashare/m2/reservas/integration/CreateReservationTest.java#rejectsEndBeforeStart | In Process
