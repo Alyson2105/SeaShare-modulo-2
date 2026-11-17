@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
@@ -28,7 +27,6 @@ class HttpFleetClientTest { // pruebas de exito de los adaptadores HTTP reales d
 
     private static final UUID VESSEL_ID = UUID.fromString("d3b07384-d113-49cd-a5d6-812e9bcfc101"); // id fijo de prueba
     private static final UUID OWNER_ID = UUID.fromString("a1c2e3f4-5678-90ab-cdef-1234567890ab"); // propietario fijo
-    private static final String TOKEN = "test-service-token"; // token usado en las pruebas
     private static final String VESSEL_PATH = "/api/v1/vessels/" + VESSEL_ID; // ruta de la ficha
     private static final String STATUS_PATH = VESSEL_PATH + "/operational-status"; // ruta del estado operativo
 
@@ -43,7 +41,6 @@ class HttpFleetClientTest { // pruebas de exito de los adaptadores HTTP reales d
         warmUpServer(); // la primera respuesta del servidor nuevo tarda mas de 300 ms
         FleetProperties properties = new FleetProperties(); // propiedades de prueba
         properties.setBaseUrl("http://localhost:" + wireMock.port()); // apunta al WireMock
-        properties.setToken(TOKEN); // token de prueba
         RestClient client = new FleetHttpConfig().fleetRestClient(properties); // cliente real con timeouts
         ExternalQueryLogPort noopLog = entry -> { }; // el registro no se prueba aqui
         infoAdapter = new HttpFleetInfoAdapter(client, noopLog); // adaptador de ficha
@@ -70,7 +67,7 @@ class HttpFleetClientTest { // pruebas de exito de los adaptadores HTTP reales d
     }
 
     @Test
-    void sendsInternalServiceTokenHeader() { // el header viaja en cada llamada
+    void internalServiceTokenHeaderIsNotSent() { // contrato de M1 sin autenticacion: el header no viaja
         wireMock.stubFor(get(urlPathEqualTo(VESSEL_PATH)).willReturn(aResponse() // stub de la ficha
                 .withStatus(200)
                 .withHeader("Content-Type", "application/json")
@@ -79,7 +76,7 @@ class HttpFleetClientTest { // pruebas de exito de los adaptadores HTTP reales d
         infoAdapter.getVesselInfo(VESSEL_ID); // ejecuta la consulta
 
         wireMock.verify(getRequestedFor(urlPathEqualTo(VESSEL_PATH)) // verifica la llamada
-                .withHeader("X-Internal-Service-Token", equalTo(TOKEN))); // con el token configurado
+                .withoutHeader("X-Internal-Service-Token")); // sin el header de token
     }
 
     @Test
@@ -112,8 +109,8 @@ class HttpFleetClientTest { // pruebas de exito de los adaptadores HTTP reales d
         boolean available = statusAdapter.isAvailable(VESSEL_ID); // consulta el estado operativo
 
         assertThat(available).isTrue(); // solo AVAILABLE habilita reserva
-        wireMock.verify(getRequestedFor(urlPathEqualTo(STATUS_PATH)) // el header tambien viaja aqui
-                .withHeader("X-Internal-Service-Token", equalTo(TOKEN)));
+        wireMock.verify(getRequestedFor(urlPathEqualTo(STATUS_PATH)) // tampoco el estado viaja con token
+                .withoutHeader("X-Internal-Service-Token"));
     }
 
     @Test

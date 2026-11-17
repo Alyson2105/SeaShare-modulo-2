@@ -71,7 +71,6 @@ seashare:                                  # Integracion con Modulo 1 y Modulo 3
   fleet:
     mode: ${SEASHARE_FLEET_MODE:fake}      # fake (default, M2 corre aislado) u http para los adaptadores reales de M1
     base-url: ${SEASHARE_FLEET_BASE_URL:http://localhost:8081}  # Url base de M1; solo se usa en modo http
-    token: ${SEASHARE_FLEET_TOKEN:}        # Token de servicio de M1; obligatorio en modo http (solo en dev/prod se define)
     connect-timeout-ms: 100                # Timeout de conexion en milisegundos
     read-timeout-ms: 300                   # Timeout de lectura en milisegundos
 
@@ -89,4 +88,4 @@ seashare:                                  # Integracion con Modulo 1 y Modulo 3
     fake-payment-status: IN_PROCESS            # Estado simulado en modo fake: IN_PROCESS, APPROVED, REJECTED, CANCELLED o EXPIRED
 
   cors:
-    allowed-origins: http://localhost:5173   # Origenes con CORS habilitado (lista separada por comas)
+    allowed-origins: ${SEASHARE_CORS_ALLOWED_ORIGINS:http://localhost:5173}   # Origenes con CORS habilitado (lista separada por comas)
