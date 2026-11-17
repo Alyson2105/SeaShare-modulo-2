@@ -31,9 +31,11 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -135,18 +137,26 @@ class NoShowIntegrationTest { // CU-05: inasistencia real contra PostgreSQL
     }
 
     private Seed reserved() { // siembra hasta RESERVED con la embarcacion por defecto
+        when(clockPort.now()).thenReturn(scheduledDeparture().minus(Duration.ofMinutes(1))); // crea antes del zarpe: regla de salida pasada
         UUID renterId = UUID.randomUUID();
         UUID reservationId = createReservation(renterId, vesselId, START_DATE, END_DATE, DEPARTURE_TIME);
         toPendingPayment(reservationId, renterId);
-        toReserved(reservationId, renterId);
+        toReserved(reservationId, renterId); // ttl vigente: las transiciones corren con el reloj de siembra
+        when(clockPort.now()).thenReturn(T0); // restaura el reloj que cada prueba necesita
         return new Seed(reservationId, renterId, vesselId);
     }
 
     private Seed pendingPayment() { // siembra hasta PENDING_PAYMENT
+        when(clockPort.now()).thenReturn(scheduledDeparture().minus(Duration.ofMinutes(1))); // crea antes del zarpe
         UUID renterId = UUID.randomUUID();
         UUID reservationId = createReservation(renterId, vesselId, START_DATE, END_DATE, DEPARTURE_TIME);
         toPendingPayment(reservationId, renterId);
+        when(clockPort.now()).thenReturn(T0); // restaura el reloj de la prueba
         return new Seed(reservationId, renterId, vesselId);
+    }
+
+    private Instant scheduledDeparture() { // zarpe pactado en la zona del puerto
+        return START_DATE.atTime(DEPARTURE_TIME).atZone(ZoneId.of(ZONE)).toInstant(); // instante utc del zarpe
     }
 
     private String bodyWithObservations(String observations) { // body con observaciones
