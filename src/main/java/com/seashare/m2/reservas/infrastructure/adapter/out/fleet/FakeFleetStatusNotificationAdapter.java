@@ -5,6 +5,7 @@ import com.seashare.m2.reservas.application.port.out.FleetNotificationOutcome;
 import com.seashare.m2.reservas.application.port.out.FleetStatusNotificationPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
  * el relay ni el caso de uso.</p>
  */
 @Component
+@ConditionalOnProperty(prefix = "seashare.fleet", name = "mode", havingValue = "fake", matchIfMissing = true) // solo en modo fake
 public class FakeFleetStatusNotificationAdapter implements FleetStatusNotificationPort { // fake de notificacion a M1
 
     private static final Logger log = LoggerFactory.getLogger(FakeFleetStatusNotificationAdapter.class); // logger

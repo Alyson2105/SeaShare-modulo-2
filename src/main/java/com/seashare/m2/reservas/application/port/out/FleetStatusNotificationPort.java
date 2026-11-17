@@ -3,7 +3,7 @@ package com.seashare.m2.reservas.application.port.out;
 import com.seashare.m2.reservas.application.dto.PendingOutboxMessage;
 
 /**
- * Puerto de salida para notificar estado operativo a M1 por HTTP PATCH (T-03, D-01).
+ * Puerto de salida para notificar estado operativo a M1 por HTTP POST (T-03, D-01).
  *
  * <p>El relay NUNCA hace HTTP directamente: delega en este puerto. El adaptador
  * de este hito es FAKE (solo loguea y responde OK); el cliente real de M1
