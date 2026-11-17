@@ -19,12 +19,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "m2.scheduler.ttl.enabled=false")
+@SpringBootTest(properties = {
+        "m2.scheduler.ttl.enabled=false",
+        "SEASHARE_CORS_ALLOWED_ORIGINS=http://localhost:5173, https://frontend.example"
+})
 @AutoConfigureMockMvc
 @Import(PostgresTestContainers.class)
 class CorsWebMvcConfigTest { // CORS hacia el frontend (B-01), misma base que UnknownRouteTest
 
     private static final String APP_ORIGIN = "http://localhost:5173"; // origen del frontend en dev
+
+    private static final String SECOND_ORIGIN = "https://frontend.example"; // segundo origen configurado
+    private static final String REQUEST_HEADERS =
+            "content-type,idempotency-key,x-user-id,x-user-role,x-correlation-id";
 
     @Autowired
     private MockMvc mockMvc; // cliente HTTP
@@ -32,18 +39,17 @@ class CorsWebMvcConfigTest { // CORS hacia el frontend (B-01), misma base que Un
     @Test
     void preflightFromAllowedOriginReturnsAllowedHeaders() throws Exception { // a: preflight valido
         MvcResult result = mockMvc.perform(options("/api/v1/reservations")
-                        .header("Origin", APP_ORIGIN)
+                        .header("Origin", SECOND_ORIGIN)
                         .header("Access-Control-Request-Method", "POST")
-                        .header("Access-Control-Request-Headers",
-                                "x-user-id,x-user-role,idempotency-key,x-correlation-id"))
+                        .header("Access-Control-Request-Headers", REQUEST_HEADERS))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Access-Control-Allow-Origin", APP_ORIGIN))
+                .andExpect(header().string("Access-Control-Allow-Origin", SECOND_ORIGIN))
                 .andReturn();
 
         String allowHeaders = result.getResponse().getHeader("Access-Control-Allow-Headers");
         assertThat(allowHeaders).isNotNull(); // el preflight siempre responde la lista
         String lower = allowHeaders.toLowerCase(Locale.ROOT); // el navegador compara sin importar mayusculas
-        assertThat(lower).contains("x-user-id", "x-user-role", "idempotency-key", "x-correlation-id");
+        assertThat(lower).contains("content-type", "idempotency-key", "x-user-id", "x-user-role", "x-correlation-id");
     }
 
     @Test
@@ -51,7 +57,7 @@ class CorsWebMvcConfigTest { // CORS hacia el frontend (B-01), misma base que Un
         mockMvc.perform(options("/api/v1/reservations")
                         .header("Origin", "http://evil.example")
                         .header("Access-Control-Request-Method", "POST")
-                        .header("Access-Control-Request-Headers", "x-user-id"))
+                        .header("Access-Control-Request-Headers", REQUEST_HEADERS))
                 .andExpect(status().isForbidden());
     }
 

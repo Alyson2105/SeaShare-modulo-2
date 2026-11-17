@@ -30,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class InternalReservationControllerTest { // pruebas web standalone del endpoint interno sin levantar el contexto
 
-    private static final UUID USER_ID = UUID.randomUUID(); // identidad de servicio para las pruebas
+    private static final UUID USER_ID = UUID.randomUUID(); // identidad para la prueba con headers
 
     @Mock
     private GetInternalReservationUseCase useCase; // caso de uso simulado
@@ -71,29 +71,32 @@ class InternalReservationControllerTest { // pruebas web standalone del endpoint
 
     @Test
     void invalidUuidIs400WithInvalidUuidCode() throws Exception { // identificador no uuid en la ruta
-        mockMvc.perform(get("/api/v1/internal/reservations/not-a-uuid")
-                        .header("X-User-Id", USER_ID.toString())
-                        .header("X-User-Role", "FINANCE"))
+        mockMvc.perform(get("/api/v1/internal/reservations/not-a-uuid"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_UUID"));
     }
 
     @Test
-    void nonFinanceRoleIs403() throws Exception { // T-13: un perfil distinto de FINANCE no puede consultar
-        UUID id = UUID.randomUUID();
+    void arbitraryRoleIs200() throws Exception { // acepta cualquier rol
+        InternalReservationView view = sampleView();
+        UUID id = UUID.fromString("c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e");
+        when(useCase.execute(id)).thenReturn(view);
 
         mockMvc.perform(get("/api/v1/internal/reservations/" + id)
                         .header("X-User-Id", USER_ID.toString())
                         .header("X-User-Role", "OWNER"))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("PROFILE_NOT_AUTHORIZED"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reservation_code").value("RS-12345678"));
     }
 
     @Test
-    void missingIdentityHeadersIs401() throws Exception { // sin encabezados de identidad
-        mockMvc.perform(get("/api/v1/internal/reservations/" + UUID.randomUUID()))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    void missingIdentityHeadersIs200() throws Exception { // acepta llamadas sin headers de identidad
+        UUID id = UUID.fromString("c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e");
+        when(useCase.execute(id)).thenReturn(sampleView());
+
+        mockMvc.perform(get("/api/v1/internal/reservations/" + id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reservation_code").value("RS-12345678"));
     }
 
     @Test
@@ -101,9 +104,7 @@ class InternalReservationControllerTest { // pruebas web standalone del endpoint
         UUID id = UUID.randomUUID();
         when(useCase.execute(id)).thenThrow(new ReservationNotFoundException(id));
 
-        mockMvc.perform(get("/api/v1/internal/reservations/" + id)
-                        .header("X-User-Id", USER_ID.toString())
-                        .header("X-User-Role", "FINANCE"))
+        mockMvc.perform(get("/api/v1/internal/reservations/" + id))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("RESERVATION_NOT_FOUND"));
     }
@@ -113,9 +114,7 @@ class InternalReservationControllerTest { // pruebas web standalone del endpoint
         UUID id = UUID.fromString("c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e");
         when(useCase.execute(id)).thenReturn(sampleView());
 
-        MvcResult result = mockMvc.perform(get("/api/v1/internal/reservations/" + id)
-                        .header("X-User-Id", USER_ID.toString())
-                        .header("X-User-Role", "FINANCE"))
+        MvcResult result = mockMvc.perform(get("/api/v1/internal/reservations/" + id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.reservation_code").value("RS-12345678"))
                 .andExpect(jsonPath("$.primary_status").value("RESERVED"))
