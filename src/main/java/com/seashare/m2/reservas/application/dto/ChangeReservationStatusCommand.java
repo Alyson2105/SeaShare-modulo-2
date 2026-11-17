@@ -18,7 +18,10 @@ public record ChangeReservationStatusCommand( // comando de aplicacion para camb
         Integer anticipationMinutes, // anticipacion cronologica; obligatorio si cancela RENTER
         String completionNotes, // notas de cierre; solo con target COMPLETED
         String paymentReference, // referencia del cobro; solo con target RESERVED
-        String paymentTokenRef // token de pago opaco hacia M3; solo con target PENDING_PAYMENT; no se persiste
+        String paymentTokenRef, // token de pago opaco hacia M3; solo con target PENDING_PAYMENT; no se persiste
+        String paymentMethodType, // tipo del medio de pago; solo con target PENDING_PAYMENT
+        String payerEmail, // correo del pagador; solo con target PENDING_PAYMENT
+        String lastFour // ultimos cuatro digitos; solo con target PENDING_PAYMENT
 ) {
     public ChangeReservationStatusCommand( // constructor compacto de compatibilidad (TTL y tests existentes)
             UUID reservationId,
@@ -27,7 +30,8 @@ public record ChangeReservationStatusCommand( // comando de aplicacion para camb
             ActorType actor,
             String reason
     ) {
-        this(reservationId, targetStatus, subtype, actor, reason, null, null, null, null, null, null, null); // delega con opcionales nulos
+        this(reservationId, targetStatus, subtype, actor, reason, null, null, null, null, null, null, null,
+                null, null, null); // delega con opcionales nulos
     }
 
     public ChangeReservationStatusCommand( // constructor de compatibilidad sin token de pago
@@ -44,6 +48,24 @@ public record ChangeReservationStatusCommand( // comando de aplicacion para camb
             String paymentReference
     ) {
         this(reservationId, targetStatus, subtype, actor, reason, actorId, expectedVersion, mechanicalFailure,
-                anticipationMinutes, completionNotes, paymentReference, null); // delega con token nulo
+                anticipationMinutes, completionNotes, paymentReference, null, null, null, null); // sin datos de pago
+    }
+
+    public ChangeReservationStatusCommand( // constructor de compatibilidad con token pero sin metadata
+            UUID reservationId,
+            ReservationStatus targetStatus,
+            CancellationSubtype subtype,
+            ActorType actor,
+            String reason,
+            UUID actorId,
+            Long expectedVersion,
+            Boolean mechanicalFailure,
+            Integer anticipationMinutes,
+            String completionNotes,
+            String paymentReference,
+            String paymentTokenRef
+    ) {
+        this(reservationId, targetStatus, subtype, actor, reason, actorId, expectedVersion, mechanicalFailure,
+                anticipationMinutes, completionNotes, paymentReference, paymentTokenRef, null, null, null); // sin metadata
     }
 }

@@ -163,7 +163,7 @@ class StartPaymentServiceTest { // CU-03: validaciones previas a la transaccion
         assertThatThrownBy(() -> service.start(command("RENTER")))
                 .isInstanceOfSatisfying(ReservationRuleException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ErrorCode.CALCULATION_UNAVAILABLE.getCode()));
-        verify(writer, never()).startPayment(any(), any(), any(), any()); // no se transiciona
+        verify(writer, never()).startPayment(any(), any(), any(), any(), any(), any(), any()); // no se transiciona
         org.mockito.ArgumentCaptor<com.seashare.m2.reservas.application.dto.CalculationAuditEntry> audit =
                 org.mockito.ArgumentCaptor.forClass(com.seashare.m2.reservas.application.dto.CalculationAuditEntry.class);
         verify(calculationAuditPort).record(audit.capture()); // FR-010: se audita el calculo fallido
@@ -185,7 +185,7 @@ class StartPaymentServiceTest { // CU-03: validaciones previas a la transaccion
         assertThatThrownBy(() -> service.start(command("RENTER")))
                 .isInstanceOfSatisfying(ReservationRuleException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ErrorCode.VESSEL_NOT_AVAILABLE.getCode()));
-        verify(writer, never()).startPayment(any(), any(), any(), any());
+        verify(writer, never()).startPayment(any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -199,12 +199,12 @@ class StartPaymentServiceTest { // CU-03: validaciones previas a la transaccion
                 .thenReturn(Optional.of(reservation(ReservationStatus.INITIATED, NOW.plusSeconds(600))));
         when(calculatedValuePort.getCalculatedValue(RESERVATION_ID)).thenReturn(value);
         when(fleetOperationalStatusPort.isAvailable(VESSEL_ID)).thenReturn(true);
-        when(writer.startPayment(eq(RESERVATION_ID), eq(value), eq("tok_123"), eq(NOW))).thenReturn(expected);
+        when(writer.startPayment(eq(RESERVATION_ID), eq(value), eq("tok_123"), any(), any(), any(), eq(NOW))).thenReturn(expected);
 
         StartPaymentResult result = service.start(command("RENTER"));
 
         assertThat(result.status()).isEqualTo(ReservationStatus.PENDING_PAYMENT);
-        verify(writer).startPayment(RESERVATION_ID, value, "tok_123", NOW); // token hacia el evento PENDING
+        verify(writer).startPayment(RESERVATION_ID, value, "tok_123", null, null, null, NOW); // token hacia el evento PENDING
         org.mockito.ArgumentCaptor<com.seashare.m2.reservas.application.dto.CalculationAuditEntry> audit =
                 org.mockito.ArgumentCaptor.forClass(com.seashare.m2.reservas.application.dto.CalculationAuditEntry.class);
         verify(calculationAuditPort).record(audit.capture()); // FR-010: montos recibidos auditados
@@ -225,14 +225,14 @@ class StartPaymentServiceTest { // CU-03: validaciones previas a la transaccion
         when(reservationRepository.findById(RESERVATION_ID))
                 .thenReturn(Optional.of(reservation(ReservationStatus.PENDING_PAYMENT, NOW.plusSeconds(600))));
         when(paymentAttemptPort.lastResult(RESERVATION_ID)).thenReturn(Optional.of("REJECTED"));
-        when(writer.startPayment(eq(RESERVATION_ID), eq(null), eq("tok_123"), eq(NOW))).thenReturn(expected);
+        when(writer.startPayment(eq(RESERVATION_ID), eq(null), eq("tok_123"), any(), any(), any(), eq(NOW))).thenReturn(expected);
 
         StartPaymentResult result = service.start(command("RENTER"));
 
         assertThat(result.attempt()).isEqualTo(2);
         verify(calculatedValuePort, never()).getCalculatedValue(any()); // no se vuelve a pedir el calculo
         verify(fleetOperationalStatusPort, never()).isAvailable(any()); // el activo ya estaba retenido
-        verify(writer).startPayment(RESERVATION_ID, null, "tok_123", NOW);
+        verify(writer).startPayment(RESERVATION_ID, null, "tok_123", null, null, null, NOW);
     }
 
     @Test
@@ -245,6 +245,28 @@ class StartPaymentServiceTest { // CU-03: validaciones previas a la transaccion
         assertThatThrownBy(() -> service.start(command("RENTER")))
                 .isInstanceOfSatisfying(ReservationRuleException.class,
                         e -> assertThat(e.getCode()).isEqualTo(ErrorCode.RETRY_NOT_ALLOWED.getCode()));
-        verify(writer, never()).startPayment(any(), any(), any(), any());
+        verify(writer, never()).startPayment(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void paymentDataTravelsFromCommandToWriter() { // los tres datos del comando llegan al escritor
+        CalculatedValue value = new CalculatedValue(new BigDecimal("100"), new BigDecimal("10"),
+                new BigDecimal("20"), new BigDecimal("130"));
+        StartPaymentResult expected = new StartPaymentResult(RESERVATION_ID, ReservationStatus.PENDING_PAYMENT,
+                VESSEL_ID, value, 600, null, 1);
+        StartPaymentCommand withData = new StartPaymentCommand(RESERVATION_ID, RENTER_ID, "RENTER", "tok_123",
+                "CREDIT_CARD", "ana@example.com", "4242"); // los tres datos en el comando
+        when(clockPort.now()).thenReturn(NOW);
+        when(reservationRepository.findById(RESERVATION_ID))
+                .thenReturn(Optional.of(reservation(ReservationStatus.INITIATED, NOW.plusSeconds(600))));
+        when(calculatedValuePort.getCalculatedValue(RESERVATION_ID)).thenReturn(value);
+        when(fleetOperationalStatusPort.isAvailable(VESSEL_ID)).thenReturn(true);
+        when(writer.startPayment(eq(RESERVATION_ID), eq(value), eq("tok_123"), eq("CREDIT_CARD"),
+                eq("ana@example.com"), eq("4242"), eq(NOW))).thenReturn(expected);
+
+        service.start(withData); // ejecuta el inicio de pago
+
+        verify(writer).startPayment(RESERVATION_ID, value, "tok_123", // los tres datos viajan juntos
+                "CREDIT_CARD", "ana@example.com", "4242", NOW);
     }
 }

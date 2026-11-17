@@ -30,6 +30,10 @@ public class OutboxAdapter implements OutboxPort { // adaptador de persistencia 
 
     public static final String PAYMENT_TOKEN_FIELD = "payment_token_ref"; // campo con token de pago: se purga al confirmar (D-09)
 
+    public static final String PAYMENT_METHOD_TYPE_FIELD = "payment_method_type"; // tipo de medio de pago: se purga al confirmar
+
+    public static final String PAYMENT_METADATA_FIELD = "payment_metadata"; // metadatos de pago: se purgan al confirmar
+
     private final OutboxMessageJpaRepository repository; // repositorio jpa de mensajes outbox
     private final MessagingProperties messagingProperties; // nombres de topologia leidos de application.yaml
     private final ObjectMapper objectMapper = new JsonMapper(); // mapeador jackson 3 para construir el payload
@@ -49,6 +53,22 @@ public class OutboxAdapter implements OutboxPort { // adaptador de persistencia 
         String paymentTokenRef = event.paymentTokenRef(); // token opaco hacia M3
         if ("PENDING".equals(status) && paymentTokenRef != null && !paymentTokenRef.isBlank()) { // solo el evento pendiente lleva token
             payloadMap.put(PAYMENT_TOKEN_FIELD, paymentTokenRef); // campo con token agregado al final
+            String methodType = event.paymentMethodType(); // tipo opcional del medio de pago
+            if (methodType != null && !methodType.isBlank()) { // presente solo si viene con valor
+                payloadMap.put(PAYMENT_METHOD_TYPE_FIELD, methodType); // se omite en blanco o nulo
+            }
+            Map<String, Object> metadata = new LinkedHashMap<>(); // objeto opcional de metadatos
+            String payerEmail = event.payerEmail(); // correo opcional del pagador
+            if (payerEmail != null && !payerEmail.isBlank()) { // ausente o en blanco se omite
+                metadata.put("payer_email", payerEmail); // solo si existe
+            }
+            String lastFour = event.lastFour(); // ultimos cuatro opcionales
+            if (lastFour != null && !lastFour.isBlank()) { // ausente o en blanco se omite
+                metadata.put("last_four", lastFour); // solo si existe
+            }
+            if (!metadata.isEmpty()) { // sin metadatos no se manda el objeto
+                payloadMap.put(PAYMENT_METADATA_FIELD, metadata); // objeto agregado al final
+            }
         }
 
         String payload; // variable para almacenar texto json serializado
@@ -164,7 +184,7 @@ public class OutboxAdapter implements OutboxPort { // adaptador de persistencia 
     public void markPublished(UUID messageId, Instant publishedAt) { // marca publicado tras el confirm
         OutboxMessageEntity entity = load(messageId); // carga la fila
         entity.setPublishedAt(publishedAt); // fija published_at
-        entity.setPayload(purgePaymentToken(entity.getPayload())); // purga solo el token, conserva el resto del payload
+        entity.setPayload(purgePaymentData(entity.getPayload())); // purga los datos de pago, conserva el resto
         repository.save(entity); // persiste el marcado
     }
 
@@ -176,21 +196,24 @@ public class OutboxAdapter implements OutboxPort { // adaptador de persistencia 
         entity.setLastError(lastError); // guarda el ultimo error
         entity.setDead(dead); // marca dead en el 5º fallo
         if (dead) { // el mensaje ya no se reintentara
-            entity.setPayload(purgePaymentToken(entity.getPayload())); // purga el token sin borrar el resto del payload
+            entity.setPayload(purgePaymentData(entity.getPayload())); // purga los datos de pago sin borrar el resto
         }
         repository.save(entity); // persiste el estado del intento
     }
 
-    private String purgePaymentToken(String payload) { // elimina solo payment_token_ref del json
-        if (payload == null || !payload.contains(PAYMENT_TOKEN_FIELD)) { // sin token no hay nada que purgar
+    private String purgePaymentData(String payload) { // elimina token, tipo y metadatos de pago del json
+        if (payload == null || (!payload.contains(PAYMENT_TOKEN_FIELD) && !payload.contains(PAYMENT_METHOD_TYPE_FIELD)
+                && !payload.contains(PAYMENT_METADATA_FIELD))) { // sin datos de pago no hay nada que purgar
             return payload; // conserva el payload original sin reserializar
         }
         try {
             JsonNode root = objectMapper.readTree(payload); // arbol json del payload
-            if (!(root instanceof ObjectNode object) || !object.has(PAYMENT_TOKEN_FIELD)) { // no es objeto o no tiene el campo
+            if (!(root instanceof ObjectNode object)) { // no es objeto
                 return payload; // conserva el payload original
             }
-            object.remove(PAYMENT_TOKEN_FIELD); // elimina unicamente el token de pago
+            object.remove(PAYMENT_TOKEN_FIELD); // elimina el token de pago
+            object.remove(PAYMENT_METHOD_TYPE_FIELD); // elimina el tipo de medio de pago
+            object.remove(PAYMENT_METADATA_FIELD); // elimina el objeto de metadatos
             return objectMapper.writeValueAsString(object); // conserva el resto de campos
         } catch (Exception e) { // payload ilegible: se conserva para no perder el mensaje
             return payload; // la purga nunca rompe el marcado del outbox

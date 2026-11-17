@@ -56,6 +56,9 @@ public class StartPaymentWriter { // CU-03: frontera transaccional con bloqueo p
     public StartPaymentResult startPayment(UUID reservationId,
                                            CalculatedValue calculation,
                                            String paymentTokenRef,
+                                           String paymentMethodType,
+                                           String payerEmail,
+                                           String lastFour,
                                            Instant requestedAt) { // una sola transaccion para validar y avanzar
         Reservation reservation = reservationRepository.findByIdForUpdate(reservationId) // SELECT ... FOR UPDATE
                 .orElseThrow(() -> new ReservationNotFoundException(reservationId));
@@ -65,10 +68,10 @@ public class StartPaymentWriter { // CU-03: frontera transaccional con bloqueo p
         assertTtlActive(reservation, clockPort.now()); // el TTL puede vencer mientras espera el bloqueo
 
         if (reservation.getStatus() == ReservationStatus.INITIATED) {
-            return firstPayment(reservation, calculation, paymentTokenRef, requestedAt);
+            return firstPayment(reservation, calculation, paymentTokenRef, paymentMethodType, payerEmail, lastFour, requestedAt);
         }
         if (reservation.getStatus() == ReservationStatus.PENDING_PAYMENT) {
-            return retryPayment(reservation, paymentTokenRef, requestedAt);
+            return retryPayment(reservation, paymentTokenRef, paymentMethodType, payerEmail, lastFour, requestedAt);
         }
         throw new ReservationRuleException(ErrorCode.INVALID_RESERVATION_STATE,
                 "Solo se puede iniciar el pago de reservas en estado Iniciada (estado actual: "
@@ -78,6 +81,9 @@ public class StartPaymentWriter { // CU-03: frontera transaccional con bloqueo p
     private StartPaymentResult firstPayment(Reservation reservation,
                                             CalculatedValue calculation,
                                             String paymentTokenRef,
+                                            String paymentMethodType,
+                                            String payerEmail,
+                                            String lastFour,
                                             Instant requestedAt) { // FR-005 y FR-006
         if (calculation == null) { // la primera vez exige el calculo de M3
             throw new ReservationRuleException(ErrorCode.CALCULATION_UNAVAILABLE,
@@ -91,7 +97,7 @@ public class StartPaymentWriter { // CU-03: frontera transaccional con bloqueo p
 
         persistCalculation(reservation, calculation); // desglose literal de M3
 
-        ChangeReservationStatusResult result = changeReservationStatus.execute(new ChangeReservationStatusCommand(
+        ChangeReservationStatusResult result = changeReservationStatus.execute(new ChangeReservationStatusCommand( // 15 campos
                 reservation.getId(),
                 ReservationStatus.PENDING_PAYMENT,
                 null,
@@ -103,13 +109,19 @@ public class StartPaymentWriter { // CU-03: frontera transaccional con bloqueo p
                 null,
                 null,
                 null,
-                paymentTokenRef)); // viaja en el evento PENDING (CU-14)
+                paymentTokenRef, // viaja en el evento PENDING (CU-14)
+                paymentMethodType, // tipo del medio de pago
+                payerEmail, // correo del pagador
+                lastFour)); // ultimos cuatro digitos
 
         return buildResult(reservation, calculation, result.ttlExpiresAt(), requestedAt);
     }
 
     private StartPaymentResult retryPayment(Reservation reservation,
                                             String paymentTokenRef,
+                                            String paymentMethodType,
+                                            String payerEmail,
+                                            String lastFour,
                                             Instant requestedAt) { // nuevo intento tras un REJECTED
         String lastResult = paymentAttemptPort.lastResult(reservation.getId()).orElse(null);
         if (!LAST_REJECTED.equals(lastResult)) { // solo se reintenta tras un rechazo
@@ -124,7 +136,7 @@ public class StartPaymentWriter { // CU-03: frontera transaccional con bloqueo p
 
         CalculatedValue persisted = persistedCalculation(reservation); // se reutiliza el calculo ya asociado
         UUID eventId = UUID.randomUUID(); // nuevo intento: nuevo Message-Id
-        outboxPort.enqueue(new StatusChangedEvent( // re-notifica PENDING con el token nuevo
+        outboxPort.enqueue(new StatusChangedEvent( // re-notifica PENDING con el token y datos nuevos
                 eventId,
                 reservation.getId(),
                 ReservationStatus.PENDING_PAYMENT,
@@ -133,7 +145,10 @@ public class StartPaymentWriter { // CU-03: frontera transaccional con bloqueo p
                 ActorType.RENTER,
                 null,
                 null,
-                paymentTokenRef));
+                paymentTokenRef,
+                paymentMethodType,
+                payerEmail,
+                lastFour));
 
         return buildResult(reservation, persisted, reservation.getTtlExpiresAt(), requestedAt);
     }

@@ -151,6 +151,20 @@ class PaymentIntegrationTest { // CU-03: inicio de pago de punta a punta con ada
     }
 
     @Test
+    void pendingEventCarriesPaymentData() throws Exception { // los tres datos llegan del request al evento
+        ReservationView reservation = createInitiated(LocalDate.of(2027, 6, 1), LocalDate.of(2027, 6, 3));
+        clearInvocations(outboxPort);
+
+        pay(reservation.reservationId(), VALID_BODY).andExpect(status().isOk());
+
+        verify(outboxPort).enqueue(argThat((StatusChangedEvent event) -> // tipo, correo y ultimos cuatro
+                event.reservationId().equals(reservation.reservationId())
+                        && "CREDIT_CARD".equals(event.paymentMethodType())
+                        && "carlos@example.com".equals(event.payerEmail())
+                        && "4242".equals(event.lastFour()))); // viajan en el evento PENDING
+    }
+
+    @Test
     void breakdownIsPersistedForDetailView() throws Exception { // CU-21 deja de mostrar rubros nulos
         ReservationView reservation = createInitiated(LocalDate.of(2027, 6, 1), LocalDate.of(2027, 6, 3));
 

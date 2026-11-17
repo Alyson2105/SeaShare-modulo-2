@@ -34,7 +34,7 @@ class StartPaymentWriterTest {
         when(repository.findByIdForUpdate(id)).thenReturn(Optional.of(reservation));
         when(clock.now()).thenReturn(expiresAt);
 
-        assertThatThrownBy(() -> writer.startPayment(id, null, "token", expiresAt.minusSeconds(1)))
+        assertThatThrownBy(() -> writer.startPayment(id, null, "token", null, null, null, expiresAt.minusSeconds(1)))
                 .isInstanceOfSatisfying(ReservationRuleException.class,
                         e -> org.assertj.core.api.Assertions.assertThat(e.getCode())
                                 .isEqualTo(ErrorCode.RESERVATION_EXPIRED.getCode()));

@@ -16,7 +16,10 @@ public record StatusChangedEvent( // evento de dominio para encolado outbox
         ActorType actor, // actor que disparo la transicion (CU-14 FR-002)
         Integer anticipationMinutes, // anticipacion cronologica al cancelar (CU-14 FR-003)
         String completionNotes, // notas de cierre en COMPLETED (CU-14 FR-004)
-        String paymentTokenRef // token de pago opaco hacia M3; solo se publica hacia PENDING_PAYMENT
+        String paymentTokenRef, // token de pago opaco hacia M3; solo se publica hacia PENDING_PAYMENT
+        String paymentMethodType, // tipo del medio de pago; solo con PENDING_PAYMENT
+        String payerEmail, // correo del pagador; solo con PENDING_PAYMENT
+        String lastFour // ultimos cuatro digitos; solo con PENDING_PAYMENT
 ) {
     public StatusChangedEvent( // constructor compacto de compatibilidad (sin datos de CU-14)
             UUID eventId,
@@ -25,7 +28,7 @@ public record StatusChangedEvent( // evento de dominio para encolado outbox
             CancellationSubtype subtype,
             Instant changedAt
     ) {
-        this(eventId, reservationId, status, subtype, changedAt, null, null, null, null); // delega con opcionales nulos
+        this(eventId, reservationId, status, subtype, changedAt, null, null, null, null, null, null, null); // opcionales nulos
     }
 
     public StatusChangedEvent( // constructor de compatibilidad sin token de pago
@@ -38,6 +41,22 @@ public record StatusChangedEvent( // evento de dominio para encolado outbox
             Integer anticipationMinutes,
             String completionNotes
     ) {
-        this(eventId, reservationId, status, subtype, changedAt, actor, anticipationMinutes, completionNotes, null); // delega con token nulo
+        this(eventId, reservationId, status, subtype, changedAt, actor, anticipationMinutes, completionNotes,
+                null, null, null, null); // sin datos de pago
+    }
+
+    public StatusChangedEvent( // constructor de compatibilidad con token pero sin metadata
+            UUID eventId,
+            UUID reservationId,
+            ReservationStatus status,
+            CancellationSubtype subtype,
+            Instant changedAt,
+            ActorType actor,
+            Integer anticipationMinutes,
+            String completionNotes,
+            String paymentTokenRef
+    ) {
+        this(eventId, reservationId, status, subtype, changedAt, actor, anticipationMinutes, completionNotes,
+                paymentTokenRef, null, null, null); // sin tipo, correo ni ultimos cuatro
     }
 }
