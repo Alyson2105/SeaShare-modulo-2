@@ -1,6 +1,6 @@
 # Feature Specification: Recibir Información de Estado Operativo (Notificación a Módulo 1)
 
-> **Diseño aprobado 2026-11-19, pendiente de implementación.** Ver `Documentación/context/consistencia-m1-m2-mantenimiento.md`. Mientras no se implemente, el código sigue enviando `RESERVED` a M1 y CU-10 consulta sin fechas.
+> **Implementado en Módulo 2 el 2026-11-19.** M2 ya no envía `RESERVED` a M1; la guarda de ocupación se activa al enviar `IN_NAVIGATION`. El mantenimiento y su cancelación se rigen por `Documentación/context/consistencia-m2-m1.md` (C4 y C5).
 
 **Módulo**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
 **Código de Caso de Uso**: CU-22  
@@ -31,15 +31,15 @@ Como sistema (Módulo 2), quiero avisar a Módulo 1 el **estado operativo result
 
 ***Acceptance Scenarios***:
 
-1. **Scenario**: La reserva pasa a `Reservada` y Módulo 1 recibe el estado operativo `Reservado`
+1. **Scenario**: La reserva pasa a `Reservada` y Módulo 1 **no** recibe aviso
     - **Given** una reserva que transiciona al estado principal `Reservada`
     - **When** el caso de uso `Actualizar estado reserva` consolida el cambio
-    - **Then** el sistema encola la notificación a Módulo 1 con el estado operativo `Reservado` para esa embarcación
+    - **Then** el sistema **NO** encola ninguna notificación a Módulo 1: el bloqueo por fechas es responsabilidad exclusiva de Módulo 2
 
 2. **Scenario**: La reserva pasa a `En Navegación` y Módulo 1 recibe el estado operativo `En Navegación`
     - **Given** una reserva que transiciona al estado principal `En Navegación`
     - **When** el cambio queda asentado en la base de datos local
-    - **Then** el sistema encola la notificación a Módulo 1 con el estado operativo `En Navegación` para esa embarcación
+    - **Then** el sistema encola la notificación a Módulo 1 con el estado operativo `En Navegación` y activa la guarda de ocupación (`m1_blocked`)
 
 3. **Scenario**: La reserva nace en `Iniciada` y no se notifica nada a Módulo 1
     - **Given** una reserva recién creada en el estado principal `Iniciada`
@@ -109,17 +109,19 @@ Como sistema, quiero que cada aviso a Módulo 1 lleve un identificador único po
     | Estado de la reserva | ¿Se notifica a Módulo 1? | Estado operativo enviado | Detalle |
     |---|---|---|---|
     | Iniciada | No | — | Sin bloqueo operativo. |
-    | Pendiente de pago | No | — | Estado transitorio gestionado íntegramente dentro de Módulo 2 (TTL de 15 minutos en curso y espera del resultado del cobro). Módulo 1 no participa de este estado: el bloqueo operativo en Módulo 1 ocurre únicamente al llegar a `Reservada`. |
-    | Reservada | Sí | Reservado | Bloqueo operativo de la embarcación. Es el único momento en que Módulo 1 recibe el estado `Reservado`, y ocurre una vez confirmado el pago. |
-    | En navegación | Sí | En Navegación | Embarcación en uso. |
-    | Completada | Sí | Señal de que debe pasar a Mantenimiento/Limpieza | Al completarse la navegación, la embarcación requiere limpieza antes de volver a estar disponible. Módulo 2 notifica "Completada" y es Módulo 1 quien gestiona internamente la transición a Mantenimiento/Limpieza y, después, a Disponible, según su propio proceso. |
-    | Cancelada | Condicional | Señal de liberación — por defecto `Disponible`; salvo que la cancelación esté asociada a una avería mecánica reportada por el Propietario, en cuyo caso la señal es hacia `Mantenimiento/Limpieza` (igual que en el flujo de `Completada`) | Solo se notifica si la reserva ya había llegado previamente al estado Reservada (es decir, si Módulo 1 ya había sido notificado y tiene la embarcación marcada como ocupada). Esta condición aplica **igual** para la liberación normal y para la liberación con avería mecánica. Si la cancelación ocurre antes de llegar a Reservada (por ejemplo, durante Iniciada o Pendiente de pago), no se notifica a Módulo 1, ya que nunca llegó a marcarla como ocupada. |
-    | Expirada | No | — | No se notifica a Módulo 1 bajo ninguna circunstancia. Como la reserva nunca alcanzó `Reservada`, Módulo 1 nunca la tuvo bloqueada y no hay nada que liberar. |
-    | Pago Fallido | No | — | No se notifica a Módulo 1 bajo ninguna circunstancia. Como la reserva nunca alcanzó `Reservada`, Módulo 1 nunca la tuvo bloqueada y no hay nada que liberar. |
+    | Pendiente de pago | No | — | Estado transitorio gestionado íntegramente dentro de Módulo 2 (TTL de 15 minutos en curso y espera del resultado del cobro). |
+    | Reservada | No | — | M1 ya no recibe `RESERVED`: el bloqueo por fechas es de Módulo 2. |
+    | En navegación | Sí | `IN_NAVIGATION` | Embarcación en uso. Activa la guarda de ocupación (`m1_blocked`). |
+    | Completada | Condicional | `MAINTENANCE_CLEANING` | Solo si la guarda de ocupación está activa (M1 conocía la ocupación por el check-in). |
+    | Cancelada ordinaria o no-show | Condicional | `AVAILABLE` | Solo si la guarda está activa **y** no hay mantenimiento activo. |
+    | Cancelada por avería | Condicional | `MAINTENANCE_CLEANING` | Solo si la guarda está activa **y** no hay mantenimiento activo. |
+    | Cancelada por mantenimiento (C5) | No | — | El barco sigue en mantenimiento: M2 cancela la reserva pero no envía `AVAILABLE`. |
+    | Expirada | No | — | No se notifica a Módulo 1 bajo ninguna circunstancia. |
+    | Pago Fallido | No | — | No se notifica a Módulo 1 bajo ninguna circunstancia. |
 
 > **Esta tabla (FR-002) es la única fuente de verdad** del mapeo estado de la reserva → estado operativo notificado a Módulo 1. Cualquier otro documento del proyecto que necesite describir este mapeo debe **referenciar esta tabla** en lugar de mantener una copia propia con su propia granularidad (ver `CU-08` FR-007, que remite a esta tabla).
 
-> **Diseño aprobado 2026-11-19, pendiente de implementación:** cuando se implemente la decisión D1, la fila `Reservada` dejará de notificarse (M2 ya no enviará `RESERVED`) y M1 pasará a modelar el mantenimiento con fechas. Hasta entonces esta tabla describe el comportamiento vigente. Ver `context/consistencia-m1-m2-mantenimiento.md`.
+> **Implementado en Módulo 2 el 2026-11-19:** la fila `Reservada` ya no se notifica; la guarda de ocupación se activa con `IN_NAVIGATION`. El mantenimiento se modela con fechas y M1 envía el aviso C5. Ver `context/consistencia-m2-m1.md` §8.
 
 - **FR-003**: El *payload* de la notificación DEBE contener obligatoriamente: identificador de la embarcación, estado operativo resultante (ya mapeado, según FR-002) y marca temporal exacta del evento en formato ISO 8601.
 - **FR-004**: El *payload* DEBE incluir un identificador único por transición (`eventId`, UUID), de modo que Módulo 1 pueda deduplicar entregas repetidas y procesar el evento de forma idempotente.
@@ -128,6 +130,8 @@ Como sistema, quiero que cada aviso a Módulo 1 lleve un identificador único po
 - **FR-007**: **REGLA ESTRICTA**: El sistema **NO DEBE** calcular, incluir ni transmitir montos, tarifas, penalidades, valores de reembolso ni ningún dato de liquidación o pago en la notificación. La notificación es puramente operativa; Módulo 1 interpreta el estado operativo y nada más.
 - **FR-008**: El sistema **NO DEBE** esperar una respuesta de negocio de Módulo 1 ni alterar la transición local de la reserva en función del resultado de la notificación. La respuesta técnica (`{event_id, outcome}`) sólo decide si el evento se marca publicado o `dead`. La consistencia es eventual y se alcanza por reintento, no por reversión.
 - **FR-009**: El sistema **NO DEBE** validar ni resolver conflictos de doble reserva en el marco de esta notificación. Esa prevención es responsabilidad interna de Módulo 2 y ocurre antes de confirmar la reserva.
+- **FR-010**: La guarda de ocupación (`m1_blocked`) DEBE activarse al encolar `IN_NAVIGATION`, no al entrar en `Reservada`. Sin esta guarda, `Completada` no enviaría `MAINTENANCE_CLEANING` y M1 no sabría que la embarcación requiere limpieza.
+- **FR-011**: Una cancelación originada por el aviso de mantenimiento C5 **NO DEBE** notificar `AVAILABLE` a Módulo 1, aunque la guarda de ocupación esté activa: la embarcación sigue en mantenimiento.
 
 ---
 

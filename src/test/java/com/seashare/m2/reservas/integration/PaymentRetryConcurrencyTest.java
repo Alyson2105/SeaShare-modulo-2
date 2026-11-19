@@ -47,7 +47,7 @@ class PaymentRetryConcurrencyTest {
         UUID renter = UUID.randomUUID();
         UUID vessel = UUID.randomUUID();
         when(fleet.getVesselInfo(any())).thenReturn(new FleetInfo(UUID.randomUUID(), 10, "America/Bogota"));
-        when(operational.isAvailable(any())).thenReturn(true);
+        when(operational.isAvailable(any(), any(), any(), any())).thenReturn(true);
         var ids = new java.util.ArrayList<UUID>();
         for (int i = 0; i < 2; i++) {
             ids.add(create.execute(new CreateReservationCommand(renter, UUID.randomUUID().toString(), vessel,
@@ -81,7 +81,7 @@ class PaymentRetryConcurrencyTest {
         UUID renter = UUID.randomUUID();
         UUID vessel = UUID.randomUUID();
         when(fleet.getVesselInfo(any())).thenReturn(new FleetInfo(UUID.randomUUID(), 10, "America/Bogota"));
-        when(operational.isAvailable(any())).thenReturn(true);
+        when(operational.isAvailable(any(), any(), any(), any())).thenReturn(true);
         UUID id = create.execute(new CreateReservationCommand(renter, UUID.randomUUID().toString(), vessel,
                 LocalDate.of(2027, 9, 1), LocalDate.of(2027, 9, 3), 2, "Juan Perez", "+573001234567",
                 "juan@example.com", LocalTime.of(9, 0), new BigDecimal("2500000.00"))).reservationId();

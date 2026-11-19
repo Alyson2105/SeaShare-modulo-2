@@ -2,6 +2,7 @@ package com.seashare.m2.reservas.infrastructure.adapter.out.persistence.idempote
 
 import com.seashare.m2.reservas.application.port.out.IdempotencyPort;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -53,5 +54,32 @@ public class IdempotencyAdapter implements IdempotencyPort { // adaptador de inf
         } catch (IllegalArgumentException e) {
             return Optional.empty(); // retorna vacio si formato es invalido
         }
+    }
+
+    @Override
+    @Transactional
+    public boolean tryClaimPermanent(String key, String endpoint, Instant now) { // reclamo sin expiracion para C5
+        int rowsAffected = repository.claimPermanent(key, endpoint, now.atOffset(ZoneOffset.UTC)); // insert si no existe
+        return rowsAffected == 1; // true solo si esta invocacion creo la fila
+    }
+
+    @Override
+    @Transactional
+    public void completeWithOutcome(String key, String endpoint, String outcome) { // guarda el outcome del evento
+        int rowsAffected = repository.complete(outcome, key, endpoint); // reutiliza response_ref
+        if (rowsAffected != 1) { // verifica que se actualizo exactamente una fila
+            throw new IllegalStateException("No idempotency key claimed for endpoint"); // lanza si no hay reclamo previo
+        }
+    }
+
+    @Override
+    public Optional<String> findOutcome(String key, String endpoint) { // recupera el resultado guardado
+        return repository.findResponseRef(key, endpoint).filter(ref -> !ref.isBlank()); // ignora filas sin completar
+    }
+
+    @Override
+    @Transactional
+    public void releaseClaim(String key, String endpoint) { // libera un reclamo sin resultado (fallo parcial)
+        repository.releaseClaim(key, endpoint); // solo borra si response_ref sigue nulo
     }
 }

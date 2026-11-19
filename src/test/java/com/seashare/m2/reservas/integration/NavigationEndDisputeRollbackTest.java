@@ -79,7 +79,7 @@ class NavigationEndDisputeRollbackTest { // CU-07: si la disputa falla, el cierr
         ownerId = UUID.randomUUID();
         when(clockPort.now()).thenReturn(T0);
         when(fleetInfoPort.getVesselInfo(any())).thenReturn(new FleetInfo(ownerId, 10, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(any())).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
         when(openDisputeUseCase.open(any())).thenThrow(new IllegalStateException("dispute failure"));
     }
 

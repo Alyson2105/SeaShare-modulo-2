@@ -2,6 +2,7 @@ package com.seashare.m2.reservas.application.service;
 
 import com.seashare.m2.reservas.application.dto.ChangeReservationStatusCommand;
 import com.seashare.m2.reservas.application.dto.ChangeReservationStatusResult;
+import com.seashare.m2.reservas.application.dto.CancellationEventRecord;
 import com.seashare.m2.reservas.application.dto.InitiateReservationCommand;
 import com.seashare.m2.reservas.application.dto.OperationalStatusEvent;
 import com.seashare.m2.reservas.application.dto.ReservationInfoProvidedEvent;
@@ -10,6 +11,7 @@ import com.seashare.m2.reservas.application.dto.StatusChangedEvent;
 import com.seashare.m2.reservas.application.port.in.ChangeReservationStatusUseCase;
 import com.seashare.m2.reservas.application.port.in.InitiateReservationUseCase;
 import com.seashare.m2.reservas.application.port.out.OutboxPort;
+import com.seashare.m2.reservas.application.port.out.CancellationEventPort;
 import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
 import com.seashare.m2.reservas.application.port.out.StatusAuditPort;
 import com.seashare.m2.reservas.domain.exception.InvalidTransitionException;
@@ -17,6 +19,7 @@ import com.seashare.m2.reservas.domain.exception.ReservationNotFoundException;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.reservas.domain.exception.VersionConflictException;
 import com.seashare.m2.reservas.domain.model.ActorType;
+import com.seashare.m2.reservas.domain.model.CancellationCause;
 import com.seashare.m2.reservas.domain.model.CancellationSubtype;
 import com.seashare.m2.reservas.domain.model.Reservation;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
@@ -43,23 +46,30 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
 
     static final String CREATION_REASON = "Reserva creada por CU-02"; // motivo de la fila de creacion (CU-08 plan L198)
 
+    static final String MAINTENANCE_REASON = "MAINTENANCE"; // causa registrada en la auditoria de una cancelacion por C5
+
+    static final String MAINTENANCE_JUSTIFICATION = "Cancelacion automatica por mantenimiento de la embarcacion"; // detalle del evento
+
     private final ReservationRepositoryPort repository; // puerto de persistencia de reservas
     private final StatusAuditPort statusAuditPort; // puerto de auditoria de estados
     private final OutboxPort outboxPort; // puerto de mensajeria outbox
     private final ClockPort clockPort; // puerto de reloj para marca temporal
     private final ModuleNotificationMatrix notificationMatrix; // T-08: matriz de notificaciones M3/M1
+    private final CancellationEventPort cancellationEventPort; // evento inmutable de cancelacion (C5)
     private final ReservationStateMachine machine = new ReservationStateMachine(); // maquina de estados de reservas
 
     public ChangeReservationStatusService(ReservationRepositoryPort repository,
                                           StatusAuditPort statusAuditPort,
                                           OutboxPort outboxPort,
                                           ClockPort clockPort,
-                                          ModuleNotificationMatrix notificationMatrix) { // constructor con inyeccion de puertos
+                                          ModuleNotificationMatrix notificationMatrix,
+                                          CancellationEventPort cancellationEventPort) { // constructor con inyeccion de puertos
         this.repository = repository; // asigna repositorio
         this.statusAuditPort = statusAuditPort; // asigna auditoria
         this.outboxPort = outboxPort; // asigna outbox
         this.clockPort = clockPort; // asigna reloj
         this.notificationMatrix = notificationMatrix; // asigna matriz de notificaciones
+        this.cancellationEventPort = cancellationEventPort; // asigna evento de cancelacion
     }
 
     @Override
@@ -104,19 +114,25 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
                 .orElseThrow(() -> new ReservationNotFoundException(command.reservationId())); // lanza excepcion si no existe
 
         ReservationStatus previousStatus = reservation.getStatus(); // guarda estado anterior
-        boolean m1BlockedBefore = reservation.isM1Blocked(); // guarda SC-003 antes del cambio
+        boolean m1BlockedBefore = reservation.isM1Blocked(); // guarda de ocupacion antes del cambio
         validateCommand(reservation, previousStatus, command, changedAt); // valida actor, subtipo, campos condicionales, version y ttl
+
+        if (command.cause() == CancellationCause.MAINTENANCE) { // cancelacion automatica por C5
+            reservation.setMaintenanceBlocked(true); // el barco sigue en mantenimiento: no se libera en M1
+        }
+        boolean maintenanceBlockedBefore = reservation.isMaintenanceBlocked(); // marca de mantenimiento antes del cambio
 
         ModuleNotificationMatrix.NotificationDecision decision = notificationMatrix.decide( // T-08: decision de notificacion
                 previousStatus, // estado anterior
                 command.targetStatus(), // estado destino
                 command.mechanicalFailure(), // averia reportada por el Propietario
-                m1BlockedBefore); // guarda previa de bloqueo en M1
+                m1BlockedBefore, // guarda previa de ocupacion en M1
+                maintenanceBlockedBefore); // evita liberar el barco si esta en mantenimiento
 
         reservation.changeStatus(command.targetStatus(), command.subtype(), machine); // aplica transicion de estado en el dominio
         applyCommandFields(reservation, command, changedAt); // fija campos de CU-08 persistidos (T-09)
-        if (decision.moduleOneStatus() != null && command.targetStatus() == ReservationStatus.RESERVED) { // entro en RESERVED con notificacion a M1
-            reservation.setM1Blocked(true); // activa la guarda: ya se notifico RESERVED a M1 (plan L196)
+        if (decision.moduleOneStatus() != null && command.targetStatus() == ReservationStatus.IN_NAVIGATION) { // check-in notificado a M1
+            reservation.setM1Blocked(true); // activa la guarda: M1 ya conoce la ocupacion (contrato C4)
         }
         Reservation saved = repository.save(reservation); // guarda cambios y retorna la version actualizada
 
@@ -169,6 +185,16 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
                     changedAt // hora exacta de la transicion
             ));
         }
+        if (command.cause() == CancellationCause.MAINTENANCE) { // C5: evento inmutable de la cancelacion automatica
+            cancellationEventPort.save(new CancellationEventRecord(
+                    saved.getId(), // reserva cancelada
+                    ActorType.SYSTEM, // proceso automatico
+                    changedAt, // instante de la cancelacion
+                    0L, // sin anticipacion: no la calcula el sistema
+                    CancellationSubtype.BY_OWNER, // subtipo acordado en el contrato C5
+                    MAINTENANCE_REASON, // motivo auditable
+                    MAINTENANCE_JUSTIFICATION)); // detalle legible
+        }
 
         return new ChangeReservationStatusResult( // construye el resultado tipado del contrato
                 saved.getId(), // id de la reserva
@@ -191,7 +217,7 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
                     "Cannot transition from " + from + " to " + command.targetStatus()); // rechaza transicion no permitida
         }
         validateSubtypeTargetCombination(from, command.targetStatus(), command.subtype()); // subtipo obligatorio con CANCELLED y prohibido fuera
-        validateActorForSubtype(from, command.targetStatus(), command.subtype(), command.actor()); // valida actor segun subtipo
+        validateActorForSubtype(from, command.targetStatus(), command.subtype(), command.actor(), command.cause()); // valida actor segun subtipo
         validateActorIdentity(command); // actor_id obligatorio si actor no es SYSTEM
         validateFieldPerTarget(command); // completion_notes solo COMPLETED; payment_reference solo RESERVED
         validateCancellationData(command); // anticipacion al cancelar RENTER; averia al cancelar OWNER
@@ -223,11 +249,15 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
     private void validateActorForSubtype(ReservationStatus from,
                                         ReservationStatus to,
                                         CancellationSubtype subtype,
-                                        ActorType actor) { // valida correspondencia entre actor y subtipo
+                                        ActorType actor,
+                                        CancellationCause cause) { // valida correspondencia entre actor y subtipo
         if (subtype == null) { // subtipo nulo permite cualquier actor
             return; // transicion valida sin subtipo
         }
         if (actor == ActorType.SYSTEM) { // actor de sistema con subtipo no nulo
+            if (cause == CancellationCause.MAINTENANCE && subtype == CancellationSubtype.BY_OWNER) { // excepcion acotada de C5
+                return; // el mantenimiento cancela con actor sistema y subtipo de propietario
+            }
             throw new InvalidTransitionException(from, to, "SYSTEM actor is not allowed with cancellation subtype"); // rechaza actor de sistema
         }
         boolean allowed = switch (subtype) { // evalua restricciones por subtipo
@@ -271,6 +301,9 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
     private void validateCancellationData(ChangeReservationStatusCommand command) { // campos obligatorios al cancelar segun actor
         if (command.targetStatus() != ReservationStatus.CANCELLED) { // fuera de cancelacion no aplica
             return; // sin validacion
+        }
+        if (command.cause() == CancellationCause.MAINTENANCE) { // cancelacion automatica de C5
+            return; // no exige averia ni anticipacion humana
         }
         if (command.actor() == ActorType.RENTER && command.anticipationMinutes() == null) { // arrendatario cancela sin anticipacion
             throw new ReservationRuleException(ErrorCode.INVALID_PARAMETERS, "anticipation_minutes is required when a renter cancels"); // exige anticipacion

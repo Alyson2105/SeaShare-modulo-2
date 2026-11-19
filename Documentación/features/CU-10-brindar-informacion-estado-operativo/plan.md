@@ -1,6 +1,6 @@
 # Contrato de Integración Externa: Consultar Estado Operativo de Embarcación (M1)
 
-> **Diseño aprobado 2026-11-19, pendiente de implementación.** Ver `Documentación/context/consistencia-m1-m2-mantenimiento.md`: CU-10 pasará a recibir el rango de fechas y a interpretar `maintenance_start`/`maintenance_until`. Mientras no se implemente, la consulta sigue sin fechas.
+> **Implementado en Módulo 2 el 2026-11-19.** CU-10 recibe el rango de fechas, envía `start_date`, `end_date` y `timezone`, e interpreta `maintenance_start`/`maintenance_until` según `Documentación/context/consistencia-m2-m1.md` (C3). M1 debe implementar su parte antes del despliegue.
 
 **Módulo Proveedor**: Módulo 1 – Gestión de Flota y Activos P2P  
 **Responsable de implementarlo**: Equipo de Módulo 1  
@@ -30,7 +30,7 @@ Módulo 1 es el **administrador del inventario físico** en la plataforma SEA-SH
 ### Método HTTP y URL
 
 ```http
-GET /api/v1/vessels/{vessel_id}/operational-status
+GET /api/v1/vessels/{vessel_id}/operational-status?start_date=2026-12-20&end_date=2026-12-22&timezone=America/Bogota
 ```
 
 ### Elementos de la Petición (Request)
@@ -50,7 +50,15 @@ GET /api/v1/vessels/{vessel_id}/operational-status
 |---|---|---|---|
 | `vessel_id` | string (UUID) | Sí | Identificador único de la embarcación en Módulo 1 (FR-001) |
 
-**Query Parameters**: No tiene.
+**Query Parameters**:
+
+| Nombre | Tipo | Obligatorio | Descripción |
+|---|---|---|---|
+| `start_date` | ISO date | No | Inicio del rango inclusivo de la reserva |
+| `end_date` | ISO date | No | Fin del rango inclusivo de la reserva |
+| `timezone` | IANA zone | No | Zona del puerto; por defecto `America/Bogota` |
+
+Si el rango falta, el veredicto es sólo del instante. M2 siempre envía los tres parámetros.
 
 **Body**: No tiene (operación `GET`).
 
@@ -66,18 +74,25 @@ GET /api/v1/vessels/{vessel_id}/operational-status
 {
   "vessel_id": "string (UUID)",
   "operational_status": "string (enum oficial de Módulo 1)",
-  "queried_at": "string (ISO 8601 timestamp con zona horaria)"
+  "queried_at": "string (ISO 8601 timestamp con zona horaria)",
+  "maintenance_start": "string (ISO 8601 con offset) | null",
+  "maintenance_until": "string (ISO 8601 con offset) | null"
 }
 ```
 
 #### Matriz de Estados Operativos Oficiales (FR-003, FR-004, FR-005):
 
-| Valor de `operational_status` | Significado en Módulo 1 | Dictamen en Módulo 2 | Efecto en CU-02 / CU-03 |
-|---|---|---|---|
-| `AVAILABLE` | Activo náutico libre para alquiler comercial | **Apto para Reserva** | Permite continuar con la creación de reserva o inicio de pago |
-| `RESERVED` | Activo bloqueado por una reserva ya confirmada | **No Apto para Reserva** | Rechaza con `409 Conflict` (motivo: bloqueado por otra reserva confirmada) |
-| `IN_NAVIGATION` | Embarcación en el mar cumpliendo un contrato de viaje | **No Apto para Reserva** | Rechaza con `409 Conflict` (motivo: embarcación en uso náutico) |
-| `MAINTENANCE_CLEANING` | Inhabilitada por reparaciones mecánicas, aseo o inspección | **No Apto para Reserva** | Rechaza con `409 Conflict` (motivo: activo inhabilitado) |
+| Valor de `operational_status` | Dictamen en Módulo 2 |
+|---|---|
+| `AVAILABLE` | **Apto para el rango** |
+| `RESERVED` | **Apto para el rango**: el bloqueo por fechas lo evalúa M2 con sus reservas |
+| `IN_NAVIGATION` / `NAVIGATION` | **Apto para el rango** |
+| `MAINTENANCE` / `MAINTENANCE_CLEANING` con fechas que **no** cruzan | **Apto para el rango** |
+| `MAINTENANCE` / `MAINTENANCE_CLEANING` con fechas que **cruzan** | **No Apto** |
+| `MAINTENANCE` sin fechas | **No Apto** (fail-safe) |
+| Valor desconocido o cuerpo ilegible | `503 FLEET_SERVICE_UNAVAILABLE` |
+
+**Cruce:** los instantes se convierten a fecha local del puerto y se comparan con el rango inclusivo `[]` de la reserva. Cualquier día tocado por el mantenimiento se considera bloqueado. Si `maintenance_until` ya venció, M2 considera la embarcación disponible (liberación perezosa, D-07).
 
 ---
 
@@ -132,7 +147,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/vessels/8f4b2319-58b9-4c8d-b
 | `400 Bad Request` | `vessel_id` con formato UUID corrupto | Módulo 2 aborta sin reintento | `400 Bad Request` (`INVALID_UUID`) |
 | `401 Unauthorized` / `403 Forbidden` | Credencial de servicio de M2 rechazada | Alerta crítica de seguridad en observabilidad | `500 Internal Server Error` (`INTERNAL_ERROR`) |
  | `404 Not Found` | Embarcación no existe en los registros de flota | Declara activo inexistente sin reintento (SC-005) | `404 Not Found` (`VESSEL_NOT_FOUND`) |
-| `500 Internal Server Error` / `502 Bad Gateway` | Falla interna en los servidores de Módulo 1 | **Estado real del código:** aborta sin reintento y devuelve 503 (`HttpFleetOperationalStatusAdapter.java:96`). **Deuda:** el contrato pide 1 reintento rápido antes del fail-safe. | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |
+| `500 Internal Server Error` / `502 Bad Gateway` | Falla interna en los servidores de Módulo 1 | Un reintento inmediato y, si persiste, fail-safe | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |
 | `Timeout` (> 300 ms) | Latencia excedida en la red o base de datos de M1 | Ejecuta 1 reintento inmediato; si se agota, activa *fail-safe* preventivo | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |
 
 ---
@@ -153,8 +168,8 @@ curl -X GET "https://flota.seashare.internal/api/v1/vessels/8f4b2319-58b9-4c8d-b
 
 - **Autenticación servicio-a-servicio (cerrado el 2026-11-19)**: M1 **no** exige token en `GET /api/v1/vessels/**` (`SecurityConfig.java:94-96`). M2 no lo envía y es correcto; no hay variable ni defecto pendiente.
 - **Endpoint formal en Módulo 1 (confirmado el 2026-11-18 y verificado el 2026-11-19)**: ruta `GET /api/v1/vessels/{vessel_id}/operational-status` (`ReservationsVesselController.java:60`) y respuesta `{vessel_id, operational_status, queried_at}` (`OperationalStatusResponse.java:6-9`).
-- **Motivo de indisponibilidad**: el contrato actual sólo devuelve el estado; M2 no recibe un motivo. `FR-005` se cumple a nivel de dictamen (apto / no apto), no de mensaje detallado.
-- **Diseño aprobado 2026-11-19 (pendiente de implementación)**: CU-10 recibirá `start_date`/`end_date` y M1 devolverá `maintenance_start`/`maintenance_until`; el veredicto será disponible si el estado es `AVAILABLE`, `RESERVED`, `IN_NAVIGATION`/`NAVIGATION`, o si el mantenimiento no cruza el rango. Mantenimiento sin fechas bloquea todo. Ver `context/consistencia-m1-m2-mantenimiento.md`.
+- **Motivo de indisponibilidad**: el contrato actual sólo devuelve el estado; M2 no recibe un motivo detallado. `FR-005` se cumple a nivel de dictamen (apto / no apto). El mensaje de `VESSEL_NOT_AVAILABLE` ya no menciona "fechas seleccionadas" para no atribuir el bloqueo a un solapamiento cuando el motivo es mantenimiento.
+- **Diseño implementado en M2 el 2026-11-19**: CU-10 envía `start_date`/`end_date`/`timezone` y M1 debe devolver `maintenance_start`/`maintenance_until`; el veredicto es disponible si el estado es `AVAILABLE`, `RESERVED`, `IN_NAVIGATION`/`NAVIGATION`, o si el mantenimiento no cruza el rango. Mantenimiento sin fechas bloquea todo. Ver `context/consistencia-m2-m1.md` §4.
 
 ---
 

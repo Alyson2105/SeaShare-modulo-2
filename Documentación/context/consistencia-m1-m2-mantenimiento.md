@@ -4,6 +4,7 @@
 **Alcance:** M2 (este repo) y M1 (`C:\Users\josue\Documents\IJ\SeaShareM1`), en modo solo lectura. El análisis de Módulo 3 está en `consistencia-m2-m3-pendientes.md`.
 **Naturaleza:** dictamen de factibilidad y diseño. No se implementó nada.
 **Contrato normativo:** `consistencia-m2-m1.md`.
+**Estado de implementación (2026-11-19):** las correcciones de M2 (C4 sin `RESERVED`, CU-10 por rango, C5, idempotencia, `auto-cancel` y job de respaldo) están implementadas en la rama `feature/consistencia-m1-m2`. Las piezas de M1 (§2.2 y catálogo C2) siguen pendientes en `SeaShareM1`.
 **Despliegue objetivo:** sábado 2026-11-21.
 
 ---

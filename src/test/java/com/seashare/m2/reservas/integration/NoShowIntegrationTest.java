@@ -39,6 +39,7 @@ import java.time.ZoneId;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -104,7 +105,7 @@ class NoShowIntegrationTest { // CU-05: inasistencia real contra PostgreSQL
         vesselId = UUID.randomUUID();
         when(clockPort.now()).thenReturn(T0);
         when(fleetInfoPort.getVesselInfo(any())).thenReturn(new FleetInfo(ownerId, 10, ZONE));
-        when(fleetOperationalStatusPort.isAvailable(any())).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
     }
 
     private UUID createReservation(UUID renterId, UUID targetVesselId, LocalDate startDate, LocalDate endDate, LocalTime departureTime) { // siembra una reserva INITIATED
@@ -192,7 +193,7 @@ class NoShowIntegrationTest { // CU-05: inasistencia real contra PostgreSQL
                 .andExpect(jsonPath("$.status").value("CANCELLED"))
                 .andExpect(jsonPath("$.cancellation_subtype").value("NO_SHOW"))
                 .andExpect(jsonPath("$.wait_minutes_recorded").value(30))
-                .andExpect(jsonPath("$.vessel_operational_status").value("AVAILABLE"));
+                .andExpect(jsonPath("$.vessel_operational_status").value(nullValue())); // M1 no conocia la ocupacion
 
         Reservation saved = reservationRepository.findById(seed.reservationId()).orElseThrow();
         assertThat(saved.getStatus()).isEqualTo(ReservationStatus.CANCELLED);

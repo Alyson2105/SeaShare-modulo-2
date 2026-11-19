@@ -111,6 +111,9 @@ class ReservationEntity { // entidad jpa para la tabla reservation
     @Column(name = "m1_blocked", nullable = false)
     private boolean m1Blocked; // indicador de bloqueo notificado al modulo 1
 
+    @Column(name = "maintenance_blocked", nullable = false)
+    private boolean maintenanceBlocked; // indicador de cancelacion por mantenimiento (V12)
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt; // marca temporal de creacion del registro
 
@@ -345,6 +348,14 @@ class ReservationEntity { // entidad jpa para la tabla reservation
 
     public void setM1Blocked(boolean m1Blocked) { // asigna indicador de bloqueo m1
         this.m1Blocked = m1Blocked; // establece m1Blocked
+    }
+
+    public boolean isMaintenanceBlocked() { // consulta indicador de mantenimiento
+        return maintenanceBlocked; // retorna maintenanceBlocked
+    }
+
+    public void setMaintenanceBlocked(boolean maintenanceBlocked) { // asigna indicador de mantenimiento
+        this.maintenanceBlocked = maintenanceBlocked; // establece maintenanceBlocked
     }
 
     public Instant getCreatedAt() { // obtiene la fecha de creacion

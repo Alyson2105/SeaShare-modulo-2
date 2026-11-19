@@ -61,7 +61,7 @@ class ReservationQueryTest { // pruebas de integracion de endpoints de consulta 
     void setUp() { // configuracion inicial de mocks de flota
         ownerId = UUID.randomUUID();
         when(fleetInfoPort.getVesselInfo(any())).thenReturn(new FleetInfo(ownerId, 10, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(any())).thenReturn(true); // el resumen de flota lo aporta el adaptador fake por defecto
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true); // el resumen de flota lo aporta el adaptador fake por defecto
     }
 
     private ReservationView createReservation(UUID renterId, UUID vesselId) { // siembra una reserva INITIATED

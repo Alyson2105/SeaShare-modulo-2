@@ -67,7 +67,7 @@ class CreateReservationValidationTest { // pruebas de validacion, errores y conc
     void setUp() { // inicializacion de mocks antes de cada prueba
         defaultOwnerId = UUID.randomUUID(); // genera owner id unico
         when(fleetInfoPort.getVesselInfo(any())).thenReturn(new FleetInfo(defaultOwnerId, 12, "America/Bogota")); // mock exitoso
-        when(fleetOperationalStatusPort.isAvailable(any())).thenReturn(true); // disponible por defecto
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true); // disponible por defecto
     }
 
     @AfterEach
@@ -290,7 +290,7 @@ class CreateReservationValidationTest { // pruebas de validacion, errores y conc
         String key = UUID.randomUUID().toString(); // clave de idempotencia
         trackedKeys.add(key); // registra para limpieza
 
-        when(fleetOperationalStatusPort.isAvailable(vesselId)).thenReturn(false); // simula embarcacion inhabilitada
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(false); // simula embarcacion inhabilitada
 
         mockMvc.perform(post("/api/v1/reservations") // peticion con embarcacion inoperativa
                         .header("X-User-Id", UUID.randomUUID().toString())

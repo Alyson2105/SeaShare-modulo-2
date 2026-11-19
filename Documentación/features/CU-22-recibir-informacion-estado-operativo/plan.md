@@ -1,6 +1,6 @@
 # Contrato de Interfaz Asíncrona: CU-22 Recibir Información de Estado Operativo
 
-> **Diseño aprobado 2026-11-19, pendiente de implementación.** Ver `Documentación/context/consistencia-m1-m2-mantenimiento.md`. Mientras no se implemente, el código sigue enviando `RESERVED` a M1 y CU-10 consulta sin fechas.
+> **Implementado en Módulo 2 el 2026-11-19.** M2 ya no envía `RESERVED`; la guarda de ocupación se activa con `IN_NAVIGATION`. Ver `Documentación/context/consistencia-m2-m1.md` (C4) y el diagnóstico `consistencia-m1-m2-mantenimiento.md`.
 
 ## 1. Identificación y Metadatos
 
@@ -41,7 +41,7 @@ Esta interfaz asíncrona permite a Módulo 2 informar a Módulo 1 el **estado op
    - Módulo 2 no espera una respuesta de negocio de Módulo 1 ni altera la transición local según el resultado de la entrega; la consistencia es eventual y se alcanza por reintento.
 7. **Fuera de Alcance (FR-009)**:
    - No se valida ni resuelve doble reserva en el marco de esta notificación; esa prevención es responsabilidad interna de Módulo 2 y ocurre antes de confirmar la reserva.
-   - No se notifican las transiciones a `Iniciada`, `Pendiente de pago`, `Expirada` ni `Pago Fallido`; `Cancelada` solo se notifica si la reserva ya había alcanzado `Reservada`.
+   - No se notifican las transiciones a `Iniciada`, `Pendiente de pago`, `Expirada` ni `Pago Fallido`; `Cancelada` solo se notifica si la guarda de ocupación está activa (M1 conoció la ocupación por `IN_NAVIGATION`); una cancelación por mantenimiento (C5) nunca notifica `AVAILABLE`.
 
 ---
 
@@ -75,7 +75,7 @@ Esta interfaz asíncrona permite a Módulo 2 informar a Módulo 1 el **estado op
 ### 3.3 Flujo de Entrega
 
 1. Un caso de uso de negocio (CU-13, CU-06, CU-07, CU-04 o CU-05) invoca a CU-08 para consolidar la transición de la reserva.
-2. CU-08 aplica la tabla FR-002 y, si la transición es notificable, invoca a CU-22.
+2. CU-08 aplica la tabla FR-002: `IN_NAVIGATION` activa la guarda de ocupación y encola el aviso; `COMPLETED`/`CANCELLED` solo encolan si la guarda ya estaba activa.
 3. CU-22 genera el `event_id` y escribe el evento en `outbox_message` dentro de la misma transacción local.
 4. Al confirmarse el commit, `OutboxRelayJob` reclama el pendiente y llama a `FleetStatusNotificationPort`.
 5. En modo `http`, el adaptador envía `POST /api/v1/internal/status-events` con el payload del outbox.
@@ -135,11 +135,10 @@ Módulo 2 nunca añade campos extra: el payload tiene exactamente estos cuatro (
 | Valor | Significado |
 | :--- | :--- |
 | `AVAILABLE` | Disponible |
-| `RESERVED` | Reservado |
 | `IN_NAVIGATION` | En Navegación |
 | `MAINTENANCE_CLEANING` | En Mantenimiento/Limpieza |
 
-Módulo 1 acepta además los alias `NAVIGATION` y `MAINTENANCE` (VERIFICADO: `AssignOperationalStatusService.java:129-130`). Módulo 2 sólo emite los cuatro valores canónicos; nunca publica nada fuera de la tabla de FR-002.
+Módulo 2 **ya no emite `RESERVED`**. Módulo 1 sigue aceptando los alias `NAVIGATION` y `MAINTENANCE` (VERIFICADO: `AssignOperationalStatusService.java:129-130`).
 
 ### 4.3 Respuesta de Módulo 1 (VERIFICADO: `StatusEventController.java:53`)
 
@@ -167,18 +166,11 @@ Un `outcome` ausente o desconocido se reintenta (`:76-79, :83-86`). El adaptador
 
 > Los ejemplos conservan el offset `-05:00` del contrato original; Módulo 2 emite `occurred_at` en UTC (`Z`) porque serializa un `Instant` (`OutboxAdapter.java:124`).
 
-### Ejemplo 1: Reservada (bloqueo por pago confirmado)
+### Ejemplo 1: Reservada — **ya no se envía**
 
-```json
-{
-  "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-  "operational_status": "RESERVED",
-  "occurred_at": "2026-10-22T12:05:00-05:00",
-  "event_id": "7f3c1a9e-2b64-4d0f-9c81-5a2d6e4b1101"
-}
-```
+Módulo 2 no emite `RESERVED` a Módulo 1. El bloqueo por fechas es responsabilidad de M2 y se evalúa con sus propias reservas.
 
-### Ejemplo 2: En navegación (check-in)
+### Ejemplo 2: En navegación (check-in; activa la guarda de ocupación)
 
 ```json
 {
@@ -200,7 +192,7 @@ Un `outcome` ausente o desconocido se reintenta (`:76-79, :83-86`). El adaptador
 }
 ```
 
-### Ejemplo 4: Cancelada ordinaria (liberación; sólo si ya había llegado a Reservada)
+### Ejemplo 4: Cancelada ordinaria (liberación; sólo si la guarda de ocupación está activa y no hay mantenimiento activo)
 
 ```json
 {
@@ -211,7 +203,7 @@ Un `outcome` ausente o desconocido se reintenta (`:76-79, :83-86`). El adaptador
 }
 ```
 
-### Ejemplo 5: Cancelada por avería mecánica (señal hacia Mantenimiento/Limpieza; sólo si ya había llegado a Reservada)
+### Ejemplo 5: Cancelada por avería mecánica (señal hacia Mantenimiento/Limpieza; sólo si la guarda está activa y no hay mantenimiento activo)
 
 ```json
 {
@@ -273,12 +265,14 @@ Cuando Módulo 1 recibe `MAINTENANCE_CLEANING`, gestiona por su cuenta el paso p
 ```mermaid
 stateDiagram-v2
     [*] --> AVAILABLE
-    AVAILABLE --> RESERVED: reserva Reservada
-    RESERVED --> IN_NAVIGATION: check-in
-    IN_NAVIGATION --> MAINTENANCE_CLEANING: Completada
-    RESERVED --> AVAILABLE: cancelación ordinaria / No-Show
-    RESERVED --> MAINTENANCE_CLEANING: cancelación por avería
+    AVAILABLE --> IN_NAVIGATION: check-in (C4; activa la guarda)
+    IN_NAVIGATION --> MAINTENANCE_CLEANING: Completada con guarda activa
     MAINTENANCE_CLEANING --> AVAILABLE: transición interna de Módulo 1
+    note right of AVAILABLE
+        RESERVED ya no se envía desde M2.
+        Las filas históricas con m1_blocked
+        pueden liberar como AVAILABLE.
+    end note
 ```
 
 ---
@@ -314,8 +308,8 @@ stateDiagram-v2
 
 ### 9.1 Envío de `RESERVED` y fechas de la reserva
 
-**Comportamiento actual (VERIFICADO)**: al confirmarse el pago, `ModuleNotificationMatrix` devuelve `RESERVED` (`ModuleNotificationMatrix.java:48`) y `ChangeReservationStatusService` encola el evento en el outbox en la misma transición (`ChangeReservationStatusService.java:164-170`). El payload no lleva fechas (`OutboxAdapter.java:120-141`).
+**Implementado en M2 el 2026-11-19 (VERIFICADO)**: `ModuleNotificationMatrix` ya no devuelve `RESERVED`; `IN_NAVIGATION` es el único aviso que activa la guarda de ocupación (`ChangeReservationStatusService`). El payload del aviso C4 no lleva fechas: el bloqueo por fechas es responsabilidad de Módulo 2 y el mantenimiento se comunica por C5.
 
-**`ReservationOperationalDispatchJob`: [DECISIÓN PENDIENTE]**. El plan técnico lo describe para enviar `RESERVED` sólo cuando `start_date <= CURRENT_DATE` (`technical-plan/plan.md:240`), pero no existe en el código. No se elige aquí entre las alternativas.
+**`ReservationOperationalDispatchJob`: descartado.** El plan técnico lo describía para enviar `RESERVED` sólo cuando `start_date <= CURRENT_DATE`; al dejar de enviarse `RESERVED`, la pieza no tiene razón de ser.
 
-**Riesgo confirmado el 2026-11-19 (ya no es una hipótesis)**: M1 guarda un único `status` (`Vessel.java:35`) y no tiene ninguna estructura de fechas (`V10__operational_status_events.sql:5-6`), así que `RESERVED` bloquea la embarcación completa. Una reserva pagada para una fecha futura deja el barco no disponible para cualquier otra fecha, porque CU-10 sólo acepta `AVAILABLE` (`HttpFleetOperationalStatusAdapter.java:64`). El diseño aprobado para resolverlo (dejar de enviar `RESERVED`, fechas de mantenimiento y aviso M1→M2) está en `context/consistencia-m1-m2-mantenimiento.md`.
+**Resuelto por el contrato C3/C5**: M1 modela el mantenimiento con ventana (`maintenance_start`/`maintenance_until`), M2 consulta por rango y M1 avisa a M2 cuando entra en mantenimiento. Ver `context/consistencia-m2-m1.md`.

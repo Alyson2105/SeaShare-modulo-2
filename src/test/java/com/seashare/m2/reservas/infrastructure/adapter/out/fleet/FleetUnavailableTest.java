@@ -14,6 +14,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URLConnection;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
@@ -29,6 +32,9 @@ class FleetUnavailableTest { // pruebas de cortes seguros y errores de M1 con Wi
     private static final UUID OWNER_ID = UUID.fromString("a1c2e3f4-5678-90ab-cdef-1234567890ab"); // propietario fijo
     private static final String VESSEL_PATH = "/api/v1/vessels/" + VESSEL_ID; // ruta de la ficha
     private static final String STATUS_PATH = VESSEL_PATH + "/operational-status"; // ruta del estado operativo
+    private static final LocalDate START = LocalDate.of(2026, 12, 20); // inicio del rango de prueba
+    private static final LocalDate END = LocalDate.of(2026, 12, 22); // fin del rango de prueba
+    private static final ZoneId ZONE = ZoneId.of("America/Bogota"); // zona del puerto de prueba
 
     private WireMockServer wireMock; // servidor falso de M1
     private HttpFleetInfoAdapter infoAdapter; // adaptador de ficha bajo prueba
@@ -44,7 +50,8 @@ class FleetUnavailableTest { // pruebas de cortes seguros y errores de M1 con Wi
         RestClient client = new FleetHttpConfig().fleetRestClient(properties); // cliente real con timeouts
         ExternalQueryLogPort noopLog = entry -> { }; // el registro no se prueba aqui
         infoAdapter = new HttpFleetInfoAdapter(client, noopLog); // adaptador de ficha
-        statusAdapter = new HttpFleetOperationalStatusAdapter(client, noopLog); // adaptador de estado
+        statusAdapter = new HttpFleetOperationalStatusAdapter(client, noopLog,
+                () -> Instant.parse("2026-12-01T00:00:00Z")); // adaptador de estado con reloj fijo
     }
 
     @AfterEach
@@ -163,7 +170,7 @@ class FleetUnavailableTest { // pruebas de cortes seguros y errores de M1 con Wi
     void operationalStatusNotFoundOn404() { // el adaptador de CU-10 comparte el mapeo de errores
         wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse().withStatus(404))); // sin cuerpo
 
-        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID)) // corta en la primera llamada
+        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID, START, END, ZONE)) // corta en la primera llamada
                 .isInstanceOfSatisfying(ReservationRuleException.class, e ->
                         assertThat(e.getCode()).isEqualTo(ErrorCode.VESSEL_NOT_FOUND.getCode())); // codigo esperado
 

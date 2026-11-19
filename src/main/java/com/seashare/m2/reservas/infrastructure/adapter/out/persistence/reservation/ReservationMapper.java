@@ -39,6 +39,7 @@ class ReservationMapper { // mapeador entre entidad de persistencia y modelo de 
         domain.setActualDepartureAt(entity.getActualDepartureAt()); // mapea hora real de zarpe (solo persistencia)
         domain.setActualArrivalAt(entity.getActualArrivalAt()); // mapea hora real de desembarque (solo persistencia)
         domain.setM1Blocked(entity.isM1Blocked()); // mapea la guarda de bloqueo en M1
+        domain.setMaintenanceBlocked(entity.isMaintenanceBlocked()); // mapea la marca de mantenimiento
         domain.setReservationCode(entity.getReservationCode()); // mapea el codigo visible persistido
         domain.setRentalAmount(entity.getRentalAmount()); // mapea alquiler liquidado (solo lectura)
         domain.setInsuranceAmount(entity.getInsuranceAmount()); // mapea seguro liquidado (solo lectura)
@@ -65,6 +66,7 @@ class ReservationMapper { // mapeador entre entidad de persistencia y modelo de 
         entity.setCurrency(reservation.getCurrency() == null ? "COP" : reservation.getCurrency()); // fija moneda en COP
         entity.setTtlExpiresAt(reservation.getTtlExpiresAt()); // asigna expiracion de ttl
         entity.setM1Blocked(false); // indica que no bloquea en modulo 1
+        entity.setMaintenanceBlocked(false); // la creacion nunca nace afectada por mantenimiento
         entity.setCreatedAt(reservation.getCreatedAt()); // asigna fecha de creacion provista por reloj
         entity.setStatusChangedAt(reservation.getCreatedAt()); // la creacion es el primer cambio de estado (V4 NOT NULL)
         entity.setHarborTimezone(reservation.getHarborTimezone()); // asigna zona horaria del puerto
@@ -105,5 +107,6 @@ class ReservationMapper { // mapeador entre entidad de persistencia y modelo de 
             entity.setTotalAmount(domain.getTotalAmount()); // total sin recalcular
         }
         entity.setM1Blocked(domain.isM1Blocked()); // persiste la guarda de notificacion a M1 (T-08)
+        entity.setMaintenanceBlocked(domain.isMaintenanceBlocked()); // persiste la marca de mantenimiento (C5)
     }
 }
