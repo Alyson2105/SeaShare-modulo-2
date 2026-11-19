@@ -2,7 +2,7 @@
 
 **Versión:** 2.0 · **Fecha:** 2026-11-19
 **Módulos:** M1 – Gestión de Flota y Activos P2P · M2 – Operación de Reservas, Tiempos y Cancelaciones
-**Estado:** diseño acordado y **normativo**. M1 implementa lo aquí descrito; las dudas se plantean después de aplicarlo.
+**Estado:** diseño acordado y **normativo**. M1 implementa lo aquí descrito; las dudas se plantean después de aplicarlo. **M2 implementado el 2026-11-19** (C4, C5, CU-10 por rango y `auto-cancel`); las piezas de M1 siguen pendientes.
 **Diagnóstico de factibilidad:** `context/consistencia-m1-m2-mantenimiento.md`.
 
 ---

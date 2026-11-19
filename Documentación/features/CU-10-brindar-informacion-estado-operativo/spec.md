@@ -1,6 +1,6 @@
 # Feature Specification: Brindar Información de Estado Operativo
 
-> **Diseño aprobado 2026-11-19, pendiente de implementación.** Ver `Documentación/context/consistencia-m1-m2-mantenimiento.md`: el chequeo pasará a considerar el rango de fechas y el mantenimiento con fechas. Mientras no se implemente, sigue siendo instantáneo.
+> **Implementado en Módulo 2 el 2026-11-19.** El chequeo considera el rango de fechas de la reserva y la ventana de mantenimiento (`maintenance_start`/`maintenance_until`) según `Documentación/context/consistencia-m2-m1.md` (C3). M1 debe completar su parte (fechas en C3) antes del despliegue.
 
 **Módulo**: Módulo 2 (Operación de Reservas, Tiempos y Cancelaciones)  
 **Created**: 2026-09-06  
@@ -14,7 +14,7 @@
 
 ### User Story 1 - Consultar si una embarcación está disponible para alquilar (Priority: P1)
 
-Cuando el sistema necesita saber si un barco se puede alquilar, consulta a la API de Módulo 1 para obtener su estado en ese mismo instante. Si el Módulo 1 responde que el barco está "Disponible", el sistema confirma que la embarcación se puede reservar. Si el barco se encuentra en cualquier otro estado (`Reservado`, `En Navegación` o `En Mantenimiento/Limpieza`), el sistema rechaza la solicitud e informa la razón por la que no se puede alquilar en ese momento.
+Cuando el sistema necesita saber si un barco se puede alquilar para unas fechas concretas, consulta a la API de Módulo 1 el estado operativo y su ventana de mantenimiento. El veredicto es **disponible para el rango** si el estado es `Disponible`, `Reservado` o `En Navegación`, o si el mantenimiento no toca ningún día de la reserva. Si el barco está en mantenimiento con fechas que cruzan el rango, o sin fechas, el sistema rechaza la solicitud.
 
 **Why this priority**: Es la verificación obligatoria que evita alquilar un barco que ya está ocupado, averiado o en mantenimiento, previniendo sobreventas.
 
@@ -34,8 +34,8 @@ Cuando el sistema necesita saber si un barco se puede alquilar, consulta a la AP
 
 3. **Scenario**: Embarcación apartada por otra reserva confirmada
     - **Given** una embarcación que figura en estado "Reservado" en Módulo 1 porque otra reserva ya alcanzó el estado "Reservada"
-    - **When** se consulta su estado operativo
-    - **Then** el sistema indica que el barco está bloqueado por otra reserva confirmada y detiene la nueva solicitud
+    - **When** se consulta su estado operativo para un rango de fechas
+    - **Then** el sistema considera la embarcación disponible para ese rango: el bloqueo por fechas es responsabilidad de Módulo 2, que ya lo evalúa con sus propias reservas
 
 ---
 
@@ -83,8 +83,8 @@ Si la consulta se realiza enviando un identificador de embarcación inválido, m
     - Este caso de uso solo verifica si el barco se puede usar o no; **NO calcula precios, no aplica tarifas ni solicita depósitos de garantía**.
 - **Información siempre en tiempo real**:
     - Para evitar que dos personas alquilen el mismo barco al mismo tiempo, la consulta se realiza en el instante exacto en que se solicita, sin guardar datos antiguos en memoria cache.
-- **Mantenimiento con fechas (diseño aprobado 2026-11-19, pendiente de implementación)**:
-    - Hoy M1 no devuelve fechas y cualquier `MAINTENANCE` bloquea toda fecha. El diseño aprobado añade `maintenance_start`/`maintenance_until` para bloquear sólo el rango afectado. Ver `context/consistencia-m1-m2-mantenimiento.md`.
+- **Mantenimiento con fechas (implementado en M2 el 2026-11-19)**:
+    - M1 devuelve `maintenance_start` y `maintenance_until`. M2 convierte los instantes a la zona del puerto y bloquea únicamente los días que cruzan el rango inclusivo de la reserva. Un `MAINTENANCE` sin fechas sigue bloqueando todo por seguridad. Si `maintenance_until` ya venció, la embarcación se considera disponible (liberación perezosa).
 
 ---
 
@@ -92,15 +92,15 @@ Si la consulta se realiza enviando un identificador de embarcación inválido, m
 
 ### Functional Requirements
 
-- **FR-001**: El sistema DEBE ofrecer una interfaz interna que reciba el código o identificador del barco a consultar.
-- **FR-002**: El sistema DEBE consultar directamente la API externa de Módulo 1 para conocer el estado operativo en tiempo real.
+- **FR-001**: El sistema DEBE ofrecer una interfaz interna que reciba el identificador del barco y el rango de fechas de la reserva (`start_date`, `end_date`) junto con la zona IANA del puerto.
+- **FR-002**: El sistema DEBE consultar directamente la API externa de Módulo 1 (`GET /operational-status?start_date&end_date&timezone`) para conocer el estado operativo en tiempo real y la ventana de mantenimiento.
 - **FR-003**: El sistema DEBE reconocer los cuatro estados operativos oficiales que maneja Módulo 1:
     - `Disponible`: Libre para ser alquilado.
     - `Reservado`: Bloqueado por una reserva ya confirmada.
     - `En Navegación`: En el agua ejecutando un viaje.
     - `En Mantenimiento/Limpieza`: Inhabilitado por reparación, revisión o aseo.
-- **FR-004**: El sistema DEBE confirmar que el barco es **Apto para Reserva** si y solo si Módulo 1 devuelve el estado `Disponible`.
-- **FR-005**: Si Módulo 1 devuelve `Reservado`, `En Navegación` o `En Mantenimiento/Limpieza`, el sistema DEBE marcar la embarcación como **No Apta para Reserva**. _Limitación conocida (2026-11-18):_ el contrato sólo devuelve el estado, así que M2 no puede comunicar un motivo distinto por estado; el rechazo es genérico (`VESSEL_NOT_AVAILABLE`).
+- **FR-004**: El sistema DEBE confirmar que el barco es **Apto para Reserva en el rango** si Módulo 1 devuelve `Disponible`, `Reservado` o `En Navegación`/`NAVIGATION`, o si devuelve `Mantenimiento/Limpieza` con una ventana que no cruza ningún día del rango.
+- **FR-005**: Si Módulo 1 devuelve `Mantenimiento/Limpieza` con fechas que cruzan el rango, o sin fechas, el sistema DEBE marcar la embarcación como **No Apta para Reserva**. Un estado desconocido o una respuesta ilegible se tratan como `503 FLEET_SERVICE_UNAVAILABLE` (fail-safe).
 - **FR-006**: Si la consulta a Módulo 1 falla por desconexión o demora, el sistema DEBE aplicar un bloqueo preventivo (*fail-safe*), declarando el barco como **No Apto para Reserva** y cancelando el proceso. Política de reintentos: se admite como máximo un (1) reintento rápido ante timeout o desconexión transitoria, dentro del presupuesto de latencia; si el reintento también falla, se aplica el fail-safe de inmediato. Nunca se reintenta ante un error 4xx.
 - **FR-007**: El sistema DEBE comunicarse con Módulo 1 exclusivamente a través de su API externa, sin conectarse jamás a la base de datos de dicho módulo.
 - **FR-008**: **REGLA DE NEGOCIO ESTRICTA (Sin dinero):** El sistema **NO DEBE consultar precios, calcular tarifas ni manejar cobros**. Su función es únicamente verificar la disponibilidad física del barco.
@@ -110,7 +110,7 @@ Si la consulta se realiza enviando un identificador de embarcación inválido, m
 
 ### Key Entities
 
-- **Consulta de Estado Operativo (`OperationalStatusQuery`)**: Datos intercambiados internamente en Módulo 2. Incluye: identificador de la embarcación, fecha/hora de la consulta, estado devuelto (`Disponible`, `Reservado`, `En Navegación`, `En Mantenimiento/Limpieza`) y la respuesta final de si se puede alquilar o no.
+- **Consulta de Estado Operativo (`OperationalStatusQuery`)**: Datos intercambiados internamente en Módulo 2. Incluye: identificador de la embarcación, rango de fechas de la reserva, zona del puerto, fecha/hora de la consulta, estado devuelto (`Disponible`, `Reservado`, `En Navegación`, `En Mantenimiento/Limpieza`), ventana de mantenimiento opcional y la respuesta final de si se puede alquilar o no.
 - **Embarcación**: Activo registrado en el Módulo 1 sobre el cual únicamente se verifica su disponibilidad.
 
 ---
@@ -120,7 +120,7 @@ Si la consulta se realiza enviando un identificador de embarcación inválido, m
 ### Measurable Outcomes
 
 - **SC-001**: El 100% de las consultas de disponibilidad a la API de Módulo 1 se responden en menos de 300 milisegundos en condiciones normales.
-- **SC-002**: Cero (0%) reservas permitidas en barcos que figuren como `Reservado`, `En Navegación` o `En Mantenimiento/Limpieza` en Módulo 1.
+- **SC-002**: Cero (0%) reservas permitidas en barcos que estén en mantenimiento durante el rango solicitado o en un estado operativo desconocido.
 - **SC-003**: El 100% de los errores de conexión con Módulo 1 bloquean la reserva de forma preventiva para evitar alquileres sin verificación.
 - **SC-004**: Cero (0) accesos a la base de datos de Módulo 1 o cálculos de precios dentro de este caso de uso.
 - **SC-005**: El 100% de las consultas sobre barcos inexistentes devuelven un mensaje claro sin detener el funcionamiento general del sistema.
