@@ -11,6 +11,7 @@ public enum ErrorCode { // catalogo de codigos de error con mapeo http
     PROFILE_NOT_AUTHORIZED("PROFILE_NOT_AUTHORIZED", 403), // perfil sin autorizacion
     RESERVATION_NOT_OWNED("RESERVATION_NOT_OWNED", 403), // reserva no pertenece al usuario
     POLICY_NOT_ACCEPTED("POLICY_NOT_ACCEPTED", 400), // falta aceptar la politica de cancelacion (CU-03 FR-014)
+    INVALID_MAINTENANCE_RANGE("INVALID_MAINTENANCE_RANGE", 400), // ventana de mantenimiento incoherente o sin fin (C5)
     PAYMENT_DATA_INCOMPLETE("PAYMENT_DATA_INCOMPLETE", 400), // faltan datos del medio de pago (CU-03)
     RESERVATION_NOT_FOUND("RESERVATION_NOT_FOUND", 404), // reserva no encontrada
     VESSEL_NOT_FOUND("VESSEL_NOT_FOUND", 404), // embarcacion no encontrada
@@ -34,6 +35,7 @@ public enum ErrorCode { // catalogo de codigos de error con mapeo http
     GRACE_PERIOD_NOT_ELAPSED("GRACE_PERIOD_NOT_ELAPSED", 409), // tolerancia de inasistencia vigente (CU-05)
     INTERNAL_ERROR("INTERNAL_ERROR", 500), // error interno del servidor
     FLEET_SERVICE_UNAVAILABLE("FLEET_SERVICE_UNAVAILABLE", 503), // servicio de flota no disponible
+    MAINTENANCE_EVENT_PARTIAL_FAILURE("MAINTENANCE_EVENT_PARTIAL_FAILURE", 503), // alguna cancelacion de C5 fallo (contrato M1-M2 §6)
     CALCULATION_UNAVAILABLE("CALCULATION_UNAVAILABLE", 503), // calculo del valor final no disponible
     HARBOR_TIMEZONE_UNAVAILABLE("HARBOR_TIMEZONE_UNAVAILABLE", 503), // zona horaria del puerto no disponible
     QUOTATION_UNAVAILABLE("QUOTATION_UNAVAILABLE", 503); // cotizacion no disponible

@@ -40,4 +40,10 @@ interface IdempotencyKeyJpaRepository extends JpaRepository<IdempotencyKeyEntity
             + "WHERE e.id.idempotencyKey = :key AND e.id.endpoint = :endpoint")
     Optional<String> findResponseRef(@Param("key") String key,
                                      @Param("endpoint") String endpoint); // recupera la referencia del resultado ya persistida
+
+    @Modifying
+    @Query("DELETE FROM IdempotencyKeyEntity e WHERE e.id.idempotencyKey = :key "
+            + "AND e.id.endpoint = :endpoint AND e.responseRef IS NULL")
+    int releaseClaim(@Param("key") String key,
+                     @Param("endpoint") String endpoint); // libera solo reclamos sin resultado
 }

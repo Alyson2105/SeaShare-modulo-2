@@ -27,4 +27,7 @@ public interface IdempotencyPort { // puerto de salida para gestion atomica de i
 
     /** Recupera el resultado guardado de un evento, si ya se proceso por completo. */
     Optional<String> findOutcome(String key, String endpoint);
+
+    /** Libera un reclamo sin resultado: se usa cuando C5 falla parcialmente y M1 debe reintentar. */
+    void releaseClaim(String key, String endpoint);
 }

@@ -67,6 +67,9 @@ m2:
       fixed-delay-ms: 30000                  # Intervalo entre barridos de disputas vencidas (default: 30 s)
       batch-size: 100                        # Maximo de disputas cerradas por ciclo
 
+  maintenance:                               # C5: avisos de mantenimiento de Modulo 1
+    auto-cancel: true                        # Cancela automaticamente las reservas RESERVED afectadas
+
 seashare:                                  # Integracion con Modulo 1 y Modulo 3 (CU-09 a CU-12)
   fleet:
     mode: ${SEASHARE_FLEET_MODE:fake}      # fake (default, M2 corre aislado) u http para los adaptadores reales de M1

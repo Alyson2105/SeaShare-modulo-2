@@ -76,4 +76,10 @@ public class IdempotencyAdapter implements IdempotencyPort { // adaptador de inf
     public Optional<String> findOutcome(String key, String endpoint) { // recupera el resultado guardado
         return repository.findResponseRef(key, endpoint).filter(ref -> !ref.isBlank()); // ignora filas sin completar
     }
+
+    @Override
+    @Transactional
+    public void releaseClaim(String key, String endpoint) { // libera un reclamo sin resultado (fallo parcial)
+        repository.releaseClaim(key, endpoint); // solo borra si response_ref sigue nulo
+    }
 }
