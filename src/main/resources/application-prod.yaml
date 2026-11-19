@@ -32,6 +32,8 @@ m2:
 
   maintenance:
     auto-cancel: true                # C5: cancela reservas RESERVED afectadas por mantenimiento
+    scan:
+      enabled: false                 # Respaldo apagado por defecto; se activa por entorno si hace falta
 
 seashare:
   fleet:

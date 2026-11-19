@@ -198,5 +198,11 @@ public class ReservationRepositoryAdapter implements ReservationRepositoryPort {
     public boolean existsAnyByVesselId(UUID vesselId) { // C5: historial local de la embarcacion
         return repository.existsByVesselId(vesselId); // cualquier estado cuenta
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> findVesselsWithReservedBetween(LocalDate from, LocalDate to) { // job de reconciliacion
+        return repository.findVesselsWithReservedBetween(from, to); // embarcaciones con RESERVED en la ventana
+    }
 }
 

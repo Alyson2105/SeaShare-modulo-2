@@ -8,6 +8,7 @@ import com.seashare.m2.reservas.application.port.in.ChangeReservationStatusUseCa
 import com.seashare.m2.reservas.application.port.in.CreateReservationUseCase;
 import com.seashare.m2.reservas.application.port.out.FleetInfoPort;
 import com.seashare.m2.reservas.application.port.out.FleetOperationalStatusPort;
+import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
 import com.seashare.m2.reservas.domain.model.ActorType;
 import com.seashare.m2.reservas.domain.model.CancellationSubtype;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
@@ -67,6 +68,9 @@ class MaintenanceEventControllerTest { // C5 de extremo a extremo con PostgreSQL
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private ReservationRepositoryPort reservationRepository;
 
     @MockitoBean
     private FleetInfoPort fleetInfoPort;
@@ -174,6 +178,15 @@ class MaintenanceEventControllerTest { // C5 de extremo a extremo con PostgreSQL
         perform(body(UUID.randomUUID().toString(), "no-es-uuid", "2026-12-20T08:00:00-05:00", "2026-12-27T18:00:00-05:00"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_PARAMETERS.getCode()));
+    }
+
+    @Test
+    void findsVesselsWithReservedInWindow() { // consulta del job de reconciliacion
+        UUID vesselId = UUID.randomUUID();
+        createReserved(vesselId, RESERVATION_START, RESERVATION_END);
+
+        assertThat(reservationRepository.findVesselsWithReservedBetween(RESERVATION_START, RESERVATION_END))
+                .contains(vesselId);
     }
 
     @Test

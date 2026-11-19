@@ -3,6 +3,7 @@ package com.seashare.m2.reservas.infrastructure.adapter.out.fleet;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.seashare.m2.reservas.application.dto.FleetInfo;
+import com.seashare.m2.reservas.application.dto.FleetMaintenanceWindow;
 import com.seashare.m2.reservas.application.port.out.ExternalQueryLogPort;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.shared.domain.ErrorCode;
@@ -19,6 +20,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
@@ -160,6 +162,31 @@ class HttpFleetClientTest { // pruebas de exito de los adaptadores HTTP reales d
                 .withBody(maintenanceBody("2026-11-20T08:00:00-05:00", "2026-11-27T18:00:00-05:00"))));
 
         assertThat(statusAdapter.isAvailable(VESSEL_ID, START, END, ZONE)).isTrue();
+    }
+
+    @Test
+    void returnsMaintenanceWindowForReconciliation() { // C3 entrega fechas para el job de respaldo
+        wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(maintenanceBody("2026-12-21T08:00:00-05:00", "2026-12-27T18:00:00-05:00"))));
+
+        Optional<FleetMaintenanceWindow> window = statusAdapter.maintenanceWindow(VESSEL_ID, START, END, ZONE);
+
+        assertThat(window).hasValueSatisfying(value -> {
+            assertThat(value.start()).isEqualTo(Instant.parse("2026-12-21T13:00:00Z"));
+            assertThat(value.until()).isEqualTo(Instant.parse("2026-12-27T23:00:00Z"));
+        });
+    }
+
+    @Test
+    void noMaintenanceWindowWhenDatesAreMissing() { // sin fechas no se inventa una ventana
+        wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(statusBody("MAINTENANCE_CLEANING"))));
+
+        assertThat(statusAdapter.maintenanceWindow(VESSEL_ID, START, END, ZONE)).isEmpty();
     }
 
     @Test

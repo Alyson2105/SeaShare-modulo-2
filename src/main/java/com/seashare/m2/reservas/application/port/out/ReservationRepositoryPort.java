@@ -74,5 +74,8 @@ public interface ReservationRepositoryPort { // puerto de persistencia para el a
 
     /** Indica si M2 tiene cualquier reserva (de cualquier estado) para la embarcacion. */
     boolean existsAnyByVesselId(UUID vesselId);
+
+    /** Embarcaciones con al menos una reserva RESERVED en la ventana indicada (job de reconciliacion). */
+    List<UUID> findVesselsWithReservedBetween(LocalDate from, LocalDate to);
 }
 

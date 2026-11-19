@@ -5,6 +5,7 @@ import com.seashare.m2.reservas.application.dto.MaintenanceEventCommand;
 import com.seashare.m2.reservas.application.dto.MaintenanceEventOutcome;
 import com.seashare.m2.reservas.application.dto.MaintenanceEventResult;
 import com.seashare.m2.reservas.application.port.in.ChangeReservationStatusUseCase;
+import com.seashare.m2.reservas.application.port.in.ApplyMaintenanceEventUseCase;
 import com.seashare.m2.reservas.application.port.out.IdempotencyPort;
 import com.seashare.m2.reservas.application.port.out.ReservationRepositoryPort;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
@@ -39,7 +40,7 @@ import java.util.UUID;
  * traves de CU-08. Un fallo parcial no guarda idempotencia y responde 503 para que M1 reintente.</p>
  */
 @Service
-public class ApplyMaintenanceEventService { // orquestador de C5
+public class ApplyMaintenanceEventService implements ApplyMaintenanceEventUseCase { // orquestador de C5
 
     static final String IDEMPOTENCY_ENDPOINT = "/api/v1/internal/maintenance-events"; // clave de idempotencia (B.2)
 
@@ -75,6 +76,7 @@ public class ApplyMaintenanceEventService { // orquestador de C5
         this.autoCancel = autoCancel; // asigna bandera de cancelacion automatica
     }
 
+    @Override
     public MaintenanceEventResult apply(MaintenanceEventCommand command) { // flujo completo de C5
         Instant now = clockPort.now(); // instante unico del aviso
         ParsedEvent parsed = parse(command, now); // valida campos y rango (400 si procede)

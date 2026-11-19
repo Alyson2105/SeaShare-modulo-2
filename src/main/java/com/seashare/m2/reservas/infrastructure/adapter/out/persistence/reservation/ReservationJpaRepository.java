@@ -67,5 +67,11 @@ interface ReservationJpaRepository extends JpaRepository<ReservationEntity, UUID
             @Param("to") LocalDate to); // C5: reservas afectadas por la ventana de mantenimiento
 
     boolean existsByVesselId(UUID vesselId); // C5: M2 conoce la embarcacion si tiene historial local
+
+    @Query("select distinct r.vesselId from ReservationEntity r where r.status = 'RESERVED' "
+            + "and r.startDate <= :to and r.endDate >= :from order by r.vesselId")
+    List<UUID> findVesselsWithReservedBetween(
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to); // job de reconciliacion: embarcaciones con reservas vigentes
 }
 

@@ -3,6 +3,7 @@ package com.seashare.m2.reservas.infrastructure.adapter.out.fleet;
 import com.seashare.m2.reservas.application.dto.ExternalQueryLogEntry;
 import com.seashare.m2.reservas.application.dto.ExternalQueryResult;
 import com.seashare.m2.reservas.application.dto.ExternalQueryType;
+import com.seashare.m2.reservas.application.dto.FleetMaintenanceWindow;
 import com.seashare.m2.reservas.application.port.out.ExternalQueryLogPort;
 import com.seashare.m2.reservas.application.port.out.FleetOperationalStatusPort;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
@@ -29,6 +30,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -61,24 +63,8 @@ public class HttpFleetOperationalStatusAdapter implements FleetOperationalStatus
     public boolean isAvailable(UUID vesselId, LocalDate start, LocalDate end, ZoneId harborZone) { // consulta el estado operativo en M1
         ZoneId zone = harborZone == null ? DEFAULT_HARBOR_ZONE : harborZone; // zona del puerto o la del contrato
         try {
-            String body = get(VESSELS_PATH + vesselId + "/operational-status"
-                    + "?start_date=" + start
-                    + "&end_date=" + end
-                    + "&timezone=" + URLEncoder.encode(zone.getId(), StandardCharsets.UTF_8)); // GET con rango y zona
-            if (body == null || body.isBlank()) { // sin cuerpo no hay estado que leer
-                throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet response body is empty"); // igual estilo que CU-09
-            }
-            JsonNode root; // respuesta parseada de M1
-            try {
-                root = MAPPER.readTree(body); // parsea la respuesta
-            } catch (JacksonException e) {
-                throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet response body is not valid json"); // igual estilo que CU-09
-            }
-            JsonNode statusNode = root.path("operational_status"); // estado reportado por M1
-            String rawStatus = statusNode.isString() ? statusNode.stringValue() : null; // null si ausente o no texto
-            if (rawStatus == null || rawStatus.isBlank()) { // ausente, vacio o no texto
-                throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet response is missing operational_status"); // el catch registra ERROR
-            }
+            JsonNode root = fetchJson(vesselId, start, end, zone); // GET con rango y zona
+            String rawStatus = rawStatus(root); // estado reportado por M1
             boolean available = decide(rawStatus, root, start, end, zone); // interpreta estado y ventana de mantenimiento
             register(vesselId, ExternalQueryResult.OK, rawStatus); // valor crudo solo si la respuesta es interpretable
             return available; // veredicto del contrato C3
@@ -89,6 +75,63 @@ public class HttpFleetOperationalStatusAdapter implements FleetOperationalStatus
             register(vesselId, ExternalQueryResult.ERROR, null); // resultado final ERROR
             throw e; // la consulta a M1 conserva su error original
         }
+    }
+
+    @Override
+    public Optional<FleetMaintenanceWindow> maintenanceWindow(UUID vesselId, LocalDate start, LocalDate end,
+                                                              ZoneId harborZone) { // ventana vigente para el job de respaldo
+        ZoneId zone = harborZone == null ? DEFAULT_HARBOR_ZONE : harborZone; // zona del puerto o la del contrato
+        try {
+            JsonNode root = fetchJson(vesselId, start, end, zone); // misma consulta C3
+            String rawStatus = rawStatus(root); // estado reportado por M1
+            Optional<FleetMaintenanceWindow> window = parseWindow(rawStatus, root); // fechas si hay mantenimiento
+            register(vesselId, ExternalQueryResult.OK, rawStatus); // una fila por consulta
+            return window;
+        } catch (TransientQueryException e) { // timeout o 503
+            register(vesselId, ExternalQueryResult.TIMEOUT, null);
+            throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, e.getMessage());
+        } catch (ReservationRuleException e) { // 4xx, 5xx o respuesta ilegible
+            register(vesselId, ExternalQueryResult.ERROR, null);
+            throw e;
+        }
+    }
+
+    private JsonNode fetchJson(UUID vesselId, LocalDate start, LocalDate end, ZoneId zone) { // GET y parseo comun a C3
+        String body = get(VESSELS_PATH + vesselId + "/operational-status"
+                + "?start_date=" + start
+                + "&end_date=" + end
+                + "&timezone=" + URLEncoder.encode(zone.getId(), StandardCharsets.UTF_8)); // GET con rango y zona
+        if (body == null || body.isBlank()) { // sin cuerpo no hay estado que leer
+            throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet response body is empty"); // igual estilo que CU-09
+        }
+        try {
+            return MAPPER.readTree(body); // parsea la respuesta
+        } catch (JacksonException e) {
+            throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet response body is not valid json"); // igual estilo que CU-09
+        }
+    }
+
+    private String rawStatus(JsonNode root) { // estado crudo de la respuesta
+        JsonNode statusNode = root.path("operational_status"); // estado reportado por M1
+        String rawStatus = statusNode.isString() ? statusNode.stringValue() : null; // null si ausente o no texto
+        if (rawStatus == null || rawStatus.isBlank()) { // ausente, vacio o no texto
+            throw new ReservationRuleException(ErrorCode.FLEET_SERVICE_UNAVAILABLE, "Fleet response is missing operational_status");
+        }
+        return rawStatus; // texto devuelto por M1
+    }
+
+    private Optional<FleetMaintenanceWindow> parseWindow(String rawStatus, JsonNode root) { // fechas del mantenimiento
+        String status = rawStatus.trim().toUpperCase(Locale.ROOT);
+        if (!"MAINTENANCE".equals(status) && !"MAINTENANCE_CLEANING".equals(status)) { // sin mantenimiento
+            return Optional.empty(); // no hay ventana que sintetizar
+        }
+        OffsetDateTime until = offsetDate(root, "maintenance_until"); // fin del mantenimiento
+        if (until == null) { // sin fecha: no se inventa una ventana
+            return Optional.empty();
+        }
+        OffsetDateTime from = offsetDate(root, "maintenance_start"); // inicio opcional
+        Instant start = from == null ? clockPort.now() : from.toInstant(); // nulo = ahora
+        return Optional.of(new FleetMaintenanceWindow(start, until.toInstant())); // ventana reportada
     }
 
     private boolean decide(String rawStatus, JsonNode root, LocalDate start, LocalDate end, ZoneId zone) { // veredicto del contrato C3
