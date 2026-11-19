@@ -56,6 +56,13 @@ public class DisputeRepositoryAdapter implements DisputeRepositoryPort { // adap
     }
 
     @Override
+    public List<GuaranteeDispute> findAll(UUID ownerId, UUID reservationId) {
+        return disputes.findAll(ownerId, reservationId).stream()
+                .map(DisputeMapper::toDomain)
+                .toList();
+    }
+
+    @Override
     public Optional<DisputeClaim> findClaimByDisputeId(UUID disputeId) {
         return claims.findByDisputeId(disputeId).map(entity -> {
             DisputeClaim original = DisputeMapper.toDomain(entity);

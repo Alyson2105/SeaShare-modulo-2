@@ -14,12 +14,11 @@ public class FleetProperties { // configuracion de conexion con modulo 1 (CU-09 
 
     private String mode = "fake"; // fake (default) o http; define que adaptadores se cargan
     private String baseUrl; // url base de modulo 1; requerida solo en modo http
-    private String token; // token de servicio interno; en produccion va por variable de entorno
     private long connectTimeoutMs = 100; // timeout de conexion por defecto en milisegundos
     private long readTimeoutMs = 300; // timeout de lectura por defecto en milisegundos
 
     @PostConstruct
-    void validate() { // fail-fast: el modo debe estar declarado y http exige destino y token
+    void validate() { // fail-fast: el modo debe estar declarado y http exige destino
         if (mode == null || mode.isBlank()) { // perfil sin modo explicito (prod exige declararlo)
             throw new IllegalStateException(
                     "seashare.fleet.mode must be declared (fake or http) in this environment"); // impide arrancar en silencio
@@ -33,11 +32,7 @@ public class FleetProperties { // configuracion de conexion con modulo 1 (CU-09 
                 throw new IllegalStateException(
                         "seashare.fleet.base-url is required when seashare.fleet.mode=http"); // impide arrancar
             }
-            if (token == null || token.isBlank()) { // sin token M1 rechaza la llamada
-                throw new IllegalStateException(
-                        "seashare.fleet.token is required when seashare.fleet.mode=http"); // impide arrancar
-            }
-            return; // modo real valido
+            return; // M1 no pide autenticacion en sus rutas internas: sin token
         }
         log.warn("M2 arranca con adaptadores falsos de Modulo 1 (seashare.fleet.mode=fake); "
                 + "no se consulta flota real"); // visibilidad del modo aislado
@@ -57,14 +52,6 @@ public class FleetProperties { // configuracion de conexion con modulo 1 (CU-09 
 
     public void setBaseUrl(String baseUrl) { // asigna la url base de modulo 1
         this.baseUrl = baseUrl; // guarda la url base
-    }
-
-    public String getToken() { // obtiene el token de servicio
-        return token; // retorna el token
-    }
-
-    public void setToken(String token) { // asigna el token de servicio
-        this.token = token; // guarda el token
     }
 
     public long getConnectTimeoutMs() { // obtiene el timeout de conexion

@@ -35,9 +35,14 @@ public class PaymentController { // CU-03: iniciar el pago de una reserva INITIA
         UUID id = parseUuid(reservationId); // 400 INVALID_UUID
         requireAcceptedPolicy(request); // FR-014
         String token = requirePaymentData(request); // FR-013 / datos de M3
+        StartPaymentRequest.PaymentData payment = request.payment(); // ya validado arriba
+        StartPaymentRequest.PaymentMetadata metadata = payment.paymentMetadata(); // metadatos ya validados
 
-        StartPaymentResult result = startPaymentUseCase.start(new StartPaymentCommand(
-                id, identity.userId(), identity.role(), token)); // 403, 404, 409 o 503
+        StartPaymentResult result = startPaymentUseCase.start(new StartPaymentCommand( // los tres datos viajan al comando
+                id, identity.userId(), identity.role(), token,
+                payment.paymentMethodType().trim(), // tipo recortado
+                metadata.payerEmail().trim(), // correo recortado
+                metadata.lastFour() == null || metadata.lastFour().isBlank() ? null : metadata.lastFour().trim())); // 403, 404, 409 o 503
 
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore()) // informacion transaccional en tiempo real

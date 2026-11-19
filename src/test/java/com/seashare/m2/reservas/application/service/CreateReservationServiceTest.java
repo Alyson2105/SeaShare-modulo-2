@@ -69,17 +69,22 @@ class CreateReservationServiceTest { // T-24: la creacion delega la escritura en
     }
 
     private CreateReservationCommand buildCommand(String idempotencyKey, int passengers) { // crea comando de prueba
+        return buildCommand(idempotencyKey, passengers, LocalDate.of(2027, 4, 1), LocalDate.of(2027, 4, 3), LocalTime.of(8, 30));
+    }
+
+    private CreateReservationCommand buildCommand(String idempotencyKey, int passengers, // crea comando con fechas y hora propias
+                                                  LocalDate startDate, LocalDate endDate, LocalTime departureTime) {
         return new CreateReservationCommand(
                 renterId,
                 idempotencyKey,
                 vesselId,
-                LocalDate.of(2027, 4, 1),
-                LocalDate.of(2027, 4, 3),
+                startDate,
+                endDate,
                 passengers,
                 "Pedro Gomez",
                 "+573001234567",
                 "pedro@example.com",
-                LocalTime.of(8, 30),
+                departureTime,
                 new BigDecimal("2500000.00")
         );
     }
@@ -176,5 +181,53 @@ class CreateReservationServiceTest { // T-24: la creacion delega la escritura en
                 .isInstanceOf(ReservationRuleException.class);
 
         verify(writer, never()).createOrReturnExisting(any(), any(), any(), any()); // no se escribe nada
+    }
+
+    @Test
+    void departureInThePastBeyondMarginIsRejected() { // una salida mas alla de cinco minutos en el pasado se rechaza
+        String key = UUID.randomUUID().toString();
+        CreateReservationCommand command = buildCommand(key, 4, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 3), LocalTime.of(8, 30));
+
+        when(fleetInfoPort.getVesselInfo(vesselId)).thenReturn(new FleetInfo(ownerId, 10, "America/Bogota"));
+
+        assertThatThrownBy(() -> service.execute(command)) // valida rechazo de salida pasada
+                .isInstanceOf(ReservationRuleException.class)
+                .hasMessage("Departure time cannot be in the past")
+                .satisfies(e -> assertThat(((ReservationRuleException) e).getCode()).isEqualTo("INVALID_PARAMETERS")); // mismo catalogo
+
+        verify(writer, never()).createOrReturnExisting(any(), any(), any(), any()); // no se escribe nada
+    }
+
+    @Test
+    void departureWithinPastMarginIsAccepted() { // una salida dentro del margen de cinco minutos se acepta
+        String key = UUID.randomUUID().toString();
+        // fijo 12:00Z son 07:00 en Bogota; 06:58 local es 11:58Z, dos minutos antes de ahora
+        CreateReservationCommand command = buildCommand(key, 4, LocalDate.of(2026, 11, 6), LocalDate.of(2026, 11, 8), LocalTime.of(6, 58));
+
+        when(fleetInfoPort.getVesselInfo(vesselId)).thenReturn(new FleetInfo(ownerId, 10, "America/Bogota"));
+        when(fleetOperationalStatusPort.isAvailable(vesselId)).thenReturn(true);
+        when(reservationRepositoryPort.existsOverlap(eq(vesselId), any(), any(), any())).thenReturn(false);
+        when(writer.createOrReturnExisting(any(), any(), any(), any())).thenReturn(persisted(UUID.randomUUID()));
+
+        ReservationView result = service.execute(command); // ejecuta creacion
+
+        assertThat(result.reservationId()).isNotNull(); // la creacion procedio
+        verify(writer).createOrReturnExisting(eq(key), eq(fixedNow), eq(CreateReservationService.IDEMPOTENCY_WINDOW), any());
+    }
+
+    @Test
+    void departureInFutureIsAccepted() { // una salida futura se acepta sin rechazo
+        String key = UUID.randomUUID().toString();
+        CreateReservationCommand command = buildCommand(key, 4, LocalDate.of(2027, 4, 1), LocalDate.of(2027, 4, 3), LocalTime.of(8, 30));
+
+        when(fleetInfoPort.getVesselInfo(vesselId)).thenReturn(new FleetInfo(ownerId, 10, "America/Bogota"));
+        when(fleetOperationalStatusPort.isAvailable(vesselId)).thenReturn(true);
+        when(reservationRepositoryPort.existsOverlap(eq(vesselId), any(), any(), any())).thenReturn(false);
+        when(writer.createOrReturnExisting(any(), any(), any(), any())).thenReturn(persisted(UUID.randomUUID()));
+
+        ReservationView result = service.execute(command); // ejecuta creacion
+
+        assertThat(result.reservationId()).isNotNull(); // la creacion procedio
+        verify(writer).createOrReturnExisting(eq(key), eq(fixedNow), eq(CreateReservationService.IDEMPOTENCY_WINDOW), any());
     }
 }

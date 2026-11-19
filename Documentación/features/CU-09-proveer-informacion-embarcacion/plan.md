@@ -1,5 +1,7 @@
 # Contrato de Integración Externa: Consultar Información de Embarcación (M1)
 
+> **Diseño aprobado 2026-11-19, pendiente de implementación.** Ver `Documentación/context/consistencia-m1-m2-mantenimiento.md`. **Hallazgo verificado:** M1 **no expone** `GET /api/v1/vessels` (catálogo); solo `/{id}` y `/{id}/operational-status` (`ReservationsVesselController.java:35,60`). La operación en lote de este contrato está pendiente en M1.
+
 **Módulo Proveedor**: Módulo 1 – Gestión de Flota y Activos P2P  
 **Responsable de implementarlo**: Equipo de Módulo 1  
 **Módulo Consumidor**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
@@ -38,8 +40,10 @@ GET /api/v1/vessels/{vessel_id}
 
 | Nombre | Obligatorio | Descripción |
 |---|---|---|
-| `X-Internal-Service-Token` | Sí | Token de servicio interno de Módulo 2 (lo entrega Módulo 1) |
+| `X-Internal-Service-Token` | **No** | M1 **no** exige token en esta ruta: `GET /api/v1/vessels/**` está en `permitAll` (VERIFICADO en M1: `SecurityConfig.java:94-96`). M2 acierta al no enviarlo. |
 | `Accept` | No | `application/json` |
+
+> **Confirmado el 2026-11-19:** M1 no valida `X-Internal-Service-Token` en ninguna de sus rutas internas. La retirada del header en M2 (commit `f498a5b`, `FleetHttpConfig.java:23`) es correcta y **no hay defecto pendiente**.
 
 **Path Parameters**:
 
@@ -96,7 +100,6 @@ GET /api/v1/vessels/{vessel_id}
 
 ```bash
 curl -X GET "https://flota.seashare.internal/api/v1/vessels/d3b07384-d113-49cd-a5d6-812e9bcfc101" \
-  -H "X-Internal-Service-Token: <token_servicio_m2>" \
   -H "Accept: application/json"
 ```
 
@@ -150,7 +153,7 @@ GET /api/v1/vessels
 
 | Nombre | Obligatorio | Descripción |
 |---|---|---|
-| `X-Internal-Service-Token` | Sí | Token de servicio interno de Módulo 2 (lo entrega Módulo 1) |
+| `X-Internal-Service-Token` | **No** | M1 no exige token en `GET /api/v1/vessels/**` (VERIFICADO en M1: `SecurityConfig.java:94-96`). |
 | `Accept` | No | `application/json` |
 
 **Query Parameters**:
@@ -205,8 +208,7 @@ GET /api/v1/vessels
 **Petición `curl`**:
 
 ```bash
-curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones?page=1&size=20" \
-  -H "X-Internal-Service-Token: <token_servicio_m2>" \
+curl -X GET "https://flota.seashare.internal/api/v1/vessels?page=1&size=20" \
   -H "Accept: application/json"
 ```
 

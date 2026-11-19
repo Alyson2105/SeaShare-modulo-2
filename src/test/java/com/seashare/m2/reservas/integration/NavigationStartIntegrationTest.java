@@ -30,10 +30,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -143,18 +145,26 @@ class NavigationStartIntegrationTest { // CU-06: inicio real contra PostgreSQL
     }
 
     private Seed reserved(UUID targetVesselId, LocalDate startDate, LocalDate endDate, LocalTime departureTime) { // siembra hasta RESERVED
+        when(clockPort.now()).thenReturn(scheduledDeparture(startDate, departureTime).minus(Duration.ofMinutes(1))); // crea antes del zarpe: regla de salida pasada
         UUID renterId = UUID.randomUUID();
         UUID reservationId = createReservation(renterId, targetVesselId, startDate, endDate, departureTime);
         toPendingPayment(reservationId, renterId);
-        toReserved(reservationId, renterId);
+        toReserved(reservationId, renterId); // ttl vigente: las transiciones corren con el reloj de siembra
+        when(clockPort.now()).thenReturn(T0); // restaura el reloj que cada prueba necesita
         return new Seed(reservationId, renterId, targetVesselId);
     }
 
     private Seed pendingPayment() { // siembra hasta PENDING_PAYMENT
+        when(clockPort.now()).thenReturn(scheduledDeparture(START_DATE, DEPARTURE_TIME).minus(Duration.ofMinutes(1))); // crea antes del zarpe
         UUID renterId = UUID.randomUUID();
         UUID reservationId = createReservation(renterId, vesselId, START_DATE, END_DATE, DEPARTURE_TIME);
         toPendingPayment(reservationId, renterId);
+        when(clockPort.now()).thenReturn(T0); // restaura el reloj de la prueba
         return new Seed(reservationId, renterId, vesselId);
+    }
+
+    private Instant scheduledDeparture(LocalDate startDate, LocalTime departureTime) { // zarpe pactado en la zona del puerto
+        return startDate.atTime(departureTime).atZone(ZoneId.of(ZONE)).toInstant(); // instante utc del zarpe
     }
 
     private String bodyWithNotes(String notes) { // body con salida y notas
@@ -295,9 +305,9 @@ class NavigationStartIntegrationTest { // CU-06: inicio real contra PostgreSQL
         Seed first = reserved(vesselId, START_DATE, END_DATE, DEPARTURE_TIME);
         toInNavigation(first.reservationId());
 
+        Seed second = reserved(vesselId, LocalDate.of(2027, 5, 20), LocalDate.of(2027, 5, 22), DEPARTURE_TIME); // siembra con su reloj de zarpe
         Instant secondTime = Instant.parse("2027-05-20T14:00:00Z"); // despues del zarpe de la segunda reserva
-        when(clockPort.now()).thenReturn(secondTime);
-        Seed second = reserved(vesselId, LocalDate.of(2027, 5, 20), LocalDate.of(2027, 5, 22), DEPARTURE_TIME);
+        when(clockPort.now()).thenReturn(secondTime); // se fija despues de sembrar: el helper restaura T0
 
         performStart(second.reservationId(), ownerId, "OWNER", bodyDepartingAt("2027-05-20T08:35:00-05:00"))
                 .andExpect(status().isConflict())

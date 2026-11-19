@@ -155,7 +155,10 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
                     command.actor(), // actor que disparo la transicion (CU-14 FR-002)
                     command.anticipationMinutes(), // anticipacion al cancelar (CU-14 FR-003)
                     command.completionNotes(), // notas de cierre en COMPLETED (CU-14 FR-004)
-                    command.paymentTokenRef() // token de pago opaco hacia M3 (solo PENDING_PAYMENT)
+                    command.paymentTokenRef(), // token de pago opaco hacia M3 (solo PENDING_PAYMENT)
+                    command.paymentMethodType(), // tipo del medio de pago hacia M3
+                    command.payerEmail(), // correo del pagador hacia M3
+                    command.lastFour() // ultimos cuatro digitos hacia M3
             ));
         }
         if (decision.moduleOneStatus() != null) { // encola el evento M1 con el id ya registrado en auditoria

@@ -27,7 +27,6 @@ class FleetUnavailableTest { // pruebas de cortes seguros y errores de M1 con Wi
 
     private static final UUID VESSEL_ID = UUID.fromString("d3b07384-d113-49cd-a5d6-812e9bcfc101"); // id fijo de prueba
     private static final UUID OWNER_ID = UUID.fromString("a1c2e3f4-5678-90ab-cdef-1234567890ab"); // propietario fijo
-    private static final String TOKEN = "test-service-token"; // token usado en las pruebas
     private static final String VESSEL_PATH = "/api/v1/vessels/" + VESSEL_ID; // ruta de la ficha
     private static final String STATUS_PATH = VESSEL_PATH + "/operational-status"; // ruta del estado operativo
 
@@ -42,7 +41,6 @@ class FleetUnavailableTest { // pruebas de cortes seguros y errores de M1 con Wi
         warmUpServer(); // la primera respuesta del servidor nuevo tarda mas de 300 ms
         FleetProperties properties = new FleetProperties(); // propiedades de prueba
         properties.setBaseUrl("http://localhost:" + wireMock.port()); // apunta al WireMock
-        properties.setToken(TOKEN); // token de prueba
         RestClient client = new FleetHttpConfig().fleetRestClient(properties); // cliente real con timeouts
         ExternalQueryLogPort noopLog = entry -> { }; // el registro no se prueba aqui
         infoAdapter = new HttpFleetInfoAdapter(client, noopLog); // adaptador de ficha
@@ -128,7 +126,6 @@ class FleetUnavailableTest { // pruebas de cortes seguros y errores de M1 con Wi
     void connectionRefusedFailsSafe() { // puerto cerrado -> IOException -> FLEET_SERVICE_UNAVAILABLE
         FleetProperties closed = new FleetProperties(); // propiedades hacia un puerto muerto
         closed.setBaseUrl("http://127.0.0.1:1"); // puerto 1 siempre cerrado en local
-        closed.setToken(TOKEN); // token de prueba
         HttpFleetInfoAdapter closedAdapter = new HttpFleetInfoAdapter(new FleetHttpConfig().fleetRestClient(closed), entry -> { }); // adaptador aislado
 
         assertThatThrownBy(() -> closedAdapter.getVesselInfo(VESSEL_ID)) // conexion rechazada dos veces

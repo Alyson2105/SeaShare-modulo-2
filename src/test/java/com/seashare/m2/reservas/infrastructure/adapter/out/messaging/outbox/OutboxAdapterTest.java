@@ -386,6 +386,90 @@ class OutboxAdapterTest { // pruebas unitarias del adaptador outbox y formato de
         assertThat(json.get("status_changed_at").asText()).isEqualTo("2026-11-09T12:05:00Z"); // iso estable
     }
 
+    @Test
+    void pendingCarriesPaymentMethodTypeAndMetadata() throws Exception { // PENDING agrega tipo y metadatos
+        UUID reservationId = UUID.randomUUID(); // reserva de prueba
+        Instant changedAt = Instant.parse("2026-11-09T12:05:00Z"); // hora del cambio
+
+        adapter.enqueue(new StatusChangedEvent( // evento con los tres datos completos
+                UUID.randomUUID(), reservationId, ReservationStatus.PENDING_PAYMENT, null, changedAt,
+                null, null, null, "tok_abc", "CREDIT_CARD", "ana@example.com", "4242"));
+
+        ArgumentCaptor<OutboxMessageEntity> captor = ArgumentCaptor.forClass(OutboxMessageEntity.class); // captura entidad
+        verify(repository).save(captor.capture()); // un encolado
+        JsonNode json = payloadOf(captor.getValue()); // parsea payload
+
+        assertThat(json.propertyNames()).containsExactlyInAnyOrder( // seis claves del contrato
+                "reservation_id", "status", "status_changed_at", "payment_token_ref",
+                "payment_method_type", "payment_metadata");
+        assertThat(json.get("payment_method_type").asText()).isEqualTo("CREDIT_CARD"); // tipo presente
+        JsonNode metadata = json.get("payment_metadata"); // objeto de metadatos
+        assertThat(metadata.get("payer_email").asText()).isEqualTo("ana@example.com"); // correo presente
+        assertThat(metadata.get("last_four").asText()).isEqualTo("4242"); // ultimos cuatro presentes
+    }
+
+    @Test
+    void pendingWithoutLastFourOrTypeOmitsThem() throws Exception { // opcionales en blanco se omiten
+        UUID reservationId = UUID.randomUUID(); // reserva de prueba
+        Instant changedAt = Instant.parse("2026-11-09T12:05:00Z"); // hora del cambio
+
+        adapter.enqueue(new StatusChangedEvent( // solo token y correo
+                UUID.randomUUID(), reservationId, ReservationStatus.PENDING_PAYMENT, null, changedAt,
+                null, null, null, "tok_abc", null, "ana@example.com", null));
+
+        ArgumentCaptor<OutboxMessageEntity> captor = ArgumentCaptor.forClass(OutboxMessageEntity.class); // captura entidad
+        verify(repository).save(captor.capture()); // un encolado
+        JsonNode json = payloadOf(captor.getValue()); // parsea payload
+
+        assertThat(json.propertyNames()).containsExactlyInAnyOrder( // sin tipo ni last_four
+                "reservation_id", "status", "status_changed_at", "payment_token_ref", "payment_metadata");
+        assertThat(json.has("payment_method_type")).isFalse(); // tipo ausente
+        JsonNode metadata = json.get("payment_metadata"); // objeto de metadatos
+        assertThat(metadata.propertyNames()).containsExactly("payer_email"); // solo el correo
+        assertThat(metadata.get("payer_email").asText()).isEqualTo("ana@example.com"); // correo presente
+    }
+
+    @Test
+    void nonPendingOmitsAllPaymentData() throws Exception { // fuera de PENDING no viaja ninguno
+        UUID reservationId = UUID.randomUUID(); // reserva de prueba
+        Instant changedAt = Instant.parse("2026-11-09T12:05:00Z"); // hora del cambio
+
+        adapter.enqueue(new StatusChangedEvent( // los tres datos no deben publicarse
+                UUID.randomUUID(), reservationId, ReservationStatus.RESERVED, null, changedAt,
+                null, null, null, "tok_ignored", "CREDIT_CARD", "ana@example.com", "4242"));
+
+        ArgumentCaptor<OutboxMessageEntity> captor = ArgumentCaptor.forClass(OutboxMessageEntity.class); // captura entidad
+        verify(repository).save(captor.capture()); // un encolado
+        JsonNode json = payloadOf(captor.getValue()); // parsea payload
+
+        assertThat(json.propertyNames()).containsExactlyInAnyOrder( // solo los tres campos base
+                "reservation_id", "status", "status_changed_at");
+    }
+
+    @Test
+    void markPublishedPurgesAllPaymentDataAndKeepsRest() throws Exception { // D-09: tipo y metadatos se purgan con el token
+        UUID messageId = UUID.randomUUID(); // id de la fila
+        Instant publishedAt = Instant.parse("2026-11-07T12:00:00Z"); // hora del confirm
+        OutboxMessageEntity entity = new OutboxMessageEntity(); // entidad de prueba
+        entity.setEventId(UUID.randomUUID()); // event id
+        entity.setDestination("AMQP"); // destino
+        entity.setPayload("{\"reservation_id\":\"abc\",\"status\":\"PENDING\",\"payment_token_ref\":\"tok_123\","
+                + "\"payment_method_type\":\"CREDIT_CARD\","
+                + "\"payment_metadata\":{\"payer_email\":\"ana@example.com\",\"last_four\":\"4242\"}}"); // payload con todo
+        when(repository.findById(messageId)).thenReturn(Optional.of(entity)); // fila existente
+
+        adapter.markPublished(messageId, publishedAt); // ejecuta el marcado con purga
+
+        JsonNode json = objectMapper.readTree(entity.getPayload()); // parsea el payload purgado
+        assertThat(json.has("payment_token_ref")).isFalse(); // token eliminado
+        assertThat(json.has("payment_method_type")).isFalse(); // tipo eliminado
+        assertThat(json.has("payment_metadata")).isFalse(); // metadatos eliminados
+        assertThat(json.get("reservation_id").asText()).isEqualTo("abc"); // resto del payload intacto
+        assertThat(json.get("status").asText()).isEqualTo("PENDING"); // estado conservado
+        assertThat(entity.getPublishedAt()).isEqualTo(publishedAt); // published_at marcado
+        verify(repository).save(entity); // persiste el cambio
+    }
+
     private StatusChangedEvent statusEvent(UUID reservationId,
                                            ReservationStatus status,
                                            CancellationSubtype subtype,

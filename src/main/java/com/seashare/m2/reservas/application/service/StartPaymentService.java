@@ -103,7 +103,8 @@ public class StartPaymentService implements StartPaymentUseCase { // CU-03: orqu
                     "La embarcacion ya no se encuentra disponible para las fechas seleccionadas");
         }
 
-        return writer.startPayment(command.reservationId(), calculation, command.paymentTokenRef(), now);
+        return writer.startPayment(command.reservationId(), calculation, command.paymentTokenRef(), // pasa los tres datos a la frontera
+                command.paymentMethodType(), command.payerEmail(), command.lastFour(), now);
     }
 
     private StartPaymentResult retryPayment(Reservation reservation, StartPaymentCommand command, Instant now) {
@@ -112,7 +113,8 @@ public class StartPaymentService implements StartPaymentUseCase { // CU-03: orqu
             throw new ReservationRuleException(ErrorCode.RETRY_NOT_ALLOWED,
                     "Ya hay un cobro en proceso para esta reserva");
         }
-        return writer.startPayment(command.reservationId(), null, command.paymentTokenRef(), now); // reutiliza el calculo
+        return writer.startPayment(command.reservationId(), null, command.paymentTokenRef(), // reintento con los datos nuevos
+                command.paymentMethodType(), command.payerEmail(), command.lastFour(), now); // reutiliza el calculo
     }
 
     private void assertTtlActive(Reservation reservation, Instant now) { // TTL heredado de INITIATED

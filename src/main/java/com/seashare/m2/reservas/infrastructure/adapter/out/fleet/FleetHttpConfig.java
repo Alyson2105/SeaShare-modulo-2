@@ -20,9 +20,7 @@ public class FleetHttpConfig { // crea el cliente REST de flota con timeouts cor
         RestClient.Builder builder = RestClient.builder() // construye el cliente
                 .baseUrl(properties.getBaseUrl()) // url base desde seashare.fleet.base-url
                 .requestFactory(factory); // aplica la fabrica con timeouts
-        if (properties.getToken() != null && !properties.getToken().isBlank()) { // token opcional en desarrollo
-            builder.defaultHeader("X-Internal-Service-Token", properties.getToken()); // viaja en cada llamada
-        }
+        // M1 no pide autenticacion: nunca se agrega X-Internal-Service-Token
         return builder.build(); // devuelve el cliente listo
     }
 }

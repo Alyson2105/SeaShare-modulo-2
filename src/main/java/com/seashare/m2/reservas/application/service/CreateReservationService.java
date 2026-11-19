@@ -31,6 +31,7 @@ public class CreateReservationService implements CreateReservationUseCase { // c
 
     public static final String IDEMPOTENCY_ENDPOINT = CreateReservationWriter.IDEMPOTENCY_ENDPOINT; // identificador del endpoint
     public static final Duration IDEMPOTENCY_WINDOW = Duration.ofSeconds(60); // ventana temporal de expiracion de clave de idempotencia
+    public static final Duration DEPARTURE_PAST_MARGIN = Duration.ofMinutes(5); // margen para aceptar una salida recien pasada
     public static final Set<ReservationStatus> BLOCKING_STATUSES = EnumSet.of( // estados que bloquean disponibilidad de fechas
             ReservationStatus.PENDING_PAYMENT,
             ReservationStatus.RESERVED,
@@ -70,10 +71,17 @@ public class CreateReservationService implements CreateReservationUseCase { // c
         if (fleetInfo.harborTimezone() == null || fleetInfo.harborTimezone().isBlank()) { // valida presencia de zona horaria
             throw new ReservationRuleException(ErrorCode.HARBOR_TIMEZONE_UNAVAILABLE, "Harbor timezone is invalid or unavailable"); // rechaza zona horaria ausente
         }
+        ZoneId harborZone; // zona del puerto ya validada
         try {
-            ZoneId.of(fleetInfo.harborTimezone()); // valida formato de zona horaria
+            harborZone = ZoneId.of(fleetInfo.harborTimezone()); // valida formato de zona horaria
         } catch (DateTimeException e) {
             throw new ReservationRuleException(ErrorCode.HARBOR_TIMEZONE_UNAVAILABLE, "Harbor timezone is invalid or unavailable"); // rechaza zona horaria invalida
+        }
+
+        // arma la salida con fecha, hora y zona del puerto; ahora menos el margen decide el rechazo
+        Instant departureAt = HarborTime.at(command.startDate(), command.departureTime(), harborZone).toInstant();
+        if (departureAt.isBefore(now.minus(DEPARTURE_PAST_MARGIN))) { // salida mas alla de cinco minutos en el pasado
+            throw new ReservationRuleException(ErrorCode.INVALID_PARAMETERS, "Departure time cannot be in the past"); // rechaza salida pasada
         }
 
         if (!fleetOperationalStatusPort.isAvailable(command.vesselId())) { // valida aptitud operativa en modulo 1

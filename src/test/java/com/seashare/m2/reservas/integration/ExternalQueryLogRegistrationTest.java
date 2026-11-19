@@ -46,7 +46,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest(properties = { // levanta los adaptadores HTTP reales
         "seashare.fleet.mode=http",
-        "seashare.fleet.token=test-token", // obligatorio en modo http
         "spring.datasource.hikari.maximum-pool-size=2" // pocas conexiones: la suite comparte max_connections del contenedor
 })
 @Import(PostgresTestContainers.class) // postgres en contenedor, patron de la suite
@@ -358,7 +357,6 @@ class ExternalQueryLogRegistrationTest { // registro de consultas a M1 en extern
     void registrationFailureDoesNotBreakQuery() { // puerto de registro roto: la consulta a M1 igual devuelve
         FleetProperties properties = new FleetProperties(); // propiedades de prueba
         properties.setBaseUrl("http://localhost:" + wireMock.port()); // apunta al WireMock
-        properties.setToken("test-service-token"); // token de prueba
         RestClient client = new FleetHttpConfig().fleetRestClient(properties); // cliente real con timeouts
         ExternalQueryLogPort brokenPort = entry -> { throw new IllegalStateException("log store down"); }; // construido a mano
         HttpFleetInfoAdapter brokenInfoAdapter = new HttpFleetInfoAdapter(client, brokenPort); // adaptador con puerto roto
