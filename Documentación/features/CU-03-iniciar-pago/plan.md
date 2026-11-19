@@ -65,7 +65,7 @@ POST /api/v1/reservations/{reservation_id}/payments
 - `accepts_cancellation_policy`: booleano obligatorio. Debe ser estrictamente `true`. Si es `false` o no se envía, el backend bloquea el avance retornando `400 Bad Request`.
 - `payment.payment_token_ref`: obligatorio, no vacío. Módulo 2 nunca recibe ni almacena número de tarjeta ni CVV.
 - `payment.payment_metadata.payer_email`: obligatorio y con formato email válido (M3 lo exige para cobrar). El frontend lo toma de `holder.email` o lo solicita en el formulario de pago.
-- `payment.payment_metadata.payment_method_id e installments`: obligatorios.
+- `payment.payment_metadata.payment_method_id e installments`: obligatorios para M2, pero **no se reenvían a M3**. M3 fija `installments = 1` y resuelve la marca desde `payment_method_type` (omite tipos genéricos y envía marcas en minúsculas). Si el frontend necesita que la marca llegue a la pasarela, debe enviarla también en `payment_method_type`.
 ---
 
 ### Elementos de la Respuesta (Response)
