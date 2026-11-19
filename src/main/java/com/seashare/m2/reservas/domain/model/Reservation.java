@@ -38,7 +38,8 @@ public class Reservation { // agregado de reserva del dominio
     private Instant statusChangedAt; // hora exacta del ultimo cambio de estado (CU-08)
     private Instant actualDepartureAt; // hora real de zarpe; la fija CU-06 (T-17c), aqui solo persistencia
     private Instant actualArrivalAt; // hora real de desembarque; la fija CU-07 (T-17d), aqui solo persistencia
-    private boolean m1Blocked; // true si ya se notifico RESERVED a Modulo 1 (guarda SC-003)
+    private boolean m1Blocked; // true si Modulo 1 ya conoce la ocupacion (aviso IN_NAVIGATION, contrato C4)
+    private boolean maintenanceBlocked; // true si la reserva se cancelo por un mantenimiento activo (contrato C5)
     private final Long version; // version de concurrencia optimista
     private String reservationCode; // codigo visible persistido; solo lectura para las vistas
 
@@ -211,12 +212,20 @@ public class Reservation { // agregado de reserva del dominio
         this.actualArrivalAt = actualArrivalAt; // establece actualArrivalAt
     }
 
-    public boolean isM1Blocked() { // consulta si Modulo 1 ya fue notificado de RESERVED
+    public boolean isM1Blocked() { // consulta si Modulo 1 ya conoce la ocupacion de la embarcacion
         return m1Blocked; // retorna m1Blocked
     }
 
-    public void setM1Blocked(boolean m1Blocked) { // fija la guarda de bloqueo en Modulo 1 (T-08)
+    public void setM1Blocked(boolean m1Blocked) { // fija la guarda de ocupacion en Modulo 1 (contrato C4)
         this.m1Blocked = m1Blocked; // establece m1Blocked
+    }
+
+    public boolean isMaintenanceBlocked() { // consulta si la reserva fue afectada por mantenimiento
+        return maintenanceBlocked; // retorna maintenanceBlocked
+    }
+
+    public void setMaintenanceBlocked(boolean maintenanceBlocked) { // fija la marca de mantenimiento (contrato C5)
+        this.maintenanceBlocked = maintenanceBlocked; // establece maintenanceBlocked
     }
 
     public String getReservationCode() { // obtiene el codigo visible

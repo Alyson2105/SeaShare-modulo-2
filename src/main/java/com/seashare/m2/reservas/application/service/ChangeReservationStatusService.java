@@ -104,19 +104,21 @@ public class ChangeReservationStatusService implements ChangeReservationStatusUs
                 .orElseThrow(() -> new ReservationNotFoundException(command.reservationId())); // lanza excepcion si no existe
 
         ReservationStatus previousStatus = reservation.getStatus(); // guarda estado anterior
-        boolean m1BlockedBefore = reservation.isM1Blocked(); // guarda SC-003 antes del cambio
+        boolean m1BlockedBefore = reservation.isM1Blocked(); // guarda de ocupacion antes del cambio
+        boolean maintenanceBlockedBefore = reservation.isMaintenanceBlocked(); // marca de mantenimiento antes del cambio
         validateCommand(reservation, previousStatus, command, changedAt); // valida actor, subtipo, campos condicionales, version y ttl
 
         ModuleNotificationMatrix.NotificationDecision decision = notificationMatrix.decide( // T-08: decision de notificacion
                 previousStatus, // estado anterior
                 command.targetStatus(), // estado destino
                 command.mechanicalFailure(), // averia reportada por el Propietario
-                m1BlockedBefore); // guarda previa de bloqueo en M1
+                m1BlockedBefore, // guarda previa de ocupacion en M1
+                maintenanceBlockedBefore); // evita liberar el barco si esta en mantenimiento
 
         reservation.changeStatus(command.targetStatus(), command.subtype(), machine); // aplica transicion de estado en el dominio
         applyCommandFields(reservation, command, changedAt); // fija campos de CU-08 persistidos (T-09)
-        if (decision.moduleOneStatus() != null && command.targetStatus() == ReservationStatus.RESERVED) { // entro en RESERVED con notificacion a M1
-            reservation.setM1Blocked(true); // activa la guarda: ya se notifico RESERVED a M1 (plan L196)
+        if (decision.moduleOneStatus() != null && command.targetStatus() == ReservationStatus.IN_NAVIGATION) { // check-in notificado a M1
+            reservation.setM1Blocked(true); // activa la guarda: M1 ya conoce la ocupacion (contrato C4)
         }
         Reservation saved = repository.save(reservation); // guarda cambios y retorna la version actualizada
 

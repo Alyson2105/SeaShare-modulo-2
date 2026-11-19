@@ -204,7 +204,7 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
         assertThat(result.version()).isGreaterThan(created.getVersion());
         assertThat(result.ttlExpiresAt()).isEqualTo(created.getTtlExpiresAt());
         assertThat(result.statusChangedAt()).isNotNull();
-        assertThat(result.eventsEnqueued()).containsExactly("AMQP", "M1_HTTP"); // M3 y bloqueo en M1 (CU-22 FR-002)
+        assertThat(result.eventsEnqueued()).containsExactly("AMQP"); // M3 recibe RESERVED; M1 ya no (contrato C4)
         Reservation updated = reservationRepositoryPort.findById(created.getId()).orElseThrow();
         assertThat(updated.getStatus()).isEqualTo(ReservationStatus.RESERVED);
         verify(statusAuditPort).record(any());
@@ -292,6 +292,7 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
                 UUID.randomUUID(), null, null, null, null, null));
         assertThat(inNavigation.status()).isEqualTo(ReservationStatus.IN_NAVIGATION);
         assertThat(inNavigation.eventsEnqueued()).containsExactly("AMQP", "M1_HTTP"); // M3 y M1 (check-in)
+        assertThat(reservationRepositoryPort.findById(created.getId()).orElseThrow().isM1Blocked()).isTrue(); // guarda activada en el check-in
 
         ChangeReservationStatusResult completed = changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
                 created.getId(), ReservationStatus.COMPLETED, null, ActorType.OWNER, "Check-out",
@@ -465,20 +466,16 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
     }
 
     @Test
-    void enqueuesReservedToModuleOneOnPaymentConfirmed() { // T-08: RESERVED notifica a M1 y activa m1_blocked
+    void reservedDoesNotNotifyModuleOneNorSetGuard() { // T-08: RESERVED ya no envia nada a M1
         Reservation created = createReservation();
         changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
         clearInvocations(outboxPort);
 
         changeStatus(created, ReservationStatus.RESERVED, null, ActorType.SYSTEM);
 
-        ArgumentCaptor<OperationalStatusEvent> captor = ArgumentCaptor.forClass(OperationalStatusEvent.class);
-        verify(outboxPort).enqueue(captor.capture()); // unico evento M1
-        assertThat(captor.getValue().operationalStatus()).isEqualTo(OperationalStatus.RESERVED); // estado ya mapeado
-        assertThat(captor.getValue().vesselId()).isEqualTo(created.getVesselId());
-        assertThat(captor.getValue().eventId()).isNotNull(); // id unico por transicion (FR-004)
+        verify(outboxPort, never()).enqueue(any(OperationalStatusEvent.class)); // sin aviso de RESERVED (contrato C4)
         Reservation updated = reservationRepositoryPort.findById(created.getId()).orElseThrow();
-        assertThat(updated.isM1Blocked()).isTrue(); // guarda SC-003 activada
+        assertThat(updated.isM1Blocked()).isFalse(); // la guarda solo se activa en IN_NAVIGATION
     }
 
     @Test
@@ -515,6 +512,9 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
         Reservation created = createReservation();
         changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
         changeStatus(created, ReservationStatus.RESERVED, null, ActorType.SYSTEM);
+        Reservation occupied = reservationRepositoryPort.findById(created.getId()).orElseThrow();
+        occupied.setM1Blocked(true); // simula una reserva cuyo bloqueo M1 ya existia (datos previos al cambio)
+        reservationRepositoryPort.save(occupied);
         clearInvocations(outboxPort);
 
         changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(

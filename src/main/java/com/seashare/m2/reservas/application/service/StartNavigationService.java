@@ -104,7 +104,8 @@ public class StartNavigationService implements StartNavigationUseCase { // CU-06
                 ReservationStatus.RESERVED,
                 ReservationStatus.IN_NAVIGATION,
                 false,
-                reservation.isM1Blocked()).moduleOneStatus(); // estado operativo o null
+                reservation.isM1Blocked(),
+                reservation.isMaintenanceBlocked()).moduleOneStatus(); // estado operativo o null
 
         ChangeReservationStatusResult statusResult = changeReservationStatusUseCase.execute( // delega el cambio de estado
                 new ChangeReservationStatusCommand(
