@@ -5,8 +5,8 @@
 - Arquitectura hexagonal bajo `src/main/java/com/seashare/m2/reservas/`: `domain` → `application/{port/in,port/out,service,dto}` → `infrastructure/adapter/{in,out}`. `LayeredArchitectureTest` (ArchUnit) falla ante violaciones de capas.
 - Implementado hoy: crear reserva (`POST /api/v1/reservations`), listado/detalle (`GET`), transiciones de estado mediante `ChangeReservationStatusUseCase` y el job de expiración por TTL. Todavía no existe un endpoint REST para cambios de estado.
 - Flyway pre-crea tablas para muchos casos de uso aún no implementados (`payment_attempt`, eventos de cancelación/no-show/check-in/out, `dispute_*`, etc.). No asumir que una funcionalidad existe solo porque exista su tabla. Solo el contexto `reservas` está implementado; `disputa` y `shared/contracts` son diseño objetivo en `Documentación/technical-plan/plan.md`.
-- Los adaptadores de flota son falsos por defecto (`seashare.fleet.mode=fake`, `matchIfMissing=true`); el cliente HTTP real del Módulo 1 no está implementado.
-- El outbox actualmente solo inserta filas. No existe relay, publicador RabbitMQ ni listener, a pesar de la configuración AMQP.
+- Los adaptadores de flota son falsos por defecto (`seashare.fleet.mode=fake`, `matchIfMissing=true`); el cliente HTTP real del Módulo 1 ya existe para lecturas (CU-09/CU-10) y para el aviso de estado (CU-22, `POST /api/v1/internal/status-events`), pero sólo se activa con `mode=http` (2026-11-18).
+- El outbox inserta filas y el relay las publica: AMQP con publisher confirms hacia Módulo 3 y HTTP POST hacia Módulo 1. La topología RabbitMQ existe, pero no hay consumidores de producción en M2 (los tiene M3).
 
 ## Comandos
 - Windows: `.\mvnw.cmd ...`; Unix: `./mvnw ...`.
@@ -76,6 +76,6 @@
 - **Plan general vs. nota 2026-10-25**: el texto inicial del plan menciona Spring Boot 3.5.x, Spring Security/JWT, ShedLock, Testcontainers, WireMock y Resilience4j. La nota posterior corrige el stack a Spring Boot 4.1.2 y “sin Spring Security”, y pide verificar las versiones de las demás librerías. Prevalece la nota; coincide con la sección técnica de este archivo.
 - **CU-08 vs. `implementContext.md`**: el spec de CU-08 exige expiración por TTL desde `INITIATED` **y** `PENDING_PAYMENT`; la bitácora documenta que la implementación actual solo barre `INITIATED` y deja `PENDING_PAYMENT` como pendiente. No se debe asumir que esa rama ya existe.
 - **Migraciones**: la nota del plan dice que solo V1 y V2 están aplicadas; el repositorio ya contiene V3. Prevalece el estado del repositorio (V1–V3); las migraciones aplicadas no se editan.
-- **Transporte de la notificación a Módulo 1**: `consistencia-m2-m1.md` lo define como AMQP/RabbitMQ; el plan general lo describe como outbox hacia `PATCH /internal/v1/vessels/{vessel_id}/status` por HTTP (`M1_HTTP`). La documentación no resuelve la discrepancia; no asumir un transporte sin confirmarlo.
+- **Transporte de la notificación a Módulo 1 (resuelto el 2026-11-18)**: es HTTP `POST /api/v1/internal/status-events` (destino `M1_HTTP`), sin cola. `[CONFIRMAR CON M1]` la ruta, el catálogo de `outcome` y la ausencia de autenticación.
 - **Conteo de casos de uso**: el plan general alterna entre 21 y 22 CU; el índice real de `Documentación/features/` contiene CU-01 a CU-22. Tomar el índice como referencia.
 - **Elementos planificados no presentes en el repo**: el plan general lista `Dockerfile`, `README.md` y perfiles `application-dev/test/prod`; el repositorio actual no los contiene. Son objetivos del plan, no estado actual.

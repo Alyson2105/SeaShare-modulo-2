@@ -1,4 +1,4 @@
-# Contexto de Progreso de Implementación - Módulo 2 (SEA-SHARE)
+﻿# Contexto de Progreso de Implementación - Módulo 2 (SEA-SHARE)
 
 **Fecha**: 2026-11-13  
 **Módulo**: Módulo 2 - Operación de Reservas, Tiempos y Cancelaciones  
@@ -70,7 +70,7 @@
 | CU-19 — Ver detalle de embarcación | **Implementado (Hito H6, T-11a)** | `GET /api/v1/vessels/{id}` y `/quotations` con datos de M1 y cotización individual de M3; `Cache-Control: no-store` y sin persistencia. |
 | CU-20 — Ver mis reservas | **Completada en código (Hito H6)** | `GET /api/v1/reservations` con paginación y filtro `filter`; `pagination`, `applied_filter` y `status_badge` implementados. `total_price.amount` usa `total_amount` con respaldo en `estimated_total` (el listado CU-20 mantiene el respaldo en `total_price`; el detalle CU-21 ya no tiene respaldo y `total_paid` puede ser null, 2026-11-13). |
 | CU-21 — Ver detalle de reserva | **Completada en código (Hito H6)** | `GET /api/v1/reservations/{id}` con validación de pertenencia, `status_badge` y datos operativos. Los rubros de `payment_summary` siguen nulos hasta que CU-03/CU-12 los persistan (H7). |
-| CU-22 — Recibir información de estado operativo | **Parcial** | El relay despacha el destino `M1_HTTP` al puerto `FleetStatusNotificationPort` con adaptador fake (loguea y responde OK); sin HTTP real. Desde el Hito H4 la matriz de notificaciones (T-08) está implementada en `ModuleNotificationMatrix` siguiendo la tabla FR-002, con `OperationalStatusEvent` encolado a `M1_HTTP` y payload de 4 campos. Falta el cliente HTTP real (D-01). |
+| CU-22 — Recibir información de estado operativo | **Implementado, pendiente de verificación** | El relay despacha `M1_HTTP` al puerto `FleetStatusNotificationPort`. En modo `http` el adaptador real `HttpFleetStatusNotificationAdapter` hace `POST /api/v1/internal/status-events` y clasifica `{event_id, outcome}` (`HttpFleetStatusNotificationAdapter.java:26-100`); en modo `fake` sólo registra y responde `DELIVERED`. La matriz (T-08) sigue en `ModuleNotificationMatrix` con `OperationalStatusEvent` de 4 campos (`OutboxAdapter.java:120-141`). Ver 4.15. |
 
 ---
 
@@ -174,12 +174,12 @@ Ejecutado en cuatro tareas con un commit por tarea (ver historial, sección 7).
 - `OutboxPort` ampliado con 3 métodos: `findPending(Instant now, int batchSize)`, `markPublished(UUID messageId, Instant publishedAt)` (incluye la purga condicional de `payment_token_ref` → `{}` por D-09, sin cambio de esquema) y `markFailed(UUID messageId, int attempts, Instant nextAttemptAt, String lastError, boolean dead)`.
 - Puertos nuevos de salida: `EventPublisherPort` (publicación AMQP con confirm; lanza `EventPublishException` sin ack) y `FleetStatusNotificationPort` con `FleetNotificationOutcome` (`DELIVERED`/`RETRYABLE_FAILURE`/`PERMANENT_FAILURE`).
 - Nuevo DTO público `PendingOutboxMessage` (la entidad outbox es *package-private* en infraestructura).
-- `PublishPendingOutboxService`: lee pendientes (`published_at IS NULL AND dead = false AND next_attempt_at <= now`, orden `next_attempt_at, created_at`), transacción por mensaje con `TransactionTemplate` (aislamiento), despacho por destino (`AMQP` → publica y marca tras confirm; `M1_HTTP` → llama al puerto, nunca HTTP), backoff 1/5/25/125 s con jitter ±10 % (`BackoffPolicy`, `Random` inyectable), máximo 5 intentos → `dead=true` + log de alerta, M1 4xx → dead directo (D-05), 5xx/timeout → reintento. `ClockPort` siempre; nunca `Instant.now()`. No propaga excepciones.
+- `PublishPendingOutboxService`: lee pendientes (`published_at IS NULL AND dead = false AND next_attempt_at <= now`, orden `next_attempt_at, created_at`), transacción por mensaje con `TransactionTemplate` (aislamiento), despacho por destino (`AMQP` → publica y marca tras confirm; `M1_HTTP` → llama al puerto, nunca HTTP), backoff 1/5/25/125 s con jitter ±10 % (`BackoffPolicy`, `Random` inyectable), máximo 5 intentos → `dead=true` + log de alerta, M1 4xx → dead directo (D-05), 5xx/timeout → reintento. `ClockPort` siempre; nunca `Instant.now()`. No propaga excepciones. *(Actualización 2026-11-18: en modo `http` el puerto sí hace HTTP POST a M1; ver 4.15.)*
 - `BackoffPolicy`: componente con `@Value` (`max-attempts`, `backoff-initial-ms`, `backoff-multiplier`, `jitter-ratio`) y constructor de paquete con `Random` fijo para pruebas exactas.
 - `OutboxRelayJob` (`adapter/in/scheduler`): `@Scheduled(fixedDelayString=m2.scheduler.outbox.fixed-delay-ms)`, `@ConditionalOnProperty(m2.scheduler.outbox.enabled)`, solo delega y atrapa todo. `SchedulerConfig` ahora habilita scheduling si `ttl` **o** `outbox` están activos (`@ConditionalOnExpression`).
 - Adaptadores: `RabbitEventPublisherAdapter` (RabbitTemplate + `publisher-confirm-type: correlated` + `CorrelationData`, espera de confirm con timeout `m2.messaging.publish-timeout-ms`, `Message-Id` = `event_id`, `Content-Type` JSON, mensaje persistente) y `FakeFleetStatusNotificationAdapter` en `adapter/out/fleet/` (log + `DELIVERED`; el cliente HTTP real cambiará solo este adaptador).
 - Configuración (`application.yaml`): `m2.scheduler.outbox.enabled: false` por defecto (evita que la suite publique sin querer; `true` en `application-dev.yaml` y `application-prod.yaml`), `fixed-delay-ms: 5000`, `batch-size: 50`, `max-attempts: 5`, `backoff-initial-ms: 1000`, `backoff-multiplier: 5`, `jitter-ratio: 0.1`; `spring.rabbitmq.publisher-confirm-type: correlated`.
-- **Limitación conocida**: en prod el job de Outbox está activo (`application-prod.yaml`: `m2.scheduler.outbox.enabled: true`) y el único adaptador de notificación hacia M1 es `FakeFleetStatusNotificationAdapter`, que responde `DELIVERED` sin aplicar el estado en M1.
+- **Limitación conocida**: en prod el job de Outbox está activo (`application-prod.yaml`: `m2.scheduler.outbox.enabled: true`) y el único adaptador de notificación hacia M1 es `FakeFleetStatusNotificationAdapter`, que responde `DELIVERED` sin aplicar el estado en M1. *(Actualización 2026-11-18: en modo `http` existe `HttpFleetStatusNotificationAdapter`, que hace `POST /api/v1/internal/status-events`; la limitación sólo aplica si prod arranca con `mode=fake`. Ver 4.15.)*
 - Pruebas: `BackoffPolicyTest` (3), `PublishPendingOutboxServiceTest` (10: backoff exacto, 5º→dead,4xx→dead, reintentos M1, aislamiento, lote, destino desconocido), `OutboxRelayJobTest` (2), `OutboxAdapterTest` (+2 de purga D-09) e `OutboxRelayIntegrationTest` (3, con RabbitMQ real y Awaitility: publica+`published_at`, fallo simulado→reintento, M1_HTTP vía puerto fake).
 
 **T-04 — Message-Id y deduplicación (versión mínima)**
@@ -252,7 +252,7 @@ Rama `feature/fase3-adaptadores-lectura` (creada desde develop; se le fusionó d
 - `REQUIRES_NEW` abre una segunda conexion mientras `CreateReservationService` (que es `@Transactional`) mantiene la suya. Bajo concurrencia alta con el pool por defecto, el registro puede perderse por falta de conexiones. La solucion de fondo es sacar las llamadas a M1 de la transaccion de CU-02; no se hizo en este hito.
 - Un 503 persistente tras el reintento se registra como `TIMEOUT`, aunque M1 si respondio. Nombre no exacto; duda para el grupo.
 - Los metodos `get`, `exchange` y `register` estan duplicados en los dos adaptadores HTTP. Refactor pendiente.
-- Contrato con M1 no firmado: rutas, header `X-Internal-Service-Token`, valores de `operational_status` y esquema de errores siguen por confirmar.
+- Contrato con M1 parcialmente confirmado el 2026-11-18: transporte HTTP POST y rutas existen en código; siguen `[CONFIRMAR CON M1]` el catálogo de `outcome`, el límite de 100 caracteres de `event_id`, los offsets de `occurred_at`, los alias `NAVIGATION`/`MAINTENANCE`, la forma del 400 y si el header `X-Internal-Service-Token` aplica a cada ruta.
 
 ---
 
@@ -392,7 +392,8 @@ Trabajo posterior al merge de H6 (`1e49661`) para desbloquear la Fase 7. Los com
 
 **Perfiles y secretos**
 - `seashare.fleet.mode`, `seashare.finance.mode` y el token de M1 se leen de variables de entorno. En `dev`/`test` el modo por defecto es `fake` (M2 corre aislado); en `prod` deben declararse explícitamente (`SEASHARE_FLEET_MODE`, `SEASHARE_FINANCE_MODE`, `SEASHARE_FINANCE_BASE_URL` y `SEASHARE_FLEET_TOKEN` cuando el modo sea `http`) o la aplicación no arranca. El token de desarrollo ya no está en la configuración compartida.
-- `FleetProperties` y `FinanceProperties` validan el modo y, en `http`, el destino (y el token en M1); al arrancar con fakes se registra un aviso.
+  - **Actualización 2026-11-18 (estado real):** `SEASHARE_FLEET_TOKEN` **ya no se lee** desde `f498a5b`: `FleetProperties` no tiene la propiedad y `FleetHttpConfig.java:23` no añade el header. El `POST` de CU-22 tampoco lo envía (`HttpFleetStatusNotificationAdapter.java:46`). Si M1 exige el token en los `GET` de CU-09/CU-10, es un **defecto de código pendiente** (`[CONFIRMAR CON M1]`).
+- `FleetProperties` y `FinanceProperties` validan el modo y, en `http`, el destino (el token de M1 ya no se valida); al arrancar con fakes se registra un aviso.
 
 **Pruebas de contenedores en Windows**
 - `PostgresTestContainers` y `RabbitTestContainers` aceptan puertos fijos por entorno (`SEASHARE_TEST_POSTGRES_PORT`, `SEASHARE_TEST_RABBIT_PORT`, `SEASHARE_TEST_RABBIT_MANAGEMENT_PORT`) para equipos donde Windows reserva rangos efímeros. RabbitMQ amplía la espera de arranque a 3 minutos.
@@ -712,3 +713,21 @@ Trabajo posterior al merge de H6 (`1e49661`) para desbloquear la Fase 7. Los com
   **Vínculo con CU-07**: aplicado, commit 5222f47 (antes pendiente de aplicar: la rama H9 se construyó sobre `develop` antes de H8). El cambio era inyectar `OpenDisputeUseCase`, llamarlo tras consolidar `COMPLETED` con `ownerId` y `statusResult.statusChangedAt()` y añadir el mock al constructor manual de su test; ya está aplicado y la respuesta de CU-07 devuelve `dispute_id` y `dispute_window_expires_at`. No cambia el contrato HTTP ni las aserciones de CU-07.
 
   **Documentación**: además de esta sección, se actualizaron la fila de la Fase 8 y las de CU-04 a CU-07 para reflejar H8 (ya en `origin/develop`), y se anotó que el conteo definitivo de pruebas se fija al integrar.
+
+### 4.15 Integración con M1 por HTTP POST (2026-11-18)
+
+**Alcance:** actualización documental; no hubo cambios de código en esta tarea.
+
+**Transporte (VERIFICADO).** El aviso de estado operativo a M1 sale por HTTP POST, no por AMQP. El relay despacha el destino `M1_HTTP` al puerto `FleetStatusNotificationPort` (`PublishPendingOutboxService.java:122-123`); en modo `http` el adaptador real envía `POST /api/v1/internal/status-events` con el payload del outbox (`HttpFleetStatusNotificationAdapter.java:32,91`) y en modo `fake` sólo registra y responde `DELIVERED` (`FakeFleetStatusNotificationAdapter.java:19-28`). No existe exchange, routing key ni cola de M1.
+
+**Respuesta (VERIFICADO en M2).** El adaptador lee `outcome` del cuerpo: `APPLIED`, `DUPLICATE`, `NO_CHANGE` y `STALE` marcan `published_at`; `UNKNOWN_VESSEL` e `INVALID_TRANSITION` marcan `dead`; un `outcome` ausente o desconocido se reintenta (`HttpFleetStatusNotificationAdapter.java:74-87`). Todo 4xx se considera permanente (`:62-63`) y todo 5xx o timeout se reintenta (`:54-60, :65-67`).`r
+
+**Catálogo de M1.** Los seis `outcome`, el límite de 100 caracteres de `event_id`, la aceptación de offsets en `occurred_at`, los alias `NAVIGATION`/`MAINTENANCE` y la forma del 400 con `errors[]` provienen del contrato aportado por el equipo y quedan como `[CONFIRMAR CON M1]`: no hay repositorio de M1 en esta máquina para citar archivo:línea.
+
+**Token (DEFECTO PENDIENTE).** Desde `f498a5b` M2 no envía `X-Internal-Service-Token` y la propiedad `seashare.fleet.token` ya no existe (`FleetHttpConfig.java:23`; `FleetProperties.java:14-39`). CU-09 y CU-10 lo declaran obligatorio. Si M1 lo exige en los `GET`, toda reserva y todo pago fallan con 400/500 según el mapeo de `HttpFleetOperationalStatusAdapter.java:115-116`.
+
+**Deudas detectadas (no corregidas).** (1) `408` y `429` caen en 4xx permanente y matan el evento. (2) El adaptador no compara el `event_id` de la respuesta con el enviado. (3) CU-10 no reintenta 500/502, aunque su plan lo pide (`HttpFleetOperationalStatusAdapter.java:96`). (4) El fixture del test usa `-05:00` mientras el código emite `Z` (`HttpFleetStatusNotificationAdapterTest.java:29`). (5) `ReservationOperationalDispatchJob` no existe: `RESERVED` se envía al confirmar el pago, sin fechas (`ChangeReservationStatusService.java:164-170`).
+
+**Riesgo de fechas.** Si M1 interpreta `RESERVED` como bloqueo completo, una reserva futura dejaría el barco no disponible para otras fechas, porque CU-10 sólo acepta `AVAILABLE` (`HttpFleetOperationalStatusAdapter.java:64`). Está marcado como `[CONFIRMAR CON M1]` y como `[DECISIÓN PENDIENTE]`; no se elige alternativa en esta actualización.
+
+**Estado de la rama.** El commit `4533b15` (adaptador HTTP real) existe sólo en `feature/conexion-frontend` y en esta rama; **no está en `develop`**.
