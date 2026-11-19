@@ -4,6 +4,8 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.seashare.m2.reservas.application.dto.FleetInfo;
 import com.seashare.m2.reservas.application.port.out.ExternalQueryLogPort;
+import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
+import com.seashare.m2.shared.domain.ErrorCode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +15,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URLConnection;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,6 +27,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class HttpFleetClientTest { // pruebas de exito de los adaptadores HTTP reales de flota con WireMock
 
@@ -29,6 +35,10 @@ class HttpFleetClientTest { // pruebas de exito de los adaptadores HTTP reales d
     private static final UUID OWNER_ID = UUID.fromString("a1c2e3f4-5678-90ab-cdef-1234567890ab"); // propietario fijo
     private static final String VESSEL_PATH = "/api/v1/vessels/" + VESSEL_ID; // ruta de la ficha
     private static final String STATUS_PATH = VESSEL_PATH + "/operational-status"; // ruta del estado operativo
+    private static final LocalDate START = LocalDate.of(2026, 12, 20); // inicio del rango de prueba
+    private static final LocalDate END = LocalDate.of(2026, 12, 22); // fin del rango de prueba
+    private static final ZoneId ZONE = ZoneId.of("America/Bogota"); // zona del puerto de prueba
+    private static final Instant NOW = Instant.parse("2026-12-01T00:00:00Z"); // reloj fijo de prueba
 
     private WireMockServer wireMock; // servidor falso de M1
     private HttpFleetInfoAdapter infoAdapter; // adaptador de ficha bajo prueba
@@ -44,7 +54,7 @@ class HttpFleetClientTest { // pruebas de exito de los adaptadores HTTP reales d
         RestClient client = new FleetHttpConfig().fleetRestClient(properties); // cliente real con timeouts
         ExternalQueryLogPort noopLog = entry -> { }; // el registro no se prueba aqui
         infoAdapter = new HttpFleetInfoAdapter(client, noopLog); // adaptador de ficha
-        statusAdapter = new HttpFleetOperationalStatusAdapter(client, noopLog); // adaptador de estado
+        statusAdapter = new HttpFleetOperationalStatusAdapter(client, noopLog, () -> NOW); // adaptador de estado
     }
 
     @AfterEach
@@ -100,30 +110,68 @@ class HttpFleetClientTest { // pruebas de exito de los adaptadores HTTP reales d
     }
 
     @Test
-    void availableStatusIsTrue() { // AVAILABLE se traduce en true
-        wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse() // stub del estado
-                .withStatus(200)
-                .withHeader("Content-Type", "application/json")
-                .withBody(statusBody("AVAILABLE"))));
-
-        boolean available = statusAdapter.isAvailable(VESSEL_ID); // consulta el estado operativo
-
-        assertThat(available).isTrue(); // solo AVAILABLE habilita reserva
-        wireMock.verify(getRequestedFor(urlPathEqualTo(STATUS_PATH)) // tampoco el estado viaja con token
-                .withoutHeader("X-Internal-Service-Token"));
-    }
-
-    @Test
-    void nonAvailableStatusesAreFalse() { // RESERVED, IN_NAVIGATION, MAINTENANCE_CLEANING y desconocido
-        for (String status : List.of("RESERVED", "IN_NAVIGATION", "MAINTENANCE_CLEANING", "WEIRD_STATUS")) {
+    void availableReservedAndNavigationAreAvailable() { // estados sin mantenimiento habilitan el rango
+        for (String status : List.of("AVAILABLE", "RESERVED", "NAVIGATION", "IN_NAVIGATION")) {
             wireMock.resetAll(); // limpia stubs y llamadas entre iteraciones
             wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse() // stub del estado actual
                     .withStatus(200)
                     .withHeader("Content-Type", "application/json")
                     .withBody(statusBody(status))));
 
-            assertThat(statusAdapter.isAvailable(VESSEL_ID)).as(status).isFalse(); // todo menos AVAILABLE es false
+            assertThat(statusAdapter.isAvailable(VESSEL_ID, START, END, ZONE)).as(status).isTrue();
         }
+    }
+
+    @Test
+    void maintenanceWithoutDatesIsNotAvailable() { // mantenimiento sin ventana: fail-safe
+        wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse() // sin fechas de mantenimiento
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(statusBody("MAINTENANCE_CLEANING"))));
+
+        assertThat(statusAdapter.isAvailable(VESSEL_ID, START, END, ZONE)).isFalse();
+    }
+
+    @Test
+    void maintenanceOutsideRangeIsAvailable() { // ventana que no toca ningun dia de la reserva
+        wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse() // mantenimiento posterior
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(maintenanceBody("2026-12-23T08:00:00-05:00", "2026-12-27T18:00:00-05:00"))));
+
+        assertThat(statusAdapter.isAvailable(VESSEL_ID, START, END, ZONE)).isTrue();
+    }
+
+    @Test
+    void maintenanceCrossingRangeIsNotAvailable() { // ventana que toca el rango inclusivo
+        wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse() // mantenimiento solapado
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(maintenanceBody("2026-12-21T08:00:00-05:00", "2026-12-27T18:00:00-05:00"))));
+
+        assertThat(statusAdapter.isAvailable(VESSEL_ID, START, END, ZONE)).isFalse();
+    }
+
+    @Test
+    void expiredMaintenanceIsAvailable() { // maintenance_until vencido: liberacion perezosa (D-07)
+        wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse() // ventana ya vencida
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(maintenanceBody("2026-11-20T08:00:00-05:00", "2026-11-27T18:00:00-05:00"))));
+
+        assertThat(statusAdapter.isAvailable(VESSEL_ID, START, END, ZONE)).isTrue();
+    }
+
+    @Test
+    void unknownStatusFailsSafe() { // estado desconocido: FLEET_SERVICE_UNAVAILABLE
+        wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse() // estado fuera del contrato
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(statusBody("WEIRD_STATUS"))));
+
+        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID, START, END, ZONE))
+                .isInstanceOfSatisfying(ReservationRuleException.class, e ->
+                        assertThat(e.getCode()).isEqualTo(ErrorCode.FLEET_SERVICE_UNAVAILABLE.getCode()));
     }
 
     private void warmUpServer() { // el primer intercambio con un servidor nuevo tarda mas de 300 ms; se calienta sin el SLA
@@ -155,5 +203,17 @@ class HttpFleetClientTest { // pruebas de exito de los adaptadores HTTP reales d
         return """
                 { "vessel_id": "%s", "operational_status": "%s", "queried_at": "2026-10-09T12:05:00-05:00" }
                 """.formatted(VESSEL_ID, status);
+    }
+
+    private static String maintenanceBody(String start, String until) { // arma el json con ventana de mantenimiento
+        return """
+                {
+                  "vessel_id": "%s",
+                  "operational_status": "MAINTENANCE",
+                  "queried_at": "2026-10-09T12:05:00-05:00",
+                  "maintenance_start": "%s",
+                  "maintenance_until": "%s"
+                }
+                """.formatted(VESSEL_ID, start, until);
     }
 }

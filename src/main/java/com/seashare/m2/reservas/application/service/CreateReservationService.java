@@ -84,7 +84,8 @@ public class CreateReservationService implements CreateReservationUseCase { // c
             throw new ReservationRuleException(ErrorCode.INVALID_PARAMETERS, "Departure time cannot be in the past"); // rechaza salida pasada
         }
 
-        if (!fleetOperationalStatusPort.isAvailable(command.vesselId())) { // valida aptitud operativa en modulo 1
+        if (!fleetOperationalStatusPort.isAvailable( // valida aptitud operativa en modulo 1
+                command.vesselId(), command.startDate(), command.endDate(), harborZone)) { // por rango y zona del puerto
             throw new ReservationRuleException(ErrorCode.VESSEL_NOT_AVAILABLE, "Vessel is not available for operation"); // rechaza embarcacion inhabilitada
         }
 

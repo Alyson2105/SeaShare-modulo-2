@@ -76,7 +76,7 @@ class CreateReservationOutboxIntegrationTest { // pruebas integradas de persiste
     void setUp() { // inicializa dependencias de flota
         defaultOwnerId = UUID.randomUUID();
         when(fleetInfoPort.getVesselInfo(any())).thenReturn(new FleetInfo(defaultOwnerId, 10, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(any())).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
     }
 
     @AfterEach

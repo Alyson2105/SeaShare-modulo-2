@@ -56,7 +56,7 @@ class IdempotencyAdapterTest { // pruebas de comportamiento de idempotencia a tr
     @BeforeEach
     void setUp() { // prepara mocks de modulo 1 antes de cada prueba
         when(fleetInfoPort.getVesselInfo(any())).thenReturn(new FleetInfo(UUID.randomUUID(), 10, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(any())).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
     }
 
     private CreateReservationCommand command(UUID renterId, String idempotencyKey, UUID vesselId) { // construye un comando valido

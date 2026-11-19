@@ -80,7 +80,7 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
     @BeforeEach
     void setUp() { // prepara mocks de modulo 1 antes de cada prueba
         when(fleetInfoPort.getVesselInfo(any())).thenReturn(new FleetInfo(UUID.randomUUID(), 10, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(any())).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
     }
 
     @AfterEach

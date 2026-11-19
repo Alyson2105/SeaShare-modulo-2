@@ -18,7 +18,9 @@ import com.seashare.m2.shared.domain.ClockPort;
 import com.seashare.m2.shared.domain.ErrorCode;
 import org.springframework.stereotype.Service;
 
+import java.time.DateTimeException;
 import java.time.Instant;
+import java.time.ZoneId;
 
 @Service
 public class StartPaymentService implements StartPaymentUseCase { // CU-03: orquesta consultas externas y transicion
@@ -98,9 +100,10 @@ public class StartPaymentService implements StartPaymentUseCase { // CU-03: orqu
                 command.reservationId(), null, calculation.rentalAmount(), calculation.insuranceAmount(),
                 calculation.guaranteeDepositAmount(), calculation.totalAmount(), "SUCCESS", now));
 
-        if (!fleetOperationalStatusPort.isAvailable(reservation.getVesselId())) { // FR-005 fuera de TX
+        if (!fleetOperationalStatusPort.isAvailable(reservation.getVesselId(), // FR-005 fuera de TX
+                reservation.getStartDate(), reservation.getEndDate(), harborZone(reservation))) { // rango y zona del puerto
             throw new ReservationRuleException(ErrorCode.VESSEL_NOT_AVAILABLE,
-                    "La embarcacion ya no se encuentra disponible para las fechas seleccionadas");
+                    "La embarcacion no se encuentra disponible para operar"); // mensaje valido tambien para mantenimiento
         }
 
         return writer.startPayment(command.reservationId(), calculation, command.paymentTokenRef(), // pasa los tres datos a la frontera
@@ -121,6 +124,18 @@ public class StartPaymentService implements StartPaymentUseCase { // CU-03: orqu
         if (reservation.getTtlExpiresAt() != null && !now.isBefore(reservation.getTtlExpiresAt())) {
             throw new ReservationRuleException(ErrorCode.RESERVATION_EXPIRED,
                     "El tiempo limite de 15 minutos para iniciar el pago de esta reserva ha expirado"); // 409
+        }
+    }
+
+    private ZoneId harborZone(Reservation reservation) { // zona del puerto guardada en la reserva, con valor por defecto del contrato
+        String timezone = reservation.getHarborTimezone(); // zona persistida al crear la reserva
+        if (timezone == null || timezone.isBlank()) { // reserva historica sin zona
+            return ZoneId.of("America/Bogota"); // valor por defecto de C3
+        }
+        try {
+            return ZoneId.of(timezone.trim()); // zona IANA valida
+        } catch (DateTimeException e) {
+            return ZoneId.of("America/Bogota"); // zona ilegible: misma politica que CU-10 (fail-safe de fechas)
         }
     }
 }

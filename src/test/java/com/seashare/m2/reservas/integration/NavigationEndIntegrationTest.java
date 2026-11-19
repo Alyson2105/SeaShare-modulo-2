@@ -85,7 +85,7 @@ class NavigationEndIntegrationTest { // CU-07: cierre real contra PostgreSQL
         ownerId = UUID.randomUUID();
         when(clockPort.now()).thenReturn(T0);
         when(fleetInfoPort.getVesselInfo(any())).thenReturn(new FleetInfo(ownerId, 10, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(any())).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
     }
 
     private UUID createReservation() { // siembra una reserva INITIATED

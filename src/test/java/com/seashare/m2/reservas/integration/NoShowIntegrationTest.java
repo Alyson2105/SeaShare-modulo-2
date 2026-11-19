@@ -105,7 +105,7 @@ class NoShowIntegrationTest { // CU-05: inasistencia real contra PostgreSQL
         vesselId = UUID.randomUUID();
         when(clockPort.now()).thenReturn(T0);
         when(fleetInfoPort.getVesselInfo(any())).thenReturn(new FleetInfo(ownerId, 10, ZONE));
-        when(fleetOperationalStatusPort.isAvailable(any())).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
     }
 
     private UUID createReservation(UUID renterId, UUID targetVesselId, LocalDate startDate, LocalDate endDate, LocalTime departureTime) { // siembra una reserva INITIATED
