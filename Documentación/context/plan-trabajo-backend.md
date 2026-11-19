@@ -15,7 +15,7 @@
 Implementar el backend completo del Módulo 2 en Spring Boot 4.1.2, Java 21, Maven, arquitectura hexagonal, paquete `com.seashare.m2`. Alcance: **CU-01 a CU-22, sin recortes**.
 
 - **Core de estados** (CU-08 único escritor) y reglas de reserva (CU-02, CU-03, CU-04..CU-07, CU-13).
-- **Integraciones**: M1 (CU-09, CU-10, CU-22 por HTTP PATCH), M3 (CU-11, CU-12, CU-13 canal B, CU-14, CU-15, CU-18), RabbitMQ (topología, outbox, relay, publisher confirms, DLQ).
+- **Integraciones**: M1 (CU-09, CU-10 por GET con token; CU-22 por `POST /api/v1/internal/status-events`), M3 (CU-11, CU-12, CU-13 canal B, CU-14, CU-15, CU-18), RabbitMQ (topología, outbox, relay, publisher confirms, DLQ) solo para M3.
 - **Vistas y disputas**: CU-19..CU-21 (consulta), CU-16..CU-18 (contexto `disputa`).
 - **Calidad**: pruebas con PostgreSQL real, reglas ArchUnit, observabilidad, Dockerfile.
 
@@ -29,11 +29,11 @@ Cada fila trae la recomendación técnica para destrabar hoy. Se adopta por defe
 
 | ID | Pregunta / conflicto | Recomendación por defecto | Destraba | Estado |
 |---|---|---|---|---|
-| D-01 | Transporte de la notificación a M1 (CU-22): AMQP o PATCH HTTP | **PATCH HTTP con destino `M1_HTTP`**. M1 solo expone REST (`features/CU-22-*/plan.md` L279; `technical-plan/plan.md` L229). Descarta AMQP, que exige un consumidor de M1 que no está documentado | T-02 (parte M1), T-04 (parte M1), T-08, T-17a..d | Adoptada por defecto, PENDIENTE de confirmar con M1 |
-| D-02 | Exchange, routing key y cola de M1 | Sin efecto mientras D-01 = HTTP. Si M1 exige AMQP, usar la convención de M3 (`consistencia-m2-m1.md` L45-L47) y acordarla con M1 | T-02 (parte M1) | Adoptada por defecto, PENDIENTE de confirmar con M1 |
+| D-01 | Transporte de la notificación a M1 (CU-22): AMQP o HTTP | **POST HTTP con destino `M1_HTTP`** a `/api/v1/internal/status-events` (`[CONFIRMAR CON M1]`). M1 sólo expone REST; no hay consumidor AMQP documentado. Decidido para el despliegue del 2026-11-21 | T-02 (parte M1), T-04 (parte M1), T-08, T-17a..d | Adoptada y decidida (2026-11-18); ruta y catálogo de `outcome` pendientes de confirmar con M1 |
+| D-02 | Exchange, routing key y cola de M1 | **Sin efecto**: no hay topología RabbitMQ para M1. Si en el futuro M1 exige AMQP, usar la convención de M3 (`consistencia-m2-m1.md` §3) y acordarla | T-02 (parte M1) | Cerrada por D-01 |
 | D-03 | ¿Se publica `PENDING_PAYMENT` a M3? | **Sí, como `PENDING`**. Lo exige CU-14 (`features/CU-14-*/spec.md` L66; `plan.md` L18, L53) y el código ya lo hace (`ChangeReservationStatusService.java` L31). La excepción es `features/CU-08-*/plan.md` L214: corregirla | T-08, T-12, T-16b | Adoptada por defecto, PENDIENTE de confirmar con M3 |
-| D-04 | ¿Hay orden garantizado entre eventos de la misma embarcación? | **No**. M1 trata cada `event_id` como idempotente (`features/CU-22-*/plan.md` L236). El consumidor deduplica | T-04 | Adoptada por defecto, PENDIENTE de confirmar con M1 |
-| D-05 | ¿Qué 4xx de M1 son permanentes? | **Todo 4xx es permanente**: no reintenta, va a DLQ con alerta (`features/CU-22-*/spec.md` L91) | T-03 | Adoptada por defecto, PENDIENTE de confirmar con M1 |
+| D-04 | ¿Hay orden garantizado entre eventos de la misma embarcación? | **No**. M1 descarta los anteriores como `STALE` (`[CONFIRMAR CON M1]`); M2 no ordena los envíos | T-04 | Adoptada por defecto, PENDIENTE de confirmar con M1 |
+| D-05 | ¿Qué 4xx de M1 son permanentes? | **Todo 4xx es permanente**: no reintenta y el evento queda `dead=true` con alerta (`features/CU-22-*/spec.md`; `HttpFleetStatusNotificationAdapter.java:62-63`). **Deuda:** `408` y `429` deberían reintentarse | T-03 | Comportamiento actual documentado; `408`/`429` `[CONFIRMAR CON M1]` |
 | D-06 | Identidad de M3 al llamar a M2 (CU-13 canal A, CU-15) | **Headers temporales** `X-User-Id` y `X-User-Role` con rol de servicio `FINANCE` (rol nuevo, no está en los documentos: `[NEEDS CLARIFICATION]` del nombre). Auth real queda para Fase 10 | T-13, T-16c | Adoptada por defecto, PENDIENTE de confirmar con M3; nombre del rol `FINANCE`: NEEDS CLARIFICATION |
 | D-07 | SLA de CU-11 y CU-12 | Usar **read timeout 1000 ms** de `technical-plan/plan.md` L297-L298. Los placeholders de L46 se reemplazan por ese valor hasta que negocio decida | T-15, T-16a | Adoptada por defecto |
 | D-08 | Disputa: ¿uno o varios reclamos? | **Un reclamo** por disputa (`technical-plan/plan.md` L195, `UNIQUE(dispute_id)`) | T-18a, T-18b | Adoptada por defecto |
@@ -47,7 +47,7 @@ Cada fila trae la recomendación técnica para destrabar hoy. Se adopta por defe
 
 > **Registro de excepción (D-14)**: este documento permanece en `Documentación/context/` pese a la regla de solo lectura de `technical-plan/plan.md` L532. Excepción autorizada y registrada el2026-11-07 en T-01.
 >
-> **Estado de la matriz (T-01, 2026-11-07)**: todas las decisiones quedan adoptadas por defecto. D-01, D-02, D-04 y D-05 pendientes de confirmar con M1; D-03 y D-06 pendientes de confirmar con M3 (D-06 además con el nombre del rol `FINANCE` como NEEDS CLARIFICATION). El resto no afecta a otros equipos.
+> **Estado de la matriz (T-01, 2026-11-07; actualizado 2026-11-18)**: D-01 y D-02 quedan cerradas (POST HTTP, sin cola con M1). D-04 y D-05 tienen su comportamiento actual documentado y sólo esperan confirmación de M1 en los puntos marcados. D-03 y D-06 siguen pendientes de confirmar con M3 (D-06 además con el nombre del rol `FINANCE` como NEEDS CLARIFICATION). El resto no afecta a otros equipos.
 
 ---
 
@@ -72,8 +72,8 @@ Convención por tarea: archivos a tocar (ruta real o **nueva**, con paquete prop
 
 | ID | Tarea | CU | Archivos | Tests | Aceptación | Depende |
 |---|---|---|---|---|---|---|
-| T-02 | Topología RabbitMQ: exchange `seashare.reservations` (topic), colas `finance.reservation-status.v1`, `finance.reservation-info.v1`, `finance.guarantee-dispute.v1`, DLQ, bindings | CU-02, CU-14, CU-18 (M3); CU-22 (M1 si D-01 cambia) | Nueva `shared`/`infrastructure/adapter/out/messaging/config/RabbitTopologyConfig.java` (paquete propuesto); `application.yaml` | `RabbitTopologyTest` → `.\mvnw.cmd test "-Dtest=RabbitTopologyTest"` | Exchange, colas y bindings declarados al arrancar (Testcontainers) | T-21 |
-| T-03 | Relay del outbox: publicación con publisher confirms, marca `published_at` tras ack, backoff 1/5/25/125 s, 5 intentos, `dead=true` y DLQ | CU-02, CU-08, CU-14, CU-22 | Nueva `infrastructure/adapter/out/messaging/outbox/OutboxRelayJob.java` (paquete propuesto); reutiliza `OutboxAdapter.java` L30-L82, `OutboxMessageEntity.java`; V3 L26-L27 (`dead`, `last_error`) | `OutboxRelayJobTest` (publica y marca); `OutboxRelayRetryTest` (backoff y DLQ) | Mensaje publicado y `published_at` no nulo tras confirm; tras 5 fallos `dead=true` | T-02 |
+| T-02 | Topología RabbitMQ: exchange `seashare.reservations` (topic), colas `finance.reservation-status.v1`, `finance.reservation-info.v1`, `finance.guarantee-dispute.v1`, DLQ, bindings | CU-02, CU-14, CU-18 (solo M3; CU-22 usa HTTP y no toca esta topología) | Nueva `shared`/`infrastructure/adapter/out/messaging/config/RabbitTopologyConfig.java` (paquete propuesto); `application.yaml` | `RabbitTopologyTest` → `.\mvnw.cmd test "-Dtest=RabbitTopologyTest"` | Exchange, colas y bindings declarados al arrancar (Testcontainers) | T-21 |
+| T-03 | Relay del outbox: publicación con publisher confirms, marca `published_at` tras ack, backoff 1/5/25/125 s, 5 intentos, `dead=true` (DLQ solo en M3; para M1 `dead` + alerta) | CU-02, CU-08, CU-14, CU-22 | Nueva `infrastructure/adapter/out/messaging/outbox/OutboxRelayJob.java` (paquete propuesto); reutiliza `OutboxAdapter.java` L30-L82, `OutboxMessageEntity.java`; V3 L26-L27 (`dead`, `last_error`) | `OutboxRelayJobTest` (publica y marca); `OutboxRelayRetryTest` (backoff y DLQ) | Mensaje publicado y `published_at` no nulo tras confirm; tras 5 fallos `dead=true` | T-02 |
 | T-04 | Consumidor/publicador AMQP y deduplicación por `event_id` | CU-02, CU-14, CU-18, CU-22 | Nueva `infrastructure/adapter/out/messaging/` (publicador y consumidor de prueba) | `OutboxRelayIntegrationTest` (cubre la publicación que el plan llamaba `OutboxPublisherIntegrationTest`); `EventDeduplicationTest` | Un mensaje duplicado se procesa una vez | T-03, D-04 |
 | T-05 | ShedLock para jobs multi-réplica | CU-08 (TTL), CU-16, CU-17 (jobs) | `pom.xml`; tabla `shedlock` ya existe en V2 L145 | `ShedLockTtlJobTest` | Dos instancias no ejecutan el job a la vez | T-20, D-09 |
 | T-22 | Observabilidad (correlation id HTTP y AMQP, MDC, métricas, health checks) y reglas ArchUnit de capas y "sin dinero" | Todos | `shared/` (filtro de correlation id, nuevo); `LayeredArchitectureTest.java` (existente); `moneyRulesArchTest` (nuevo, `src/test/java/com/seashare/m2/reservas/architecture/`) | `LayeredArchitectureTest`, `MoneyArchitectureTest` | Correlation id en respuesta y en headers AMQP; ArchUnit en verde | T-03 |
@@ -254,7 +254,7 @@ Orden de integración: cada frente integra en su rama de tarea; los cambios al c
 | ID | Contradicción | Lados |
 |---|---|---|
 | L1 | Rango de CU: 22 vs 21 | `CLAUDE.md` L98 vs `contexto_m2.md` L41, L80; `technical-plan/plan.md` L12. Resuelto por D-10 |
-| L2 | Transporte de M1: AMQP vs PATCH | `consistencia-m2-m1.md` L9, L166; `CU-22/plan.md` L7, L48 vs `technical-plan/plan.md` L229; `CU-22/plan.md` L279. Resuelto por D-01 |
+| L2 | Transporte de M1: AMQP vs HTTP | `consistencia-m2-m1.md` §6 y `CU-22/plan.md` §3 describían AMQP; `technical-plan/plan.md` L229 y `CU-22/plan.md` §9 decían PATCH. Resuelto por D-01 (2026-11-18): **POST HTTP** |
 | L3 | Migraciones aplicadas: V1 y V2 vs V3 en repo | `CLAUDE.md` L83-L85; `technical-plan/plan.md` L550 vs `db/migration/`; `contexto_m2.md` L78 |
 | L4 | PENDING_PAYMENT a M3 | `CU-08/plan.md` L145 y L214; `CU-08/spec.md` L40, L192; `CU-14/spec.md` L66; `CU-14/plan.md` L18, L53; código `ChangeReservationStatusService.java` L31. Resuelto por D-03 |
 | L5 | Conteo de códigos de error | Nota: 20; `ErrorCode.java` L8-L28: 21 |
