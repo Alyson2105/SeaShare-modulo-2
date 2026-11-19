@@ -1,5 +1,7 @@
 # Feature Specification: Recibir Información de Estado Operativo (Notificación a Módulo 1)
 
+> **Diseño aprobado 2026-11-19, pendiente de implementación.** Ver `Documentación/context/consistencia-m1-m2-mantenimiento.md`. Mientras no se implemente, el código sigue enviando `RESERVED` a M1 y CU-10 consulta sin fechas.
+
 **Módulo**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
 **Código de Caso de Uso**: CU-22  
 **Fecha de Creación**: 2026-10-21  
@@ -52,7 +54,7 @@ Como sistema, quiero encolar y reintentar la notificación dirigida a Módulo 1 
 
 ***Why this priority***: Una notificación perdida rompe la consistencia entre la operación y la flota: una reserva viva seguiría apareciendo como libre en el inventario de Módulo 1 y podría ser reasignada a otro Arrendatario. La entrega garantizada (Event Delivery Guarantee) es innegociable en arquitecturas desacopladas.
 
-***Independent Test***: Se simula una caída (HTTP 503 o timeout) en la API de Módulo 1, se dispara un cambio de estado en Módulo 2 y se verifica que la transición quede guardada, que el evento quede en la cola de entrega y que se reintente según FR-006 (máximo 5 intentos con backoff exponencial y jitter), derivando a DLQ con alerta si se agotan los intentos.
+***Independent Test***: Se simula una caída (HTTP 503 o timeout) en la API de Módulo 1, se dispara un cambio de estado en Módulo 2 y se verifica que la transición quede guardada, que el evento quede en el outbox y que se reintente según FR-006 (máximo 5 intentos con backoff exponencial y jitter), marcándose `dead=true` con alerta si se agotan los intentos.
 
 ***Acceptance Scenarios***:
 
@@ -64,7 +66,7 @@ Como sistema, quiero encolar y reintentar la notificación dirigida a Módulo 1 
 2. **Scenario**: Agotamiento de reintentos y derivación a DLQ
     - **Given** un evento que ya acumula cinco intentos fallidos por indisponibilidad de Módulo 1
     - **When** el quinto intento termina en error
-    - **Then** el sistema deriva el evento a la cola de letras muertas (DLQ) y dispara una alerta, sin descartar el evento ni alterar el estado ya consolidado de la reserva
+    - **Then** el sistema marca el evento como `dead=true` y dispara una alerta, sin descartar el evento ni alterar el estado ya consolidado de la reserva
 
 ---
 
@@ -88,10 +90,10 @@ Como sistema, quiero que cada aviso a Módulo 1 lleve un identificador único po
 ### Edge Cases
 
 - **Falso timeout de red**: si Módulo 2 entrega dos veces la misma notificación por un falso timeout, Módulo 1 debe poder procesarla de forma idempotente. Módulo 2 envía un identificador único por cada transición para facilitarlo (FR-004 y FR-005).
-- **Error permanente (4xx) de Módulo 1**: si Módulo 1 rechaza el aviso con un error 4xx (por ejemplo, embarcación inexistente o estado operativo no reconocido), el evento **no se reintenta** y se escala directamente a DLQ con alerta, porque reintentar un rechazo permanente no aporta resultado.
-- **Sin respuesta síncrona**: este caso de uso no espera una respuesta de negocio de Módulo 1 ni revierte la transición local de la reserva. La entrega se considera consumada con la confirmación del broker, no con un acuse de negocio del receptor.
+- **Error permanente (4xx) de Módulo 1**: si Módulo 1 rechaza el aviso con un error 4xx, el evento **no se reintenta** y queda `dead=true` con alerta en el log, porque reintentar un rechazo permanente no aporta resultado. Módulo 2 no tiene Dead Letter Queue para M1. M1 sólo emite `400`, `404` y `500` (`GlobalExceptionHandler.java:60-71,103-117`); `408` y `429` quedan como deuda de Módulo 2 si M1 llegara a usarlos.
+- **Respuesta técnica, sin negocio**: este caso de uso no espera una respuesta de negocio de Módulo 1 ni revierte la transición local de la reserva. La entrega se considera consumada cuando M1 responde `200` con `APPLIED`, `DUPLICATE`, `NO_CHANGE` o `STALE`; no hay broker de por medio.
 - **Prohibición absoluta de información financiera**: la notificación es puramente operativa. **Módulo 2 JAMÁS incluye montos, tarifas, penalidades, valores de reembolso ni datos de liquidación o pago**. Solo el identificador de la embarcación, el estado operativo resultante y los metadatos técnicos del evento.
-- **Entrega fuera de orden**: si dos notificaciones correspondientes a dos transiciones consecutivas de la misma Reserva llegan en orden inverso al de las transiciones, cada una debe ser tratada por Módulo 1 como una transición idempotente identificada por su propio identificador de evento. `[NEEDS CLARIFICATION: el contrato no define garantías de orden entre eventos de la misma embarcación]`.
+- **Entrega fuera de orden**: si dos notificaciones correspondientes a dos transiciones consecutivas de la misma Reserva llegan en orden inverso al de las transiciones, Módulo 1 descarta la anterior como `STALE` (VERIFICADO: `AssignOperationalStatusService.java:71-74`, comparación estricta `isBefore`). Módulo 2 no garantiza orden entre eventos de la misma embarcación.
 - **Conflicto de doble reserva**: **no aplica** a este caso de uso. La prevención de la doble reserva la resuelve Módulo 2 internamente antes de confirmar la reserva, usando sus propios registros de disponibilidad y el bloqueo de inventario; este caso de uso solo informa un hecho ya decidido.
 - **Manejo de rechazo del receptor**: **no aplica**. No hay un flujo de "rechazo de la notificación" observable por el usuario final; un rechazo permanente se escala a DLQ con alerta para el equipo de integración.
 
@@ -117,12 +119,14 @@ Como sistema, quiero que cada aviso a Módulo 1 lleve un identificador único po
 
 > **Esta tabla (FR-002) es la única fuente de verdad** del mapeo estado de la reserva → estado operativo notificado a Módulo 1. Cualquier otro documento del proyecto que necesite describir este mapeo debe **referenciar esta tabla** en lugar de mantener una copia propia con su propia granularidad (ver `CU-08` FR-007, que remite a esta tabla).
 
+> **Diseño aprobado 2026-11-19, pendiente de implementación:** cuando se implemente la decisión D1, la fila `Reservada` dejará de notificarse (M2 ya no enviará `RESERVED`) y M1 pasará a modelar el mantenimiento con fechas. Hasta entonces esta tabla describe el comportamiento vigente. Ver `context/consistencia-m1-m2-mantenimiento.md`.
+
 - **FR-003**: El *payload* de la notificación DEBE contener obligatoriamente: identificador de la embarcación, estado operativo resultante (ya mapeado, según FR-002) y marca temporal exacta del evento en formato ISO 8601.
 - **FR-004**: El *payload* DEBE incluir un identificador único por transición (`eventId`, UUID), de modo que Módulo 1 pueda deduplicar entregas repetidas y procesar el evento de forma idempotente.
 - **FR-005**: El identificador del evento DEBE generarse en la misma transacción local que consolida la transición de estado (patrón *outbox*), de forma que la transición y su notificación se confirmen juntas y el evento nunca se pierda silenciosamente.
-- **FR-006**: El sistema DEBE implementar un mecanismo de entrega garantizada (cola de reintentos) para asegurar que las notificaciones alcancen Módulo 1 ante fallos temporales de red o timeouts. Esta cola gobierna tanto el camino feliz (primer intento) como el de fallo (reintentos con backoff); **no existe envío síncrono directo**. Política de reintento: máximo 5 intentos por evento (primer intento inmediato), backoff exponencial con jitter de 1 s, 5 s, 25 s y 125 s, solo ante 5xx o timeout (nunca ante un 4xx permanente); tras el quinto fallo, derivación a DLQ y alerta.
+- **FR-006**: El sistema DEBE implementar un mecanismo de entrega garantizada (outbox + reintentos) para asegurar que las notificaciones alcancen Módulo 1 ante fallos temporales de red o timeouts. Esta cola lógica gobierna tanto el camino feliz (primer intento) como el de fallo; **no existe envío síncrono directo desde la transacción de negocio**. Política de reintento: máximo 5 intentos por evento (primer intento inmediato), backoff exponencial con jitter de 1 s, 5 s, 25 s y 125 s, solo ante 5xx o timeout (nunca ante un 4xx permanente); tras el quinto fallo, el evento se marca `dead=true` con alerta crítica. No hay Dead Letter Queue para Módulo 1.
 - **FR-007**: **REGLA ESTRICTA**: El sistema **NO DEBE** calcular, incluir ni transmitir montos, tarifas, penalidades, valores de reembolso ni ningún dato de liquidación o pago en la notificación. La notificación es puramente operativa; Módulo 1 interpreta el estado operativo y nada más.
-- **FR-008**: El sistema **NO DEBE** esperar una respuesta de negocio de Módulo 1 ni alterar la transición local de la reserva en función del resultado de la notificación. La consistencia es eventual y se alcanza por reintento, no por reversión.
+- **FR-008**: El sistema **NO DEBE** esperar una respuesta de negocio de Módulo 1 ni alterar la transición local de la reserva en función del resultado de la notificación. La respuesta técnica (`{event_id, outcome}`) sólo decide si el evento se marca publicado o `dead`. La consistencia es eventual y se alcanza por reintento, no por reversión.
 - **FR-009**: El sistema **NO DEBE** validar ni resolver conflictos de doble reserva en el marco de esta notificación. Esa prevención es responsabilidad interna de Módulo 2 y ocurre antes de confirmar la reserva.
 
 ---
@@ -150,7 +154,7 @@ No quedan inconsistencias abiertas en este spec. Las dos que estaban pendientes 
 
 ### Measurable Outcomes
 
-- **SC-001**: El 100% de las transiciones de reserva que la tabla de FR-002 marca como notificables son notificadas a Módulo 1 (0% de eventos perdidos gracias a la cola de reintentos).
+- **SC-001**: El 100% de las transiciones de reserva que la tabla de FR-002 marca como notificables son notificadas a Módulo 1 (0% de eventos perdidos gracias al outbox y a los reintentos).
 - **SC-002**: El tiempo de emisión del primer intento de notificación no supera los 500 milisegundos tras la consolidación del estado en la base de datos local.
 - **SC-003**: Cero (0) valores financieros, monetarios o de liquidación incluidos en el cuerpo del mensaje enviado a Módulo 1.
 - **SC-004**: El 100% de los eventos emitidos lleva un identificador único por transición, de modo que la entrega duplicada sea detectable y deduplicable por el receptor.

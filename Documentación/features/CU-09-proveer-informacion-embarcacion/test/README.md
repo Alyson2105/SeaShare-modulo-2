@@ -45,7 +45,7 @@ Casos para FleetInfoPort y su adaptador HTTP de M1; modo fake activo por defecto
 
 | TC | Documentado | Ejecutado | Resultado | Ejecutado por | Fecha | Observaciones |
 |---|---|---|---|---|---|---|
-| TC-CU09-001 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpFleetClientTest#mapsVesselInfoFromSuccessfulResponse y #sendsInternalServiceTokenHeader pasaron: propietario, capacidad, zona y cabecera. M1 real no fue consultado. |
+| TC-CU09-001 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: HttpFleetClientTest#mapsVesselInfoFromSuccessfulResponse pasó: propietario, capacidad y zona. M1 real no fue consultado. _(Nota 2026-11-18: el test `#sendsInternalServiceTokenHeader` citado en la corrida V4 ya no existe; el header se retiró en `f498a5b`.)_ |
 | TC-CU09-002 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Integración: CreateReservationTest#rejectsPassengersOverCapacity pasó: 409 CAPACITY_EXCEEDED y cero reservas del arrendatario; flota simulada. La validación se realiza en CU-02. |
 | TC-CU09-003 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: FleetUnavailableTest#vesselNotFoundOn404WithoutRetry pasó: VESSEL_NOT_FOUND y una llamada. No comprueba la respuesta de todos los consumidores. |
 | TC-CU09-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Componente WireMock: FleetUnavailableTest#double503FailsSafeAfterSingleRetry y #timeoutRetriesOnceThenFailsSafe pasaron con dos intentos y fallo seguro. ExternalQueryLogRegistrationTest#vesselServerError500RegistersErrorRow pasó con un solo intento; el plan exige reintentar 500/502. |

@@ -13,7 +13,7 @@ Al ejecutarse exitosamente:
 4. Verifica que hayan transcurrido al menos **30 minutos continuos** desde la hora pactada de inicio de la reserva (`tiempo_actual >= scheduled_departure + 30 minutos`, FR-003). Si el tiempo no se ha cumplido, rechaza con `409 Conflict` informando el tiempo exacto faltante (FR-005, SC-001, SC-003).
 5. Invoca a `Actualizar estado reserva` (CU-08) transicionando la reserva al estado terminal **`CANCELLED`** con sub-estado **`NO_SHOW`** (FR-007).
 6. Notifica de forma asíncrona a las dependencias externas a través de CU-08:
-   - Encola en la cola de notificación a Módulo 1 definida en CU-22 (`Recibir información estado operativo`, invocado vía `<<include>>`) la señal de liberación de la embarcación al estado **`AVAILABLE`** (FR-010). El flujo no espera respuesta de Módulo 1 ni depende de ella: la entrega se garantiza con reintentos y backoff, DLQ e idempotencia por identificador único de evento (CU-22 FR-006), y un fallo de entrega no revierte la transición local de Módulo 2.
+   - Encola la notificación HTTP de estado operativo hacia Módulo 1 definida en CU-22 (`Recibir información estado operativo`, invocado vía `<<include>>`) la señal de liberación de la embarcación al estado **`AVAILABLE`** (FR-010). El flujo no espera respuesta de negocio de Módulo 1 ni depende de ella: la entrega se garantiza con reintentos y backoff, `dead=true` con alerta e idempotencia por identificador único de evento (CU-22 FR-006), y un fallo de entrega no revierte la transición local de Módulo 2.
    - Publica el evento asíncrono en RabbitMQ ([plan de CU-14](../CU-14-recibir-estado-reserva/plan.md)) hacia Módulo 3 informando el estado `CANCELLED` y sub-estado `NO_SHOW` para que Finanzas ejecute la compensación económica al Propietario (FR-011).
 7. **Regla estricta "Sin dinero"**: Módulo 2 no calcula compensaciones, retenciones ni dispersiones monetarias (FR-009, SC-005).
 
@@ -198,13 +198,13 @@ No aplica. Operación puntual sobre una reserva individual.
 | **FR-007** | Transición a `CANCELLED` con sub-estado `NO_SHOW` | Respuesta `200 OK` con `status: CANCELLED` y `cancellation_subtype` |
 | **FR-008** | Registro de auditoría (evento No-Show) | Almacenamiento de fecha, minutos de espera y `observations` |
 | **FR-009** | Regla estricta "Sin dinero" (cero cálculos monetarios) | Payload de respuesta sin campos monetarios |
-| **FR-010** | Liberación de la embarcación a `AVAILABLE` en M1 | Notificación asíncrona respaldada por el [plan de CU-22](../CU-22-recibir-informacion-estado-operativo/plan.md) y por la cola de notificación definida en CU-22 |
+| **FR-010** | Liberación de la embarcación a `AVAILABLE` en M1 | Notificación asíncrona respaldada por el [plan de CU-22](../CU-22-recibir-informacion-estado-operativo/plan.md) y por el outbox HTTP definido en CU-22 |
 | **FR-011** | Notificación de `NO_SHOW` a Módulo 3 | Publicación respaldada por el [plan de CU-14](../CU-14-recibir-estado-reserva/plan.md) |
 | **FR-012** | Fail-safe si no se resuelve la zona horaria del puerto | Error `503 FLEET_SERVICE_UNAVAILABLE` |
 | **SC-001** | 0% reportes aceptados antes de los 30 minutos | Validación cronológica estricta |
 | **SC-002** | 0% reportes sobre estados inválidos | Matriz de validación de máquina de estados |
 | **SC-003** | 100% de intentos anticipados informan tiempo restante | Campos `minutes_remaining` y `seconds_remaining` en error 409 |
-| **SC-004** | Notificación externa encolada en < 1 segundo | Outbox transaccional, outbox hacia M1 (PATCH de UC07) y SLA de actualización |
+| **SC-004** | Notificación externa encolada en < 1 segundo | Outbox transaccional, outbox hacia M1 (POST HTTP de CU-22) y SLA de actualización |
 | **SC-005** | Cero operaciones de cálculo monetario en M2 | Neutralidad financiera del endpoint |
 | **SC-006** | Cero reportes autorizados a no-propietarios | Control de claim de rol y pertenencia |
 
@@ -224,7 +224,7 @@ No aplica. Operación puntual sobre una reserva individual.
 
 ### [DIFERENCIA H8-CU05-03] Notificacion a M1
 - El plan dice: encolar la liberacion a `AVAILABLE` por la cola de notificacion de CU-22 (L16).
-- El codigo hace: outbox con destino `M1_HTTP`; el unico adaptador es `FakeFleetStatusNotificationAdapter`, que solo loguea y responde `DELIVERED` sin hacer HTTP.
+- El codigo hace: outbox con destino `M1_HTTP`; en modo `http` el adaptador real `HttpFleetStatusNotificationAdapter` hace `POST /api/v1/internal/status-events`; en modo `fake` solo loguea y responde `DELIVERED`. Actualizado 2026-11-18.
 - Decision: por ahora solo adaptador fake; sin cliente HTTP real.
 
 ### [DIFERENCIA H8-CU05-04] vessel_operational_status

@@ -203,7 +203,7 @@ No aplica. Operación puntual sobre una reserva individual.
 | **FR-009** | Desactivación permanente de No-Show y cancelación | Invariante técnica garantizada en Notas Transversales |
 | **FR-010** | Regla "Sin dinero" (cero cobros en muelle) | Respuesta sin conceptos monetarios |
 | **SC-001** | Cero inicios permitidos fuera de estado `RESERVED` | Verificado en control previo de máquina de estados |
-| **SC-002** | Notificación a M1 encolada en < 1 segundo | Outbox transaccional, outbox hacia M1 (PATCH de UC07) y SLA operativo |
+| **SC-002** | Notificación a M1 encolada en < 1 segundo | Outbox transaccional, outbox hacia M1 (POST HTTP de CU-22) y SLA operativo |
 | **SC-003** | Cero posibilidad de cancelar o No-Show tras inicio | Bloqueo definitivo documentado |
 | **SC-004** | 100% de inicios notifican a M3 para activar póliza | Publicación garantizada en RabbitMQ |
 | **SC-005** | Cero cobros monetarios ejecutados en Módulo 2 | Neutralidad financiera de la interfaz |
@@ -225,7 +225,7 @@ No aplica. Operación puntual sobre una reserva individual.
 
 ### [DIFERENCIA H8-CU06-03] Notificacion a M1
 - El plan dice: encolar la senal de la embarcacion a `IN_NAVIGATION` por la cola de notificacion de CU-22 (L18).
-- El codigo hace: outbox con destino `M1_HTTP`; el unico adaptador es `FakeFleetStatusNotificationAdapter`, que solo loguea y responde `DELIVERED` sin hacer HTTP.
+- El codigo hace: outbox con destino `M1_HTTP`; en modo `http` el adaptador real `HttpFleetStatusNotificationAdapter` hace `POST /api/v1/internal/status-events`; en modo `fake` solo loguea y responde `DELIVERED`. Actualizado 2026-11-18.
 - Decision: por ahora solo adaptador fake; sin cliente HTTP real.
 
 ### [DIFERENCIA H8-CU06-04] insurance_activated

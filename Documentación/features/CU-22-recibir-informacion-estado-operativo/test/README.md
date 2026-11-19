@@ -1,6 +1,6 @@
 # CU-22 — Pruebas backend de notificación operativa a M1
 
-Casos de mapeo de estado operativo, outbox y despacho M1_HTTP. El adaptador de entrega a M1 es fake.
+Casos de mapeo de estado operativo, outbox y despacho M1_HTTP. En modo `fake` el adaptador de entrega a M1 sólo registra y responde `DELIVERED`; en modo `http` existe un adaptador real que hace `POST /api/v1/internal/status-events` (actualizado 2026-11-18).
 
 **Estado global**: Draft por ambigüedad del transporte y confirmación de entrega; evaluado el 2026-11-13.
 
@@ -51,6 +51,8 @@ Casos de mapeo de estado operativo, outbox y despacho M1_HTTP. El adaptador de e
 | TC-CU22-006 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | OutboxRelayIntegrationTest#m1HttpUsaElPuertoFalsoYMarcaPublished pasó con fila insertada manualmente y puerto falso; no hubo HTTP ni medición SLA. El plan mezcla broker y PATCH. |
 
 ## Brechas detectadas
+
+> **Actualización 2026-11-18 (sin reescribir la corrida V4 del 2026-11-13):** las brechas 1 y 2 quedaron resueltas. Existe `HttpFleetStatusNotificationAdapter` (POST `/api/v1/internal/status-events`) y la documentación de CU-22 ya describe HTTP POST, sin AMQP ni PATCH. La brecha 3 se mantiene: para M1 no hay republicación a DLQ, sólo `dead=true` + alerta.
 
 1. [Contexto](../../../context/implementContext.md): matriz y outbox implementados, pero notificador M1_HTTP es fake.
 2. Plan mezcla PATCH HTTP y descripción AMQP/broker; último salto y confirmación requieren coherencia con M1.

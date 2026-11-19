@@ -1,5 +1,7 @@
 # Contrato de Integración Externa: Consultar Estado Operativo de Embarcación (M1)
 
+> **Diseño aprobado 2026-11-19, pendiente de implementación.** Ver `Documentación/context/consistencia-m1-m2-mantenimiento.md`: CU-10 pasará a recibir el rango de fechas y a interpretar `maintenance_start`/`maintenance_until`. Mientras no se implemente, la consulta sigue sin fechas.
+
 **Módulo Proveedor**: Módulo 1 – Gestión de Flota y Activos P2P  
 **Responsable de implementarlo**: Equipo de Módulo 1  
 **Módulo Consumidor**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
@@ -37,8 +39,10 @@ GET /api/v1/vessels/{vessel_id}/operational-status
 
 | Nombre | Obligatorio | Descripción |
 |---|---|---|
-| `X-Internal-Service-Token` | Sí | Token de servicio interno de Módulo 2 (lo entrega Módulo 1) |
+| `X-Internal-Service-Token` | **No** | M1 deja `GET /api/v1/vessels/**` como `permitAll` (VERIFICADO en M1: `SecurityConfig.java:94-96`). M2 acierta al no enviarlo. |
 | `Accept` | No | `application/json` |
+
+> **Confirmado el 2026-11-19:** M1 no valida `X-Internal-Service-Token` en sus rutas internas. La retirada del header en M2 (commit `f498a5b`, `FleetHttpConfig.java:23`) es correcta: **no hay defecto pendiente ni riesgo de 401/403**.
 
 **Path Parameters**:
 
@@ -85,7 +89,6 @@ GET /api/v1/vessels/{vessel_id}/operational-status
 
 ```bash
 curl -X GET "https://flota.seashare.internal/api/v1/vessels/d3b07384-d113-49cd-a5d6-812e9bcfc101/operational-status" \
-  -H "X-Internal-Service-Token: <token_servicio_m2>" \
   -H "Accept: application/json"
 ```
 
@@ -107,7 +110,6 @@ curl -X GET "https://flota.seashare.internal/api/v1/vessels/d3b07384-d113-49cd-a
 
 ```bash
 curl -X GET "https://flota.seashare.internal/api/v1/vessels/8f4b2319-58b9-4c8d-b0a3-9e41f7d12a99/operational-status" \
-  -H "X-Internal-Service-Token: <token_servicio_m2>" \
   -H "Accept: application/json"
 ```
 
@@ -130,7 +132,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/vessels/8f4b2319-58b9-4c8d-b
 | `400 Bad Request` | `vessel_id` con formato UUID corrupto | Módulo 2 aborta sin reintento | `400 Bad Request` (`INVALID_UUID`) |
 | `401 Unauthorized` / `403 Forbidden` | Credencial de servicio de M2 rechazada | Alerta crítica de seguridad en observabilidad | `500 Internal Server Error` (`INTERNAL_ERROR`) |
  | `404 Not Found` | Embarcación no existe en los registros de flota | Declara activo inexistente sin reintento (SC-005) | `404 Not Found` (`VESSEL_NOT_FOUND`) |
-| `500 Internal Server Error` / `502 Bad Gateway` | Falla interna en los servidores de Módulo 1 | Aplica máximo 1 reintento rápido; si persiste, activa *fail-safe* preventivo | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |
+| `500 Internal Server Error` / `502 Bad Gateway` | Falla interna en los servidores de Módulo 1 | **Estado real del código:** aborta sin reintento y devuelve 503 (`HttpFleetOperationalStatusAdapter.java:96`). **Deuda:** el contrato pide 1 reintento rápido antes del fail-safe. | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |
 | `Timeout` (> 300 ms) | Latencia excedida en la red o base de datos de M1 | Ejecuta 1 reintento inmediato; si se agota, activa *fail-safe* preventivo | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |
 
 ---
@@ -149,8 +151,10 @@ curl -X GET "https://flota.seashare.internal/api/v1/vessels/8f4b2319-58b9-4c8d-b
 
 ## 5. Puntos Abiertos y Aclaraciones Necesarias
 
-- `[NEEDS CLARIFICATION: mecanismo de autenticación servicio-a-servicio]`: M1 exige el header `X-Internal-Service-Token` (contrato UC07 de M1); falta que M1 indique quién entrega el valor.
-- `[NEEDS CLARIFICATION: endpoint formal en Módulo 1]`: ratificar la ruta `GET /api/v1/vessels/{vessel_id}/operational-status` en la especificación OpenAPI de Módulo 1.
+- **Autenticación servicio-a-servicio (cerrado el 2026-11-19)**: M1 **no** exige token en `GET /api/v1/vessels/**` (`SecurityConfig.java:94-96`). M2 no lo envía y es correcto; no hay variable ni defecto pendiente.
+- **Endpoint formal en Módulo 1 (confirmado el 2026-11-18 y verificado el 2026-11-19)**: ruta `GET /api/v1/vessels/{vessel_id}/operational-status` (`ReservationsVesselController.java:60`) y respuesta `{vessel_id, operational_status, queried_at}` (`OperationalStatusResponse.java:6-9`).
+- **Motivo de indisponibilidad**: el contrato actual sólo devuelve el estado; M2 no recibe un motivo. `FR-005` se cumple a nivel de dictamen (apto / no apto), no de mensaje detallado.
+- **Diseño aprobado 2026-11-19 (pendiente de implementación)**: CU-10 recibirá `start_date`/`end_date` y M1 devolverá `maintenance_start`/`maintenance_until`; el veredicto será disponible si el estado es `AVAILABLE`, `RESERVED`, `IN_NAVIGATION`/`NAVIGATION`, o si el mantenimiento no cruza el rango. Mantenimiento sin fechas bloquea todo. Ver `context/consistencia-m1-m2-mantenimiento.md`.
 
 ---
 
