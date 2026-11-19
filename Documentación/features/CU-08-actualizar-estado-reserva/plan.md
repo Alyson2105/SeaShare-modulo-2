@@ -214,7 +214,7 @@ No aplica. Operación sobre una única reserva.
 2. **`EXPIRED` (desde `PENDING_PAYMENT`) y `PAYMENT_FAILED` hacia Módulo 3**: CU-14 FR-001 dice que toda transición desde `PENDING_PAYMENT` se notifica; el flujo alterno del spec de CU-08 dice que no. Decidido: Módulo 2 no los notifica a Módulo 3 (en INITIATED→EXPIRED no hay nada que deshacer y PAYMENT_FAILED lo origina M3). Única excepción: cobro aprobado tardío tras el TTL, que se publica como `CANCELLED_FLEXIBLE` (ver CU-13 y CU-14). No se le pide nada a M3.
 3. **Barco `RESERVED` por semanas**: con una reserva confirmada para dentro de un mes, Módulo 1 mostraría el barco ocupado todo ese tiempo. Choca con H1 (disponibilidad instantánea). Decisión de negocio.
 4. **Orden de entrega a Módulo 1**: pedirle que aplique un evento solo si su `occurred_at` es más reciente que el último aplicado.
-5. **Último salto a Módulo 1**: Decidido el 2026-11-18: HTTP `POST /api/v1/internal/status-events` a M1 (`[CONFIRMAR CON M1]`); el destino del outbox es `M1_HTTP` y no hay cola. Confirmar también si `outbox_message` es una tabla compartida.
+5. **Último salto a Módulo 1**: Decidido el 2026-11-18 y confirmado el 2026-11-19: HTTP `POST /api/v1/internal/status-events` a M1 (VERIFICADO: `StatusEventController.java:20,31`); el destino del outbox es `M1_HTTP` y no hay cola. Confirmar también si `outbox_message` es una tabla compartida.
 6. **Réplicas múltiples del job de TTL**: `SKIP LOCKED` o ShedLock.
 
 ---

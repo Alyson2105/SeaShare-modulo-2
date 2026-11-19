@@ -252,7 +252,7 @@ Rama `feature/fase3-adaptadores-lectura` (creada desde develop; se le fusionó d
 - `REQUIRES_NEW` abre una segunda conexion mientras `CreateReservationService` (que es `@Transactional`) mantiene la suya. Bajo concurrencia alta con el pool por defecto, el registro puede perderse por falta de conexiones. La solucion de fondo es sacar las llamadas a M1 de la transaccion de CU-02; no se hizo en este hito.
 - Un 503 persistente tras el reintento se registra como `TIMEOUT`, aunque M1 si respondio. Nombre no exacto; duda para el grupo.
 - Los metodos `get`, `exchange` y `register` estan duplicados en los dos adaptadores HTTP. Refactor pendiente.
-- Contrato con M1 parcialmente confirmado el 2026-11-18: transporte HTTP POST y rutas existen en código; siguen `[CONFIRMAR CON M1]` el catálogo de `outcome`, el límite de 100 caracteres de `event_id`, los offsets de `occurred_at`, los alias `NAVIGATION`/`MAINTENANCE`, la forma del 400 y si el header `X-Internal-Service-Token` aplica a cada ruta.
+- Contrato con M1 confirmado el 2026-11-19 contra su código: transporte HTTP POST, ruta, ausencia de autenticación, seis `outcome`, límite de 100 caracteres de `event_id`, offsets de `occurred_at`, alias `NAVIGATION`/`MAINTENANCE` y forma del `400` (`ProblemDetail` con `errors`). Queda como deuda de M2 reintentar `408/429` si M1 llegara a emitirlos.
 
 ---
 
@@ -391,8 +391,8 @@ Trabajo posterior al merge de H6 (`1e49661`) para desbloquear la Fase 7. Los com
 - Se elimina el reintento con `Thread.sleep` del valor calculado: una sola llamada; un 404 devuelve `CALCULATION_UNAVAILABLE` de inmediato y el cliente reintenta más tarde. Se conserva un reintento inmediato solo ante conexión rechazada. Se retiran `max-404-retries`, `retry-delay-ms` y `max-total-ms`.
 
 **Perfiles y secretos**
-- `seashare.fleet.mode`, `seashare.finance.mode` y el token de M1 se leen de variables de entorno. En `dev`/`test` el modo por defecto es `fake` (M2 corre aislado); en `prod` deben declararse explícitamente (`SEASHARE_FLEET_MODE`, `SEASHARE_FINANCE_MODE`, `SEASHARE_FINANCE_BASE_URL` y `SEASHARE_FLEET_TOKEN` cuando el modo sea `http`) o la aplicación no arranca. El token de desarrollo ya no está en la configuración compartida.
-  - **Actualización 2026-11-18 (estado real):** `SEASHARE_FLEET_TOKEN` **ya no se lee** desde `f498a5b`: `FleetProperties` no tiene la propiedad y `FleetHttpConfig.java:23` no añade el header. El `POST` de CU-22 tampoco lo envía (`HttpFleetStatusNotificationAdapter.java:46`). Si M1 exige el token en los `GET` de CU-09/CU-10, es un **defecto de código pendiente** (`[CONFIRMAR CON M1]`).
+- `seashare.fleet.mode` y `seashare.finance.mode` se leen de variables de entorno. En `dev`/`test` el modo por defecto es `fake` (M2 corre aislado); en `prod` deben declararse explícitamente (`SEASHARE_FLEET_MODE`, `SEASHARE_FINANCE_MODE` y `SEASHARE_FINANCE_BASE_URL`) o la aplicación no arranca.
+  - **Actualización 2026-11-19:** M1 **no exige** `X-Internal-Service-Token` en sus rutas internas (`SecurityConfig.java:92-96`). M2 no lo envía desde `f498a5b` (`FleetHttpConfig.java:23`) y es correcto: no hay defecto ni variable `SEASHARE_FLEET_TOKEN` pendiente.
 - `FleetProperties` y `FinanceProperties` validan el modo y, en `http`, el destino (el token de M1 ya no se valida); al arrancar con fakes se registra un aviso.
 
 **Pruebas de contenedores en Windows**
@@ -722,7 +722,7 @@ Trabajo posterior al merge de H6 (`1e49661`) para desbloquear la Fase 7. Los com
 
 **Respuesta (VERIFICADO en M2).** El adaptador lee `outcome` del cuerpo: `APPLIED`, `DUPLICATE`, `NO_CHANGE` y `STALE` marcan `published_at`; `UNKNOWN_VESSEL` e `INVALID_TRANSITION` marcan `dead`; un `outcome` ausente o desconocido se reintenta (`HttpFleetStatusNotificationAdapter.java:74-87`). Todo 4xx se considera permanente (`:62-63`) y todo 5xx o timeout se reintenta (`:54-60, :65-67`).`r
 
-**Catálogo de M1.** Los seis `outcome`, el límite de 100 caracteres de `event_id`, la aceptación de offsets en `occurred_at`, los alias `NAVIGATION`/`MAINTENANCE` y la forma del 400 con `errors[]` provienen del contrato aportado por el equipo y quedan como `[CONFIRMAR CON M1]`: no hay repositorio de M1 en esta máquina para citar archivo:línea.
+**Catálogo de M1 (verificado el 2026-11-19).** Los seis `outcome` (`AssignOperationalStatusUseCase.java:29-36`), el límite de 100 caracteres de `event_id` (`AssignOperationalStatusService.java:26,91`), la aceptación de offsets en `occurred_at` (`:108`), los alias `NAVIGATION`/`MAINTENANCE` (`:129-130`) y la forma del `400` como `ProblemDetail` con `errors[]` (`GlobalExceptionHandler.java:65-71`) están confirmados en el código de M1.
 
 **Token (DEFECTO PENDIENTE).** Desde `f498a5b` M2 no envía `X-Internal-Service-Token` y la propiedad `seashare.fleet.token` ya no existe (`FleetHttpConfig.java:23`; `FleetProperties.java:14-39`). CU-09 y CU-10 lo declaran obligatorio. Si M1 lo exige en los `GET`, toda reserva y todo pago fallan con 400/500 según el mapeo de `HttpFleetOperationalStatusAdapter.java:115-116`.
 

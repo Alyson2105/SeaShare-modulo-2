@@ -42,8 +42,8 @@ Módulo 1 gestiona por su cuenta la transición final `En Mantenimiento/Limpieza
 
 | Elemento | Valor |
 |---|---|
-| Método y ruta | `POST /api/v1/internal/status-events` (`[CONFIRMAR CON M1]`) |
-| Autenticación | Sin `X-Internal-Service-Token` en esta ruta (`[CONFIRMAR CON M1]`) |
+| Método y ruta | `POST /api/v1/internal/status-events` (VERIFICADO en M1: `StatusEventController.java:20,31`) |
+| Autenticación | Sin `X-Internal-Service-Token` en esta ruta (VERIFICADO en M1: `SecurityConfig.java:92-93` la declara `permitAll`) |
 | Transporte | HTTP REST síncrono, invocado desde el relay del outbox |
 
 > El transporte es HTTP POST y no AMQP: no se define exchange, routing key ni cola para Módulo 1. Cualquier referencia anterior a una cola de M1 queda sin efecto.
@@ -77,9 +77,9 @@ Valores posibles de `operational_status` (estados operativos oficiales de Módul
 | `IN_NAVIGATION` | En Navegación |
 | `MAINTENANCE_CLEANING` | En Mantenimiento/Limpieza |
 
-Módulo 1 acepta además los alias `NAVIGATION` y `MAINTENANCE` (`[CONFIRMAR CON M1]`). Módulo 2 no los emite: solo envía los cuatro valores canónicos.
+Módulo 1 acepta además los alias `NAVIGATION` y `MAINTENANCE` (VERIFICADO en M1: `AssignOperationalStatusService.java:129-130`). Módulo 2 no los emite: solo envía los cuatro valores canónicos.
 
-Respuesta `200 OK` (`[CONFIRMAR CON M1]`):
+Respuesta `200 OK` (VERIFICADO en M1: `StatusEventController.java:53` devuelve `{event_id, outcome}`):
 
 | Campo | Tipo | Descripción |
 |---|---|---|
@@ -88,7 +88,7 @@ Respuesta `200 OK` (`[CONFIRMAR CON M1]`):
 
 Catálogo de `outcome` y tratamiento en Módulo 2:
 
-| `outcome` | Significado en Módulo 1 (`[CONFIRMAR CON M1]`) | Tratamiento en Módulo 2 (VERIFICADO) |
+| `outcome` | Significado en Módulo 1 (VERIFICADO: `AssignOperationalStatusUseCase.java:29-36`) | Tratamiento en Módulo 2 (VERIFICADO) |
 |---|---|---|
 | `APPLIED` | El estado cambió | Entregado (`HttpFleetStatusNotificationAdapter.java:81`) |
 | `DUPLICATE` | Ese `event_id` ya se procesó | Entregado (`:81`) |
@@ -99,7 +99,7 @@ Catálogo de `outcome` y tratamiento en Módulo 2:
 
 Un `outcome` ausente o fuera de ese catálogo se trata como fallo reintentable (`:76-79, :83-86`).
 
-Respuesta `400` (`[CONFIRMAR CON M1]`): aviso incompleto o inválido, con `errors[{field, message}]` para `event_id`, `vessel_id`, `operational_status` y `occurred_at`.
+Respuesta `400` (VERIFICADO en M1: `GlobalExceptionHandler.java:65-71`): `ProblemDetail` con `status: 400`, `detail` y la propiedad `errors[{field, message}]` para `event_id`, `vessel_id`, `operational_status` y `occurred_at`. No usa el sobre `{code, message}` de Módulo 2.
 
 Mapeo estado de la reserva → `operational_status` (**copia de referencia**; la fuente de verdad única es la tabla de FR-002 de `CU-22-recibir-informacion-estado-operativo/spec.md`. Ante cualquier divergencia, prevalece CU-22 FR-002):
 
@@ -114,9 +114,9 @@ Mapeo estado de la reserva → `operational_status` (**copia de referencia**; la
 | Expirada | No | — | La reserva nunca alcanzó Reservada; Módulo 1 nunca la tuvo bloqueada. |
 | Pago Fallido | No | — | La reserva nunca alcanzó Reservada; Módulo 1 nunca la tuvo bloqueada. |
 
-Módulo 2 sólo emite los cuatro estados operativos canónicos y nunca el estado crudo de la reserva. Un valor fuera de catálogo lo rechaza Módulo 1 con `400` (`[CONFIRMAR CON M1]`).
+Módulo 2 sólo emite los cuatro estados operativos canónicos y nunca el estado crudo de la reserva. Un valor fuera de catálogo lo rechaza Módulo 1 con `400` (VERIFICADO en M1: `AssignOperationalStatusService.java:101-104,131`).
 
-### 4.1 Transiciones que aplica Módulo 1 (`[CONFIRMAR CON M1]`)
+### 4.1 Transiciones que aplica Módulo 1 (VERIFICADO: `AssignOperationalStatusService.java:33-37`)
 
 | Desde | Hacia |
 |---|---|
@@ -126,10 +126,12 @@ Módulo 2 sólo emite los cuatro estados operativos canónicos y nunca el estado
 | `MAINTENANCE_CLEANING` | Ninguna por aviso: la termina el propietario |
 
 > Consecuencia para Módulo 2: un aviso que no encaje en esta tabla devuelve `INVALID_TRANSITION` y el evento queda `dead` (`HttpFleetStatusNotificationAdapter.java:82`).
+>
+> **Hallazgo (2026-11-19):** `AVAILABLE → NAVIGATION` **no** está permitida hoy. Si Módulo 2 deja de enviar `RESERVED` (diseño aprobado, ver `context/consistencia-m1-m2-mantenimiento.md`), el check-in devolvería `INVALID_TRANSITION` hasta que M1 añada esa transición.
 
 ## 5. Ejemplos
 
-> Módulo 2 emite `occurred_at` en UTC (`Z`), porque serializa un `Instant` (`OutboxAdapter.java:124`). El contrato acepta `Z` o un offset explícito (`[CONFIRMAR CON M1]`); los ejemplos de abajo se mantienen con `-05:00` como muestra del formato aceptado.
+> Módulo 2 emite `occurred_at` en UTC (`Z`), porque serializa un `Instant` (`OutboxAdapter.java:124`). El contrato acepta `Z` o un offset explícito (VERIFICADO en M1: `AssignOperationalStatusService.java:108` usa `OffsetDateTime.parse`); los ejemplos de abajo se mantienen con `-05:00` como muestra del formato aceptado.
 
 Reservada (bloqueo por pago confirmado):
 
@@ -186,7 +188,7 @@ Cancelada por avería mecánica (señal hacia Mantenimiento/Limpieza; sólo si y
 }
 ```
 
-Respuesta de Módulo 1 para cualquiera de los avisos anteriores (`[CONFIRMAR CON M1]`):
+Respuesta de Módulo 1 para cualquiera de los avisos anteriores (VERIFICADO: `StatusEventController.java:53`):
 
 ```json
 {
@@ -204,16 +206,16 @@ Respuesta de Módulo 1 para cualquiera de los avisos anteriores (`[CONFIRMAR CON
 5. **Idempotencia**: cada transición genera un `event_id` único. Si el mensaje se entrega más de una vez, Módulo 1 lo descarta por `event_id` / `Message-Id`, que es idéntico en todos los reintentos de esa misma transición.
 6. **Reintentos**: máximo 5 intentos por evento (el primero inmediato), con backoff exponencial y jitter de 1 s, 5 s, 25 s y 125 s. Sólo se reintenta ante 5xx o timeout; nunca ante un 4xx permanente.
 7. **Evento muerto**: tras el quinto fallo, el evento se marca `dead=true` en `outbox_message` y se emite una alerta crítica en el log. No hay Dead Letter Queue para M1: el evento no se descarta y la transición local ya confirmada no se altera.
-8. **Error permanente (4xx)**: todo 4xx se considera permanente: no se reintenta y el evento pasa a `dead=true` con alerta (`HttpFleetStatusNotificationAdapter.java:62-63`). `408` y `429` quedan como `[CONFIRMAR CON M1]` y como deuda de código: deberían reintentarse.
+8. **Error permanente (4xx)**: todo 4xx se considera permanente: no se reintenta y el evento pasa a `dead=true` con alerta (`HttpFleetStatusNotificationAdapter.java:62-63`). M1 sólo produce `400` (validación), `404` (no existe) y `500` (genérico) (`GlobalExceptionHandler.java:60-71,103-117`); `408` y `429` no se emiten hoy. Queda como deuda de Módulo 2 reintentar `408/429` si M1 llegara a usarlos.
 9. **Módulo 1 caído o conexión rechazada**: el evento queda en el outbox y se reintenta según la regla 6; la transición local ya quedó guardada.
-10. **Orden**: este contrato no garantiza orden entre eventos de la misma embarcación. Módulo 1 descarta como `STALE` un evento anterior al último cambio (`[CONFIRMAR CON M1]`); Módulo 2 no ordena los envíos.
+10. **Orden**: este contrato no garantiza orden entre eventos de la misma embarcación. Módulo 1 descarta como `STALE` un evento anterior al último cambio (VERIFICADO en M1: `AssignOperationalStatusService.java:71-74`, comparación estricta `isBefore`); Módulo 2 no ordena los envíos.
 11. **Transición final interna de Módulo 1**: cuando recibe `MAINTENANCE_CLEANING`, Módulo 1 gestiona por su cuenta el paso posterior a `Disponible`. Módulo 2 no lo notifica ni espera esa confirmación.
 
 Pendientes con Módulo 1:
-1. `[CONFIRMAR CON M1]` Método, ruta y ausencia de autenticación en `POST /api/v1/internal/status-events`.
-2. `[CONFIRMAR CON M1]` Catálogo completo de `outcome`, forma del `400` y si `event_id` viaja en la respuesta.
-3. `[CONFIRMAR CON M1]` Tratamiento de `408` y `429`: hoy todo 4xx es permanente en Módulo 2.
-4. `[CONFIRMAR CON M1]` Si `RESERVED` bloquea la embarcación completa o sólo el rango de fechas reservado.
+1. ~~Método, ruta y autenticación~~: **cerrado el 2026-11-19** (M1 `StatusEventController.java:20,31`; `SecurityConfig.java:92-93`).
+2. ~~Catálogo de `outcome`, forma del `400` y `event_id` en la respuesta~~: **cerrado el 2026-11-19** (M1 `AssignOperationalStatusUseCase.java:29-36`; `GlobalExceptionHandler.java:65-71`; `StatusEventController.java:53`).
+3. **Deuda de Módulo 2**: `408` y `429` no los emite M1; si los emitiera, hoy se tratarían como permanentes.
+4. **Cerrado el 2026-11-19**: M1 guarda un único estado (`Vessel.java:35`) y no tiene fechas, así que `RESERVED` bloquea la embarcación completa. El diseño aprobado para resolverlo está en `context/consistencia-m1-m2-mantenimiento.md`.
 
 Cerrado el 2026-11-18: el transporte es HTTP POST (destino `M1_HTTP`), no AMQP; no existe exchange, routing key ni cola de Módulo 1.
 

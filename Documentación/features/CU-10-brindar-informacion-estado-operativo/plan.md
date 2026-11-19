@@ -37,10 +37,10 @@ GET /api/v1/vessels/{vessel_id}/operational-status
 
 | Nombre | Obligatorio | Descripción |
 |---|---|---|
-| `X-Internal-Service-Token` | Sí | Token de servicio interno de Módulo 2 (lo entrega Módulo 1) (`[CONFIRMAR CON M1]`). M2 lo configura en `seashare.fleet.token` ← `SEASHARE_FLEET_TOKEN`. |
+| `X-Internal-Service-Token` | **No** | M1 deja `GET /api/v1/vessels/**` como `permitAll` (VERIFICADO en M1: `SecurityConfig.java:94-96`). M2 acierta al no enviarlo. |
 | `Accept` | No | `application/json` |
 
-> **Estado del código (VERIFICADO el 2026-11-18):** M2 **no envía** este header. Se retiró en el commit `f498a5b` (`FleetHttpConfig.java:23`) y la propiedad ya no existe. Con M1 exigiendo el token, el 401/403 se mapea a `INTERNAL_ERROR` y **toda reserva o pago falla**. Defecto de código pendiente.
+> **Confirmado el 2026-11-19:** M1 no valida `X-Internal-Service-Token` en sus rutas internas. La retirada del header en M2 (commit `f498a5b`, `FleetHttpConfig.java:23`) es correcta: **no hay defecto pendiente ni riesgo de 401/403**.
 
 **Path Parameters**:
 
@@ -87,7 +87,6 @@ GET /api/v1/vessels/{vessel_id}/operational-status
 
 ```bash
 curl -X GET "https://flota.seashare.internal/api/v1/vessels/d3b07384-d113-49cd-a5d6-812e9bcfc101/operational-status" \
-  -H "X-Internal-Service-Token: <token_servicio_m2>" \
   -H "Accept: application/json"
 ```
 
@@ -109,7 +108,6 @@ curl -X GET "https://flota.seashare.internal/api/v1/vessels/d3b07384-d113-49cd-a
 
 ```bash
 curl -X GET "https://flota.seashare.internal/api/v1/vessels/8f4b2319-58b9-4c8d-b0a3-9e41f7d12a99/operational-status" \
-  -H "X-Internal-Service-Token: <token_servicio_m2>" \
   -H "Accept: application/json"
 ```
 
@@ -151,8 +149,8 @@ curl -X GET "https://flota.seashare.internal/api/v1/vessels/8f4b2319-58b9-4c8d-b
 
 ## 5. Puntos Abiertos y Aclaraciones Necesarias
 
-- **Mecanismo de autenticación servicio-a-servicio (resuelto el 2026-11-18)**: M1 entrega el `X-Internal-Service-Token`; M2 lo configura en `seashare.fleet.token` (variable `SEASHARE_FLEET_TOKEN`, sin default en `prod`). **Pendiente de código:** M2 no lo envía hoy (`FleetHttpConfig.java:23`).
-- **Endpoint formal en Módulo 1 (confirmado el 2026-11-18)**: ruta `GET /api/v1/vessels/{vessel_id}/operational-status` y respuesta `{vessel_id, operational_status, queried_at}` (`[CONFIRMAR CON M1]` por OpenAPI).
+- **Autenticación servicio-a-servicio (cerrado el 2026-11-19)**: M1 **no** exige token en `GET /api/v1/vessels/**` (`SecurityConfig.java:94-96`). M2 no lo envía y es correcto; no hay variable ni defecto pendiente.
+- **Endpoint formal en Módulo 1 (confirmado el 2026-11-18 y verificado el 2026-11-19)**: ruta `GET /api/v1/vessels/{vessel_id}/operational-status` (`ReservationsVesselController.java:60`) y respuesta `{vessel_id, operational_status, queried_at}` (`OperationalStatusResponse.java:6-9`).
 - **Motivo de indisponibilidad**: el contrato actual sólo devuelve el estado; M2 no recibe un motivo. `FR-005` se cumple a nivel de dictamen (apto / no apto), no de mensaje detallado.
 
 ---

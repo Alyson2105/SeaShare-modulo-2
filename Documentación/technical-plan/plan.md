@@ -226,7 +226,7 @@ Exchange común hacia Módulo 3: `seashare.reservations` (topic, durable); topol
 |---|---|---|---|---|---|
 | C1 | M2 → M1 | CU-01, CU-19 | Request/response | `GET /api/v1/vessels[/{id}]` | [CU-09/plan.md](../features/CU-09-proveer-informacion-embarcacion/plan.md) |
 | C2 | M2 → M1 | CU-02, CU-03 | Request/response | `GET …/operational-status` | [CU-10/plan.md](../features/CU-10-brindar-informacion-estado-operativo/plan.md) |
-| C3 | M2 → M1 | CU-08 | Notificación vía outbox (REST) | Outbox → `POST /api/v1/internal/status-events` (`[CONFIRMAR CON M1]`; M1 responde `{event_id, outcome}`; M2 reintenta ante 5xx o timeout) | [CU-22/plan.md](../features/CU-22-recibir-informacion-estado-operativo/plan.md) |
+| C3 | M2 → M1 | CU-08 | Notificación vía outbox (REST) | Outbox → `POST /api/v1/internal/status-events` (VERIFICADO en M1: `StatusEventController.java:20,31`; M1 responde `{event_id, outcome}`; M2 reintenta ante 5xx o timeout) | [CU-22/plan.md](../features/CU-22-recibir-informacion-estado-operativo/plan.md) |
 | C4 | M2 → M3 | CU-11 | Request/response | `POST /api/v1/estimates/batch` y `/individual` | [CU-11 lote](../features/CU-11-proveer-informacion-cotizacion-reserva/plan.external.lote.md) / [individual](../features/CU-11-proveer-informacion-cotizacion-reserva/plan.external.individual.md) |
 | C5 | M2 → M3 | CU-12 | Request/response | `POST …/calculated-value` | [CU-12/plan.md](../features/CU-12-brindar-calculo-total-reserva/plan.md) |
 | C6 | **M3 → M2** | CU-13 | Canal A (apagado): endpoint expuesto | `POST /reservations/{id}/payment/confirmation` | [CU-13/plan.md](../features/CU-13-confirmar-pago/plan.md) |
