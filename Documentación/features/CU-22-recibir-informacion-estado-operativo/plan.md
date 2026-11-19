@@ -6,7 +6,7 @@
 - **Módulo Responsable**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones
 - **Tipo de Interfaz**: Salida asíncrona por outbox (HTTP POST, destino M1_HTTP), saliente hacia Módulo 1, que responde de forma síncrona con `{event_id, outcome}`
 - **Actor / Consumidor Autorizado**: 
-  - `Módulo 1 – Gestión de Flota y Activos P2P` (consume la cola de Módulo 1 y materializa `Asignar estado operativo`)
+  - `Módulo 1 – Gestión de Flota y Activos P2P` (expone `POST /api/v1/internal/status-events` y materializa `Asignar estado operativo`)
 - **Caso de Uso Base / Relaciones**: 
   - Incluido por: `Actualizar estado reserva` (`<<include>>` - CU-08), único disparador.
   - Relación hermana: `Recibir Estado de Reserva` (`CU-14` → Módulo 3), independiente; el fallo de una notificación no invalida la otra.

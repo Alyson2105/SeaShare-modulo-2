@@ -52,7 +52,7 @@ Como sistema, quiero encolar y reintentar la notificación dirigida a Módulo 1 
 
 ***Why this priority***: Una notificación perdida rompe la consistencia entre la operación y la flota: una reserva viva seguiría apareciendo como libre en el inventario de Módulo 1 y podría ser reasignada a otro Arrendatario. La entrega garantizada (Event Delivery Guarantee) es innegociable en arquitecturas desacopladas.
 
-***Independent Test***: Se simula una caída (HTTP 503 o timeout) en la API de Módulo 1, se dispara un cambio de estado en Módulo 2 y se verifica que la transición quede guardada, que el evento quede en la cola de entrega y que se reintente según FR-006 (máximo 5 intentos con backoff exponencial y jitter), derivando a DLQ con alerta si se agotan los intentos.
+***Independent Test***: Se simula una caída (HTTP 503 o timeout) en la API de Módulo 1, se dispara un cambio de estado en Módulo 2 y se verifica que la transición quede guardada, que el evento quede en el outbox y que se reintente según FR-006 (máximo 5 intentos con backoff exponencial y jitter), marcándose `dead=true` con alerta si se agotan los intentos.
 
 ***Acceptance Scenarios***:
 
@@ -64,7 +64,7 @@ Como sistema, quiero encolar y reintentar la notificación dirigida a Módulo 1 
 2. **Scenario**: Agotamiento de reintentos y derivación a DLQ
     - **Given** un evento que ya acumula cinco intentos fallidos por indisponibilidad de Módulo 1
     - **When** el quinto intento termina en error
-    - **Then** el sistema deriva el evento a la cola de letras muertas (DLQ) y dispara una alerta, sin descartar el evento ni alterar el estado ya consolidado de la reserva
+    - **Then** el sistema marca el evento como `dead=true` y dispara una alerta, sin descartar el evento ni alterar el estado ya consolidado de la reserva
 
 ---
 
@@ -150,7 +150,7 @@ No quedan inconsistencias abiertas en este spec. Las dos que estaban pendientes 
 
 ### Measurable Outcomes
 
-- **SC-001**: El 100% de las transiciones de reserva que la tabla de FR-002 marca como notificables son notificadas a Módulo 1 (0% de eventos perdidos gracias a la cola de reintentos).
+- **SC-001**: El 100% de las transiciones de reserva que la tabla de FR-002 marca como notificables son notificadas a Módulo 1 (0% de eventos perdidos gracias al outbox y a los reintentos).
 - **SC-002**: El tiempo de emisión del primer intento de notificación no supera los 500 milisegundos tras la consolidación del estado en la base de datos local.
 - **SC-003**: Cero (0) valores financieros, monetarios o de liquidación incluidos en el cuerpo del mensaje enviado a Módulo 1.
 - **SC-004**: El 100% de los eventos emitidos lleva un identificador único por transición, de modo que la entrega duplicada sea detectable y deduplicable por el receptor.
