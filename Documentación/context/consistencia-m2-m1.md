@@ -2,7 +2,7 @@
 
 **Versión:** 2.0 · **Fecha:** 2026-11-19
 **Módulos:** M1 – Gestión de Flota y Activos P2P · M2 – Operación de Reservas, Tiempos y Cancelaciones
-**Estado:** diseño acordado; incluye lo que ya existe y lo que debe existir para el cierre.
+**Estado:** diseño acordado y **normativo**. M1 implementa lo aquí descrito; las dudas se plantean después de aplicarlo.
 **Diagnóstico de factibilidad:** `context/consistencia-m1-m2-mantenimiento.md`.
 
 ---
@@ -27,7 +27,7 @@ Ningún módulo accede a la base del otro. Toda comunicación es HTTP.
 | ID | Dirección | Método y ruta | Transporte | Hoy | Objetivo |
 |---|---|---|---|---|---|
 | **C1** | M2 → M1 | `GET /api/v1/vessels/{vessel_id}` | HTTP | Existe | Igual; se completan campos opcionales |
-| **C2** | M2 → M1 | `GET /api/v1/vessels?page&size&q` | HTTP | **No existe** | Crear la operación de lote |
+| **C2** | M2 → M1 | `GET /api/v1/vessels?page&size&q` | HTTP | **No existe** | Crear la operación de lote **antes del 2026-11-21** |
 | **C3** | M2 → M1 | `GET /api/v1/vessels/{vessel_id}/operational-status` | HTTP | Existe, sin fechas | Añadir rango y ventana de mantenimiento |
 | **C4** | M2 → M1 | `POST /api/v1/internal/status-events` | HTTP | Existe, envía `RESERVED` | Dejar de enviar `RESERVED` |
 | **C5** | M1 → M2 | `POST {M2_URL}/api/v1/internal/maintenance-events` | HTTP | **No existe** | Crear en ambos módulos |
@@ -88,7 +88,7 @@ Connect 100 ms / read 300 ms. Un reintento inmediato solo ante `503` o error de 
 
 ---
 
-## 3. C2 — Catálogo de embarcaciones (pendiente en M1)
+## 3. C2 — Catálogo de embarcaciones (compromiso del sábado)
 
 ### Petición objetivo
 
@@ -192,6 +192,8 @@ Sin mantenimiento, ambos campos van en `null`.
 | desconocido / ilegible / vacío | — | `503 FLEET_SERVICE_UNAVAILABLE` (fail-safe) |
 
 **Cruce de fechas:** se convierten los instantes a fecha local del puerto y se comparan con el rango inclusivo de la reserva. Cualquier día tocado por el mantenimiento se considera bloqueado.
+
+**Vencimiento:** si `maintenance_until` ya pasó, M1 devuelve `AVAILABLE` con `maintenance_start` y `maintenance_until` en `null`, aunque el estado persistido siga en `MAINTENANCE`. La corrección es perezosa, en la consulta; no hay job de liberación. M2 aplica la misma regla como defensa.
 
 ### Errores y resiliencia
 Igual que hoy: `400 INVALID_UUID`, `404 VESSEL_NOT_FOUND`, `503 FLEET_SERVICE_UNAVAILABLE`; un reintento ante `503` o conexión. Connect 100 ms / read 300 ms.
@@ -297,12 +299,12 @@ Content-Type: application/json
 | `DUPLICATE` | `event_id` ya procesado |
 | `NO_AFFECTED_RESERVATIONS` | Ninguna `RESERVED` cruza el rango |
 | `UNKNOWN_VESSEL` | M2 no conoce la embarcación |
-| `INVALID_RANGE` | `maintenance_until` ausente o incoherente |
+| `INVALID_RANGE` | Rango bien formado pero íntegramente en el pasado; no hay nada que aplicar |
 | `AUTO_CANCEL_DISABLED` | `m2.maintenance.auto-cancel=false` |
 
 ### Errores
 
-| HTTP | `code` | Cuándo | ¿M1 reintenta? |
+| HTTP | `code` | Cuándo | Reintento de M1 |
 |---|---|---|---|
 | `400` | `INVALID_PARAMETERS` | Campo faltante o mal formado | No |
 | `400` | `INVALID_MAINTENANCE_RANGE` | Rango incoherente | No |
@@ -319,8 +321,8 @@ Clave `event_id` en `idempotency_key` con `endpoint = /api/v1/internal/maintenan
 - `INITIATED` y `PENDING_PAYMENT` no se cancelan: expiran por TTL.
 - Emite a M3 `CANCELLED_BY_HOST` (reembolso 100 %), fuera de este contrato.
 
-### Resiliencia esperada de M1
-Cinco intentos con backoff 1/5/25/125 s ante timeout, `503` o `5xx`; nunca ante `4xx`. Se recomienda outbox en M1 para no perder el aviso si M2 está caído.
+### Resiliencia de M1
+Connect 1 000 ms / read 5 000 ms. Cinco intentos con backoff 1/5/25/125 s ante timeout, `503` o `5xx`; nunca ante `4xx`. **M1 debe persistir el aviso en un outbox** y reintentarlo para no perderlo si M2 está caído.
 
 ---
 
@@ -336,7 +338,7 @@ Cinco intentos con backoff 1/5/25/125 s ante timeout, `503` o `5xx`; nunca ante 
 - M1 devuelve `queried_at` en `America/Bogota` (`ReservationsVesselController.java:25-27`).
 - Reservas: `DATE` inclusivo, último día ocupado.
 - Mantenimiento: instantes; se convierten a fecha local para el cruce.
-- Ambigüedad aceptada: cualquier día tocado por el mantenimiento queda bloqueado.
+- Regla: cualquier día tocado por el mantenimiento queda bloqueado.
 
 ### Estados
 
@@ -356,7 +358,7 @@ Cinco intentos con backoff 1/5/25/125 s ante timeout, `503` o `5xx`; nunca ante 
 | C2 | 100 / 300 ms | 0 |
 | C3 | 100 / 300 ms | 1 ante `503` o conexión |
 | C4 | 100 / 5 000 ms | 5 con backoff |
-| C5 | 1 000 / 5 000 ms (propuesta) | 5 con backoff |
+| C5 | 1 000 / 5 000 ms | 5 con backoff |
 
 ### Errores
 - M1: `ProblemDetail` con `errors[]` en `400`; `404` para recurso inexistente; `500` genérico.
@@ -381,18 +383,24 @@ Cinco intentos con backoff 1/5/25/125 s ante timeout, `503` o `5xx`; nunca ante 
 
 ---
 
-## 9. Preguntas abiertas con M1
+## 9. Decisiones aplicables
 
-1. ¿Confirman `POST /api/v1/internal/status-events` sin autenticación y con respuesta `{event_id, outcome}`? (verificado en su código)
-2. ¿Pueden permitir `AVAILABLE → NAVIGATION` para el sábado?
-3. ¿Crean C2 (`GET /api/v1/vessels` con `{vessels, pagination}`) y con qué prioridad?
-4. ¿`maintenance_until` será obligatorio? Si no, M2 rechazará el evento con `400`.
-5. ¿El mantenimiento podrá iniciarse desde `NAVIGATION` o sólo desde `AVAILABLE`?
-6. ¿Quién libera el mantenimiento al vencer `maintenance_until`: job o evaluación al consultar?
-7. ¿Cómo interpretan el cruce cuando el mantenimiento empieza a las 18:00 y la reserva cubre el día completo? Propuesta: cualquier día tocado queda bloqueado.
-8. ¿Emiten algún aviso si el mantenimiento se cancela antes de tiempo?
-9. ¿Añadirán un outbox de avisos hacia M2 para no perder eventos si M2 está caído?
-10. ¿Qué URL de M2 y qué timeouts usarán por entorno?
+Estas decisiones son de cumplimiento obligatorio para el despliegue del **2026-11-21**. No hay preguntas abiertas en este contrato.
+
+| ID | Decisión |
+|---|---|
+| **D-01** | C4 y C5 son HTTP POST sin autenticación entre módulos. M2 responde `{event_id, outcome}` en C4 y C5. |
+| **D-02** | M1 crea C2 (`GET /api/v1/vessels`) **antes del 2026-11-21**, público, con `{vessels[], pagination{page,page_size,total_items,total_pages}}` y parámetros `page`, `size`, `q`. |
+| **D-03** | M1 añade `AVAILABLE → NAVIGATION` a su máquina de estados. No se permite `AVAILABLE → MAINTENANCE` por aviso: el mantenimiento lo inicia el propietario o el admin. |
+| **D-04** | C4 deja de enviar `RESERVED`. Se envía `IN_NAVIGATION` (check-in), `MAINTENANCE_CLEANING` (completada) y `AVAILABLE` o `MAINTENANCE_CLEANING` (cancelación), según §8. |
+| **D-05** | `maintenance_until` es **obligatorio**; `maintenance_start` es opcional (`null` = ahora) y debe ser anterior a `until`. Si falta `until`, no se puede leer o `until <= start`, M2 responde `400 INVALID_MAINTENANCE_RANGE`. Un rango válido pero íntegramente en el pasado devuelve `200` con `outcome=INVALID_RANGE`. |
+| **D-06** | El mantenimiento solo se inicia desde `AVAILABLE`. `reason` acepta `OWNER` o `ADMIN`. |
+| **D-07** | La liberación es **perezosa al consultar**: si `maintenance_until` ya pasó, C3 devuelve `AVAILABLE` con fechas `null`. No hay job de liberación. |
+| **D-08** | El cruce usa la zona del puerto y el rango inclusivo de la reserva. **Cualquier día tocado por el mantenimiento queda bloqueado.** |
+| **D-09** | M1 **debe** persistir los avisos de C5 en un outbox y reintentarlos: connect 1 000 ms, read 5 000 ms, 5 intentos 1/5/25/125 s solo ante timeout, `503` o `5xx`. |
+| **D-10** | M2 cancela automáticamente las reservas `RESERVED` cuyo rango cruza el mantenimiento, con subtipo `BY_OWNER` y actor sistema. `INITIATED` y `PENDING_PAYMENT` no se cancelan: expiran por TTL. |
+| **D-11** | M1 **no** emite un aviso al cancelar un mantenimiento antes de tiempo. M2 se guía por `maintenance_until`. |
+| **D-12** | La URL de M2 en M1 se configura por variable de entorno (`M2_BASE_URL`), sin valor por defecto en producción. |
 
 ---
 
