@@ -1,5 +1,7 @@
 # Contrato de Integración Externa: Consultar Estado Operativo de Embarcación (M1)
 
+> **Diseño aprobado 2026-11-19, pendiente de implementación.** Ver `Documentación/context/consistencia-m1-m2-mantenimiento.md`: CU-10 pasará a recibir el rango de fechas y a interpretar `maintenance_start`/`maintenance_until`. Mientras no se implemente, la consulta sigue sin fechas.
+
 **Módulo Proveedor**: Módulo 1 – Gestión de Flota y Activos P2P  
 **Responsable de implementarlo**: Equipo de Módulo 1  
 **Módulo Consumidor**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
@@ -152,6 +154,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/vessels/8f4b2319-58b9-4c8d-b
 - **Autenticación servicio-a-servicio (cerrado el 2026-11-19)**: M1 **no** exige token en `GET /api/v1/vessels/**` (`SecurityConfig.java:94-96`). M2 no lo envía y es correcto; no hay variable ni defecto pendiente.
 - **Endpoint formal en Módulo 1 (confirmado el 2026-11-18 y verificado el 2026-11-19)**: ruta `GET /api/v1/vessels/{vessel_id}/operational-status` (`ReservationsVesselController.java:60`) y respuesta `{vessel_id, operational_status, queried_at}` (`OperationalStatusResponse.java:6-9`).
 - **Motivo de indisponibilidad**: el contrato actual sólo devuelve el estado; M2 no recibe un motivo. `FR-005` se cumple a nivel de dictamen (apto / no apto), no de mensaje detallado.
+- **Diseño aprobado 2026-11-19 (pendiente de implementación)**: CU-10 recibirá `start_date`/`end_date` y M1 devolverá `maintenance_start`/`maintenance_until`; el veredicto será disponible si el estado es `AVAILABLE`, `RESERVED`, `IN_NAVIGATION`/`NAVIGATION`, o si el mantenimiento no cruza el rango. Mantenimiento sin fechas bloquea todo. Ver `context/consistencia-m1-m2-mantenimiento.md`.
 
 ---
 

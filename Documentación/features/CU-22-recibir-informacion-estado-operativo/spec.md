@@ -1,5 +1,7 @@
 # Feature Specification: Recibir Información de Estado Operativo (Notificación a Módulo 1)
 
+> **Diseño aprobado 2026-11-19, pendiente de implementación.** Ver `Documentación/context/consistencia-m1-m2-mantenimiento.md`. Mientras no se implemente, el código sigue enviando `RESERVED` a M1 y CU-10 consulta sin fechas.
+
 **Módulo**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
 **Código de Caso de Uso**: CU-22  
 **Fecha de Creación**: 2026-10-21  
@@ -116,6 +118,8 @@ Como sistema, quiero que cada aviso a Módulo 1 lleve un identificador único po
     | Pago Fallido | No | — | No se notifica a Módulo 1 bajo ninguna circunstancia. Como la reserva nunca alcanzó `Reservada`, Módulo 1 nunca la tuvo bloqueada y no hay nada que liberar. |
 
 > **Esta tabla (FR-002) es la única fuente de verdad** del mapeo estado de la reserva → estado operativo notificado a Módulo 1. Cualquier otro documento del proyecto que necesite describir este mapeo debe **referenciar esta tabla** en lugar de mantener una copia propia con su propia granularidad (ver `CU-08` FR-007, que remite a esta tabla).
+
+> **Diseño aprobado 2026-11-19, pendiente de implementación:** cuando se implemente la decisión D1, la fila `Reservada` dejará de notificarse (M2 ya no enviará `RESERVED`) y M1 pasará a modelar el mantenimiento con fechas. Hasta entonces esta tabla describe el comportamiento vigente. Ver `context/consistencia-m1-m2-mantenimiento.md`.
 
 - **FR-003**: El *payload* de la notificación DEBE contener obligatoriamente: identificador de la embarcación, estado operativo resultante (ya mapeado, según FR-002) y marca temporal exacta del evento en formato ISO 8601.
 - **FR-004**: El *payload* DEBE incluir un identificador único por transición (`eventId`, UUID), de modo que Módulo 1 pueda deduplicar entregas repetidas y procesar el evento de forma idempotente.

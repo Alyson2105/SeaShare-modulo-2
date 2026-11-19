@@ -1,5 +1,7 @@
 # Feature Specification: Brindar Información de Estado Operativo
 
+> **Diseño aprobado 2026-11-19, pendiente de implementación.** Ver `Documentación/context/consistencia-m1-m2-mantenimiento.md`: el chequeo pasará a considerar el rango de fechas y el mantenimiento con fechas. Mientras no se implemente, sigue siendo instantáneo.
+
 **Módulo**: Módulo 2 (Operación de Reservas, Tiempos y Cancelaciones)  
 **Created**: 2026-09-06  
 **Primary Actor / Disparador**: Módulo 2 / invocación interna durante las validaciones de disponibilidad de la embarcación por parte de los casos de uso `Iniciar reserva` (CU-02) e `Iniciar pago` (CU-03). Módulo 2 es el consumidor; Módulo 1 es el proveedor de la API.  
@@ -81,6 +83,8 @@ Si la consulta se realiza enviando un identificador de embarcación inválido, m
     - Este caso de uso solo verifica si el barco se puede usar o no; **NO calcula precios, no aplica tarifas ni solicita depósitos de garantía**.
 - **Información siempre en tiempo real**:
     - Para evitar que dos personas alquilen el mismo barco al mismo tiempo, la consulta se realiza en el instante exacto en que se solicita, sin guardar datos antiguos en memoria cache.
+- **Mantenimiento con fechas (diseño aprobado 2026-11-19, pendiente de implementación)**:
+    - Hoy M1 no devuelve fechas y cualquier `MAINTENANCE` bloquea toda fecha. El diseño aprobado añade `maintenance_start`/`maintenance_until` para bloquear sólo el rango afectado. Ver `context/consistencia-m1-m2-mantenimiento.md`.
 
 ---
 

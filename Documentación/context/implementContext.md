@@ -405,7 +405,7 @@ Trabajo posterior al merge de H6 (`1e49661`) para desbloquear la Fase 7. Los com
 ### 4.12 Embudo de conversión: T-16a (CU-01) y T-16b (CU-03) (2026-11-12)
 
 **T-16a — búsqueda de embarcaciones**
-- Puerto nuevo `FleetCatalogPort` (`search(query, page, size)`) con dos adaptadores: `FakeFleetCatalogAdapter` (25 embarcaciones deterministas, modo por defecto) y `HttpFleetCatalogAdapter` (`GET /api/v1/vessels`, contrato de CU-09 operación 2, `X-Internal-Service-Token`).
+- Puerto nuevo `FleetCatalogPort` (`search(query, page, size)`) con dos adaptadores: `FakeFleetCatalogAdapter` (25 embarcaciones deterministas, modo por defecto) y `HttpFleetCatalogAdapter` (`GET /api/v1/vessels`, contrato de CU-09 operación 2; ya no envía token desde `f498a5b`, ver 4.15).
 - `VesselSearchService`: valida rol `RENTER`, pagina en lotes fijos de 20, filtra localmente por `type`, `passengers` y solapamiento con reservas `PENDING_PAYMENT`/`RESERVED`/`IN_NAVIGATION`, y cotiza en lote solo los ids visibles.
 - `VesselSearchController`: `GET /api/v1/vessels` con `Cache-Control: no-store`; fechas, pasajeros, tipo y página se validan antes de consultar M1 o M3 (400 `INVALID_PARAMETERS`).
 - Degradación: si M3 no cotiza, la respuesta sigue siendo 200 con `quotation_available: false`, `estimated_total: null` y `context_label` de tarifas en actualización; si falla M1, 503 `FLEET_SERVICE_UNAVAILABLE`.
@@ -724,10 +724,10 @@ Trabajo posterior al merge de H6 (`1e49661`) para desbloquear la Fase 7. Los com
 
 **Catálogo de M1 (verificado el 2026-11-19).** Los seis `outcome` (`AssignOperationalStatusUseCase.java:29-36`), el límite de 100 caracteres de `event_id` (`AssignOperationalStatusService.java:26,91`), la aceptación de offsets en `occurred_at` (`:108`), los alias `NAVIGATION`/`MAINTENANCE` (`:129-130`) y la forma del `400` como `ProblemDetail` con `errors[]` (`GlobalExceptionHandler.java:65-71`) están confirmados en el código de M1.
 
-**Token (DEFECTO PENDIENTE).** Desde `f498a5b` M2 no envía `X-Internal-Service-Token` y la propiedad `seashare.fleet.token` ya no existe (`FleetHttpConfig.java:23`; `FleetProperties.java:14-39`). CU-09 y CU-10 lo declaran obligatorio. Si M1 lo exige en los `GET`, toda reserva y todo pago fallan con 400/500 según el mapeo de `HttpFleetOperationalStatusAdapter.java:115-116`.
+**Token (cerrado el 2026-11-19).** M1 no exige `X-Internal-Service-Token` en ninguna ruta interna (`SecurityConfig.java:92-96`). M2 no lo envía desde `f498a5b` (`FleetHttpConfig.java:23`) y es correcto; no hay defecto pendiente.
 
 **Deudas detectadas (no corregidas).** (1) `408` y `429` caen en 4xx permanente y matan el evento. (2) El adaptador no compara el `event_id` de la respuesta con el enviado. (3) CU-10 no reintenta 500/502, aunque su plan lo pide (`HttpFleetOperationalStatusAdapter.java:96`). (4) El fixture del test usa `-05:00` mientras el código emite `Z` (`HttpFleetStatusNotificationAdapterTest.java:29`). (5) `ReservationOperationalDispatchJob` no existe: `RESERVED` se envía al confirmar el pago, sin fechas (`ChangeReservationStatusService.java:164-170`).
 
-**Riesgo de fechas.** Si M1 interpreta `RESERVED` como bloqueo completo, una reserva futura dejaría el barco no disponible para otras fechas, porque CU-10 sólo acepta `AVAILABLE` (`HttpFleetOperationalStatusAdapter.java:64`). Está marcado como `[CONFIRMAR CON M1]` y como `[DECISIÓN PENDIENTE]`; no se elige alternativa en esta actualización.
+**Riesgo confirmado el 2026-11-19.** M1 guarda un único estado (`Vessel.java:35`) y no tiene estructura de fechas, así que `RESERVED` bloquea la embarcación completa y CU-10 sólo acepta `AVAILABLE` (`HttpFleetOperationalStatusAdapter.java:64`). El diseño aprobado está en `context/consistencia-m1-m2-mantenimiento.md`.
 
 **Estado de la rama.** El commit `4533b15` (adaptador HTTP real) existe sólo en `feature/conexion-frontend` y en esta rama; **no está en `develop`**.

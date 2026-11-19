@@ -1,5 +1,7 @@
 # Contrato de Interfaz Asíncrona: CU-22 Recibir Información de Estado Operativo
 
+> **Diseño aprobado 2026-11-19, pendiente de implementación.** Ver `Documentación/context/consistencia-m1-m2-mantenimiento.md`. Mientras no se implemente, el código sigue enviando `RESERVED` a M1 y CU-10 consulta sin fechas.
+
 ## 1. Identificación y Metadatos
 
 - **Identificador del Contrato**: `ASYNC-M2-CU22-NOTIFICACION-ESTADO-OPERATIVO`
@@ -316,4 +318,4 @@ stateDiagram-v2
 
 **`ReservationOperationalDispatchJob`: [DECISIÓN PENDIENTE]**. El plan técnico lo describe para enviar `RESERVED` sólo cuando `start_date <= CURRENT_DATE` (`technical-plan/plan.md:240`), pero no existe en el código. No se elige aquí entre las alternativas.
 
-**Nota de riesgo (a verificar, no afirmada)**: con el comportamiento actual M1 recibe `RESERVED` sin la fecha de inicio, y CU-10 de M2 sólo considera disponible el estado `AVAILABLE` (`HttpFleetOperationalStatusAdapter.java:64`). Si M1 interpreta `RESERVED` como bloqueo de la embarcación completa, una reserva pagada para una fecha futura dejaría la embarcación no disponible para otras fechas. **Verificar con M1 si `RESERVED` bloquea la embarcación completa o sólo el rango reservado** (`[CONFIRMAR CON M1]`).
+**Riesgo confirmado el 2026-11-19 (ya no es una hipótesis)**: M1 guarda un único `status` (`Vessel.java:35`) y no tiene ninguna estructura de fechas (`V10__operational_status_events.sql:5-6`), así que `RESERVED` bloquea la embarcación completa. Una reserva pagada para una fecha futura deja el barco no disponible para cualquier otra fecha, porque CU-10 sólo acepta `AVAILABLE` (`HttpFleetOperationalStatusAdapter.java:64`). El diseño aprobado para resolverlo (dejar de enviar `RESERVED`, fechas de mantenimiento y aviso M1→M2) está en `context/consistencia-m1-m2-mantenimiento.md`.

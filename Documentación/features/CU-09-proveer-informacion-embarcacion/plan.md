@@ -1,5 +1,7 @@
 # Contrato de Integración Externa: Consultar Información de Embarcación (M1)
 
+> **Diseño aprobado 2026-11-19, pendiente de implementación.** Ver `Documentación/context/consistencia-m1-m2-mantenimiento.md`. **Hallazgo verificado:** M1 **no expone** `GET /api/v1/vessels` (catálogo); solo `/{id}` y `/{id}/operational-status` (`ReservationsVesselController.java:35,60`). La operación en lote de este contrato está pendiente en M1.
+
 **Módulo Proveedor**: Módulo 1 – Gestión de Flota y Activos P2P  
 **Responsable de implementarlo**: Equipo de Módulo 1  
 **Módulo Consumidor**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  

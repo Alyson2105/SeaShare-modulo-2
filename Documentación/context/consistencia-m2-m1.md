@@ -1,5 +1,7 @@
 # Contrato de Evento: Estado Operativo de Embarcación (CU-22 → Módulo 1)
 
+> **Diseño aprobado 2026-11-19, pendiente de implementación.** Ver `Documentación/context/consistencia-m1-m2-mantenimiento.md`: Módulo 2 dejará de enviar `RESERVED` y M1 pasará a modelar el mantenimiento con fechas. Mientras no se implemente, el comportamiento descrito aquí sigue vigente.
+
 | Campo | Valor |
 |---|---|
 | Módulo productor | Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones |
