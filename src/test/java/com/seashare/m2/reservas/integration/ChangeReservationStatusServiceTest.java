@@ -18,6 +18,7 @@ import com.seashare.m2.reservas.domain.exception.InvalidTransitionException;
 import com.seashare.m2.reservas.domain.exception.ReservationRuleException;
 import com.seashare.m2.reservas.domain.exception.VersionConflictException;
 import com.seashare.m2.reservas.domain.model.ActorType;
+import com.seashare.m2.reservas.domain.model.CancellationCause;
 import com.seashare.m2.reservas.domain.model.CancellationSubtype;
 import com.seashare.m2.reservas.domain.model.OperationalStatus;
 import com.seashare.m2.reservas.domain.model.Reservation;
@@ -32,6 +33,7 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Propagation;
@@ -64,6 +66,9 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
 
     @Autowired
     private ReservationRepositoryPort reservationRepositoryPort; // puerto de lectura para verificar el estado persistido
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate; // verificacion de auditoria y eventos inmutables
 
     @MockitoBean
     private FleetInfoPort fleetInfoPort; // simulacion del puerto de flota de modulo 1
@@ -524,6 +529,47 @@ class ChangeReservationStatusServiceTest { // pruebas de integracion del cambio 
         ArgumentCaptor<OperationalStatusEvent> captor = ArgumentCaptor.forClass(OperationalStatusEvent.class);
         verify(outboxPort).enqueue(captor.capture());
         assertThat(captor.getValue().operationalStatus()).isEqualTo(OperationalStatus.MAINTENANCE_CLEANING); // nombre real del spec
+    }
+
+    @Test
+    void maintenanceCancellationAllowsSystemWithByOwnerAndSkipsModuleOne() { // excepcion acotada de C5
+        Reservation created = createReservation();
+        changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
+        changeStatus(created, ReservationStatus.RESERVED, null, ActorType.SYSTEM);
+        clearInvocations(outboxPort);
+
+        ChangeReservationStatusResult result = changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.CANCELLED, CancellationSubtype.BY_OWNER, ActorType.SYSTEM,
+                "MAINTENANCE", null, null, null, null, null, null, null, null, null, null, CancellationCause.MAINTENANCE));
+
+        assertThat(result.status()).isEqualTo(ReservationStatus.CANCELLED);
+        assertThat(result.cancellationSubtype()).isEqualTo(CancellationSubtype.BY_OWNER);
+        assertThat(result.eventsEnqueued()).containsExactly("AMQP"); // M3 recibe CANCELLED_BY_HOST; M1 no recibe AVAILABLE
+        verify(outboxPort, never()).enqueue(any(OperationalStatusEvent.class)); // el barco sigue en mantenimiento
+
+        Reservation saved = reservationRepositoryPort.findById(created.getId()).orElseThrow();
+        assertThat(saved.isMaintenanceBlocked()).isTrue(); // marca persistida para la matriz
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT reason FROM reservation_status_audit WHERE reservation_id = ? AND to_status = 'CANCELLED'",
+                String.class, created.getId())).isEqualTo("MAINTENANCE"); // causa auditada
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT reason FROM cancellation_event WHERE reservation_id = ?",
+                String.class, created.getId())).isEqualTo("MAINTENANCE"); // evento inmutable reutilizado
+    }
+
+    @Test
+    void systemWithByOwnerWithoutMaintenanceCauseIsRejected() { // la excepcion no abre otras combinaciones
+        Reservation created = createReservation();
+        changeStatus(created, ReservationStatus.PENDING_PAYMENT, null, ActorType.RENTER);
+        changeStatus(created, ReservationStatus.RESERVED, null, ActorType.SYSTEM);
+
+        assertThatThrownBy(() -> changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand(
+                created.getId(), ReservationStatus.CANCELLED, CancellationSubtype.BY_OWNER, ActorType.SYSTEM,
+                "Otra causa", null, null, null, null, null, null, null, null, null, null, null)))
+                .isInstanceOf(InvalidTransitionException.class);
+
+        assertThat(reservationRepositoryPort.findById(created.getId()).orElseThrow().getStatus())
+                .isEqualTo(ReservationStatus.RESERVED); // sin cambios
     }
 
     @Test

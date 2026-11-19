@@ -123,4 +123,18 @@ class IdempotencyAdapterTest { // pruebas de comportamiento de idempotencia a tr
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("No idempotency key claimed for endpoint");
     }
+
+    @Test
+    void permanentClaimNeverExpiresAndStoresOutcome() { // C5: event_id idempotente sin ventana
+        String key = UUID.randomUUID().toString();
+        String endpoint = "/api/v1/internal/maintenance-events";
+        Instant now = Instant.now();
+
+        assertThat(idempotencyPort.tryClaimPermanent(key, endpoint, now)).isTrue();
+        assertThat(idempotencyPort.tryClaimPermanent(key, endpoint, now.plusSeconds(3600))).isFalse(); // no expira
+        assertThat(idempotencyPort.findOutcome(key, endpoint)).isEmpty(); // aun sin resultado
+
+        idempotencyPort.completeWithOutcome(key, endpoint, "APPLIED");
+        assertThat(idempotencyPort.findOutcome(key, endpoint)).contains("APPLIED");
+    }
 }

@@ -1,6 +1,7 @@
 package com.seashare.m2.reservas.application.dto;
 
 import com.seashare.m2.reservas.domain.model.ActorType;
+import com.seashare.m2.reservas.domain.model.CancellationCause;
 import com.seashare.m2.reservas.domain.model.CancellationSubtype;
 import com.seashare.m2.reservas.domain.model.ReservationStatus;
 
@@ -21,7 +22,8 @@ public record ChangeReservationStatusCommand( // comando de aplicacion para camb
         String paymentTokenRef, // token de pago opaco hacia M3; solo con target PENDING_PAYMENT; no se persiste
         String paymentMethodType, // tipo del medio de pago; solo con target PENDING_PAYMENT
         String payerEmail, // correo del pagador; solo con target PENDING_PAYMENT
-        String lastFour // ultimos cuatro digitos; solo con target PENDING_PAYMENT
+        String lastFour, // ultimos cuatro digitos; solo con target PENDING_PAYMENT
+        CancellationCause cause // causa funcional; null para las cancelaciones ya cubiertas por actor y subtipo
 ) {
     public ChangeReservationStatusCommand( // constructor compacto de compatibilidad (TTL y tests existentes)
             UUID reservationId,
@@ -31,7 +33,7 @@ public record ChangeReservationStatusCommand( // comando de aplicacion para camb
             String reason
     ) {
         this(reservationId, targetStatus, subtype, actor, reason, null, null, null, null, null, null, null,
-                null, null, null); // delega con opcionales nulos
+                null, null, null, null); // delega con opcionales nulos
     }
 
     public ChangeReservationStatusCommand( // constructor de compatibilidad sin token de pago
@@ -48,7 +50,7 @@ public record ChangeReservationStatusCommand( // comando de aplicacion para camb
             String paymentReference
     ) {
         this(reservationId, targetStatus, subtype, actor, reason, actorId, expectedVersion, mechanicalFailure,
-                anticipationMinutes, completionNotes, paymentReference, null, null, null, null); // sin datos de pago
+                anticipationMinutes, completionNotes, paymentReference, null, null, null, null, null); // sin datos de pago
     }
 
     public ChangeReservationStatusCommand( // constructor de compatibilidad con token pero sin metadata
@@ -66,6 +68,28 @@ public record ChangeReservationStatusCommand( // comando de aplicacion para camb
             String paymentTokenRef
     ) {
         this(reservationId, targetStatus, subtype, actor, reason, actorId, expectedVersion, mechanicalFailure,
-                anticipationMinutes, completionNotes, paymentReference, paymentTokenRef, null, null, null); // sin metadata
+                anticipationMinutes, completionNotes, paymentReference, paymentTokenRef, null, null, null, null); // sin metadata
+    }
+
+    public ChangeReservationStatusCommand( // constructor de compatibilidad de 15 argumentos (sin causa)
+            UUID reservationId,
+            ReservationStatus targetStatus,
+            CancellationSubtype subtype,
+            ActorType actor,
+            String reason,
+            UUID actorId,
+            Long expectedVersion,
+            Boolean mechanicalFailure,
+            Integer anticipationMinutes,
+            String completionNotes,
+            String paymentReference,
+            String paymentTokenRef,
+            String paymentMethodType,
+            String payerEmail,
+            String lastFour
+    ) {
+        this(reservationId, targetStatus, subtype, actor, reason, actorId, expectedVersion, mechanicalFailure,
+                anticipationMinutes, completionNotes, paymentReference, paymentTokenRef, paymentMethodType,
+                payerEmail, lastFour, null); // sin causa funcional explicita
     }
 }
