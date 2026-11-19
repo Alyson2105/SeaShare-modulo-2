@@ -1,8 +1,9 @@
-# Consistencia M1–M2: mantenimiento con fechas y aviso M1 → M2
+# Consistencia M1–M2: inconsistencias y factibilidad
 
-**Fecha:** 2026-11-18
-**Alcance:** M2 (este repo), M1 (`C:\Users\josue\Documents\IJ\SeaShareM1`) y M3 (`C:\Users\josue\Documents\IJ\SeaShareM3`), todos en modo solo lectura.
+**Fecha:** 2026-11-18 · **Actualizado:** 2026-11-19
+**Alcance:** M2 (este repo) y M1 (`C:\Users\josue\Documents\IJ\SeaShareM1`), en modo solo lectura. El análisis de Módulo 3 está en `consistencia-m2-m3-pendientes.md`.
 **Naturaleza:** dictamen de factibilidad y diseño. No se implementó nada.
+**Contrato normativo:** `consistencia-m2-m1.md`.
 **Despliegue objetivo:** sábado 2026-11-21.
 
 ---
@@ -31,16 +32,14 @@ Hechos base usados en todo el documento:
 | 10 | M2 resuelve solapamiento con `daterange` inclusivo y `EXCLUDE` | VERIFICADO | M2 `V1__init.sql:53-56`, `ReservationJpaRepository.java:27` |
 | 11 | CU-10 solo compara con `AVAILABLE` y no envía fechas | VERIFICADO | M2 `HttpFleetOperationalStatusAdapter.java:48,64` |
 | 12 | M2 declara las colas como clásicas con `seashare.reservations.dlx` | VERIFICADO | M2 `RabbitTopologyConfig.java:39-46` |
-| 13 | M3 declara las mismas colas como quorum con `DLX ""` y `cola.dlq` | VERIFICADO | M3 `RabbitTopologyConfig.java:158-168` |
-| 14 | M3 reembolsa 100 % con `CANCELLED_BY_HOST` | VERIFICADO | M3 `RefundCalculator.java:24-26`, `ReservationStatusPolicy.java:33` |
-| 15 | La decisión de adoptar M1→M2 por HTTP y `maintenance_until` es del equipo | DECLARADO | Decisiones 3 y 4 de este encargo |
-| 16 | Comportamiento real de M1/M3 en un entorno desplegado | NO VERIFICABLE | No hay entorno ni ejecución en esta revisión |
+| 13 | Las decisiones 1 a 7 son del equipo, no del código | DECLARADO | Encargo de este documento |
+| 14 | Comportamiento real de M1 en un entorno desplegado | NO VERIFICABLE | No hay entorno ni ejecución en esta revisión |
 
 ---
 
 ## 1. Resumen ejecutivo
 
-Se revisaron las nueve decisiones contra el código de los tres módulos. La dirección es viable, pero **el sábado solo llegan D1 y D8**; D3, D4 y D5 dependen de cambios en M1 y no caben en tres días.
+Se revisaron las decisiones 1 a 7 (las de M1/M2) contra el código de ambos módulos. La dirección es viable, pero **el sábado solo llega D1**; D3, D4 y D5 dependen de cambios en M1 y no caben en tres días. Las decisiones 8 y 9 (M3) viven en `consistencia-m2-m3-pendientes.md`.
 
 | # | Decisión | Veredicto | Bloqueante |
 |---|---|---|---|
@@ -51,10 +50,8 @@ Se revisaron las nueve decisiones contra el código de los tres módulos. La dir
 | 5 | CU-10 con rango | **FACTIBLE CON CAMBIOS** | Depende de D3 (fechas en M1) |
 | 6 | Reutilizar CU-08 | **FACTIBLE CON CAMBIOS** | Excepción acotada a `SYSTEM`+`BY_OWNER`; auditoría y evento |
 | 7 | `auto-cancel` | **FACTIBLE** | Sin D4 no tiene disparador |
-| 8 | Colas de M3 | **FACTIBLE** | Cambiar `RabbitTopologyConfig` y su test en M2 |
-| 9 | Tarifas base | **CON CAMBIOS EN M3** | `/fleet/base-rates` vs `/boats/base-rates` |
 
-**Bloqueantes del sábado:** D3, D4 y D5 (M1). **Asumible:** D1 (dos cambios pequeños, uno por módulo) y D8 (solo M2), más D7 como flag apagado.
+**Bloqueantes del sábado:** D3, D4 y D5 (M1). **Asumible:** D1 (dos cambios pequeños, uno por módulo) y D7 como flag apagado. **Además:** el catálogo de CU-01 no existe en M1 (§2.3), así que con `mode=http` la búsqueda no funciona; no afecta a D1.
 
 ---
 
@@ -80,8 +77,6 @@ Esfuerzo: **S** ≤ 4 h · **M** 1–2 días · **L** > 2 días. Prioridad sába
 | Idempotencia | `V2__remaining_tables.sql:137-143` (reutilizar) | `key = event_id`, `endpoint = /api/v1/internal/maintenance-events`, `response_ref = outcome` | S | NO |
 | Config | `application.yaml` + `application-prod.yaml` | `m2.maintenance.auto-cancel` (default `true`), `m2.maintenance.scan.*` | S | **SÍ** (solo el flag) |
 | Job de reconciliación | nuevo `.../scheduler/MaintenanceReconciliationJob.java` | Opcional, apagado por defecto; reutiliza el servicio | M | NO |
-| Colas | `.../messaging/config/RabbitTopologyConfig.java:35-66` | Quorum + `DLX ""` + `rk = cola.dlq` | S | **SÍ** |
-| Test de topología | `RabbitTopologyTest.java` | Asertar quorum, DLX y DLQ | S | **SÍ** |
 | Códigos de error | `shared/domain/ErrorCode.java` | `MAINTENANCE_EVENT_PARTIAL_FAILURE` (503), `INVALID_MAINTENANCE_RANGE` (400) | S | NO |
 
 ### 2.2 Peticiones a M1 (no las implementamos nosotros)
@@ -99,16 +94,19 @@ Esfuerzo: **S** ≤ 4 h · **M** 1–2 días · **L** > 2 días. Prioridad sába
 | Aviso pendiente | nueva tabla `maintenance_event_outbox` + relay | Persistir y reintentar; sin esto se pierde el aviso si M2 cae | L | NO |
 | Config | `application.yml` | `seashare.modules.m2.base-url`, timeouts, reintentos | S | NO |
 
-### 2.3 Peticiones a M3 (no las implementamos nosotros)
+### 2.3 Inconsistencias adicionales M1 ↔ M2
 
-| Pieza | Archivo | Cambio | Esfuerzo | Prioridad sábado |
-|---|---|---|---|---|
-| Tarifas base | `FleetRateRestClient.java:32` | Alinear con `/api/v1/boats/base-rates` o acordar alias en M1 | S | NO |
-| Confirmación | — | Confirmar que `CANCELLED_BY_HOST` llega con actor sistema implícito | S | NO |
+**Catálogo de embarcaciones (CU-01/CU-09).** Módulo 2 pide `GET /api/v1/vessels?page&size&q` (`HttpFleetCatalogAdapter.java:42-44`) y Módulo 1 no expone la colección: sólo `/{vessel_id}` y `/{vessel_id}/operational-status` (`ReservationsVesselController.java:35,60`). Cualquier respuesta no `2xx` se convierte en `503 FLEET_SERVICE_UNAVAILABLE` (`HttpFleetCatalogAdapter.java:52-54`), así que con `mode=http` la búsqueda de CU-01 no funciona. La ficha individual (C1) y el estado (C3) sí existen. Contrato objetivo en `consistencia-m2-m1.md` §3.
+
+| Pieza | Módulo | Archivo | Cambio | Esfuerzo | Prioridad sábado |
+|---|---|---|---|---|---|
+| Catálogo | M1 | nuevo controlador de listado | `GET /api/v1/vessels` con `{vessels, pagination}`, `page`, `size`, `q`, público | M | NO |
 
 ---
 
 ## 3. Contratos
+
+> **Fuente normativa:** `consistencia-m2-m1.md`. Aquí se resumen solo para explicar el diseño; cualquier divergencia se resuelve a favor del contrato.
 
 ### 3.1 `POST {M2_URL}/api/v1/internal/maintenance-events` (M1 → M2)
 
@@ -299,7 +297,7 @@ Hoy es imposible: `ValidateActorForSubtype` rechaza `SYSTEM` con subtipo (`:230-
 - `validateActorForSubtype`: permitir `SYSTEM`+`BY_OWNER` **solo** si `cause == MAINTENANCE`. El resto de reglas intactas.
 - `validateCancellationData`: con causa `MAINTENANCE` no exigir `mechanical_failure`.
 - Auditoría: `reservation_status_audit` solo guarda `actor_id` y `event_ids` (`V4:16-17`); registrar la causa requiere columna nueva o usar `cancellation_event` (verificar sus columnas antes de implementar).
-- Evento a M3: `CANCELLED` con subtipo `BY_OWNER` → `CANCELLED_BY_HOST` (M3 `ReservationStatus.java:13`).
+- El evento hacia M3 se mantiene fuera de este documento: ver `consistencia-m2-m3-pendientes.md`.
 
 **B.5 Matriz sin `RESERVED`.**
 
@@ -345,35 +343,11 @@ Mantener el reintento en `503` y el mapeo de `404`/`400`/`401`. Mensaje de `VESS
 | `HttpFleetOperationalStatusAdapterTest` | mantenimiento con/sin fechas, cruce/no cruce, valor desconocido |
 | `ModuleNotificationMatrixTest` | sin `RESERVED`; `COMPLETED` con guarda; cancelación con mantenimiento activo |
 | `ChangeReservationStatusServiceTest` | `SYSTEM`+`BY_OWNER` con causa `MAINTENANCE`, versión, auditoría |
-| `RabbitTopologyTest` | quorum, `DLX ""`, `.dlq` |
 
 **B.9 Documentos a actualizar.**
-`CU-10/spec.md` y `plan.md` (firma con rango, mantenimiento por fechas), `CU-22/spec.md` y `plan.md` (FR-002 sin `RESERVED`, nuevo aviso y guarda), `consistencia-m2-m1.md` (contratos §3.1 y §3.2), `technical-plan/plan.md` (C3, D-07, resiliencia, jobs), `CU-02`/`CU-03` (mensaje de error).
+`CU-10/spec.md` y `plan.md` (firma con rango, mantenimiento por fechas), `CU-22/spec.md` y `plan.md` (FR-002 sin `RESERVED`, nuevo aviso y guarda), `consistencia-m2-m1.md` (contratos C3, C4 y C5), `technical-plan/plan.md` (C3, D-07, resiliencia, jobs), `CU-02`/`CU-03` (mensaje de error), `CU-09` (catálogo C2).
 
-### 4.3 M3
-
-**C.1 `CANCELLED_BY_HOST` y reembolso.**
-M3 lo reconoce (`ReservationStatus.java:13`), planifica `refund(RefundTrigger.CANCELLED_BY_HOST)` (`ReservationStatusPolicy.java:33`) y reembolsa el 100 % (`RefundCalculator.java:24-26`). El actor no viaja en el payload: M3 no distingue quién canceló, así que no hay impedimento por "actor sistema".
-
-**C.2 Datos para el reembolso.**
-El cobro nace del evento `PENDING` (`HandleReservationStatusService.java:147-149`); el reembolso se pide al recibir la cancelación (`:149,158-161`) y usa los montos que M3 ya guardó en la intención de cobro. **La cancelación no necesita montos ni `payment_metadata`.** Solo requiere `reservation_id`, `status`, `status_changed_at`; `payment_token_ref` y `payment_method_type` pueden ir en `null` (M3 los valida como texto solo si están presentes, `ReservationStatusListener.java:132-141`).
-
-**C.3 Idempotencia.**
-M3 deduplica por clave de dominio en `reservation_status_log` (`UNIQUE (reservation_id, status, operation_type, idempotency_key)`, `ReservationStatusLogJpaRepository.java:22-27`), no por `Message-Id`. Un reenvío del mismo `CANCELLED_BY_HOST` no duplica el reembolso.
-
-**C.4 Colas.**
-M3 declara al arrancar exchange, 7 colas y sus DLQ (`RabbitTopologyConfig.java:24-102`), y bindings (`:104-144`). M2 debe replicar exactamente, para las 3 colas compartidas:
-
-| Elemento | Valor |
-|---|---|
-| Tipo | `quorum` |
-| Durable | sí |
-| `x-dead-letter-exchange` | `""` |
-| `x-dead-letter-routing-key` | `<nombre-cola>.dlq` |
-| DLQ | `<nombre-cola>.dlq`, durable, clásica |
-
-**C.5 Tarifas base.**
-M3 llama `POST /api/v1/fleet/base-rates` (`FleetRateRestClient.java:32`); M1 expone `POST /api/v1/boats/base-rates` (`BaseRateController.java:22`). Se resuelve en M3 (cambiar la constante) o con un alias en M1. No bloquea el mantenimiento.
+> El análisis de Módulo 3 (reembolso, colas y tarifas base) se movió a `context/consistencia-m2-m3-pendientes.md`.
 
 ---
 
@@ -399,13 +373,12 @@ M3 llama `POST /api/v1/fleet/base-rates` (`FleetRateRestClient.java:32`); M1 exp
 | Pieza | ¿Sábado? | Motivo |
 |---|---|---|
 | D1 sin `RESERVED` + guarda de ocupación | **Sí** | Dos cambios pequeños; requiere 1 cambio en M1 |
-| D8 colas quorum | **Sí** | Solo M2 |
 | D7 flag `auto-cancel` | **Sí (apagado)** | Sin D4 no hay disparador |
 | D3 fechas en M1 | No | Migración + entidad + DTO + liberación |
 | D4 push M1→M2 | No | Cliente + outbox + relay en M1 |
 | D5 CU-10 con rango | No | Depende de D3 |
 | D6 excepción de actor | No | Depende de D4 para usarse |
-| D9 tarifas base | No | M3 |
+| Catálogo C2 | No | Falta el endpoint en M1 |
 
 ### 5.3 Preguntas para M1 (para enviar tal cual)
 
@@ -420,14 +393,6 @@ M3 llama `POST /api/v1/fleet/base-rates` (`FleetRateRestClient.java:32`); M1 exp
 9. Si el mantenimiento se cancela antes de tiempo, ¿emiten algún aviso? El contrato actual solo cubre el inicio.
 10. ¿Aceptan recibir `LINK`/`REL` o prefieren un campo `reason` (`OWNER`/`ADMIN`)?
 
-### 5.4 Preguntas para M3
-
-1. ¿Confirman que `CANCELLED_BY_HOST` con actor sistema reembolsa el 100 % sin pasos manuales?
-2. ¿El reembolso requiere que el cobro esté `CAPTURED`, o funciona con `PENDING`?
-3. ¿Aceptan que `payment_token_ref` y `payment_method_type` lleguen en `null` en la cancelación?
-4. ¿Prefieren que M2 envíe `payment_metadata` también en la cancelación o lo dejan opcional?
-5. ¿Pueden alinear la ruta de tarifas base a `/api/v1/boats/base-rates`?
-
 ---
 
 ## 6. Orden de implementación
@@ -436,9 +401,8 @@ M3 llama `POST /api/v1/fleet/base-rates` (`FleetRateRestClient.java:32`); M1 exp
 
 1. **M2**: quitar `RESERVED` de `ModuleNotificationMatrix` y mover la guarda a `IN_NAVIGATION`. Tests de matriz y de cancelación.
 2. **M1**: añadir `NAVIGATION` a las salidas de `AVAILABLE`. Un archivo y un test.
-3. **M2**: alinear `RabbitTopologyConfig` y `RabbitTopologyTest` con quorum.
-4. **M2**: `m2.maintenance.auto-cancel` documentado y apagado.
-5. Verificación conjunta: reservar, pagar y hacer check-in con `mode=http`; comprobar que M1 pasa a `NAVIGATION` sin haber recibido `RESERVED`.
+3. **M2**: `m2.maintenance.auto-cancel` documentado y apagado.
+4. Verificación conjunta: reservar, pagar y hacer check-in con `mode=http`; comprobar que M1 pasa a `NAVIGATION` sin haber recibido `RESERVED`.
 
 ### Fase 1 — M1 (desbloquea D3, D4, D5)
 
@@ -451,14 +415,9 @@ M3 llama `POST /api/v1/fleet/base-rates` (`FleetRateRestClient.java:32`); M1 exp
 ### Fase 2 — M2 (consume lo anterior)
 
 1. Endpoint `maintenance-events` + idempotencia + tests.
-2. Excepción acotada de actor + auditoría + evento a M3.
+2. Excepción acotada de actor + auditoría + evento de cancelación (contrato en el documento de M3).
 3. CU-10 con rango + adaptador + llamadas.
 4. Job de reconciliación (opcional, apagado).
-
-### Fase 3 — M3
-
-1. Ruta de tarifas base.
-2. Verificación de reembolso con `CANCELLED_BY_HOST`.
 
 ---
 
