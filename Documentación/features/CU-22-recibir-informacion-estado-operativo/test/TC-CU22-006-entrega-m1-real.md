@@ -59,5 +59,7 @@ Solo existe adaptador fake; el plan mezcla HTTP y AMQP, falta acordar último sa
 #### Post-conditions
 Corrida V4 del 2026-11-13: Draft; estado documental: Draft; evidencia: OutboxRelayIntegrationTest#m1HttpUsaElPuertoFalsoYMarcaPublished. plan.md §§1, 3 y decisiones finales exige PATCH; §§2, 3.3 y 8 describen RabbitMQ y confirmación de broker. spec.md Edge Cases exige confirmación del broker. No hay HTTP real ni medición de 500 ms.
 
+> **Nota 2026-11-18 (no reescribe la corrida V4):** el adaptador HTTP real ya existe (`HttpFleetStatusNotificationAdapter`, POST `/api/v1/internal/status-events`) y su prueba WireMock cubre `outcome`, 4xx, 5xx y timeout, pero **no** mide el SLA de 500 ms. La documentación de plan.md y spec.md ya no dice PATCH ni broker. El caso sigue en Draft hasta una prueba contra M1 real.
+
 #### Traceability
 FR-006, FR-008 | SC-001, SC-002 | Evidencia parcial: src/test/java/com/seashare/m2/reservas/integration/OutboxRelayIntegrationTest.java#m1HttpUsaElPuertoFalsoYMarcaPublished | Draft

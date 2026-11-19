@@ -13,7 +13,7 @@ Al ejecutarse exitosamente:
 4. Invoca a `Actualizar estado reserva` (CU-08) transicionando la reserva al estado terminal **`COMPLETED`** y guardando la hora real de llegada (FR-004, FR-005).
 5. Dispara internamente la apertura del ciclo de disputa invocando a `Generar disputa de garantía` (`CU-16`, `<<include>>`, FR-010): crea la entidad de disputa en estado `PENDING` y activa la **ventana fija de 24 horas** para que el Propietario pueda formalizar reclamos de daños si fuera necesario.
 6. Notifica de forma asíncrona a las dependencias externas a través de CU-08:
-   - Encola en la cola de notificación a Módulo 1 definida en CU-22 (`Recibir información estado operativo`, invocado vía `<<include>>`) la señal de la embarcación al estado **`MAINTENANCE_CLEANING`** (FR-006, SC-002). El flujo no espera respuesta de Módulo 1 ni depende de ella: la entrega se garantiza con reintentos y backoff, DLQ e idempotencia por identificador único de evento (CU-22 FR-006). El retorno posterior a `AVAILABLE` es una transición interna de Módulo 1 (ver CU-22 FR-002).
+   - Encola la notificación HTTP de estado operativo hacia Módulo 1 definida en CU-22 (`Recibir información estado operativo`, invocado vía `<<include>>`) la señal de la embarcación al estado **`MAINTENANCE_CLEANING`** (FR-006, SC-002). El flujo no espera respuesta de negocio de Módulo 1 ni depende de ella: la entrega se garantiza con reintentos y backoff, `dead=true` con alerta e idempotencia por identificador único de evento (CU-22 FR-006). El retorno posterior a `AVAILABLE` es una transición interna de Módulo 1 (ver CU-22 FR-002).
    - Publica el evento asíncrono en RabbitMQ ([plan de CU-14](../CU-14-recibir-estado-reserva/plan.md)) hacia Módulo 3 informando el estado **`COMPLETED`** y adjuntando el texto de novedades si fue provisto (FR-007). En consecuencia, **Módulo 3 libera de inmediato el pago del alquiler al Propietario, pero la garantía permanece retenida hasta la resolución de la disputa (ventana de 24 h)** (decisión arquitectónica H4 de plan.md).
 7. **Regla estricta "Sin dinero"**: Módulo 2 no valora económicamente reparaciones, no cobra cargos por desembarque tardío ni descuenta fondos de la garantía (FR-008, SC-003).
 
@@ -196,13 +196,13 @@ No aplica. Operación puntual sobre una reserva individual.
 | **FR-003** | Campo de texto opcional para reporte de novedades | Campo `remarks` en request body |
 | **FR-004** | Transición a `COMPLETED` mediante CU-08 | Respuesta `200 OK` con `status: "COMPLETED"` |
 | **FR-005** | Registro de auditoría (hora real de entrega y novedades) | Campos `actual_arrival_at` y log del evento de entrega |
-| **FR-006** | Señal de la embarcación hacia `MAINTENANCE_CLEANING` en M1 (el retorno a `AVAILABLE` es interno de M1; ver CU-22 FR-002) | Notificación asíncrona respaldada por el [plan de CU-22](../CU-22-recibir-informacion-estado-operativo/plan.md) y por la cola de notificación definida en CU-22 |
+| **FR-006** | Señal de la embarcación hacia `MAINTENANCE_CLEANING` en M1 (el retorno a `AVAILABLE` es interno de M1; ver CU-22 FR-002) | Notificación asíncrona respaldada por el [plan de CU-22](../CU-22-recibir-informacion-estado-operativo/plan.md) y por el outbox HTTP definido en CU-22 |
 | **FR-007** | Notificación de `COMPLETED` a M3 (pago libre, garantía retenida) | Evento AMQP respaldado por el [plan de CU-14](../CU-14-recibir-estado-reserva/plan.md) |
 | **FR-008** | Regla estricta "Sin dinero" (cero cálculo de daños o demoras) | Cero campos monetarios en la interfaz |
 | **FR-009** | Rechazo sobre reservas que no estén `IN_NAVIGATION` | Matriz de errores tipados de la Sección 3 |
 | **FR-010** | Apertura de ventana de disputa de 24 horas vía CU-16 | Campos devueltos `dispute_id` y `dispute_window_expires_at` |
 | **SC-001** | Cero cierres permitidos fuera de `IN_NAVIGATION` | Validación estricta de máquina de estados |
-| **SC-002** | Notificación a M1 para liberar barco encolada en < 1 segundo | Outbox transaccional, outbox hacia M1 (PATCH de UC07) y SLA operativo |
+| **SC-002** | Notificación a M1 para liberar barco encolada en < 1 segundo | Outbox transaccional, outbox hacia M1 (POST HTTP de CU-22) y SLA operativo |
 | **SC-003** | Cero evaluaciones de daños o cobros ejecutados en M2 | Neutralidad financiera garantizada |
 | **SC-004** | 100% de entregas registradas con hora real | Campo `actual_arrival_at` auditado |
 | **SC-005** | Cero cierres autorizados a no-propietarios | Control estricto de legitimación por JWT |
@@ -228,7 +228,7 @@ No aplica. Operación puntual sobre una reserva individual.
 
 ### [DIFERENCIA H8-CU07-04] Notificacion a M1
 - El plan dice: encolar la senal de la embarcacion a `MAINTENANCE_CLEANING` por la cola de notificacion de CU-22 (L16).
-- El codigo hace: outbox con destino `M1_HTTP`; el unico adaptador es `FakeFleetStatusNotificationAdapter`, que solo loguea y responde `DELIVERED` sin hacer HTTP.
+- El codigo hace: outbox con destino `M1_HTTP`; en modo `http` el adaptador real `HttpFleetStatusNotificationAdapter` hace `POST /api/v1/internal/status-events`; en modo `fake` solo loguea y responde `DELIVERED`. Actualizado 2026-11-18.
 - Decision: por ahora solo adaptador fake; sin cliente HTTP real.
 
 ### [DIFERENCIA H8-CU07-05] Zona horaria
