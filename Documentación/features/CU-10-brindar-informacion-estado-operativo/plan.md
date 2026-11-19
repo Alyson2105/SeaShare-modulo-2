@@ -37,8 +37,10 @@ GET /api/v1/vessels/{vessel_id}/operational-status
 
 | Nombre | Obligatorio | Descripción |
 |---|---|---|
-| `X-Internal-Service-Token` | Sí | Token de servicio interno de Módulo 2 (lo entrega Módulo 1) |
+| `X-Internal-Service-Token` | Sí | Token de servicio interno de Módulo 2 (lo entrega Módulo 1) (`[CONFIRMAR CON M1]`). M2 lo configura en `seashare.fleet.token` ← `SEASHARE_FLEET_TOKEN`. |
 | `Accept` | No | `application/json` |
+
+> **Estado del código (VERIFICADO el 2026-11-18):** M2 **no envía** este header. Se retiró en el commit `f498a5b` (`FleetHttpConfig.java:23`) y la propiedad ya no existe. Con M1 exigiendo el token, el 401/403 se mapea a `INTERNAL_ERROR` y **toda reserva o pago falla**. Defecto de código pendiente.
 
 **Path Parameters**:
 
@@ -130,7 +132,7 @@ curl -X GET "https://flota.seashare.internal/api/v1/vessels/8f4b2319-58b9-4c8d-b
 | `400 Bad Request` | `vessel_id` con formato UUID corrupto | Módulo 2 aborta sin reintento | `400 Bad Request` (`INVALID_UUID`) |
 | `401 Unauthorized` / `403 Forbidden` | Credencial de servicio de M2 rechazada | Alerta crítica de seguridad en observabilidad | `500 Internal Server Error` (`INTERNAL_ERROR`) |
  | `404 Not Found` | Embarcación no existe en los registros de flota | Declara activo inexistente sin reintento (SC-005) | `404 Not Found` (`VESSEL_NOT_FOUND`) |
-| `500 Internal Server Error` / `502 Bad Gateway` | Falla interna en los servidores de Módulo 1 | Aplica máximo 1 reintento rápido; si persiste, activa *fail-safe* preventivo | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |
+| `500 Internal Server Error` / `502 Bad Gateway` | Falla interna en los servidores de Módulo 1 | **Estado real del código:** aborta sin reintento y devuelve 503 (`HttpFleetOperationalStatusAdapter.java:96`). **Deuda:** el contrato pide 1 reintento rápido antes del fail-safe. | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |
 | `Timeout` (> 300 ms) | Latencia excedida en la red o base de datos de M1 | Ejecuta 1 reintento inmediato; si se agota, activa *fail-safe* preventivo | `503 Service Unavailable` (`FLEET_SERVICE_UNAVAILABLE`) |
 
 ---
@@ -149,8 +151,9 @@ curl -X GET "https://flota.seashare.internal/api/v1/vessels/8f4b2319-58b9-4c8d-b
 
 ## 5. Puntos Abiertos y Aclaraciones Necesarias
 
-- `[NEEDS CLARIFICATION: mecanismo de autenticación servicio-a-servicio]`: M1 exige el header `X-Internal-Service-Token` (contrato UC07 de M1); falta que M1 indique quién entrega el valor.
-- `[NEEDS CLARIFICATION: endpoint formal en Módulo 1]`: ratificar la ruta `GET /api/v1/vessels/{vessel_id}/operational-status` en la especificación OpenAPI de Módulo 1.
+- **Mecanismo de autenticación servicio-a-servicio (resuelto el 2026-11-18)**: M1 entrega el `X-Internal-Service-Token`; M2 lo configura en `seashare.fleet.token` (variable `SEASHARE_FLEET_TOKEN`, sin default en `prod`). **Pendiente de código:** M2 no lo envía hoy (`FleetHttpConfig.java:23`).
+- **Endpoint formal en Módulo 1 (confirmado el 2026-11-18)**: ruta `GET /api/v1/vessels/{vessel_id}/operational-status` y respuesta `{vessel_id, operational_status, queried_at}` (`[CONFIRMAR CON M1]` por OpenAPI).
+- **Motivo de indisponibilidad**: el contrato actual sólo devuelve el estado; M2 no recibe un motivo. `FR-005` se cumple a nivel de dictamen (apto / no apto), no de mensaje detallado.
 
 ---
 

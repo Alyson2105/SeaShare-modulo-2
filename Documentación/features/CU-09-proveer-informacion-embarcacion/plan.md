@@ -38,8 +38,10 @@ GET /api/v1/vessels/{vessel_id}
 
 | Nombre | Obligatorio | Descripción |
 |---|---|---|
-| `X-Internal-Service-Token` | Sí | Token de servicio interno de Módulo 2 (lo entrega Módulo 1) |
+| `X-Internal-Service-Token` | Sí | Token de servicio interno de Módulo 2 (lo entrega Módulo 1) (`[CONFIRMAR CON M1]`). M2 lo configura en `seashare.fleet.token`, leído de `SEASHARE_FLEET_TOKEN`. |
 | `Accept` | No | `application/json` |
+
+> **Estado del código (VERIFICADO el 2026-11-18):** M2 **no envía** este header. El token se retiró en el commit `f498a5b` (`FleetHttpConfig.java:23` lo niega explícitamente) y ya no existe la propiedad `seashare.fleet.token`. Si M1 lo exige, CU-09 falla con 401/403 y M2 lo mapea a `INTERNAL_ERROR`. Es un defecto de código pendiente, no un cambio de contrato.
 
 **Path Parameters**:
 
@@ -150,7 +152,7 @@ GET /api/v1/vessels
 
 | Nombre | Obligatorio | Descripción |
 |---|---|---|
-| `X-Internal-Service-Token` | Sí | Token de servicio interno de Módulo 2 (lo entrega Módulo 1) |
+| `X-Internal-Service-Token` | Sí | Token de servicio interno de Módulo 2 (lo entrega Módulo 1) (`[CONFIRMAR CON M1]`). M2 lo configura en `seashare.fleet.token` ← `SEASHARE_FLEET_TOKEN`; hoy no lo envía (defecto pendiente, ver §Headers de la operación individual). |
 | `Accept` | No | `application/json` |
 
 **Query Parameters**:
@@ -205,7 +207,7 @@ GET /api/v1/vessels
 **Petición `curl`**:
 
 ```bash
-curl -X GET "https://flota.seashare.internal/api/v1/embarcaciones?page=1&size=20" \
+curl -X GET "https://flota.seashare.internal/api/v1/vessels?page=1&size=20" \
   -H "X-Internal-Service-Token: <token_servicio_m2>" \
   -H "Accept: application/json"
 ```
