@@ -16,8 +16,6 @@ public class DisputeMessagingProperties {
 
     private String exchange = "seashare.reservations"; // exchange topic compartido hacia M3
 
-    private String deadLetterExchange = "seashare.reservations.dlx"; // exchange directo de dead-lettering
-
     private String routingKeyDisputeUpdated = "reservation.dispute.updated"; // routing key de CU-18
 
     private String queueDispute = "finance.guarantee-dispute.v1"; // cola de M3 para disputas
@@ -28,14 +26,6 @@ public class DisputeMessagingProperties {
 
     public void setExchange(String exchange) {
         this.exchange = exchange;
-    }
-
-    public String getDeadLetterExchange() {
-        return deadLetterExchange;
-    }
-
-    public void setDeadLetterExchange(String deadLetterExchange) {
-        this.deadLetterExchange = deadLetterExchange;
     }
 
     public String getRoutingKeyDisputeUpdated() {
