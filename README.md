@@ -17,10 +17,10 @@ paquete `com.seashare.m2`. Este módulo es dueño del ciclo de vida de la reserv
 
 ## 2. Infraestructura local (PostgreSQL y RabbitMQ)
 
-El repositorio **ya incluye** `docker-compose.yml` con ambos servicios:
+El repositorio **ya incluye** `docker-compose.yml` con PostgreSQL. RabbitMQ se toma del stack del Módulo 3:
 
 ```bash
-docker compose up -d      # levanta PostgreSQL y RabbitMQ
+docker compose up -d      # levanta PostgreSQL (RabbitMQ lo aporta el stack de M3)
 docker compose ps         # verifica
 docker compose down       # apaga conservando datos
 docker compose down -v    # apaga BORRANDO datos (pide confirmación antes de usarlo)
@@ -30,9 +30,11 @@ Servicios:
 
 | Servicio | Puerto en tu equipo | Credenciales |
 |---|---|---|
-| PostgreSQL (`seashare_m2`) | `localhost:5433` | `seashare` / `seashare` |
-| RabbitMQ AMQP | `localhost:5672` | `seashare` / `seashare` |
-| RabbitMQ panel web | http://localhost:15672 | `seashare` / `seashare` |
+| PostgreSQL (`seashare_m2`) | `localhost:5434` | `seashare` / `seashare` |
+| RabbitMQ AMQP (M3) | `localhost:5672` | `seashare` / `seashare` |
+| RabbitMQ panel web (M3) | http://localhost:15672 | `seashare` / `seashare` |
+
+M2 no levanta un broker propio: declara las colas compartidas en el broker de M3 y publica allí.
 
 Flyway gestiona el esquema (`V1` a `V6`) y `spring.jpa.hibernate.ddl-auto: validate`
 verifica que las entidades coincidan con la BD. **Nunca se editan migraciones ya aplicadas.**
@@ -99,7 +101,7 @@ docker                 # solo hace falta Docker en ejecución (NO docker-compose
   PostgreSQL 16 en contenedor (uno solo, compartido por toda la corrida) y lo retira al
   terminar. Requisito único: Docker corriendo.
 - `docker-compose.yml` sigue siendo necesario para **correr la app en desarrollo**
-  (su PostgreSQL en `localhost:5433` y RabbitMQ), no para los tests.
+  (su PostgreSQL en `localhost:5434`; RabbitMQ lo aporta el stack de M3), no para los tests.
 - No hay H2: todo `@SpringBootTest` necesita PostgreSQL real; lo aporta Testcontainers
   vía `@Import(PostgresTestContainers.class)` (`src/test/java/com/seashare/m2/shared/`).
 - Tests unitarios puros no abren contexto de Spring ni levantan contenedor.
@@ -133,7 +135,7 @@ Notas:
 docker build -t seashare-m2 .
 docker run --rm -p 8080:8080 \
   -e SERVER_PORT=8080 \
-  -e SEASHARE_DB_URL=jdbc:postgresql://host.docker.internal:5433/seashare_m2 \
+  -e SEASHARE_DB_URL=jdbc:postgresql://host.docker.internal:5434/seashare_m2 \
   -e SEASHARE_DB_USERNAME=seashare \
   -e SEASHARE_DB_PASSWORD=seashare \
   seashare-m2

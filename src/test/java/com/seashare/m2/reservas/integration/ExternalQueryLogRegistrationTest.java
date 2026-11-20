@@ -32,6 +32,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URLConnection;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -58,6 +60,12 @@ class ExternalQueryLogRegistrationTest { // registro de consultas a M1 en extern
     private static final String VESSEL_PATH = "/api/v1/vessels/" + VESSEL_ID; // ruta de la ficha
 
     private static final String STATUS_PATH = VESSEL_PATH + "/operational-status"; // ruta del estado operativo
+
+    private static final LocalDate START = LocalDate.of(2026, 12, 20); // inicio del rango de prueba
+
+    private static final LocalDate END = LocalDate.of(2026, 12, 22); // fin del rango de prueba
+
+    private static final ZoneId ZONE = ZoneId.of("America/Bogota"); // zona del puerto de prueba
 
     private static final WireMockServer wireMock = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort()); // M1 falso unico
 
@@ -216,7 +224,7 @@ class ExternalQueryLogRegistrationTest { // registro de consultas a M1 en extern
                 .withHeader("Content-Type", "application/json")
                 .withBody(statusBody("AVAILABLE"))));
 
-        assertThat(statusAdapter.isAvailable(VESSEL_ID)).isTrue(); // el resultado no cambia
+        assertThat(statusAdapter.isAvailable(VESSEL_ID, START, END, ZONE)).isTrue(); // el resultado no cambia
 
         Map<String, Object> row = singleRow(); // una sola fila
         assertThat(row.get("type")).isEqualTo("OPERATIONAL_STATUS"); // tipo CU-10
@@ -225,16 +233,18 @@ class ExternalQueryLogRegistrationTest { // registro de consultas a M1 en extern
     }
 
     @Test
-    void statusUnknownRawStatusRegistersOkRow() { // estado desconocido -> false pero OK con el valor crudo
+    void statusUnknownRawStatusRegistersErrorRow() { // estado desconocido -> 503 y fila ERROR (fail-safe)
         wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse().withStatus(200) // estado raro
                 .withHeader("Content-Type", "application/json")
                 .withBody(statusBody("WEIRD_STATE"))));
 
-        assertThat(statusAdapter.isAvailable(VESSEL_ID)).isFalse(); // solo AVAILABLE es true
+        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID, START, END, ZONE))
+                .isInstanceOfSatisfying(ReservationRuleException.class, e ->
+                        assertThat(e.getCode()).isEqualTo(ErrorCode.FLEET_SERVICE_UNAVAILABLE.getCode())); // fail-safe
 
         Map<String, Object> row = singleRow(); // una sola fila
-        assertThat(row.get("result")).isEqualTo("OK"); // 200 util es OK
-        assertThat(row.get("returned_status")).isEqualTo("WEIRD_STATE"); // crudo sin validar
+        assertThat(row.get("result")).isEqualTo("ERROR"); // estado desconocido es ERROR
+        assertThat(row.get("returned_status")).isNull(); // sin estado crudo util
     }
 
     @Test
@@ -243,7 +253,7 @@ class ExternalQueryLogRegistrationTest { // registro de consultas a M1 en extern
                 .withFixedDelay(800)
                 .withBody(statusBody("AVAILABLE"))));
 
-        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID)) // corta por timeout
+        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID, START, END, ZONE)) // corta por timeout
                 .isInstanceOfSatisfying(ReservationRuleException.class, e ->
                         assertThat(e.getCode()).isEqualTo(ErrorCode.FLEET_SERVICE_UNAVAILABLE.getCode())); // codigo de siempre
 
@@ -254,7 +264,7 @@ class ExternalQueryLogRegistrationTest { // registro de consultas a M1 en extern
     void statusNotFoundRegistersErrorRow() { // 404 -> ERROR con el error original
         wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse().withStatus(404))); // sin cuerpo
 
-        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID)) // corta en la primera llamada
+        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID, START, END, ZONE)) // corta en la primera llamada
                 .isInstanceOfSatisfying(ReservationRuleException.class, e ->
                         assertThat(e.getCode()).isEqualTo(ErrorCode.VESSEL_NOT_FOUND.getCode())); // codigo de siempre
 
@@ -265,7 +275,7 @@ class ExternalQueryLogRegistrationTest { // registro de consultas a M1 en extern
     void statusEmptyBodyThrowsAndRegistersSingleErrorRow() { // 200 sin cuerpo -> FLEET_SERVICE_UNAVAILABLE y una fila ERROR
         wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse().withStatus(200))); // cuerpo vacio
 
-        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID)) // corte de siempre
+        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID, START, END, ZONE)) // corte de siempre
                 .isInstanceOfSatisfying(ReservationRuleException.class, e ->
                         assertThat(e.getCode()).isEqualTo(ErrorCode.FLEET_SERVICE_UNAVAILABLE.getCode())); // codigo esperado
 
@@ -280,7 +290,7 @@ class ExternalQueryLogRegistrationTest { // registro de consultas a M1 en extern
                 .withHeader("Content-Type", "application/json")
                 .withBody("{ not-json")));
 
-        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID)) // corte de siempre
+        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID, START, END, ZONE)) // corte de siempre
                 .isInstanceOfSatisfying(ReservationRuleException.class, e ->
                         assertThat(e.getCode()).isEqualTo(ErrorCode.FLEET_SERVICE_UNAVAILABLE.getCode())); // codigo esperado
 
@@ -297,7 +307,7 @@ class ExternalQueryLogRegistrationTest { // registro de consultas a M1 en extern
                 .withHeader("Content-Type", "application/json")
                 .withBody("{\"vessel_id\":\"" + VESSEL_ID + "\"}")));
 
-        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID)) // corte de siempre
+        assertThatThrownBy(() -> statusAdapter.isAvailable(VESSEL_ID, START, END, ZONE)) // corte de siempre
                 .isInstanceOfSatisfying(ReservationRuleException.class, e ->
                         assertThat(e.getCode()).isEqualTo(ErrorCode.FLEET_SERVICE_UNAVAILABLE.getCode())); // codigo esperado
 
@@ -328,9 +338,9 @@ class ExternalQueryLogRegistrationTest { // registro de consultas a M1 en extern
         try {
             wireMock.stubFor(get(urlPathEqualTo(STATUS_PATH)).willReturn(aResponse().withStatus(200) // estado largo demas
                     .withHeader("Content-Type", "application/json")
-                    .withBody(statusBody("S".repeat(50)))));
+                    .withBody(statusBody("AVAILABLE" + " ".repeat(40))))); // estado valido con relleno
 
-            statusAdapter.isAvailable(VESSEL_ID); // registro con valores largos
+            statusAdapter.isAvailable(VESSEL_ID, START, END, ZONE); // registro con valores largos
         } finally {
             MDC.remove("correlationId"); // limpia el MDC
         }
@@ -360,7 +370,8 @@ class ExternalQueryLogRegistrationTest { // registro de consultas a M1 en extern
         RestClient client = new FleetHttpConfig().fleetRestClient(properties); // cliente real con timeouts
         ExternalQueryLogPort brokenPort = entry -> { throw new IllegalStateException("log store down"); }; // construido a mano
         HttpFleetInfoAdapter brokenInfoAdapter = new HttpFleetInfoAdapter(client, brokenPort); // adaptador con puerto roto
-        HttpFleetOperationalStatusAdapter brokenStatusAdapter = new HttpFleetOperationalStatusAdapter(client, brokenPort); // adaptador con puerto roto
+        HttpFleetOperationalStatusAdapter brokenStatusAdapter = new HttpFleetOperationalStatusAdapter(client, brokenPort,
+                () -> java.time.Instant.parse("2026-12-01T00:00:00Z")); // adaptador con puerto roto y reloj fijo
 
         wireMock.stubFor(get(urlPathEqualTo(VESSEL_PATH)).willReturn(aResponse().withStatus(200) // ficha valida
                 .withHeader("Content-Type", "application/json")
@@ -372,7 +383,7 @@ class ExternalQueryLogRegistrationTest { // registro de consultas a M1 en extern
         FleetInfo info = brokenInfoAdapter.getVesselInfo(VESSEL_ID); // la consulta no se rompe
 
         assertThat(info.maxCapacity()).isEqualTo(12); // resultado intacto
-        assertThat(brokenStatusAdapter.isAvailable(VESSEL_ID)).isTrue(); // resultado intacto
+        assertThat(brokenStatusAdapter.isAvailable(VESSEL_ID, START, END, ZONE)).isTrue(); // resultado intacto
         assertThat(jdbcTemplate.queryForList("SELECT * FROM external_query_log")).isEmpty(); // nada se guardo
     }
 

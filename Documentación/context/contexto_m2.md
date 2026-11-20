@@ -10,14 +10,14 @@
 
 ## Comandos
 - Windows: `.\mvnw.cmd ...`; Unix: `./mvnw ...`.
-- Levantar primero la infraestructura: `docker compose up -d` (Postgres en `localhost:5433`, RabbitMQ en `5672`/`15672`). `docker compose down -v` borra los datos locales.
+- Levantar primero la infraestructura: `docker compose up -d` (Postgres en `localhost:5434`; RabbitMQ se toma del stack de M3 en `5672`/`15672`). `docker compose down -v` borra los datos locales.
 - Compilar: `.\mvnw.cmd clean package`; ejecutar: `.\mvnw.cmd spring-boot:run`; todos los tests: `.\mvnw.cmd test`.
 - Una clase/método: `.\mvnw.cmd test -Dtest=CreateReservationTest` o `.\mvnw.cmd test -Dtest=ReservationTest#methodName`.
 - Todo `@SpringBootTest` (contexto, web, persistencia, integración) necesita el Postgres real; no hay H2 ni Testcontainers. Los tests unitarios puros no lo necesitan.
 - La mayoría de los tests de integración son `@Transactional` y hacen rollback; `IdempotencyClaimConcurrencyTest` confirma filas deliberadamente.
 
 ## Particularidades de ejecución y configuración
-- La URL de la BD es `jdbc:postgresql://localhost:5433/seashare_m2` (5433, no 5432), usuario/contraseña `seashare`. Las credenciales en `application.yaml` son solo para desarrollo local.
+- La URL de la BD es `jdbc:postgresql://localhost:5434/seashare_m2` (5434, no 5432 ni 5433), usuario/contraseña `seashare`. Las credenciales en `application.yaml` son solo para desarrollo local.
 - Flyway es dueño del esquema (`spring.jpa.hibernate.ddl-auto: validate`). Nunca editar un `V*.sql` ya aplicado: se rompe el checksum; agregar una nueva migración `V4__...sql`.
 - El job de TTL corre cada 30 s por defecto. Desactivarlo en los tests que no lo necesiten: `@SpringBootTest(properties = "m2.scheduler.ttl.enabled=false")`.
 - Obtener la hora desde `ClockPort.now()`, nunca `Instant.now()`, para poder simular el tiempo en tests.

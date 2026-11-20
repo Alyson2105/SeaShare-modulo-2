@@ -72,7 +72,7 @@ class CreateReservationTest { // pruebas funcionales del caso de uso iniciar res
     void setUp() { // inicializa mocks de modulo 1 antes de cada prueba
         defaultOwnerId = UUID.randomUUID();
         when(fleetInfoPort.getVesselInfo(any())).thenReturn(new FleetInfo(defaultOwnerId, 12, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(any())).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
     }
 
     private String buildRequestBody(UUID vesselId, LocalDate startDate, LocalDate endDate, int passengers,

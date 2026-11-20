@@ -1,8 +1,10 @@
-# Consistencia M1–M2: mantenimiento con fechas y aviso M1 → M2
+# Consistencia M1–M2: inconsistencias y factibilidad
 
-**Fecha:** 2026-11-18
-**Alcance:** M2 (este repo), M1 (`C:\Users\josue\Documents\IJ\SeaShareM1`) y M3 (`C:\Users\josue\Documents\IJ\SeaShareM3`), todos en modo solo lectura.
+**Fecha:** 2026-11-18 · **Actualizado:** 2026-11-19
+**Alcance:** M2 (este repo) y M1 (`C:\Users\josue\Documents\IJ\SeaShareM1`), en modo solo lectura. El análisis de Módulo 3 está en `consistencia-m2-m3-pendientes.md`.
 **Naturaleza:** dictamen de factibilidad y diseño. No se implementó nada.
+**Contrato normativo:** `consistencia-m2-m1.md`.
+**Estado de implementación (2026-11-19):** las correcciones de M2 (C4 sin `RESERVED`, CU-10 por rango, C5, idempotencia, `auto-cancel` y job de respaldo) están implementadas en la rama `feature/consistencia-m1-m2`. Las piezas de M1 (§2.2 y catálogo C2) siguen pendientes en `SeaShareM1`.
 **Despliegue objetivo:** sábado 2026-11-21.
 
 ---
@@ -31,16 +33,14 @@ Hechos base usados en todo el documento:
 | 10 | M2 resuelve solapamiento con `daterange` inclusivo y `EXCLUDE` | VERIFICADO | M2 `V1__init.sql:53-56`, `ReservationJpaRepository.java:27` |
 | 11 | CU-10 solo compara con `AVAILABLE` y no envía fechas | VERIFICADO | M2 `HttpFleetOperationalStatusAdapter.java:48,64` |
 | 12 | M2 declara las colas como clásicas con `seashare.reservations.dlx` | VERIFICADO | M2 `RabbitTopologyConfig.java:39-46` |
-| 13 | M3 declara las mismas colas como quorum con `DLX ""` y `cola.dlq` | VERIFICADO | M3 `RabbitTopologyConfig.java:158-168` |
-| 14 | M3 reembolsa 100 % con `CANCELLED_BY_HOST` | VERIFICADO | M3 `RefundCalculator.java:24-26`, `ReservationStatusPolicy.java:33` |
-| 15 | La decisión de adoptar M1→M2 por HTTP y `maintenance_until` es del equipo | DECLARADO | Decisiones 3 y 4 de este encargo |
-| 16 | Comportamiento real de M1/M3 en un entorno desplegado | NO VERIFICABLE | No hay entorno ni ejecución en esta revisión |
+| 13 | Las decisiones 1 a 7 son del equipo, no del código | DECLARADO | Encargo de este documento |
+| 14 | Comportamiento real de M1 en un entorno desplegado | NO VERIFICABLE | No hay entorno ni ejecución en esta revisión |
 
 ---
 
 ## 1. Resumen ejecutivo
 
-Se revisaron las nueve decisiones contra el código de los tres módulos. La dirección es viable, pero **el sábado solo llegan D1 y D8**; D3, D4 y D5 dependen de cambios en M1 y no caben en tres días.
+Las decisiones 1 a 7 se implementan con el **2026-11-21** como fecha límite única: no hay trabajo posterior ni fases siguientes. Las decisiones 8 y 9 (M3) viven en `consistencia-m2-m3-pendientes.md`.
 
 | # | Decisión | Veredicto | Bloqueante |
 |---|---|---|---|
@@ -51,10 +51,8 @@ Se revisaron las nueve decisiones contra el código de los tres módulos. La dir
 | 5 | CU-10 con rango | **FACTIBLE CON CAMBIOS** | Depende de D3 (fechas en M1) |
 | 6 | Reutilizar CU-08 | **FACTIBLE CON CAMBIOS** | Excepción acotada a `SYSTEM`+`BY_OWNER`; auditoría y evento |
 | 7 | `auto-cancel` | **FACTIBLE** | Sin D4 no tiene disparador |
-| 8 | Colas de M3 | **FACTIBLE** | Cambiar `RabbitTopologyConfig` y su test en M2 |
-| 9 | Tarifas base | **CON CAMBIOS EN M3** | `/fleet/base-rates` vs `/boats/base-rates` |
 
-**Bloqueantes del sábado:** D3, D4 y D5 (M1). **Asumible:** D1 (dos cambios pequeños, uno por módulo) y D8 (solo M2), más D7 como flag apagado.
+**Alcance del sábado:** D1 a D7 y el catálogo C2. **Riesgo principal:** D3, D4 y D5 requieren cambios en M1; no hay plan B ni fecha posterior. **Además:** el catálogo de CU-01 no existe en M1 (§2.3), así que con `mode=http` la búsqueda no funciona hasta que C2 esté implementado.
 
 ---
 
@@ -68,47 +66,48 @@ Esfuerzo: **S** ≤ 4 h · **M** 1–2 días · **L** > 2 días. Prioridad sába
 |---|---|---|---|---|
 | Matriz de notificaciones | `application/service/ModuleNotificationMatrix.java:46-60` | Eliminar `RESERVED`; condicionar `CANCELLED` a que no haya mantenimiento activo | S | **SÍ** |
 | Guarda de ocupación | `application/service/ChangeReservationStatusService.java:118-120` | Activar la guarda al encolar `IN_NAVIGATION` (y renombrar a `m1_occupied`); sin esto se pierde `MAINTENANCE_CLEANING` | S | **SÍ** |
-| Puerto CU-10 | `application/port/out/FleetOperationalStatusPort.java:7` | `isAvailable(UUID, LocalDate start, LocalDate end)` | S | NO |
-| Adaptador CU-10 | `infrastructure/.../fleet/HttpFleetOperationalStatusAdapter.java:46-71` | Interpretar estados y fechas de mantenimiento; fallo seguro igual que hoy | M | NO |
-| Llamadas CU-10 | `CreateReservationService.java:87`, `StartPaymentService.java:101` | Pasar el rango; mensaje sin "fechas seleccionadas" cuando el bloqueo es de mantenimiento | S | NO |
-| Controlador interno | nuevo `infrastructure/adapter/in/web/MaintenanceEventController.java` | `POST /api/v1/internal/maintenance-events` | S | NO |
-| DTO interno | nuevos `MaintenanceEventRequest/Response` | Contrato D.1; `{code,message}` en errores | S | NO |
-| Servicio de aplicación | nuevo `application/service/ApplyMaintenanceEventService.java` | Idempotencia, consulta de afectadas, cancelación por reserva | M | NO |
-| Consulta de afectadas | `ReservationRepositoryPort` + `ReservationJpaRepository` | `findReservedByVesselOverlapping(vesselId, start, end)` | S | NO |
-| Excepción de actor | `ChangeReservationStatusService.java:223-240` | Permitir `SYSTEM`+`BY_OWNER` solo con causa `MAINTENANCE` (patrón `diseno-h7-previo.md`) | M | NO |
-| Causa y auditoría | `ChangeReservationStatusCommand`, auditoría | Registrar causa; `reservation_status_audit` solo tiene `actor_id`/`event_ids` (`V4:16-17`) → columna o reutilizar `cancellation_event` | M | NO |
-| Idempotencia | `V2__remaining_tables.sql:137-143` (reutilizar) | `key = event_id`, `endpoint = /api/v1/internal/maintenance-events`, `response_ref = outcome` | S | NO |
+| Puerto CU-10 | `application/port/out/FleetOperationalStatusPort.java:7` | `isAvailable(UUID, LocalDate start, LocalDate end)` | S | **SÍ** |
+| Adaptador CU-10 | `infrastructure/.../fleet/HttpFleetOperationalStatusAdapter.java:46-71` | Interpretar estados y fechas de mantenimiento; fallo seguro igual que hoy | M | **SÍ** |
+| Llamadas CU-10 | `CreateReservationService.java:87`, `StartPaymentService.java:101` | Pasar el rango; mensaje sin "fechas seleccionadas" cuando el bloqueo es de mantenimiento | S | **SÍ** |
+| Controlador interno | nuevo `infrastructure/adapter/in/web/MaintenanceEventController.java` | `POST /api/v1/internal/maintenance-events` | S | **SÍ** |
+| DTO interno | nuevos `MaintenanceEventRequest/Response` | Contrato D.1; `{code,message}` en errores | S | **SÍ** |
+| Servicio de aplicación | nuevo `application/service/ApplyMaintenanceEventService.java` | Idempotencia, consulta de afectadas, cancelación por reserva | M | **SÍ** |
+| Consulta de afectadas | `ReservationRepositoryPort` + `ReservationJpaRepository` | `findReservedByVesselOverlapping(vesselId, start, end)` | S | **SÍ** |
+| Excepción de actor | `ChangeReservationStatusService.java:223-240` | Permitir `SYSTEM`+`BY_OWNER` solo con causa `MAINTENANCE` (patrón `diseno-h7-previo.md`) | M | **SÍ** |
+| Causa y auditoría | `ChangeReservationStatusCommand`, auditoría | Registrar causa; `reservation_status_audit` solo tiene `actor_id`/`event_ids` (`V4:16-17`) → columna o reutilizar `cancellation_event` | M | **SÍ** |
+| Idempotencia | `V2__remaining_tables.sql:137-143` (reutilizar) | `key = event_id`, `endpoint = /api/v1/internal/maintenance-events`, `response_ref = outcome` | S | **SÍ** |
 | Config | `application.yaml` + `application-prod.yaml` | `m2.maintenance.auto-cancel` (default `true`), `m2.maintenance.scan.*` | S | **SÍ** (solo el flag) |
-| Job de reconciliación | nuevo `.../scheduler/MaintenanceReconciliationJob.java` | Opcional, apagado por defecto; reutiliza el servicio | M | NO |
-| Colas | `.../messaging/config/RabbitTopologyConfig.java:35-66` | Quorum + `DLX ""` + `rk = cola.dlq` | S | **SÍ** |
-| Test de topología | `RabbitTopologyTest.java` | Asertar quorum, DLX y DLQ | S | **SÍ** |
-| Códigos de error | `shared/domain/ErrorCode.java` | `MAINTENANCE_EVENT_PARTIAL_FAILURE` (503), `INVALID_MAINTENANCE_RANGE` (400) | S | NO |
+| Job de reconciliación | nuevo `.../scheduler/MaintenanceReconciliationJob.java` | Se incluye apagado por defecto; reutiliza el servicio | M | **SÍ** |
+| Códigos de error | `shared/domain/ErrorCode.java` | `MAINTENANCE_EVENT_PARTIAL_FAILURE` (503), `INVALID_MAINTENANCE_RANGE` (400) | S | **SÍ** |
 
 ### 2.2 Peticiones a M1 (no las implementamos nosotros)
 
 | Pieza | Archivo | Cambio | Esfuerzo | Prioridad sábado |
 |---|---|---|---|---|
-| Transiciones | `application/usecase/AssignOperationalStatusService.java:33-37` | Permitir `AVAILABLE→NAVIGATION` (y decidir `AVAILABLE→MAINTENANCE`) | S | **SÍ** |
-| Esquema | nueva `V11__maintenance_window.sql` | `maintenance_start DATETIME(6) NULL`, `maintenance_until DATETIME(6) NULL` | S | NO |
-| Dominio | `domain/model/Vessel.java` | Campos nuevos y reglas de mantenimiento | M | NO |
-| Persistencia | `VesselEntity`, `VesselPersistenceMapper`, `VesselJpaRepository`, `VesselPersistenceAdapter` | Leer/escribir ventana; SQL de inicio/fin de mantenimiento | M | NO |
-| Servicios de mantenimiento | `OwnerMaintenanceService`, `AdminMaintenanceService` | Exigir `maintenance_until`; decidir si se permite con reservas futuras | M | NO |
-| DTO de estado | `ReservationsVesselQuery.OperationalStatus`, `OperationalStatusResponse` | Añadir `maintenance_start`/`maintenance_until` | S | NO |
-| Liberación | `ReservationsVesselQueryService` o job | Evaluar vencimiento al consultar y/o job | M | NO |
-| Cliente saliente | nuevo `infrastructure/adapter/out/reservations/...` | `RestClient` a M2 con timeouts | M | NO |
-| Aviso pendiente | nueva tabla `maintenance_event_outbox` + relay | Persistir y reintentar; sin esto se pierde el aviso si M2 cae | L | NO |
-| Config | `application.yml` | `seashare.modules.m2.base-url`, timeouts, reintentos | S | NO |
+| Transiciones | `application/usecase/AssignOperationalStatusService.java:33-37` | Permitir `AVAILABLE→NAVIGATION`; `AVAILABLE→MAINTENANCE` por aviso no se permite | S | **SÍ** |
+| Esquema | nueva `V11__maintenance_window.sql` | `maintenance_start DATETIME(6) NULL`, `maintenance_until DATETIME(6) NULL` | S | **SÍ** |
+| Dominio | `domain/model/Vessel.java` | Campos nuevos y reglas de mantenimiento | M | **SÍ** |
+| Persistencia | `VesselEntity`, `VesselPersistenceMapper`, `VesselJpaRepository`, `VesselPersistenceAdapter` | Leer/escribir ventana; SQL de inicio/fin de mantenimiento | M | **SÍ** |
+| Servicios de mantenimiento | `OwnerMaintenanceService`, `AdminMaintenanceService` | Exigir `maintenance_until`; permitir el mantenimiento con reservas futuras (M2 cancela) | M | **SÍ** |
+| DTO de estado | `ReservationsVesselQuery.OperationalStatus`, `OperationalStatusResponse` | Añadir `maintenance_start`/`maintenance_until` | S | **SÍ** |
+| Liberación | `ReservationsVesselQueryService` o job | Evaluar vencimiento al consultar y/o job | M | **SÍ** |
+| Cliente saliente | nuevo `infrastructure/adapter/out/reservations/...` | `RestClient` a M2 con timeouts | M | **SÍ** |
+| Aviso pendiente | nueva tabla `maintenance_event_outbox` + relay | Persistir y reintentar; sin esto se pierde el aviso si M2 cae | L | **SÍ** |
+| Config | `application.yml` | `seashare.modules.m2.base-url`, timeouts, reintentos | S | **SÍ** |
 
-### 2.3 Peticiones a M3 (no las implementamos nosotros)
+### 2.3 Inconsistencias adicionales M1 ↔ M2
 
-| Pieza | Archivo | Cambio | Esfuerzo | Prioridad sábado |
-|---|---|---|---|---|
-| Tarifas base | `FleetRateRestClient.java:32` | Alinear con `/api/v1/boats/base-rates` o acordar alias en M1 | S | NO |
-| Confirmación | — | Confirmar que `CANCELLED_BY_HOST` llega con actor sistema implícito | S | NO |
+**Catálogo de embarcaciones (CU-01/CU-09).** Módulo 2 pide `GET /api/v1/vessels?page&size&q` (`HttpFleetCatalogAdapter.java:42-44`) y Módulo 1 no expone la colección: sólo `/{vessel_id}` y `/{vessel_id}/operational-status` (`ReservationsVesselController.java:35,60`). Cualquier respuesta no `2xx` se convierte en `503 FLEET_SERVICE_UNAVAILABLE` (`HttpFleetCatalogAdapter.java:52-54`), así que con `mode=http` la búsqueda de CU-01 no funciona. La ficha individual (C1) y el estado (C3) sí existen. Contrato objetivo en `consistencia-m2-m1.md` §3.
+
+| Pieza | Módulo | Archivo | Cambio | Esfuerzo | Prioridad sábado |
+|---|---|---|---|---|---|
+| Catálogo | M1 | nuevo controlador de listado | `GET /api/v1/vessels` con `{vessels, pagination}`, `page`, `size`, `q`, público | M | **SÍ** |
 
 ---
 
 ## 3. Contratos
+
+> **Fuente normativa:** `consistencia-m2-m1.md`. Aquí se resumen solo para explicar el diseño; cualquier divergencia se resuelve a favor del contrato.
 
 ### 3.1 `POST {M2_URL}/api/v1/internal/maintenance-events` (M1 → M2)
 
@@ -132,7 +131,7 @@ Esfuerzo: **S** ≤ 4 h · **M** 1–2 días · **L** > 2 días. Prioridad sába
 | `event_id` | string | Sí | UUID o texto ≤ 100; clave de idempotencia |
 | `vessel_id` | string (UUID) | Sí | Embarcación |
 | `maintenance_start` | string (ISO-8601 con offset) | No | `null` = empieza ahora |
-| `maintenance_until` | string (ISO-8601 con offset) | Sí | `null` se rechaza con 400 (`INVALID_RANGE`) |
+| `maintenance_until` | string (ISO-8601 con offset) | Sí | `null` o `until <= start` se rechaza con 400 (`INVALID_MAINTENANCE_RANGE`) |
 | `occurred_at` | string (ISO-8601 con offset) | Sí | Momento del cambio |
 | `reason` | string | No | `OWNER` o `ADMIN`; informativo |
 
@@ -151,7 +150,7 @@ Esfuerzo: **S** ≤ 4 h · **M** 1–2 días · **L** > 2 días. Prioridad sába
 | `DUPLICATE` | `event_id` ya procesado | No reintentar |
 | `NO_AFFECTED_RESERVATIONS` | No hay reservas `RESERVED` que crucen el rango | No reintentar |
 | `UNKNOWN_VESSEL` | `vessel_id` no existe en M2 | No reintentar |
-| `INVALID_RANGE` | `maintenance_until` ausente o anterior a `maintenance_start` | No reintentar (corregir) |
+| `INVALID_RANGE` | Rango válido pero íntegramente en el pasado | No reintentar (corregir) |
 | `AUTO_CANCEL_DISABLED` | `m2.maintenance.auto-cancel=false` | No reintentar |
 
 **Errores**
@@ -160,7 +159,7 @@ Esfuerzo: **S** ≤ 4 h · **M** 1–2 días · **L** > 2 días. Prioridad sába
 { "code": "MAINTENANCE_EVENT_PARTIAL_FAILURE", "message": "1 de 3 reservas no se pudo cancelar" }
 ```
 
-| HTTP | `code` | Cuándo | ¿M1 reintenta? |
+| HTTP | `code` | Cuándo | Reintento de M1 |
 |---|---|---|---|
 | 400 | `INVALID_PARAMETERS` | Falta campo, UUID inválido, fecha mal formada | No |
 | 400 | `INVALID_MAINTENANCE_RANGE` | Rango incoherente | No |
@@ -243,7 +242,7 @@ ALTER TABLE vessel
 
 - `maintenance_until` obligatorio al iniciar mantenimiento; `maintenance_start` opcional (nulo = ahora).
 - Validación: `until > start`.
-- **Permitir mantenimiento con reservas futuras.** Hoy solo se permite desde `AVAILABLE` (`Vessel.java:167-169`; `VesselJpaRepository.java:52-57`). Con la decisión 1, M1 quedará en `AVAILABLE` o `NAVIGATION`; hay que decidir si se permite desde `NAVIGATION` (no recomendado) y qué reemplaza la protección que daba `RESERVED`: **la cancelación automática de M2 (D7)** y el aviso push (D4). M1 no debe intentar conocer reservas.
+- **Permitir mantenimiento con reservas futuras.** Hoy solo se permite desde `AVAILABLE` (`Vessel.java:167-169`; `VesselJpaRepository.java:52-57`). Con la decisión 1, M1 quedará en `AVAILABLE` o `NAVIGATION`. Se decide: el mantenimiento solo se inicia desde `AVAILABLE` (nunca desde `NAVIGATION`) y **sí se permite con reservas futuras**; lo que reemplaza la protección que daba `RESERVED` es la cancelación automática de M2 (D7) más el aviso push (D4). M1 no conoce reservas.
 
 **A.3 Cliente saliente y aviso pendiente.**
 No hay infraestructura: el único `RestClient` es de Cloudinary (`StorageConfig.java:17`). Diseño recomendado, patrón outbox:
@@ -260,8 +259,7 @@ Enganchar **después del commit** evita bloquear la transacción si M2 no respon
 **A.5 Liberación.**
 Hoy el fin de mantenimiento es manual (`OwnerMaintenanceService.java:58-62`, `VesselJpaRepository.java:69-103`). Con `maintenance_until`:
 
-- **Recomendado:** evaluar al consultar. Si `maintenance_until < ahora`, el endpoint devuelve `AVAILABLE` con las fechas en `null`, y el estado persistido se corrige de forma perezosa.
-- **Alternativa:** job que pase a `AVAILABLE` al vencer.
+Se decide **evaluación perezosa al consultar**: si `maintenance_until < ahora`, el endpoint devuelve `AVAILABLE` con las fechas en `null`, y el estado persistido se corrige de forma perezosa. No hay job de liberación.
 - Si nadie lo libera y no se evalúa, M2 seguiría viendo `MAINTENANCE` con `maintenance_until` vencido. Regla de M2: **si `maintenance_until` es anterior a hoy, se considera disponible** (defensa en profundidad).
 
 **A.6 Seguridad.**
@@ -299,7 +297,7 @@ Hoy es imposible: `ValidateActorForSubtype` rechaza `SYSTEM` con subtipo (`:230-
 - `validateActorForSubtype`: permitir `SYSTEM`+`BY_OWNER` **solo** si `cause == MAINTENANCE`. El resto de reglas intactas.
 - `validateCancellationData`: con causa `MAINTENANCE` no exigir `mechanical_failure`.
 - Auditoría: `reservation_status_audit` solo guarda `actor_id` y `event_ids` (`V4:16-17`); registrar la causa requiere columna nueva o usar `cancellation_event` (verificar sus columnas antes de implementar).
-- Evento a M3: `CANCELLED` con subtipo `BY_OWNER` → `CANCELLED_BY_HOST` (M3 `ReservationStatus.java:13`).
+- El evento hacia M3 se mantiene fuera de este documento: ver `consistencia-m2-m3-pendientes.md`.
 
 **B.5 Matriz sin `RESERVED`.**
 
@@ -310,7 +308,7 @@ Hoy es imposible: `ValidateActorForSubtype` rechaza `SYSTEM` con subtipo (`:230-
 | `→ CANCELLED` | sí | `AVAILABLE` / `MAINTENANCE_CLEANING` | Solo si la guarda está activa **y** no hay mantenimiento activo |
 | `→ RESERVED` | sí | **ninguno** | — |
 
-Riesgo señalado en la decisión 5: una cancelación **no** debe enviar `AVAILABLE` si la embarcación está en mantenimiento. Implementación: consultar CU-10 antes de encolar o marcar la reserva cuando llegue el aviso de mantenimiento. Recomendado: guardar en la reserva un indicador `maintenance_blocked` al procesar el evento, y que la matriz lo reciba.
+Riesgo señalado en la decisión 5: una cancelación **no** debe enviar `AVAILABLE` si la embarcación está en mantenimiento. Implementación decidida: guardar en la reserva un indicador `maintenance_blocked` al procesar el evento y pasarlo a la matriz.
 
 Tests afectados (reescribir): `ModuleNotificationMatrixTest`, `ChangeReservationStatusServiceTest` (`:468` y alrededores), `RequestCancellationServiceTest`, `ReportNoShowServiceTest`, `EndNavigationServiceTest`, `TtlExpiryIntegrationTest`, `PaymentIntegrationTest` (aserciones sobre `M1_HTTP`).
 
@@ -345,127 +343,71 @@ Mantener el reintento en `503` y el mapeo de `404`/`400`/`401`. Mensaje de `VESS
 | `HttpFleetOperationalStatusAdapterTest` | mantenimiento con/sin fechas, cruce/no cruce, valor desconocido |
 | `ModuleNotificationMatrixTest` | sin `RESERVED`; `COMPLETED` con guarda; cancelación con mantenimiento activo |
 | `ChangeReservationStatusServiceTest` | `SYSTEM`+`BY_OWNER` con causa `MAINTENANCE`, versión, auditoría |
-| `RabbitTopologyTest` | quorum, `DLX ""`, `.dlq` |
 
 **B.9 Documentos a actualizar.**
-`CU-10/spec.md` y `plan.md` (firma con rango, mantenimiento por fechas), `CU-22/spec.md` y `plan.md` (FR-002 sin `RESERVED`, nuevo aviso y guarda), `consistencia-m2-m1.md` (contratos §3.1 y §3.2), `technical-plan/plan.md` (C3, D-07, resiliencia, jobs), `CU-02`/`CU-03` (mensaje de error).
+`CU-10/spec.md` y `plan.md` (firma con rango, mantenimiento por fechas), `CU-22/spec.md` y `plan.md` (FR-002 sin `RESERVED`, nuevo aviso y guarda), `consistencia-m2-m1.md` (contratos C3, C4 y C5), `technical-plan/plan.md` (C3, D-07, resiliencia, jobs), `CU-02`/`CU-03` (mensaje de error), `CU-09` (catálogo C2).
 
-### 4.3 M3
-
-**C.1 `CANCELLED_BY_HOST` y reembolso.**
-M3 lo reconoce (`ReservationStatus.java:13`), planifica `refund(RefundTrigger.CANCELLED_BY_HOST)` (`ReservationStatusPolicy.java:33`) y reembolsa el 100 % (`RefundCalculator.java:24-26`). El actor no viaja en el payload: M3 no distingue quién canceló, así que no hay impedimento por "actor sistema".
-
-**C.2 Datos para el reembolso.**
-El cobro nace del evento `PENDING` (`HandleReservationStatusService.java:147-149`); el reembolso se pide al recibir la cancelación (`:149,158-161`) y usa los montos que M3 ya guardó en la intención de cobro. **La cancelación no necesita montos ni `payment_metadata`.** Solo requiere `reservation_id`, `status`, `status_changed_at`; `payment_token_ref` y `payment_method_type` pueden ir en `null` (M3 los valida como texto solo si están presentes, `ReservationStatusListener.java:132-141`).
-
-**C.3 Idempotencia.**
-M3 deduplica por clave de dominio en `reservation_status_log` (`UNIQUE (reservation_id, status, operation_type, idempotency_key)`, `ReservationStatusLogJpaRepository.java:22-27`), no por `Message-Id`. Un reenvío del mismo `CANCELLED_BY_HOST` no duplica el reembolso.
-
-**C.4 Colas.**
-M3 declara al arrancar exchange, 7 colas y sus DLQ (`RabbitTopologyConfig.java:24-102`), y bindings (`:104-144`). M2 debe replicar exactamente, para las 3 colas compartidas:
-
-| Elemento | Valor |
-|---|---|
-| Tipo | `quorum` |
-| Durable | sí |
-| `x-dead-letter-exchange` | `""` |
-| `x-dead-letter-routing-key` | `<nombre-cola>.dlq` |
-| DLQ | `<nombre-cola>.dlq`, durable, clásica |
-
-**C.5 Tarifas base.**
-M3 llama `POST /api/v1/fleet/base-rates` (`FleetRateRestClient.java:32`); M1 expone `POST /api/v1/boats/base-rates` (`BaseRateController.java:22`). Se resuelve en M3 (cambiar la constante) o con un alias en M1. No bloquea el mantenimiento.
+> El análisis de Módulo 3 (reembolso, colas y tarifas base) se movió a `context/consistencia-m2-m3-pendientes.md`.
 
 ---
 
-## 5. Riesgos y preguntas
+## 5. Riesgos y decisiones
 
 ### 5.1 Escenarios límite
 
 | Escenario | Comportamiento esperado | Riesgo |
 |---|---|---|
-| Mantenimiento cruza una reserva `IN_NAVIGATION` | No se cancela (solo `RESERVED`); M1 no puede pasar a mantenimiento desde `NAVIGATION` sin liberar | Queda inconsistente hasta el check-out; definir la regla |
-| Mantenimiento sin fecha | Bloquea todo; M2 no cancela nada (no puede calcular cruce) | Recomendado rechazar en M1 (400) |
+| Mantenimiento cruza una reserva `IN_NAVIGATION` | No se cancela (solo `RESERVED`); M1 no puede pasar a mantenimiento desde `NAVIGATION` | Se declara el mantenimiento al terminar el viaje; M2 no cancela la travesía en curso |
+| Mantenimiento sin fecha | Se rechaza con `400 INVALID_MAINTENANCE_RANGE` | M1 no debe emitir eventos sin `maintenance_until` |
 | Mantenimiento extendido después | Nuevo evento con nuevo `event_id`; cancela reservas adicionales | Correcto si M1 reenvía |
 | Mantenimiento cancelado antes de tiempo | No hay evento de "fin" en el contrato; M1 tendría que liberar y no avisar | Definir si hace falta `maintenance-cancelled` |
 | Reenvío del mismo aviso | `DUPLICATE` sin efectos | Correcto |
 | M2 caído cuando M1 avisa | M1 reintenta desde su outbox | Requiere A.3 |
-| Muchas reservas afectadas | Una transacción por reserva; respuesta 503 si alguna falla | Puede tardar; definir límite y lote |
+| Muchas reservas afectadas | Una transacción por reserva; respuesta 503 si alguna falla | Se procesan todas las afectadas; sin límite de lote en esta versión |
 | Reserva creada entre el mantenimiento y el aviso | Se crea en `INITIATED`; no se cancela; expira por TTL o falla en CU-03 por CU-10 | Aceptable |
 | Relojes desfasados | Cruce por fechas locales del puerto | Definir tolerancia |
 | `maintenance_until` vencido y nadie libera | M2 lo trata como disponible (§4.1 A.5) | Depende de que M1 devuelva la fecha |
 
-### 5.2 Alcance para el sábado
+### 5.2 Alcance
 
-| Pieza | ¿Sábado? | Motivo |
-|---|---|---|
-| D1 sin `RESERVED` + guarda de ocupación | **Sí** | Dos cambios pequeños; requiere 1 cambio en M1 |
-| D8 colas quorum | **Sí** | Solo M2 |
-| D7 flag `auto-cancel` | **Sí (apagado)** | Sin D4 no hay disparador |
-| D3 fechas en M1 | No | Migración + entidad + DTO + liberación |
-| D4 push M1→M2 | No | Cliente + outbox + relay en M1 |
-| D5 CU-10 con rango | No | Depende de D3 |
-| D6 excepción de actor | No | Depende de D4 para usarse |
-| D9 tarifas base | No | M3 |
+Todo el alcance descrito (D1 a D7 y el catálogo C2) entra en el despliegue del **2026-11-21**. No hay piezas diferidas a una fecha posterior.
 
-### 5.3 Preguntas para M1 (para enviar tal cual)
+### 5.3 Decisiones aplicadas
 
-1. ¿Pueden permitir `AVAILABLE → NAVIGATION` en `AssignOperationalStatusService` para el sábado? Sin eso, el check-in devuelve `INVALID_TRANSITION` cuando dejemos de enviar `RESERVED`.
-2. ¿`maintenance_until` es obligatorio? Si no, proponemos `400` cuando falte, para que M2 nunca reciba un mantenimiento indefinido.
-3. ¿El mantenimiento se puede iniciar desde `NAVIGATION` o solo desde `AVAILABLE`? Hoy solo desde `AVAILABLE`.
-4. ¿Cómo interpretamos el cruce si el mantenimiento empieza a las 18:00 y la reserva cubre ese día completo? Proponemos que **cualquier día tocado queda bloqueado**.
-5. ¿Quién libera el mantenimiento al vencer `maintenance_until`: un job o la consulta? Si es job, ¿cada cuánto?
-6. ¿Pueden añadir un outbox de avisos hacia M2, o aceptan que el aviso se pierda si M2 está caído?
-7. ¿Qué URL de M2 usarán por entorno y con qué timeouts?
-8. ¿Nos confirman que el endpoint interno de M2 puede quedar sin autenticación, como los suyos?
-9. Si el mantenimiento se cancela antes de tiempo, ¿emiten algún aviso? El contrato actual solo cubre el inicio.
-10. ¿Aceptan recibir `LINK`/`REL` o prefieren un campo `reason` (`OWNER`/`ADMIN`)?
+Las decisiones están en `consistencia-m2-m1.md` §9 (D-01 a D-12). Resumen de las que afectan a este diagnóstico:
 
-### 5.4 Preguntas para M3
-
-1. ¿Confirman que `CANCELLED_BY_HOST` con actor sistema reembolsa el 100 % sin pasos manuales?
-2. ¿El reembolso requiere que el cobro esté `CAPTURED`, o funciona con `PENDING`?
-3. ¿Aceptan que `payment_token_ref` y `payment_method_type` lleguen en `null` en la cancelación?
-4. ¿Prefieren que M2 envíe `payment_metadata` también en la cancelación o lo dejan opcional?
-5. ¿Pueden alinear la ruta de tarifas base a `/api/v1/boats/base-rates`?
+- `maintenance_until` obligatorio; mantenimiento solo desde `AVAILABLE`; liberación perezosa al consultar.
+- Cruce por zona del puerto con rango inclusivo: cualquier día tocado queda bloqueado.
+- M1 añade `AVAILABLE → NAVIGATION` y deja de recibir `RESERVED`.
+- M1 usa outbox para C5 con reintentos 1/5/25/125 s.
+- M2 cancela solo reservas `RESERVED` que cruzan el rango; las demás expiran por TTL.
+- M1 crea C2 (catálogo) antes del sábado.
 
 ---
 
-## 6. Orden de implementación
+## 6. Plan de implementación (todo antes del sábado)
 
-### Fase 0 — Sábado (solo lo que no depende de M1 salvo un cambio)
+### M1
 
-1. **M2**: quitar `RESERVED` de `ModuleNotificationMatrix` y mover la guarda a `IN_NAVIGATION`. Tests de matriz y de cancelación.
-2. **M1**: añadir `NAVIGATION` a las salidas de `AVAILABLE`. Un archivo y un test.
-3. **M2**: alinear `RabbitTopologyConfig` y `RabbitTopologyTest` con quorum.
-4. **M2**: `m2.maintenance.auto-cancel` documentado y apagado.
-5. Verificación conjunta: reservar, pagar y hacer check-in con `mode=http`; comprobar que M1 pasa a `NAVIGATION` sin haber recibido `RESERVED`.
+1. Añadir `NAVIGATION` a las salidas de `AVAILABLE` (`AssignOperationalStatusService`). Un archivo y un test.
+2. Migración de ventana de mantenimiento (`maintenance_start`, `maintenance_until`), dominio, persistencia y DTO de estado con fechas.
+3. Exigir `maintenance_until` y permitir el mantenimiento solo desde `AVAILABLE`.
+4. Liberación perezosa al consultar (`maintenance_until` vencido → `AVAILABLE`).
+5. Cliente HTTP hacia M2 + tabla `maintenance_event_outbox` + relay con reintentos.
+6. Catálogo C2: `GET /api/v1/vessels` con `{vessels, pagination}`, `page`, `size`, `q`, público.
 
-### Fase 1 — M1 (desbloquea D3, D4, D5)
+### M2
 
-1. Migración de ventana de mantenimiento y dominio.
-2. DTO de estado con fechas.
-3. Outbox de avisos + relay + configuración de M2.
-4. Liberación al vencer.
-5. Aviso de cancelación de mantenimiento (si se aprueba).
+1. Quitar `RESERVED` de `ModuleNotificationMatrix` y mover la guarda de ocupación a `IN_NAVIGATION`. Tests de matriz y cancelación.
+2. Endpoint `maintenance-events` + idempotencia + tests.
+3. Excepción acotada de actor (`SYSTEM`+`BY_OWNER` con causa `MAINTENANCE`), auditoría y evento de cancelación.
+4. CU-10 con rango + adaptador + llamadas en CU-02 y CU-03.
+5. `m2.maintenance.auto-cancel` y job de reconciliación apagado por defecto.
 
-### Fase 2 — M2 (consume lo anterior)
+### Verificación conjunta
 
-1. Endpoint `maintenance-events` + idempotencia + tests.
-2. Excepción acotada de actor + auditoría + evento a M3.
-3. CU-10 con rango + adaptador + llamadas.
-4. Job de reconciliación (opcional, apagado).
-
-### Fase 3 — M3
-
-1. Ruta de tarifas base.
-2. Verificación de reembolso con `CANCELLED_BY_HOST`.
-
----
-
-## 7. Decisiones que quedan abiertas
-
-1. Qué reemplaza exactamente a `RESERVED` como protección de M1 (respuesta propuesta: nada; M2 cancela).
-2. Si el mantenimiento puede iniciarse desde `NAVIGATION`.
-3. Si el vencimiento se evalúa al consultar o con job.
-4. Si M1 emite aviso al cancelar un mantenimiento.
-5. Semántica de cruce día/hora (§3.4).
+1. Reservar, pagar y hacer check-in con `mode=http`: M1 pasa a `NAVIGATION` sin haber recibido `RESERVED`.
+2. Declarar mantenimiento con una reserva `RESERVED` que cruza: M2 cancela y M3 recibe `CANCELLED_BY_HOST`.
+3. Declarar mantenimiento con una reserva fuera del rango: no se cancela.
+4. Buscar embarcaciones con `mode=http`: C2 responde con paginación.
+5. `maintenance_until` vencido sin liberar: C3 devuelve `AVAILABLE`.

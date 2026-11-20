@@ -14,6 +14,13 @@ Cambios de las ramas `feature/h10-cierre` y `feature/h10-limpieza`, fecha 2026-1
 - `StartPaymentRequest` (CU-03): `payment_token_ref` 255, `payment_method_type` 50, `payer_email` 254, `payment_method_id` 100, `last_four` 4.
 - Violación de `@Size`: HTTP 400 con `INVALID_PARAMETERS` y message = primer mensaje del campo (`GlobalExceptionHandler`).
 
+## Pagos y cuotas (M2–M3)
+
+- `StartPaymentRequest` sigue recibiendo `payment_method_id` (máx. 100) e `installments` (entero >= 1), pero **M2 no los reenvía a M3**.
+- M3 fija `installments = 1` y decide el `payment_method_id` de la pasarela a partir de `payment_method_type`: omite los tipos genéricos (`CREDIT_CARD`, `DEBIT_CARD`, `PREPAID_CARD`) y envía las marcas (`VISA`, `MASTER`, etc.) en minúsculas.
+- Si el frontend necesita que la marca llegue a la pasarela, debe enviarla también en `payment_method_type`. `payment_metadata` solo transporta `payer_email` y `last_four`.
+- Consecuencia: el usuario no puede elegir cuotas; el cobro se hace en una sola. Es una limitación aceptada de M3 para esta entrega.
+
 ## Cache-Control
 
 - `no-store` presente en: `POST /api/v1/reservations`, `GET /api/v1/reservations`, `GET /api/v1/reservations/{id}`, `GET /api/v1/internal/reservations/{id}`, `POST /api/v1/reservations/{reservationId}/payments`, `GET /api/v1/vessels`, `GET /api/v1/vessels/{vessel_id}`, `GET /api/v1/vessels/{vessel_id}/quotations`.

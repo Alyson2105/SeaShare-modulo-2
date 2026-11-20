@@ -83,7 +83,7 @@ class TtlExpiryIntegrationTest { // pruebas de integracion del scheduler de TTL 
     @BeforeEach
     void setUp() {
         when(fleetInfoPort.getVesselInfo(any())).thenReturn(new FleetInfo(UUID.randomUUID(), 10, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(any())).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
         when(clockPort.now()).thenReturn(BASE_TIME);
         Mockito.reset(statusAuditPort, outboxPort);
     }
@@ -196,7 +196,7 @@ class TtlExpiryIntegrationTest { // pruebas de integracion del scheduler de TTL 
                 null, null, null, null, null, "pg-1000"));
 
         assertThat(result.status()).isEqualTo(ReservationStatus.RESERVED);
-        assertThat(result.eventsEnqueued()).containsExactly("AMQP", "M1_HTTP"); // M3 + bloqueo M1
+        assertThat(result.eventsEnqueued()).containsExactly("AMQP"); // M3 recibe RESERVED; M1 ya no (contrato C4)
     }
 
     @Test

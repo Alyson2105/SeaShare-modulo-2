@@ -88,7 +88,7 @@ class PaymentIntegrationTest { // CU-03: inicio de pago de punta a punta con ada
         renterId = UUID.randomUUID();
         vesselId = UUID.randomUUID();
         when(fleetInfoPort.getVesselInfo(any())).thenReturn(new FleetInfo(ownerId, 10, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(any())).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
     }
 
     private ReservationView createInitiated(LocalDate start, LocalDate end) { // siembra una reserva INITIATED

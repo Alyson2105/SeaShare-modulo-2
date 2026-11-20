@@ -58,5 +58,20 @@ interface ReservationJpaRepository extends JpaRepository<ReservationEntity, UUID
     long countByRenterIdAndStatusAndIdNot(UUID renterId, ReservationStatus status, UUID id); // viajes completados del arrendatario excluyendo la reserva actual
 
     boolean existsByVesselIdAndStatusAndIdNot(UUID vesselId, ReservationStatus status, UUID id); // CU-06: otra reserva del barco en el estado indicado
+
+    @Query("select r.id from ReservationEntity r where r.vesselId = :vesselId and r.status = 'RESERVED' "
+            + "and r.startDate <= :to and r.endDate >= :from order by r.startDate asc")
+    List<UUID> findReservedByVesselOverlapping(
+            @Param("vesselId") UUID vesselId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to); // C5: reservas afectadas por la ventana de mantenimiento
+
+    boolean existsByVesselId(UUID vesselId); // C5: M2 conoce la embarcacion si tiene historial local
+
+    @Query("select distinct r.vesselId from ReservationEntity r where r.status = 'RESERVED' "
+            + "and r.startDate <= :to and r.endDate >= :from order by r.vesselId")
+    List<UUID> findVesselsWithReservedBetween(
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to); // job de reconciliacion: embarcaciones con reservas vigentes
 }
 

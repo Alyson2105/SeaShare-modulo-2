@@ -63,7 +63,7 @@ class OpenDisputeIntegrationTest { // apertura automatica contra PostgreSQL real
     void setUp() {
         ownerId = UUID.randomUUID();
         when(fleetInfoPort.getVesselInfo(any())).thenReturn(new FleetInfo(ownerId, 10, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(any())).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
     }
 
     private ReservationView createReservation() { // reserva INITIATED valida para la FK de disputa

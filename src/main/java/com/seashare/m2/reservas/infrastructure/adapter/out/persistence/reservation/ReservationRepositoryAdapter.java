@@ -186,5 +186,23 @@ public class ReservationRepositoryAdapter implements ReservationRepositoryPort {
         return repository.existsByVesselIdAndStatusAndIdNot(
                 vesselId, ReservationStatus.IN_NAVIGATION, excludeReservationId); // excluye la reserva evaluada
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> findReservedByVesselOverlapping(UUID vesselId, LocalDate from, LocalDate to) { // C5: afectadas
+        return repository.findReservedByVesselOverlapping(vesselId, from, to); // bordes inclusivos y orden por inicio
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsAnyByVesselId(UUID vesselId) { // C5: historial local de la embarcacion
+        return repository.existsByVesselId(vesselId); // cualquier estado cuenta
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> findVesselsWithReservedBetween(LocalDate from, LocalDate to) { // job de reconciliacion
+        return repository.findVesselsWithReservedBetween(from, to); // embarcaciones con RESERVED en la ventana
+    }
 }
 

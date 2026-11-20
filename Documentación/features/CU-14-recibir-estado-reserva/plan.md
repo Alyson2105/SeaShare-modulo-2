@@ -32,7 +32,7 @@ Headers AMQP:
 
 | Header | Obligatorio | Valor |
 |---|---|---|
-| `Message-Id` | Sí | UUID único del mensaje (M3 lo usa para descartar duplicados) |
+| `Message-Id` | Sí | UUID único del mensaje (trazabilidad; M3 deduplica por clave de dominio en `reservation_status_log`, no por este header) |
 | `Content-Type` | Sí | `application/json` |
 
 Payload:
@@ -44,7 +44,7 @@ Payload:
 | `status_changed_at` | datetime (ISO 8601) | Sí | Cuándo ocurrió el cambio |
 | `payment_token_ref` | string | Solo si `status` = `PENDING` | Token de pago generado por el frontend. M2 lo transporta sin interpretarlo |
 | `payment_method_type` | string | No | Tipo de medio de pago (solo en `PENDING`) |
-| `payment_metadata` | object | No | Datos no sensibles del pago: `payer_email`, `payment_method_id`, `installments`, `last_four` (solo en `PENDING`) |
+| `payment_metadata` | object | No | Datos no sensibles del pago: `payer_email` y `last_four` (solo en `PENDING`). M2 no envía `payment_method_id` ni `installments`; M3 fija 1 cuota y resuelve la marca desde `payment_method_type`. |
 
 Qué estado de M2 se publica como qué `status`:
 
@@ -62,7 +62,7 @@ Qué estado de M2 se publica como qué `status`:
 | Expirada con cobro aprobado tardío | `CANCELLED_FLEXIBLE` (mapeo por tratamiento financiero: M3 reembolsa 100 %) |
 | Iniciada, Expirada sin cobro, Pago Fallido | No se publican |
 
-M3 solo reconoce los estados de su lista. Cualquier otro valor lo registra como inconsistencia y no hace nada, por eso M2 no publica nada fuera de esta tabla.
+M3 solo reconoce los estados de su lista. Cualquier otro valor se registra como error permanente (`operational_failure`) y se confirma el mensaje; no se ejecuta ninguna operación financiera. Por eso M2 no publica nada fuera de esta tabla.
 
 ## 5. Ejemplos
 
@@ -77,8 +77,6 @@ Pendiente de pago:
   "payment_method_type": "CREDIT_CARD",
   "payment_metadata": {
     "payer_email": "carlos.mendoza@example.com",
-    "payment_method_id": "visa",
-    "installments": 1,
     "last_four": "4242"
   }
 }

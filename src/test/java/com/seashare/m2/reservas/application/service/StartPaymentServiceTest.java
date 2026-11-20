@@ -180,7 +180,7 @@ class StartPaymentServiceTest { // CU-03: validaciones previas a la transaccion
         when(calculatedValuePort.getCalculatedValue(RESERVATION_ID))
                 .thenReturn(new CalculatedValue(new BigDecimal("1"), new BigDecimal("1"),
                         new BigDecimal("1"), new BigDecimal("3")));
-        when(fleetOperationalStatusPort.isAvailable(VESSEL_ID)).thenReturn(false);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(false);
 
         assertThatThrownBy(() -> service.start(command("RENTER")))
                 .isInstanceOfSatisfying(ReservationRuleException.class,
@@ -198,7 +198,7 @@ class StartPaymentServiceTest { // CU-03: validaciones previas a la transaccion
         when(reservationRepository.findById(RESERVATION_ID))
                 .thenReturn(Optional.of(reservation(ReservationStatus.INITIATED, NOW.plusSeconds(600))));
         when(calculatedValuePort.getCalculatedValue(RESERVATION_ID)).thenReturn(value);
-        when(fleetOperationalStatusPort.isAvailable(VESSEL_ID)).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
         when(writer.startPayment(eq(RESERVATION_ID), eq(value), eq("tok_123"), any(), any(), any(), eq(NOW))).thenReturn(expected);
 
         StartPaymentResult result = service.start(command("RENTER"));
@@ -231,7 +231,7 @@ class StartPaymentServiceTest { // CU-03: validaciones previas a la transaccion
 
         assertThat(result.attempt()).isEqualTo(2);
         verify(calculatedValuePort, never()).getCalculatedValue(any()); // no se vuelve a pedir el calculo
-        verify(fleetOperationalStatusPort, never()).isAvailable(any()); // el activo ya estaba retenido
+        verify(fleetOperationalStatusPort, never()).isAvailable(any(), any(), any(), any()); // el activo ya estaba retenido
         verify(writer).startPayment(RESERVATION_ID, null, "tok_123", null, null, null, NOW);
     }
 
@@ -260,7 +260,7 @@ class StartPaymentServiceTest { // CU-03: validaciones previas a la transaccion
         when(reservationRepository.findById(RESERVATION_ID))
                 .thenReturn(Optional.of(reservation(ReservationStatus.INITIATED, NOW.plusSeconds(600))));
         when(calculatedValuePort.getCalculatedValue(RESERVATION_ID)).thenReturn(value);
-        when(fleetOperationalStatusPort.isAvailable(VESSEL_ID)).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
         when(writer.startPayment(eq(RESERVATION_ID), eq(value), eq("tok_123"), eq("CREDIT_CARD"),
                 eq("ana@example.com"), eq("4242"), eq(NOW))).thenReturn(expected);
 

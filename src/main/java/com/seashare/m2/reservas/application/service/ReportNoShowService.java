@@ -102,7 +102,8 @@ public class ReportNoShowService implements ReportNoShowUseCase { // CU-05: repo
                 ReservationStatus.RESERVED,
                 ReservationStatus.CANCELLED,
                 false,
-                reservation.isM1Blocked()).moduleOneStatus(); // estado operativo o null
+                reservation.isM1Blocked(),
+                reservation.isMaintenanceBlocked()).moduleOneStatus(); // estado operativo o null
 
         changeReservationStatusUseCase.execute(new ChangeReservationStatusCommand( // delega el cambio de estado
                 command.reservationId(), // reserva

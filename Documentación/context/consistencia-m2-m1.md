@@ -1,241 +1,416 @@
-# Contrato de Evento: Estado Operativo de Embarcación (CU-22 → Módulo 1)
+# Contrato de integración M1–M2
 
-> **Diseño aprobado 2026-11-19, pendiente de implementación.** Ver `Documentación/context/consistencia-m1-m2-mantenimiento.md`: Módulo 2 dejará de enviar `RESERVED` y M1 pasará a modelar el mantenimiento con fechas. Mientras no se implemente, el comportamiento descrito aquí sigue vigente.
+**Versión:** 2.0 · **Fecha:** 2026-11-19
+**Módulos:** M1 – Gestión de Flota y Activos P2P · M2 – Operación de Reservas, Tiempos y Cancelaciones
+**Estado:** diseño acordado y **normativo**. M1 implementa lo aquí descrito; las dudas se plantean después de aplicarlo. **M2 implementado el 2026-11-19** (C4, C5, CU-10 por rango y `auto-cancel`); las piezas de M1 siguen pendientes.
+**Diagnóstico de factibilidad:** `context/consistencia-m1-m2-mantenimiento.md`.
 
-| Campo | Valor |
-|---|---|
-| Módulo productor | Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones |
-| Módulo consumidor | Módulo 1 – Gestión de Flota y Activos P2P (`Asignar estado operativo`) |
-| Caso de uso de M2 que lo emite | CU-22 Recibir información estado operativo (invocado por CU-08 Actualizar estado reserva mediante `<<include>>`) |
-| Spec de referencia | CU-22-recibir-informacion-estado-operativo/spec.md y CU-08-actualizar-estado-reserva/spec.md |
-| Tipo | Salida asíncrona por outbox (HTTP POST, destino M1_HTTP). Módulo 1 responde de forma síncrona con `{event_id, outcome}` |
-| Fecha | 2026-10-22 |
+---
 
-## 1. Propósito
+## 0. Propósito y propiedad de datos
 
-Cada vez que una reserva cambia de estado y la tabla de FR-002 de CU-22 indica que se notifica, Módulo 2 avisa a Módulo 1 el **estado operativo de la embarcación ya mapeado** (nunca el estado crudo de la reserva). Módulo 1 es la fuente de verdad del inventario náutico y no participa de la transacción local de Módulo 2.
-
-La notificación es **puramente operativa**: no lleva montos, tarifas, penalidades, valores de reembolso ni datos de liquidación o pago (FR-007). Además, Módulo 2 **no espera una respuesta de negocio** de Módulo 1 ni revierte la transición local según el resultado de la entrega (FR-008): la consistencia es eventual y se alcanza por reintento.
-
-Módulo 1 gestiona por su cuenta la transición final `En Mantenimiento/Limpieza → Disponible`; Módulo 2 no espera esa confirmación ni la modela.
-
-## 2. Cuándo se publica
-
-- Cada vez que CU-08 consolida una transición de estado cuya fila en la tabla de FR-002 de CU-22 indique **Sí** (o **Condicional** con su condición cumplida).
-- Las transiciones llegan a CU-22 a través de los casos de uso de negocio que usan CU-08:
-
-| Caso de uso de M2 | Transición de la reserva | Notificación a Módulo 1 |
+| Dato | Dueño | Regla |
 |---|---|---|
-| CU-13 Confirmar pago | → Reservada | Sí: `RESERVED` |
-| CU-06 Marcar inicio de navegación | → En navegación | Sí: `IN_NAVIGATION` |
-| CU-07 Marcar fin de navegación | → Completada | Sí: `MAINTENANCE_CLEANING` (señal de Mantenimiento/Limpieza) |
-| CU-04 Solicitar cancelación | → Cancelada (ordinaria) | Sí, sólo si ya había llegado a Reservada: `AVAILABLE` |
-| CU-04 Solicitar cancelación | → Cancelada (avería mecánica) | Sí, sólo si ya había llegado a Reservada: `MAINTENANCE_CLEANING` |
-| CU-05 Marcar inasistencia | → Cancelada (No-Show) | Sí, sólo si ya había llegado a Reservada: `AVAILABLE` |
-| CU-02 Iniciar reserva | → Iniciada | No |
-| CU-03 Iniciar pago | → Pendiente de pago | No |
-| CU-08 (TTL) | → Expirada | No |
-| CU-08 | → Pago Fallido | No |
+| Reservas, fechas, solapamiento, TTL, FCFS | **M2** | M1 no conoce reservas ni fechas de reserva |
+| Estado operativo de la embarcación | **M1** | M2 lo consulta y lo recibe por aviso |
+| Mantenimiento y su ventana | **M1** | M2 lo consume para bloquear fechas y cancelar |
+| Catálogo e información técnica | **M1** | M2 no lo persiste |
 
-- La primera notificación del ciclo es `RESERVED` (al confirmarse el pago). La reserva que nace en Iniciada no genera ninguna notificación de estado operativo.
-- **No se publica** nada para Iniciada, Pendiente de pago, Expirada ni Pago Fallido, bajo ninguna circunstancia.
+Ningún módulo accede a la base del otro. Toda comunicación es HTTP.
 
-## 3. Dónde se publica
+**Regla de oro:** M2 es la autoridad de disponibilidad por fechas; M1 sólo informa impedimentos operativos.
 
-| Elemento | Valor |
-|---|---|
-| Método y ruta | `POST /api/v1/internal/status-events` (VERIFICADO en M1: `StatusEventController.java:20,31`) |
-| Autenticación | Sin `X-Internal-Service-Token` en esta ruta (VERIFICADO en M1: `SecurityConfig.java:92-93` la declara `permitAll`) |
-| Transporte | HTTP REST síncrono, invocado desde el relay del outbox |
+---
 
-> El transporte es HTTP POST y no AMQP: no se define exchange, routing key ni cola para Módulo 1. Cualquier referencia anterior a una cola de M1 queda sin efecto.
+## 1. Inventario de conexiones
 
-## 4. Mensaje
+| ID | Dirección | Método y ruta | Transporte | Hoy | Objetivo |
+|---|---|---|---|---|---|
+| **C1** | M2 → M1 | `GET /api/v1/vessels/{vessel_id}` | HTTP | Existe | Igual; se completan campos opcionales |
+| **C2** | M2 → M1 | `GET /api/v1/vessels?page&size&q` | HTTP | **No existe** | Crear la operación de lote **antes del 2026-11-21** |
+| **C3** | M2 → M1 | `GET /api/v1/vessels/{vessel_id}/operational-status` | HTTP | Existe, sin fechas | Añadir rango y ventana de mantenimiento |
+| **C4** | M2 → M1 | `POST /api/v1/internal/status-events` | HTTP | Existe, envía `RESERVED` | Dejar de enviar `RESERVED` |
+| **C5** | M1 → M2 | `POST {M2_URL}/api/v1/internal/maintenance-events` | HTTP | **No existe** | Crear en ambos módulos |
 
-Headers HTTP:
+**Autenticación:** ninguna entre módulos. M1 deja `POST /internal/status-events` y `GET /vessels/**` en `permitAll` (`SecurityConfig.java:92-96`). M2 no tiene Spring Security y su nuevo endpoint interno será igualmente público.
 
-| Header | Obligatorio | Valor |
-|---|---|---|
-| `Content-Type` | Sí | `application/json` |
-| `Accept` | No | `application/json` |
+---
 
-> El identificador de deduplicación viaja en el cuerpo (`event_id`); no se usa el header AMQP `Message-Id`.
+## 2. C1 — Ficha individual de embarcación
 
-Payload:
+### Petición
 
-| Campo | Tipo | Obligatorio | Descripción |
-|---|---|---|---|
-| `vessel_id` | UUID | Sí | Identificador de la embarcación en Módulo 1 |
-| `operational_status` | string | Sí | Estado operativo resultante, ya mapeado, según la tabla de abajo |
-| `occurred_at` | datetime (ISO 8601) | Sí | Marca temporal exacta de la transición que originó el aviso |
-| `event_id` | UUID | Sí | Identificador único por transición (idempotencia) |
-
-Valores posibles de `operational_status` (estados operativos oficiales de Módulo 1):
-
-| Valor | Significado |
-|---|---|
-| `AVAILABLE` | Disponible |
-| `RESERVED` | Reservado |
-| `IN_NAVIGATION` | En Navegación |
-| `MAINTENANCE_CLEANING` | En Mantenimiento/Limpieza |
-
-Módulo 1 acepta además los alias `NAVIGATION` y `MAINTENANCE` (VERIFICADO en M1: `AssignOperationalStatusService.java:129-130`). Módulo 2 no los emite: solo envía los cuatro valores canónicos.
-
-Respuesta `200 OK` (VERIFICADO en M1: `StatusEventController.java:53` devuelve `{event_id, outcome}`):
-
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `event_id` | string | Eco del `event_id` recibido |
-| `outcome` | string | Resultado de aplicar el aviso |
-
-Catálogo de `outcome` y tratamiento en Módulo 2:
-
-| `outcome` | Significado en Módulo 1 (VERIFICADO: `AssignOperationalStatusUseCase.java:29-36`) | Tratamiento en Módulo 2 (VERIFICADO) |
-|---|---|---|
-| `APPLIED` | El estado cambió | Entregado (`HttpFleetStatusNotificationAdapter.java:81`) |
-| `DUPLICATE` | Ese `event_id` ya se procesó | Entregado (`:81`) |
-| `NO_CHANGE` | La embarcación ya tenía ese estado | Entregado (`:81`) |
-| `STALE` | El suceso es anterior al último cambio | Entregado (`:81`) |
-| `UNKNOWN_VESSEL` | La embarcación no existe o es borrador | Permanente → `dead` (`:82`) |
-| `INVALID_TRANSITION` | Transición fuera del contrato | Permanente → `dead` (`:82`) |
-
-Un `outcome` ausente o fuera de ese catálogo se trata como fallo reintentable (`:76-79, :83-86`).
-
-Respuesta `400` (VERIFICADO en M1: `GlobalExceptionHandler.java:65-71`): `ProblemDetail` con `status: 400`, `detail` y la propiedad `errors[{field, message}]` para `event_id`, `vessel_id`, `operational_status` y `occurred_at`. No usa el sobre `{code, message}` de Módulo 2.
-
-Mapeo estado de la reserva → `operational_status` (**copia de referencia**; la fuente de verdad única es la tabla de FR-002 de `CU-22-recibir-informacion-estado-operativo/spec.md`. Ante cualquier divergencia, prevalece CU-22 FR-002):
-
-| Estado de la reserva | ¿Se notifica a Módulo 1? | `operational_status` | Detalle |
-|---|---|---|---|
-| Iniciada | No | — | Sin bloqueo operativo. |
-| Pendiente de pago | No | — | Estado transitorio gestionado íntegramente dentro de Módulo 2 (TTL de 15 minutos en curso y espera del resultado del cobro). El bloqueo operativo en Módulo 1 ocurre únicamente al llegar a Reservada. |
-| Reservada | Sí | `RESERVED` | Bloqueo operativo de la embarcación. Es el único momento en que Módulo 1 recibe `RESERVED`, y ocurre una vez confirmado el pago. |
-| En navegación | Sí | `IN_NAVIGATION` | Embarcación en uso. |
-| Completada | Sí | `MAINTENANCE_CLEANING` | Señal de que la embarcación debe pasar a Mantenimiento/Limpieza. Módulo 1 gestiona internamente esa transición y, después, su retorno a Disponible. |
-| Cancelada | Condicional | `AVAILABLE` por defecto; `MAINTENANCE_CLEANING` si la cancelación está asociada a una avería mecánica reportada por el Propietario | Sólo se notifica si la reserva ya había llegado previamente al estado Reservada. La condición aplica igual para la liberación normal y para la liberación con avería mecánica. |
-| Expirada | No | — | La reserva nunca alcanzó Reservada; Módulo 1 nunca la tuvo bloqueada. |
-| Pago Fallido | No | — | La reserva nunca alcanzó Reservada; Módulo 1 nunca la tuvo bloqueada. |
-
-Módulo 2 sólo emite los cuatro estados operativos canónicos y nunca el estado crudo de la reserva. Un valor fuera de catálogo lo rechaza Módulo 1 con `400` (VERIFICADO en M1: `AssignOperationalStatusService.java:101-104,131`).
-
-### 4.1 Transiciones que aplica Módulo 1 (VERIFICADO: `AssignOperationalStatusService.java:33-37`)
-
-| Desde | Hacia |
-|---|---|
-| `AVAILABLE` | `RESERVED` |
-| `RESERVED` | `IN_NAVIGATION`, `MAINTENANCE_CLEANING`, `AVAILABLE` |
-| `IN_NAVIGATION` | `MAINTENANCE_CLEANING` |
-| `MAINTENANCE_CLEANING` | Ninguna por aviso: la termina el propietario |
-
-> Consecuencia para Módulo 2: un aviso que no encaje en esta tabla devuelve `INVALID_TRANSITION` y el evento queda `dead` (`HttpFleetStatusNotificationAdapter.java:82`).
->
-> **Hallazgo (2026-11-19):** `AVAILABLE → NAVIGATION` **no** está permitida hoy. Si Módulo 2 deja de enviar `RESERVED` (diseño aprobado, ver `context/consistencia-m1-m2-mantenimiento.md`), el check-in devolvería `INVALID_TRANSITION` hasta que M1 añada esa transición.
-
-## 5. Ejemplos
-
-> Módulo 2 emite `occurred_at` en UTC (`Z`), porque serializa un `Instant` (`OutboxAdapter.java:124`). El contrato acepta `Z` o un offset explícito (VERIFICADO en M1: `AssignOperationalStatusService.java:108` usa `OffsetDateTime.parse`); los ejemplos de abajo se mantienen con `-05:00` como muestra del formato aceptado.
-
-Reservada (bloqueo por pago confirmado):
-
-```json
-{
-  "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-  "operational_status": "RESERVED",
-  "occurred_at": "2026-10-22T12:05:00-05:00",
-  "event_id": "7f3c1a9e-2b64-4d0f-9c81-5a2d6e4b1101"
-}
+```http
+GET {M1_URL}/api/v1/vessels/37a31793-29e9-4765-9d3d-39b74a744476
+Accept: application/json
 ```
 
-En navegación (check-in):
+### Respuesta `200 OK` (actual de M1)
 
 ```json
 {
-  "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-  "operational_status": "IN_NAVIGATION",
-  "occurred_at": "2026-10-22T14:10:00-05:00",
-  "event_id": "8a4d2b0f-3c75-4e1a-8d92-6b3e7f5c2202"
-}
-```
-
-Completada (señal hacia Mantenimiento/Limpieza; el retorno a Disponible es interno de Módulo 1):
-
-```json
-{
-  "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-  "operational_status": "MAINTENANCE_CLEANING",
-  "occurred_at": "2026-10-25T18:30:00-05:00",
-  "event_id": "9b5e3c1a-4d86-4f2b-9e03-7c4f8a6d3303"
-}
-```
-
-Cancelada ordinaria (liberación; sólo si ya había llegado a Reservada):
-
-```json
-{
-  "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
+  "vessel_id": "37a31793-29e9-4765-9d3d-39b74a744476",
+  "name": "Embarcación demo 01",
+  "registration_number": "MAT-12345",
+  "type": "YACHT",
+  "max_capacity": 8,
   "operational_status": "AVAILABLE",
-  "occurred_at": "2026-10-24T10:00:00-05:00",
-  "event_id": "0c6f4d2b-5e97-4a3c-8f14-8d5a9b7e4404"
+  "photo_url": "https://cdn.example/1.jpg",
+  "captain_included": true,
+  "port": { "name": "Marina demo", "latitude": 11.24, "longitude": -74.21, "timezone": "America/Bogota" },
+  "amenities": ["Capitán", "Combustible"],
+  "owner": { "owner_id": "…", "validated_name": "…" }
 }
 ```
 
-Cancelada por avería mecánica (señal hacia Mantenimiento/Limpieza; sólo si ya había llegado a Reservada):
+### Campos que M2 lee
 
-```json
-{
-  "vessel_id": "d3b07384-d113-49cd-a5d6-812e9bcfc101",
-  "operational_status": "MAINTENANCE_CLEANING",
-  "occurred_at": "2026-10-24T10:00:00-05:00",
-  "event_id": "1d7a5e3c-6f08-4b4d-9a25-9e6b0c8f5505"
-}
-```
-
-Respuesta de Módulo 1 para cualquiera de los avisos anteriores (VERIFICADO: `StatusEventController.java:53`):
-
-```json
-{
-  "event_id": "1d7a5e3c-6f08-4b4d-9a25-9e6b0c8f5505",
-  "outcome": "APPLIED"
-}
-```
-
-## 6. Reglas de procesamiento
-
-1. **Cuándo se publica**: cada vez que CU-08 consolida una transición notificable según FR-002. El evento se guarda en la misma transacción local que el cambio de estado (outbox) y un proceso aparte lo publica (FR-005).
-2. **Entrega garantizada**: el aviso se encola y se entrega con reintentos; no existe envío síncrono directo (FR-006).
-3. **Sin dinero**: el mensaje nunca lleva montos, tarifas, penalidades, valores de reembolso ni datos de liquidación o pago (FR-007).
-4. **Respuesta técnica, sin negocio**: Módulo 1 responde `200` con `{event_id, outcome}`. No hay respuesta de negocio ni reversión local. Módulo 2 marca el evento como publicado cuando el `outcome` es `APPLIED`, `DUPLICATE`, `NO_CHANGE` o `STALE` (FR-008).
-5. **Idempotencia**: cada transición genera un `event_id` único. Si el mensaje se entrega más de una vez, Módulo 1 lo descarta por `event_id` / `Message-Id`, que es idéntico en todos los reintentos de esa misma transición.
-6. **Reintentos**: máximo 5 intentos por evento (el primero inmediato), con backoff exponencial y jitter de 1 s, 5 s, 25 s y 125 s. Sólo se reintenta ante 5xx o timeout; nunca ante un 4xx permanente.
-7. **Evento muerto**: tras el quinto fallo, el evento se marca `dead=true` en `outbox_message` y se emite una alerta crítica en el log. No hay Dead Letter Queue para M1: el evento no se descarta y la transición local ya confirmada no se altera.
-8. **Error permanente (4xx)**: todo 4xx se considera permanente: no se reintenta y el evento pasa a `dead=true` con alerta (`HttpFleetStatusNotificationAdapter.java:62-63`). M1 sólo produce `400` (validación), `404` (no existe) y `500` (genérico) (`GlobalExceptionHandler.java:60-71,103-117`); `408` y `429` no se emiten hoy. Queda como deuda de Módulo 2 reintentar `408/429` si M1 llegara a usarlos.
-9. **Módulo 1 caído o conexión rechazada**: el evento queda en el outbox y se reintenta según la regla 6; la transición local ya quedó guardada.
-10. **Orden**: este contrato no garantiza orden entre eventos de la misma embarcación. Módulo 1 descarta como `STALE` un evento anterior al último cambio (VERIFICADO en M1: `AssignOperationalStatusService.java:71-74`, comparación estricta `isBefore`); Módulo 2 no ordena los envíos.
-11. **Transición final interna de Módulo 1**: cuando recibe `MAINTENANCE_CLEANING`, Módulo 1 gestiona por su cuenta el paso posterior a `Disponible`. Módulo 2 no lo notifica ni espera esa confirmación.
-
-Pendientes con Módulo 1:
-1. ~~Método, ruta y autenticación~~: **cerrado el 2026-11-19** (M1 `StatusEventController.java:20,31`; `SecurityConfig.java:92-93`).
-2. ~~Catálogo de `outcome`, forma del `400` y `event_id` en la respuesta~~: **cerrado el 2026-11-19** (M1 `AssignOperationalStatusUseCase.java:29-36`; `GlobalExceptionHandler.java:65-71`; `StatusEventController.java:53`).
-3. **Deuda de Módulo 2**: `408` y `429` no los emite M1; si los emitiera, hoy se tratarían como permanentes.
-4. **Cerrado el 2026-11-19**: M1 guarda un único estado (`Vessel.java:35`) y no tiene fechas, así que `RESERVED` bloquea la embarcación completa. El diseño aprobado para resolverlo está en `context/consistencia-m1-m2-mantenimiento.md`.
-
-Cerrado el 2026-11-18: el transporte es HTTP POST (destino `M1_HTTP`), no AMQP; no existe exchange, routing key ni cola de Módulo 1.
-
-## 7. Trazabilidad
-
-| Requisito | Descripción | Dónde se cumple |
+| Campo | Obligatorio para M2 | Si falta |
 |---|---|---|
-| FR-001 de CU-22 | Encolar la notificación cuando CU-08 consolide una transición notificable | Secciones 2 y 6 (regla 1) |
-| FR-002 de CU-22 | Enviar el estado operativo ya mapeado | Sección 4 (tabla de mapeo) |
-| FR-003 de CU-22 | Payload: embarcación, estado mapeado y marca temporal ISO 8601 | Sección 4 |
-| FR-004 de CU-22 | Identificador único por transición (`event_id`) | Sección 4 y regla 5 de la sección 6 |
-| FR-005 de CU-22 | Identificador generado en la misma transacción (outbox) | Sección 6 (regla 1) |
-| FR-006 de CU-22 | Entrega garantizada: reintentos, backoff, DLQ | Sección 6 (reglas 2, 6 y 7) |
-| FR-007 de CU-22 / SC-003 | Sin información financiera | Sección 1 y regla 3 de la sección 6 |
-| FR-008 de CU-22 | Sin espera de respuesta ni reversión local | Sección 1 y regla 4 de la sección 6 |
-| FR-009 de CU-22 | No resolver doble reserva en esta notificación | Sección 1 (fuera de alcance) |
-| FR-007 de CU-08 | Notificar el estado operativo a Módulo 1 | Todo el contrato |
-| SC-001 de CU-22 | 0% de eventos perdidos | Outbox + reintentos + DLQ (sección 6) |
-| SC-002 de CU-22 | Primer intento en menos de 500 ms | Publisher confirm (sección 6, regla 4) |
-| SC-004 de CU-22 | 100% de eventos con identificador único | Sección 4 y regla 5 de la sección 6 |
-| SC-005 de CU-22 | Cero estados crudos de reserva en el payload | Sección 4 (tabla de mapeo) |
+| `name` | Sí | `503 FLEET_SERVICE_UNAVAILABLE` (`HttpVesselReadAdapter.java:131-134`) |
+| `max_capacity` | Sí en CU-02 | Capacidad inválida → activo no disponible |
+| `port.timezone` | Sí en CU-02 | `503 HARBOR_TIMEZONE_UNAVAILABLE` (`CreateReservationService.java:71-79`) |
+| `owner.owner_id` | Sí en CU-02 | Sin propietario no se crea la reserva |
+| `type`, `photo_url`/`image_url`, `amenities`, `owner.validated_name` | No | Se muestran vacíos |
+| `length_feet`, `cabin_count`, `owner.verified` | No | M1 no los envía hoy; M2 los deja en `null` |
+
+### Errores
+
+| HTTP M1 | Causa | Respuesta de M2 |
+|---|---|---|
+| `400` | UUID malformado | `400 INVALID_UUID` |
+| `404` | No existe, eliminada o borrador | `404 VESSEL_NOT_FOUND` |
+| `5xx` / timeout | Falla de M1 | `503 FLEET_SERVICE_UNAVAILABLE` |
+| cuerpo vacío o ilegible | — | `503 FLEET_SERVICE_UNAVAILABLE` |
+
+### Resiliencia
+Connect 100 ms / read 300 ms. Un reintento inmediato solo ante `503` o error de conexión; nunca ante `4xx`. El detalle de CU-19 aplica *fail-safe* por elemento y no reintenta.
+
+---
+
+## 3. C2 — Catálogo de embarcaciones (compromiso del sábado)
+
+### Petición objetivo
+
+```http
+GET {M1_URL}/api/v1/vessels?page=1&size=20&q=texto
+Accept: application/json
+```
+
+| Parámetro | Obligatorio | Regla |
+|---|---|---|
+| `page` | No | Entero ≥ 1; por defecto 1 |
+| `size` | No | Entero; M2 envía siempre 20 |
+| `q` | No | Texto libre por nombre o ubicación |
+
+> M2 **no envía** fechas, tipo, pasajeros ni token. El filtrado por fechas, tipo y capacidad es local de M2.
+
+### Respuesta objetivo `200 OK`
+
+```json
+{
+  "vessels": [
+    {
+      "vessel_id": "…",
+      "name": "Embarcación demo 01",
+      "type": "YACHT",
+      "photo_url": "https://cdn.example/1.jpg",
+      "port": { "name": "Marina demo", "latitude": 11.24, "longitude": -74.21, "timezone": "America/Bogota" },
+      "max_capacity": 8,
+      "captain_included": true
+    }
+  ],
+  "pagination": { "page": 1, "page_size": 20, "total_items": 25, "total_pages": 2 }
+}
+```
+
+M2 ignora cualquier campo extra y acepta elementos sin `vessel_id` descartándolos (`HttpFleetCatalogAdapter.java:77-81`).
+
+### Errores y resiliencia
+Cualquier respuesta no `2xx` se traduce a `503 FLEET_SERVICE_UNAVAILABLE` (`HttpFleetCatalogAdapter.java:52-54`). Connect 100 ms / read 300 ms, sin reintento.
+
+### Estado actual (VERIFICADO)
+M1 **no expone** esta ruta: sólo `/{vessel_id}` y `/{vessel_id}/operational-status` (`ReservationsVesselController.java:35,60`). El listado existente `/api/v1/fleet/boats` exige JWT y devuelve sólo las embarcaciones del propietario (`BoatController.java:94-98`). Con `mode=http`, CU-01 devuelve `503`.
+
+---
+
+## 4. C3 — Estado operativo
+
+### Petición actual
+
+```http
+GET {M1_URL}/api/v1/vessels/37a31793-29e9-4765-9d3d-39b74a744476/operational-status
+Accept: application/json
+```
+
+### Petición objetivo
+
+```http
+GET {M1_URL}/api/v1/vessels/{vessel_id}/operational-status?start_date=2026-12-20&end_date=2026-12-22&timezone=America/Bogota
+Accept: application/json
+```
+
+| Parámetro | Obligatorio | Regla |
+|---|---|---|
+| `start_date`, `end_date` | No | Rango de la reserva en la zona del puerto; si faltan, el veredicto es sólo del instante |
+| `timezone` | No | Zona IANA del puerto; por defecto `America/Bogota` |
+
+### Respuesta actual
+
+```json
+{
+  "vessel_id": "…",
+  "operational_status": "AVAILABLE",
+  "queried_at": "2026-11-19T10:00:00-05:00"
+}
+```
+
+### Respuesta objetivo
+
+```json
+{
+  "vessel_id": "…",
+  "operational_status": "MAINTENANCE",
+  "queried_at": "2026-11-19T10:00:00-05:00",
+  "maintenance_start": "2026-12-21T08:00:00-05:00",
+  "maintenance_until": "2026-12-27T18:00:00-05:00"
+}
+```
+
+Sin mantenimiento, ambos campos van en `null`.
+
+### Veredicto que aplica M2
+
+| `operational_status` | Mantenimiento | Resultado |
+|---|---|---|
+| `AVAILABLE` | — | Disponible |
+| `RESERVED` | — | Disponible para el rango (el bloqueo es de M2) |
+| `IN_NAVIGATION` / `NAVIGATION` | — | Disponible para el rango |
+| `MAINTENANCE` / `MAINTENANCE_CLEANING` | fechas que **no** cruzan | Disponible |
+| `MAINTENANCE` / `MAINTENANCE_CLEANING` | fechas que cruzan | No disponible |
+| `MAINTENANCE` | sin fechas | No disponible (seguro) |
+| desconocido / ilegible / vacío | — | `503 FLEET_SERVICE_UNAVAILABLE` (fail-safe) |
+
+**Cruce de fechas:** se convierten los instantes a fecha local del puerto y se comparan con el rango inclusivo de la reserva. Cualquier día tocado por el mantenimiento se considera bloqueado.
+
+**Vencimiento:** si `maintenance_until` ya pasó, M1 devuelve `AVAILABLE` con `maintenance_start` y `maintenance_until` en `null`, aunque el estado persistido siga en `MAINTENANCE`. La corrección es perezosa, en la consulta; no hay job de liberación. M2 aplica la misma regla como defensa.
+
+### Errores y resiliencia
+Igual que hoy: `400 INVALID_UUID`, `404 VESSEL_NOT_FOUND`, `503 FLEET_SERVICE_UNAVAILABLE`; un reintento ante `503` o conexión. Connect 100 ms / read 300 ms.
+
+---
+
+## 5. C4 — Avisos de estado M2 → M1
+
+### Petición
+
+```http
+POST {M1_URL}/api/v1/internal/status-events
+Content-Type: application/json
+```
+
+```json
+{
+  "event_id": "7f3c1a9e-2b64-4d0f-9c81-5a2d6e4b1101",
+  "vessel_id": "37a31793-29e9-4765-9d3d-39b74a744476",
+  "operational_status": "IN_NAVIGATION",
+  "occurred_at": "2026-12-20T08:05:00Z"
+}
+```
+
+| Campo | Tipo | Regla |
+|---|---|---|
+| `event_id` | string | Obligatorio, ≤ 100; mismo valor en todos los reintentos |
+| `vessel_id` | UUID | Obligatorio |
+| `operational_status` | string | `IN_NAVIGATION` o `MAINTENANCE_CLEANING` o `AVAILABLE` (ver §8) |
+| `occurred_at` | ISO-8601 con offset | M2 lo emite en UTC (`Z`); M1 acepta `Z` y offsets |
+
+### Respuesta `200 OK`
+
+```json
+{ "event_id": "7f3c1a9e-2b64-4d0f-9c81-5a2d6e4b1101", "outcome": "APPLIED" }
+```
+
+| `outcome` | Significado | M2 |
+|---|---|---|
+| `APPLIED` | El estado cambió | `published_at` |
+| `DUPLICATE` | `event_id` ya procesado | `published_at` |
+| `NO_CHANGE` | Ya tenía ese estado | `published_at` |
+| `STALE` | Anterior al último cambio | `published_at` |
+| `UNKNOWN_VESSEL` | No existe o es borrador | `dead=true` |
+| `INVALID_TRANSITION` | Transición fuera de la tabla | `dead=true` |
+
+### Errores
+`400` con `ProblemDetail` y la propiedad `errors[{field,message}]` (no `{code,message}`).
+`4xx` → permanente (`dead`); `5xx` o timeout → reintento.
+
+### Resiliencia
+Connect 100 ms / read 5 000 ms. Cinco intentos con backoff 1/5/25/125 s y jitter solo ante `5xx` o timeout. Sin DLQ: `dead=true` + alerta.
+
+### Idempotencia
+`event_id` se genera en la transición local y se conserva en todos los reintentos. M1 deduplica por `processed_event`.
+
+### Orden
+No garantizado. M1 descarta los anteriores como `STALE` (comparación estricta contra `status_changed_at`).
+
+---
+
+## 6. C5 — Avisos de mantenimiento M1 → M2 (nuevo)
+
+### Cuándo
+Cuando una embarcación pasa a `MAINTENANCE`, una sola vez por evento.
+
+### Petición
+
+```http
+POST {M2_URL}/api/v1/internal/maintenance-events
+Content-Type: application/json
+```
+
+```json
+{
+  "event_id": "b0f5f0a2-6a0e-4f0e-9a59-1f1c2f3a4b5c",
+  "vessel_id": "37a31793-29e9-4765-9d3d-39b74a744476",
+  "maintenance_start": "2026-11-20T08:00:00-05:00",
+  "maintenance_until": "2026-11-27T18:00:00-05:00",
+  "occurred_at": "2026-11-19T15:15:00Z",
+  "reason": "OWNER"
+}
+```
+
+| Campo | Obligatorio | Regla |
+|---|---|---|
+| `event_id` | Sí | ≤ 100; clave de idempotencia |
+| `vessel_id` | Sí | UUID |
+| `maintenance_start` | No | `null` = empieza ahora |
+| `maintenance_until` | Sí | Debe ser posterior a `maintenance_start` |
+| `occurred_at` | Sí | ISO-8601 con offset |
+| `reason` | No | `OWNER` o `ADMIN` |
+
+### Respuesta `200 OK`
+
+```json
+{ "event_id": "b0f5f0a2-6a0e-4f0e-9a59-1f1c2f3a4b5c", "outcome": "APPLIED" }
+```
+
+| `outcome` | Cuándo |
+|---|---|
+| `APPLIED` | Canceló al menos una reserva, o no había ninguna |
+| `DUPLICATE` | `event_id` ya procesado |
+| `NO_AFFECTED_RESERVATIONS` | Ninguna `RESERVED` cruza el rango |
+| `UNKNOWN_VESSEL` | M2 no conoce la embarcación |
+| `INVALID_RANGE` | Rango bien formado pero íntegramente en el pasado; no hay nada que aplicar |
+| `AUTO_CANCEL_DISABLED` | `m2.maintenance.auto-cancel=false` |
+
+### Errores
+
+| HTTP | `code` | Cuándo | Reintento de M1 |
+|---|---|---|---|
+| `400` | `INVALID_PARAMETERS` | Campo faltante o mal formado | No |
+| `400` | `INVALID_MAINTENANCE_RANGE` | Rango incoherente | No |
+| `503` | `MAINTENANCE_EVENT_PARTIAL_FAILURE` | Alguna cancelación falló | **Sí**, mismo `event_id` |
+| `500` | `INTERNAL_ERROR` | Fallo inesperado | Sí, una vez |
+
+La respuesta de error de M2 usa el sobre `{code, message}` (`ErrorBody.java:3`).
+
+### Idempotencia y fallo parcial
+Clave `event_id` en `idempotency_key` con `endpoint = /api/v1/internal/maintenance-events` y `response_ref = outcome`. Un reenvío devuelve `DUPLICATE`. Un `503` no guarda registro: el reintento reprocesa y salta las reservas ya canceladas por estado.
+
+### Efecto en M2
+- Cancela sólo reservas `RESERVED` cuyo rango cruza el mantenimiento, con subtipo `BY_OWNER` y causa de sistema.
+- `INITIATED` y `PENDING_PAYMENT` no se cancelan: expiran por TTL.
+- Emite a M3 `CANCELLED_BY_HOST` (reembolso 100 %), fuera de este contrato.
+
+### Resiliencia de M1
+Connect 1 000 ms / read 5 000 ms. Cinco intentos con backoff 1/5/25/125 s ante timeout, `503` o `5xx`; nunca ante `4xx`. **M1 debe persistir el aviso en un outbox** y reintentarlo para no perderlo si M2 está caído.
+
+---
+
+## 7. Semántica transversal
+
+### Identificadores
+- `event_id`: obligatorio, ≤ 100 caracteres, único por evento, estable en reintentos.
+- `vessel_id`: UUID de M1.
+- Idempotencia en M1 por `processed_event`; en M2 por `idempotency_key`.
+
+### Fechas y zonas
+- `occurred_at`, `maintenance_start`, `maintenance_until`, `queried_at`: ISO-8601 con offset.
+- M1 devuelve `queried_at` en `America/Bogota` (`ReservationsVesselController.java:25-27`).
+- Reservas: `DATE` inclusivo, último día ocupado.
+- Mantenimiento: instantes; se convierten a fecha local para el cruce.
+- Regla: cualquier día tocado por el mantenimiento queda bloqueado.
+
+### Estados
+
+| M1 | M2 envía | M2 interpreta |
+|---|---|---|
+| `AVAILABLE` | `AVAILABLE` | disponible |
+| `RESERVED` | — (ya no se envía) | disponible para el rango |
+| `NAVIGATION` | `IN_NAVIGATION` | disponible para el rango |
+| `MAINTENANCE` | `MAINTENANCE_CLEANING` | bloquea según fechas |
+| alias `NAVIGATION`/`MAINTENANCE` | — | M1 los acepta; M2 no los emite |
+
+### Timeouts y reintentos
+
+| Conexión | Connect / read | Reintentos |
+|---|---|---|
+| C1 | 100 / 300 ms | 1 ante `503` o conexión |
+| C2 | 100 / 300 ms | 0 |
+| C3 | 100 / 300 ms | 1 ante `503` o conexión |
+| C4 | 100 / 5 000 ms | 5 con backoff |
+| C5 | 1 000 / 5 000 ms | 5 con backoff |
+
+### Errores
+- M1: `ProblemDetail` con `errors[]` en `400`; `404` para recurso inexistente; `500` genérico.
+- M2: `{code, message}`; `503` para dependencia caída.
+
+---
+
+## 8. Reglas de negocio de C4 (FR-002 sin `RESERVED`)
+
+| Transición de la reserva | Valor enviado | Condición |
+|---|---|---|
+| `RESERVED` | **ninguno** | — |
+| `IN_NAVIGATION` | `IN_NAVIGATION` | Siempre; activa la guarda de ocupación en M2 |
+| `COMPLETED` | `MAINTENANCE_CLEANING` | Solo si M1 conocía la ocupación |
+| `CANCELLED` ordinaria o no-show | `AVAILABLE` | Solo si M1 conocía la ocupación **y** no hay mantenimiento activo |
+| `CANCELLED` por avería | `MAINTENANCE_CLEANING` | Igual condición |
+| `INITIATED`, `PENDING_PAYMENT`, `EXPIRED`, `PAYMENT_FAILED` | ninguno | — |
+
+**Cambio obligatorio en M1:** permitir `AVAILABLE → NAVIGATION` en su máquina de estados. Hoy no está permitida (`AssignOperationalStatusService.java:33-37`) y el check-in devolvería `INVALID_TRANSITION`.
+
+**Cambio obligatorio en M2:** la guarda de ocupación (`m1_blocked`) debe activarse al enviar `IN_NAVIGATION`, no al enviar `RESERVED`, o se perderá el `MAINTENANCE_CLEANING` de `COMPLETED`.
+
+---
+
+## 9. Decisiones aplicables
+
+Estas decisiones son de cumplimiento obligatorio para el despliegue del **2026-11-21**. No hay preguntas abiertas en este contrato.
+
+| ID | Decisión |
+|---|---|
+| **D-01** | C4 y C5 son HTTP POST sin autenticación entre módulos. M2 responde `{event_id, outcome}` en C4 y C5. |
+| **D-02** | M1 crea C2 (`GET /api/v1/vessels`) **antes del 2026-11-21**, público, con `{vessels[], pagination{page,page_size,total_items,total_pages}}` y parámetros `page`, `size`, `q`. |
+| **D-03** | M1 añade `AVAILABLE → NAVIGATION` a su máquina de estados. No se permite `AVAILABLE → MAINTENANCE` por aviso: el mantenimiento lo inicia el propietario o el admin. |
+| **D-04** | C4 deja de enviar `RESERVED`. Se envía `IN_NAVIGATION` (check-in), `MAINTENANCE_CLEANING` (completada) y `AVAILABLE` o `MAINTENANCE_CLEANING` (cancelación), según §8. |
+| **D-05** | `maintenance_until` es **obligatorio**; `maintenance_start` es opcional (`null` = ahora) y debe ser anterior a `until`. Si falta `until`, no se puede leer o `until <= start`, M2 responde `400 INVALID_MAINTENANCE_RANGE`. Un rango válido pero íntegramente en el pasado devuelve `200` con `outcome=INVALID_RANGE`. |
+| **D-06** | El mantenimiento solo se inicia desde `AVAILABLE`. `reason` acepta `OWNER` o `ADMIN`. |
+| **D-07** | La liberación es **perezosa al consultar**: si `maintenance_until` ya pasó, C3 devuelve `AVAILABLE` con fechas `null`. No hay job de liberación. |
+| **D-08** | El cruce usa la zona del puerto y el rango inclusivo de la reserva. **Cualquier día tocado por el mantenimiento queda bloqueado.** |
+| **D-09** | M1 **debe** persistir los avisos de C5 en un outbox y reintentarlos: connect 1 000 ms, read 5 000 ms, 5 intentos 1/5/25/125 s solo ante timeout, `503` o `5xx`. |
+| **D-10** | M2 cancela automáticamente las reservas `RESERVED` cuyo rango cruza el mantenimiento, con subtipo `BY_OWNER` y actor sistema. `INITIATED` y `PENDING_PAYMENT` no se cancelan: expiran por TTL. |
+| **D-11** | M1 **no** emite un aviso al cancelar un mantenimiento antes de tiempo. M2 se guía por `maintenance_until`. |
+| **D-12** | La URL de M2 en M1 se configura por variable de entorno (`M2_BASE_URL`), sin valor por defecto en producción. |
+
+---
+
+## 10. Trazabilidad
+
+| Requisito | Dónde se cumple |
+|---|---|
+| CU-09 FR-003/FR-004 (ficha y catálogo) | C1 y C2 |
+| CU-10 FR-002 a FR-006 (estado operativo y fail-safe) | C3 |
+| CU-12/CU-19 FR-004 (capacidad) | C1 |
+| CU-22 FR-001 a FR-009 (aviso de estado) | C4 y §8 |
+| Diseño de mantenimiento (C5) | §6 y `context/consistencia-m1-m2-mantenimiento.md` |
+| Disponibilidad por fechas (M2) | §0 y §4 |

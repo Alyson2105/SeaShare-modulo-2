@@ -83,7 +83,7 @@ class DisputeWindowCloseIntegrationTest { // cierre automatico de la ventana con
     void setUp() {
         ownerId = UUID.randomUUID();
         when(fleetInfoPort.getVesselInfo(any())).thenReturn(new FleetInfo(ownerId, 10, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(any())).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
         when(clockPort.now()).thenReturn(BASE);
     }
 

@@ -65,5 +65,17 @@ public interface ReservationRepositoryPort { // puerto de persistencia para el a
      * excluyendo la reserva que se esta evaluando (CU-06).
      */
     boolean existsOtherInNavigation(UUID vesselId, UUID excludeReservationId); // otra travesia activa del mismo barco
+
+    /**
+     * IDs de reservas RESERVED de la embarcacion cuyo rango inclusivo cruza la ventana indicada.
+     * Se usa en C5 para cancelar solo las reservas afectadas por el mantenimiento.
+     */
+    List<UUID> findReservedByVesselOverlapping(UUID vesselId, LocalDate from, LocalDate to);
+
+    /** Indica si M2 tiene cualquier reserva (de cualquier estado) para la embarcacion. */
+    boolean existsAnyByVesselId(UUID vesselId);
+
+    /** Embarcaciones con al menos una reserva RESERVED en la ventana indicada (job de reconciliacion). */
+    List<UUID> findVesselsWithReservedBetween(LocalDate from, LocalDate to);
 }
 

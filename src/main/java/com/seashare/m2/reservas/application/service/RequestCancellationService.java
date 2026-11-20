@@ -114,7 +114,8 @@ public class RequestCancellationService implements RequestCancellationUseCase { 
                 ReservationStatus.RESERVED,
                 ReservationStatus.CANCELLED,
                 mechanicalFailure,
-                reservation.isM1Blocked()).moduleOneStatus(); // estado operativo o null
+                reservation.isM1Blocked(),
+                reservation.isMaintenanceBlocked()).moduleOneStatus(); // estado operativo o null
 
         String auditReason = command.actor() == ActorType.OWNER ? ownerReason : justification; // motivo de auditoria
 

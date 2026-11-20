@@ -86,7 +86,8 @@ public class EndNavigationService implements EndNavigationUseCase { // CU-07: ci
                 ReservationStatus.IN_NAVIGATION,
                 ReservationStatus.COMPLETED,
                 false,
-                reservation.isM1Blocked()).moduleOneStatus(); // estado operativo o null
+                reservation.isM1Blocked(),
+                reservation.isMaintenanceBlocked()).moduleOneStatus(); // estado operativo o null
 
         ChangeReservationStatusResult statusResult = changeReservationStatusUseCase.execute( // delega el cambio de estado
                 new ChangeReservationStatusCommand(

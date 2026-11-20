@@ -118,7 +118,7 @@ class CreateReservationServiceTest { // T-24: la creacion delega la escritura en
         Reservation created = persisted(UUID.randomUUID());
 
         when(fleetInfoPort.getVesselInfo(vesselId)).thenReturn(new FleetInfo(ownerId, 10, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(vesselId)).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
         when(reservationRepositoryPort.existsOverlap(eq(vesselId), any(), any(), any())).thenReturn(false);
         when(writer.createOrReturnExisting(eq(key), eq(fixedNow), eq(CreateReservationService.IDEMPOTENCY_WINDOW), any()))
                 .thenReturn(created);
@@ -136,7 +136,7 @@ class CreateReservationServiceTest { // T-24: la creacion delega la escritura en
         CreateReservationCommand command = buildCommand(key, 4);
 
         when(fleetInfoPort.getVesselInfo(vesselId)).thenReturn(new FleetInfo(ownerId, 10, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(vesselId)).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
         when(reservationRepositoryPort.existsOverlap(eq(vesselId), any(), any(), any())).thenReturn(false);
         when(writer.createOrReturnExisting(any(), any(), any(), any())).thenReturn(persisted(UUID.randomUUID()));
 
@@ -159,7 +159,7 @@ class CreateReservationServiceTest { // T-24: la creacion delega la escritura en
         Reservation existing = persisted(UUID.randomUUID());
 
         when(fleetInfoPort.getVesselInfo(vesselId)).thenReturn(new FleetInfo(ownerId, 10, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(vesselId)).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
         when(reservationRepositoryPort.existsOverlap(eq(vesselId), any(), any(), any())).thenReturn(false);
         when(writer.createOrReturnExisting(any(), any(), any(), any())).thenReturn(existing);
 
@@ -175,7 +175,7 @@ class CreateReservationServiceTest { // T-24: la creacion delega la escritura en
         CreateReservationCommand command = buildCommand(key, 12); // pasajeros superan la capacidad 8
 
         when(fleetInfoPort.getVesselInfo(vesselId)).thenReturn(new FleetInfo(ownerId, 8, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(vesselId)).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
 
         assertThatThrownBy(() -> service.execute(command)) // valida lanzamiento de excepcion de capacidad
                 .isInstanceOf(ReservationRuleException.class);
@@ -205,7 +205,7 @@ class CreateReservationServiceTest { // T-24: la creacion delega la escritura en
         CreateReservationCommand command = buildCommand(key, 4, LocalDate.of(2026, 11, 6), LocalDate.of(2026, 11, 8), LocalTime.of(6, 58));
 
         when(fleetInfoPort.getVesselInfo(vesselId)).thenReturn(new FleetInfo(ownerId, 10, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(vesselId)).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
         when(reservationRepositoryPort.existsOverlap(eq(vesselId), any(), any(), any())).thenReturn(false);
         when(writer.createOrReturnExisting(any(), any(), any(), any())).thenReturn(persisted(UUID.randomUUID()));
 
@@ -221,7 +221,7 @@ class CreateReservationServiceTest { // T-24: la creacion delega la escritura en
         CreateReservationCommand command = buildCommand(key, 4, LocalDate.of(2027, 4, 1), LocalDate.of(2027, 4, 3), LocalTime.of(8, 30));
 
         when(fleetInfoPort.getVesselInfo(vesselId)).thenReturn(new FleetInfo(ownerId, 10, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(vesselId)).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
         when(reservationRepositoryPort.existsOverlap(eq(vesselId), any(), any(), any())).thenReturn(false);
         when(writer.createOrReturnExisting(any(), any(), any(), any())).thenReturn(persisted(UUID.randomUUID()));
 

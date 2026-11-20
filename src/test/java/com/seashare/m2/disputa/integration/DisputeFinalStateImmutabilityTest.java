@@ -73,7 +73,7 @@ class DisputeFinalStateImmutabilityTest {
     @BeforeEach
     void setUp() {
         when(fleetInfoPort.getVesselInfo(any())).thenReturn(new FleetInfo(UUID.randomUUID(), 10, "America/Bogota"));
-        when(fleetOperationalStatusPort.isAvailable(any())).thenReturn(true);
+        when(fleetOperationalStatusPort.isAvailable(any(), any(), any(), any())).thenReturn(true);
 
         ReservationView reservation = createReservationUseCase.execute(new CreateReservationCommand(
                 UUID.randomUUID(),
