@@ -1,5 +1,6 @@
 package com.seashare.m2.reservas.infrastructure.adapter.out.messaging.config;
 
+import com.seashare.m2.disputa.infrastructure.adapter.out.messaging.DisputeMessagingProperties;
 import com.seashare.m2.shared.PostgresTestContainers;
 import com.seashare.m2.shared.RabbitTestContainers;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,19 +23,22 @@ import java.util.Base64;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * T-02: verifica que la topologia RabbitMQ exista al arrancar la aplicacion
- * contra un broker real (contenedor compartido, no uno por prueba).
+ * T-02: verifica que la topologia RabbitMQ de M2 sea identica a la de M3:
+ * colas quorum con dead-lettering al exchange por defecto, DLQ clasicas y
+ * sin exchange DLX propio.
  *
  * <p>Las declaraciones las ejecuta RabbitAdmin al abrir la primera conexion
- * (forzada en {@code setUp} con {@code getQueueProperties}). El tipo de exchange
- * y los bindings se consultan por la API de management del contenedor
- * ({@code rabbitmq:3-management}).</p>
+ * (forzada en {@code setUp} con {@code getQueueProperties}). El tipo de exchange,
+ * los argumentos de cola y los bindings se consultan por la API de management
+ * del contenedor ({@code rabbitmq:3-management}).</p>
  */
 @SpringBootTest
 @Import({PostgresTestContainers.class, RabbitTestContainers.class})
 class RabbitTopologyTest { // prueba de integracion de la topologia rabbitmq con broker real
 
     private static final String VHOST = "%2F"; // vhost por defecto codificado para la API de management
+
+    private static final String CUSTOM_DLX = "seashare.reservations.dlx"; // DLX propio que ya no debe declararse
 
     @Autowired
     private RabbitMQContainer container; // contenedor compartido con management habilitado
@@ -43,7 +47,10 @@ class RabbitTopologyTest { // prueba de integracion de la topologia rabbitmq con
     private AmqpAdmin amqpAdmin; // administrador de declaraciones de spring amqp
 
     @Autowired
-    private MessagingProperties properties; // nombres de topologia leidos de application.yaml
+    private MessagingProperties properties; // nombres de topologia de reservas
+
+    @Autowired
+    private DisputeMessagingProperties disputeProperties; // nombres de topologia de disputa
 
     private final JsonMapper objectMapper = new JsonMapper(); // mapeador jackson 3 para respuestas json
 
@@ -61,18 +68,14 @@ class RabbitTopologyTest { // prueba de integracion de la topologia rabbitmq con
     }
 
     @Test
-    void queuesAndDlqsExistWithDeadLetterArguments() throws Exception { // las 4 colas existen con sus argumentos dlq
-        JsonNode statusQueue = apiGet("/api/queues/" + VHOST + "/" + properties.getQueueStatus());
-        assertDeadLetterArguments(statusQueue, properties.getQueueStatus()); // cola de estado con DLX
+    void queuesAndDlqsExistWithDeadLetterArguments() throws Exception { // las colas son quorum y las DLQ clasicas
+        assertWorkQueue(properties.getQueueStatus()); // cola de estado
+        assertWorkQueue(properties.getQueueInfo()); // cola de informacion
+        assertWorkQueue(disputeProperties.getQueueDispute()); // cola de disputa
 
-        JsonNode infoQueue = apiGet("/api/queues/" + VHOST + "/" + properties.getQueueInfo());
-        assertDeadLetterArguments(infoQueue, properties.getQueueInfo()); // cola de informacion con DLX
-
-        JsonNode statusDlq = apiGet("/api/queues/" + VHOST + "/" + properties.dlqStatus());
-        assertThat(statusDlq.get("name").asText()).isEqualTo(properties.dlqStatus()); // DLQ de estado existe
-
-        JsonNode infoDlq = apiGet("/api/queues/" + VHOST + "/" + properties.dlqInfo());
-        assertThat(infoDlq.get("name").asText()).isEqualTo(properties.dlqInfo()); // DLQ de informacion existe
+        assertDlq(properties.dlqStatus()); // DLQ de estado
+        assertDlq(properties.dlqInfo()); // DLQ de informacion
+        assertDlq(disputeProperties.dlqDispute()); // DLQ de disputa
     }
 
     @Test
@@ -92,45 +95,62 @@ class RabbitTopologyTest { // prueba de integracion de la topologia rabbitmq con
     }
 
     @Test
-    void dlqsBoundToDeadLetterExchange() throws Exception { // cada DLQ esta ligada al DLX por su routing key
-        JsonNode statusDlqBindings = apiGet("/api/bindings/" + VHOST + "/e/" + properties.getDeadLetterExchange()
-                + "/q/" + properties.dlqStatus());
-        assertThat(hasBindingWithRoutingKey(statusDlqBindings, properties.getQueueStatus())).isTrue();
+    void disputeQueueBoundToDisputeUpdatedRoutingKey() throws Exception { // binding reservation.dispute.updated
+        JsonNode bindings = apiGet("/api/bindings/" + VHOST + "/e/" + properties.getExchange()
+                + "/q/" + disputeProperties.getQueueDispute());
 
-        JsonNode infoDlqBindings = apiGet("/api/bindings/" + VHOST + "/e/" + properties.getDeadLetterExchange()
-                + "/q/" + properties.dlqInfo());
-        assertThat(hasBindingWithRoutingKey(infoDlqBindings, properties.getQueueInfo())).isTrue();
+        assertThat(hasBindingWithRoutingKey(bindings, disputeProperties.getRoutingKeyDisputeUpdated())).isTrue();
     }
 
-    private void assertDeadLetterArguments(JsonNode queue, String queueName) { // valida argumentos de dead-lettering
-        assertThat(queue.get("name").asText()).isEqualTo(queueName); // verifica nombre de cola
-        JsonNode arguments = queue.get("arguments"); // argumentos x-dead-letter-* declarados
-        assertThat(arguments.get("x-dead-letter-exchange").asText()) // verifica DLX configurado
-                .isEqualTo(properties.getDeadLetterExchange());
-        assertThat(arguments.get("x-dead-letter-routing-key").asText()) // verifica rk hacia la DLQ
-                .isEqualTo(queueName);
+    @Test
+    void customDeadLetterExchangeIsNotDeclared() throws Exception { // M2 ya no declara su propio DLX
+        JsonNode exchanges = apiGet("/api/exchanges/" + VHOST);
+
+        for (JsonNode exchange : exchanges) {
+            assertThat(exchange.get("name").asText())
+                    .as("M2 no debe declarar su propio DLX")
+                    .isNotEqualTo(CUSTOM_DLX);
+        }
+    }
+
+    private void assertWorkQueue(String queueName) throws Exception { // valida cola quorum con DLX por defecto
+        JsonNode queue = apiGet("/api/queues/" + VHOST + "/" + queueName);
+
+        assertThat(queue.get("name").asText()).isEqualTo(queueName);
+        assertThat(queue.get("type").asText()).as(queueName).isEqualTo("quorum");
+        JsonNode arguments = queue.get("arguments");
+        assertThat(arguments.get("x-dead-letter-exchange").asText()).as(queueName).isEqualTo("");
+        assertThat(arguments.get("x-dead-letter-routing-key").asText()).as(queueName)
+                .isEqualTo(queueName + ".dlq");
+    }
+
+    private void assertDlq(String queueName) throws Exception { // valida DLQ durable clasica
+        JsonNode queue = apiGet("/api/queues/" + VHOST + "/" + queueName);
+
+        assertThat(queue.get("name").asText()).isEqualTo(queueName);
+        assertThat(queue.get("type").asText()).as(queueName).isEqualTo("classic");
     }
 
     private boolean hasBindingWithRoutingKey(JsonNode bindings, String routingKey) { // busca binding por routing key
-        for (JsonNode binding : bindings) { // recorre los bindings devueltos por management
+        for (JsonNode binding : bindings) {
             if (binding.has("routing_key") && binding.get("routing_key").asText().equals(routingKey)) {
-                return true; // encontro el binding esperado
+                return true;
             }
         }
-        return false; // ningun binding coincide
+        return false;
     }
 
     private JsonNode apiGet(String path) throws Exception { // GET autenticado contra la API de management
-        String credentials = container.getAdminUsername() + ":" + container.getAdminPassword(); // credenciales del contenedor
-        String basicAuth = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8)); // codificacion basic
-        HttpRequest request = HttpRequest.newBuilder(URI.create(container.getHttpUrl() + path)) // url completa
-                .header("Authorization", "Basic " + basicAuth) // cabecera de autenticacion
-                .GET().build(); // metodo GET
-        HttpResponse<String> response = HttpClient.newHttpClient() // cliente http del jdk
-                .send(request, HttpResponse.BodyHandlers.ofString()); // ejecuta la peticion
-        assertThat(response.statusCode()) // management debe responder 200
+        String credentials = container.getAdminUsername() + ":" + container.getAdminPassword();
+        String basicAuth = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
+        HttpRequest request = HttpRequest.newBuilder(URI.create(container.getHttpUrl() + path))
+                .header("Authorization", "Basic " + basicAuth)
+                .GET().build();
+        HttpResponse<String> response = HttpClient.newHttpClient()
+                .send(request, HttpResponse.BodyHandlers.ofString());
+        assertThat(response.statusCode())
                 .as("GET %s devolvio %d: %s", path, response.statusCode(), response.body())
                 .isEqualTo(200);
-        return objectMapper.readTree(response.body()); // parsea la respuesta json
+        return objectMapper.readTree(response.body());
     }
 }

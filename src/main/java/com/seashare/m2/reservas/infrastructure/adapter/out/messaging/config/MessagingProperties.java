@@ -17,8 +17,6 @@ public class MessagingProperties { // propiedades de configuracion de la topolog
 
     private String exchange = "seashare.reservations"; // exchange topic principal de eventos de reserva
 
-    private String deadLetterExchange = "seashare.reservations.dlx"; // exchange directo para dead-lettering
-
     private String routingKeyStatusChanged = "reservation.status.changed"; // routing key del evento de cambio de estado
 
     private String routingKeyInfoProvided = "reservation.info.provided"; // routing key del evento de informacion de reserva
@@ -33,14 +31,6 @@ public class MessagingProperties { // propiedades de configuracion de la topolog
 
     public void setExchange(String exchange) { // asigna el exchange principal
         this.exchange = exchange; // establece exchange
-    }
-
-    public String getDeadLetterExchange() { // obtiene el exchange de dead-lettering
-        return deadLetterExchange; // retorna deadLetterExchange
-    }
-
-    public void setDeadLetterExchange(String deadLetterExchange) { // asigna el exchange de dead-lettering
-        this.deadLetterExchange = deadLetterExchange; // establece deadLetterExchange
     }
 
     public String getRoutingKeyStatusChanged() { // obtiene la routing key de cambio de estado
