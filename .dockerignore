@@ -1,0 +1,12 @@
+# Contexto de build limpio: nada que no sea codigo fuente
+.git
+.idea
+.vscode
+target
+docs
+Documentación
+untitled
+*.iml
+Dockerfile
+docker-compose.yml
+README.md

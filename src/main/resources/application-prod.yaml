@@ -1,0 +1,44 @@
+# Perfil PROD: cero secretos en el repositorio.
+# Todos los valores sensibles llegan por variables de entorno; si faltan, la app
+# no arranca (placeholder sin valor) en lugar de caer a credenciales por defecto.
+# spring.jpa.hibernate.ddl-auto sigue en validate (heredado de application.yaml).
+
+spring:
+  datasource:
+    url: ${SEASHARE_DB_URL}
+    username: ${SEASHARE_DB_USERNAME}
+    password: ${SEASHARE_DB_PASSWORD}
+
+  rabbitmq:
+    host: ${SEASHARE_RABBIT_HOST}
+    port: ${SEASHARE_RABBIT_PORT:5672}
+    username: ${SEASHARE_RABBIT_USERNAME}
+    password: ${SEASHARE_RABBIT_PASSWORD}
+
+logging:
+  level:
+    root: INFO                       # Sin debug en produccion
+
+m2:
+  scheduler:
+    ttl:
+      enabled: true                  # Job TTL activo (unica instancia o ShedLock, T-05)
+    outbox:
+      enabled: true                  # Relay del outbox activo (publica con publisher confirms)
+    payments:
+      enabled: true                  # Canal B de CU-13: consulta de cobros a M3
+    dispute:
+      enabled: true                  # Cierre automatico de la ventana de disputa (H9)
+
+  maintenance:
+    auto-cancel: true                # C5: cancela reservas RESERVED afectadas por mantenimiento
+    scan:
+      enabled: false                 # Respaldo apagado por defecto; se activa por entorno si hace falta
+
+seashare:
+  fleet:
+    mode: ${SEASHARE_FLEET_MODE:}    # sin valor por defecto: prod debe declarar fake o http explicitamente
+    base-url: ${SEASHARE_FLEET_BASE_URL:}   # obligatoria solo en mode=http
+  finance:
+    mode: ${SEASHARE_FINANCE_MODE:}  # sin valor por defecto: prod debe declarar fake o http explicitamente
+    base-url: ${SEASHARE_FINANCE_BASE_URL:}  # sin valor por defecto: fail-fast lo exige solo en mode=http

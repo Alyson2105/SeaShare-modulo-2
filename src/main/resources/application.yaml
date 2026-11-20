@@ -1,0 +1,98 @@
+logging:                                    # Correlation id en todos los logs de la aplicacion (T-22)
+  pattern:
+    level: "%5p [%X{correlationId:-}]"      # imprime el valor del MDC o "-" si no hay contexto HTTP
+
+spring:
+  application:
+    name: seashare-modulo-2                  # Nombre del servicio (aparece en logs y metricas)
+
+  datasource:                                # Conexion a PostgreSQL (la levanta docker-compose)
+    url: jdbc:postgresql://localhost:5434/seashare_m2   # 5434: debe coincidir con docker-compose.yml
+    username: seashare                       # Solo desarrollo local; en produccion va por variable de entorno
+    password: seashare
+
+  jpa:
+    open-in-view: false                      # Evita consultas a BD fuera de la capa de servicio
+    hibernate:
+      ddl-auto: validate                     # Hibernate NO crea tablas: solo verifica que coincidan con Flyway
+
+  flyway:
+    enabled: true                            # Ejecuta las migraciones al arrancar
+    locations: classpath:db/migration        # Carpeta de los scripts V1__*.sql, V2__*.sql, ...
+
+  rabbitmq:                                  # Broker de mensajeria (eventos hacia Modulo 3)
+    host: localhost
+    port: 5672                               # Puerto AMQP
+    username: seashare                       # Solo desarrollo local
+    password: seashare
+    publisher-confirm-type: correlated       # Publisher confirms: published_at solo tras el ack (T-03)
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info                 # Solo se exponen estos endpoints de Actuator
+
+m2:
+  messaging:                                # Nombres de la topologia RabbitMQ (T-02)
+    exchange: seashare.reservations         # Exchange topic durable de eventos de reserva
+    routing-key-status-changed: reservation.status.changed  # CU-14: cambio de estado hacia M3
+    routing-key-info-provided: reservation.info.provided    # CU-02: informacion de reserva hacia M3
+    queue-status: finance.reservation-status.v1  # Cola de M3 para cambios de estado
+    queue-info: finance.reservation-info.v1      # Cola de M3 para informacion de reserva
+    publish-timeout-ms: 5000                # Espera maxima del publisher confirm del broker (T-03)
+
+  scheduler:
+    ttl:
+      enabled: true                          # Activa el job de expiración por TTL (false en tests que no lo necesiten)
+      fixed-delay-ms: 30000                  # Intervalo entre ejecuciones del job en milisegundos (default: 30 s)
+      batch-size: 100                        # Máximo de reservas procesadas por ciclo (default: 100)
+    outbox:
+      enabled: false                         # Relay del outbox (T-03): false en la suite; true en perfiles dev/prod
+      fixed-delay-ms: 5000                   # Intervalo entre ciclos del relay en milisegundos (default: 5 s)
+      batch-size: 50                         # Maximo de mensajes outbox por ciclo (default: 50)
+      max-attempts: 5                        # Intentos maximos por mensaje antes de marcar dead (T-03)
+      backoff-initial-ms: 1000               # Base del backoff: 1/5/25/125 s con backoff-multiplier 5
+      backoff-multiplier: 5                  # Multiplicador exponencial entre intentos
+      jitter-ratio: 0.1                      # Jitter uniforme de +/-10 % sobre cada retardo
+      lease-ms: 30000                        # Arriendo de un mensaje reclamado: cubre el timeout de publicacion y M1
+    payments:
+      enabled: false                         # Canal B de CU-13: consulta de cobros (false en la suite)
+      fixed-delay-ms: 5000                   # Ciclo de consulta a modulo 3
+      batch-size: 50                         # Reservas consultadas por ciclo
+      recent-window-minutes: 30              # Ventana para detectar cobros huerfanos tras EXPIRED/PAYMENT_FAILED
+    dispute:
+      enabled: false                         # Cierre automatico de la ventana de disputa (H9): false en la suite
+      fixed-delay-ms: 30000                  # Intervalo entre barridos de disputas vencidas (default: 30 s)
+      batch-size: 100                        # Maximo de disputas cerradas por ciclo
+
+  maintenance:                               # C5: avisos de mantenimiento de Modulo 1
+    auto-cancel: true                        # Cancela automaticamente las reservas RESERVED afectadas
+    scan:
+      enabled: false                         # Job de respaldo: el mecanismo primario es el outbox de M1
+      fixed-delay-ms: 300000                 # Intervalo entre ciclos del job (default: 5 min)
+      window-days: 60                        # Ventana futura de reservas RESERVED a revisar
+      batch-size: 100                        # Maximo de embarcaciones consultadas por ciclo
+
+seashare:                                  # Integracion con Modulo 1 y Modulo 3 (CU-09 a CU-12)
+  fleet:
+    mode: ${SEASHARE_FLEET_MODE:fake}      # fake (default, M2 corre aislado) u http para los adaptadores reales de M1
+    base-url: ${SEASHARE_FLEET_BASE_URL:http://localhost:8081}  # Url base de M1; solo se usa en modo http
+    connect-timeout-ms: 100                # Timeout de conexion en milisegundos
+    read-timeout-ms: 300                   # Timeout de lectura en milisegundos
+
+  finance:
+    mode: ${SEASHARE_FINANCE_MODE:fake}    # fake (default, M2 corre aislado) u http para los adaptadores reales de M3
+    base-url: ${SEASHARE_FINANCE_BASE_URL:http://localhost:8080}  # M3 sirve en 8080; en prod solo por variable de entorno
+    individual-connect-timeout-ms: 100     # Timeout de conexion de la estimacion individual
+    individual-read-timeout-ms: 1000       # Timeout de lectura de la estimacion individual
+    batch-connect-timeout-ms: 150          # Timeout de conexion de la estimacion en lote
+    batch-read-timeout-ms: 1000            # Timeout de lectura de la estimacion en lote
+    calculated-value-connect-timeout-ms: 100   # Timeout de conexion del valor calculado (CU-12)
+    calculated-value-read-timeout-ms: 1000     # Timeout de lectura del valor calculado (CU-12)
+    payment-status-connect-timeout-ms: 100     # Timeout de conexion de la consulta de cobro (CU-13)
+    payment-status-read-timeout-ms: 500        # Timeout de lectura de la consulta de cobro (CU-13)
+    fake-payment-status: IN_PROCESS            # Estado simulado en modo fake: IN_PROCESS, APPROVED, REJECTED, CANCELLED o EXPIRED
+
+  cors:
+    allowed-origins: ${SEASHARE_CORS_ALLOWED_ORIGINS:http://localhost:5173}   # Origenes con CORS habilitado (lista separada por comas)

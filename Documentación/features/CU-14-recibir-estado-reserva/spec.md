@@ -1,0 +1,87 @@
+# Feature Specification: Recibir Estado de Reserva (Notificación a Módulo 3)
+
+**Módulo**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones  
+**Fecha de Creación**: 2026-09-08 (Actualizado: la integración inicia en Pendiente de Pago)  
+**Actores Primarios / Disparador**: Sistema / Invocado internamente por el caso de uso `Actualizar estado reserva`.  
+**Dependencias Externas (APIs)**:
+- **Módulo 3 – Liquidación, Seguros y Dispersión de Fondos**: API externa receptora (`Recibir estado de reserva`), encargada de procesar las transiciones operativas para detonar la lógica financiera (activación de seguros, retenciones, cobros, dispersiones y reembolsos).
+
+> **Nota**: Existen dos casos de uso hermanos de notificación hacia módulos externos desde `Actualizar estado reserva` (`CU-08`): este caso (`CU-14`, **Módulo 2 → Módulo 3**) notifica el **estado de la reserva** tal cual; `Recibir información de estado operativo` (`CU-22`, **Módulo 2 → Módulo 1**) notifica el **estado operativo de la embarcación ya mapeado**. Son contratos distintos, con tablas de mapeo independientes.
+
+---
+
+## User Scenarios & Testing
+
+### User Story 1 - Notificar el inicio del ciclo de pago y posteriores transiciones (Priority: P1)
+
+Como sistema (Módulo 2), quiero notificar a Módulo 3 cada vez que una reserva entra a la fase de pago (`Pendiente de Pago`) y en cada transición de estado posterior, para que Finanzas tenga visibilidad en tiempo real del ciclo de vida del alquiler y pueda ejecutar sus procesos de recaudo y cobertura.
+
+***Why this priority***: Módulo 3 es ciego a la operación si Módulo 2 no le avisa. Esta notificación es el gatillo que permite a Módulo 3 saber cuándo debe esperar un pago, cuándo activar un seguro o cuándo devolver dinero.
+
+***Independent Test***: Se prueba revisando el mensaje que `Actualizar estado reserva` deja en el outbox y publica en el exchange `seashare.reservations` (routing key `reservation.status.changed`) con un consumidor de prueba que simula la cola de Módulo 3. Se provoca la creación de una reserva en estado `Pendiente de Pago` (vía `Iniciar pago`) y se verifica que Módulo 2 emita un *payload* con el ID de la reserva, el nuevo estado y la marca de tiempo, sin enviar montos calculados.
+
+***Acceptance Scenarios***:
+
+1. **Scenario**: Notificación inicial al arrancar el proceso de pago
+    - **Given** una reserva recién transicionada a estado `Pendiente de Pago` (nacida en `Iniciada` por `Iniciar reserva`) debido a que el Arrendatario ejecutó `Iniciar pago`
+    - **When** se consolida el nuevo estado en la base de datos
+    - **Then** el sistema emite, por la cola de entrega garantizada (primer intento asíncrono), la notificación a Módulo 3 informando que la reserva identificada entró a `Pendiente de Pago`, activando el interés financiero sobre el contrato
+
+2. **Scenario**: Notificaciones de ciclo de vida activo
+    - **Given** una reserva que transiciona a `Reservada`, `En Navegación`, `Completada` o `Cancelada` (`Expirada` y `Pago Fallido` no se notifican; única excepción: el cobro aprobado tardío tras el TTL, que se publica como `CANCELLED_FLEXIBLE`)
+    - **When** se asienta el cambio en la máquina de estados
+    - **Then** el sistema notifica el evento exacto a Módulo 3, incluyendo sub-estados si aplican (ej. `Cancelada` con sub-estado `Moderado`)
+
+---
+
+### User Story 2 - Asegurar la entrega de notificaciones ante caídas de red (Priority: P1)
+
+Como sistema, quiero encolar y reintentar las notificaciones dirigidas a Módulo 3 si este no responde, para garantizar que ningún evento operativo (como un check-in o una cancelación) se pierda silenciosamente, manteniendo la consistencia eventual entre la operación y las finanzas.
+
+***Why this priority***: Una notificación perdida significa que un seguro no se activó o que un propietario nunca recibió su dinero. La entrega garantizada (Event Delivery Guarantee) es innegociable en arquitecturas desacopladas.
+
+***Independent Test***: Se simula que el broker no confirma la publicación del mensaje. Se dispara un cambio de estado en Módulo 2. Se verifica que Módulo 2 guarde la transición exitosamente y encole el mensaje de notificación, reintentándolo según FR-005 (máx. 5 intentos con backoff) y marcándolo como muerto con su último error si se agotan.
+
+***Acceptance Scenarios***:
+
+1. **Scenario**: Reintento automático por indisponibilidad de Módulo 3
+    - **Given** una reserva que cambia a `En Navegación` pero el broker no confirma la publicación
+    - **When** el sistema intenta enviar la notificación y recibe un error de conexión
+    - **Then** el sistema marca el evento como "Pendiente de envío" y lo reintenta con una estrategia de respaldo progresivo (backoff) hasta que Módulo 3 confirme la recepción
+
+---
+
+### Edge Cases
+
+- **Idempotencia en la Recepción**: Si Módulo 2 envía dos veces la misma notificación por un falso timeout de red, Módulo 3 debe ser capaz de procesarla de forma idempotente. Módulo 2 envía identificadores únicos por cada transición para facilitar esto.
+- **Texto de novedades en el cierre**: Si el cierre incluye texto opcional de novedades, el *payload* de `Completada` lo lleva como campo informativo. Dicho texto no modifica el tratamiento del cierre (liberación del pago y retención de la garantía hasta la resolución de la disputa).
+- **Prohibición de Cálculo Monetario**: Las notificaciones de estado son puramente operativas. **Módulo 2 JAMÁS incluye en el *payload* cálculos de penalidades, montos de reembolso o valoraciones de daños**. Solo notifica el estado (ej. `Cancelada`), el sub-estado (ej. `Tardío`) y el actor responsable.
+
+---
+
+## Requirements
+
+### Functional Requirements
+
+- **FR-001**: El sistema DEBE publicar el evento `reservation.status.changed` (vía outbox, exchange `seashare.reservations`) hacia Módulo 3 cada vez que el caso de uso `Actualizar estado reserva` consolide una transición hacia un estado que Módulo 3 debe conocer (`Pendiente de Pago`, `Reservada`, `En Navegación`, `Completada` y `Cancelada`). `Iniciada`, `Expirada` y `Pago Fallido` no se publican; única excepción: el cobro aprobado tardío tras el TTL, que se publica como `CANCELLED_FLEXIBLE`. La integración con Módulo 3 inicia estrictamente a partir del estado `Pendiente de Pago` (la reserva nace en `Iniciada` por `Iniciar reserva`; solo se comunica a Módulo 3 al formalizar el cobro).
+- **FR-002**: El *payload* de la notificación DEBE contener obligatoriamente: identificador de la reserva, nuevo estado principal, sub-estado (si aplica), marca temporal exacta del evento (en formato ISO 8601) y actor que disparó el evento.
+- **FR-003**: Si el estado es `Cancelada`, la notificación DEBE incluir el sub-estado (`Flexible`, `Moderado`, `Tardío`, `Por Propietario`, `Por Inasistencia`) y la anticipación temporal cronológica.
+- **FR-004**: Si el cierre de la navegación incluye texto opcional de novedades provisto por el Propietario, la notificación de `Completada` DEBE incluirlo como campo informativo, sin que ello modifique el tratamiento del cierre.
+- **FR-005**: El sistema DEBE implementar un mecanismo de entrega garantizada (cola de reintentos) para asegurar que las notificaciones alcancen Módulo 3 ante fallos temporales del broker o de la red. Esta cola gobierna tanto el camino feliz (primer intento) como el de fallo (reintentos con backoff); no existe envío síncrono directo. Política de reintento: máximo 5 intentos por evento (primer intento inmediato), backoff exponencial con jitter de 1 s, 5 s, 25 s y 125 s, cuando el broker no confirma la publicación (el mismo `Message-Id` en cada reintento); tras el quinto fallo, el evento queda marcado como muerto con su último error y se genera una alerta.
+- **FR-006**: **REGLA ESTRICTA**: El sistema **NO DEBE** calcular ni incluir datos financieros procesados en la notificación. Finanzas es responsable de interpretar el estado operativo y traducir ese evento a dinero.
+
+---
+
+### Key Entities
+
+- **Notificación de Transición (`StateTransitionEvent`)**: DTO (Data Transfer Object) de integración saliente que empaqueta los detalles del cambio de estado operativo para consumo de Módulo 3.
+
+---
+
+## Success Criteria
+
+### Measurable Outcomes
+
+- **SC-001**: El 100% de los cambios de estado publicables (a partir de la transición a `Pendiente de Pago`, sin incluir `Expirada` ni `Pago Fallido`)son notificados a Módulo 3 (0% de eventos perdidos gracias a la cola de reintentos).
+- **SC-002**: El tiempo de emisión del primer intento de notificación no supera los 500 milisegundos tras la consolidación del estado en la base de datos local.
+- **SC-003**: Cero (0) valores financieros o monetarios calculados incluidos en el cuerpo del mensaje enviado a Módulo 3.

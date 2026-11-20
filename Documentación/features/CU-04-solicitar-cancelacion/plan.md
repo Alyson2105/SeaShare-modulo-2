@@ -1,0 +1,450 @@
+# Contrato de Interfaz REST: CU-04 Solicitar Cancelación
+
+## 1. Identificación y Metadatos
+
+- **Identificador del Contrato**: `REST-M2-CU04-SOLICITAR-CANCELACION`
+- **Módulo Responsable**: Módulo 2 – Operación de Reservas, Tiempos y Cancelaciones
+- **Tipo de Interfaz**: REST sincrónico expuesto por Módulo 2
+- **Actor / Consumidor Autorizado**: 
+  - `RENTER` (únicamente el titular de la reserva)
+  - `OWNER` (únicamente el dueño registrado de la embarcación asociada a la reserva)
+- **Caso de Uso Base / Relaciones**: 
+  - Extiende a: `Ver detalle de reserva` (`<<extend>>` - CU-21)
+  - Incluye: `Actualizar estado reserva` (`<<include>>` - CU-08)
+  - Incluye: `Proveer información de embarcación` (`<<include>>` - CU-09 de Módulo 1)
+- **Versión del Contrato**: 1.0.0
+- **Fecha de Creación**: 2026-10-09
+
+---
+
+## 2. Propósito y Alcance del Endpoint
+
+Este endpoint procesa la solicitud voluntaria de cancelación de una reserva antes del zarpe o inicio formal de la navegación.
+
+### Responsabilidades del Endpoint:
+1. **Validación de Identidad y Legitimidad**: Verifica mediante el token JWT que el solicitante sea unívocamente el arrendatario titular o el propietario registrado de la embarcación. Cualquier otro usuario recibe `403 Forbidden`.
+2. **Validación de Estado Operativo**: Permite la cancelación **única y exclusivamente** si la reserva se encuentra en estado principal `RESERVED`.
+   - Si la reserva está en `INITIATED` o `PENDING_PAYMENT`, la petición es rechazada con `409 Conflict`, indicando que dichas reservas no admiten cancelación activa y deben expirar pasivamente por vencimiento del temporizador TTL.
+   - Si la reserva está en `IN_NAVIGATION`, `COMPLETED`, `EXPIRED`, `PAYMENT_FAILED` o ya fue `CANCELLED`, se rechaza con `409 Conflict`.
+3. **Resolución de Zona Horaria Oficial**: Consulta a Módulo 1 (`CU-09`) el puerto de atraque para obtener la zona horaria oficial del activo (`America/Bogota`, etc.). Si la consulta a Módulo 1 falla o no responde, el sistema **no asume una zona horaria por defecto** y rechaza la operación con `503 Service Unavailable` como fail-safe de protección de derechos.
+4. **Cálculo de Anticipación y Clasificación Contractual (Arrendatario)**:
+   - Computa la diferencia exacta en horas y minutos entre el instante de la solicitud y la fecha/hora pactada de inicio de la reserva, bajo la zona horaria del puerto.
+   - Aplica las reglas contractuales temporales:
+     - **Flexible**: Anticipación $\ge 72$ horas (`anticipacion >= 72h`). En el límite exacto de 72h:00m:00s es Flexible (a favor del cliente).
+     - **Moderado**: Anticipación entre 24 y 72 horas (`24h <= anticipacion < 72h`). En el límite exacto de 24h:00m:00s es Moderado.
+     - **Tardío**: Anticipación estrictamente menor a 24 horas (`anticipacion < 24h`). Se permite cancelar hasta el último minuto previo al zarpe bajo esta franja.
+   - Determina el estado operativo a notificar de forma asíncrona a Módulo 1 (`AVAILABLE`), conforme al mapeo de CU-22 FR-002.
+5. **Clasificación Directa y Causal (Propietario)**:
+   - Asigna directamente la clasificación **Por Propietario**, sin evaluar el tiempo de anticipación ni franjas horarias.
+   - Exige obligatoriamente seleccionar el motivo:
+     - `logistics_force_majeure`: Se encola la liberación asíncrona de la embarcación en Módulo 1 al estado `AVAILABLE` (notificación encolada únicamente si `m1_blocked == true`).
+     - `mechanical_failure`: Se encola en Módulo 1 el paso asíncrono de la embarcación al estado `MAINTENANCE_CLEANING` (notificación encolada únicamente si `m1_blocked == true`), inhabilitando su oferta en el catálogo de M1. **Regla Estricta de Cero Cascada**: Queda estrictamente prohibido aplicar cancelaciones automáticas en cascada sobre reservas futuras del mismo barco; todas las reservas futuras confirmadas (`RESERVED`) se mantienen intactas en Módulo 2. La decisión de cancelar a futuro será estrictamente manual por parte del Propietario.
+6. **Transición Formal y Publicación de Eventos**: Invoca internamente a `Actualizar estado reserva` (`CU-08`), encola la notificación HTTP de estado operativo hacia Módulo 1 definida en CU-22 (`Recibir información estado operativo`) la señal con el estado operativo ya mapeado según la tabla de FR-002 de CU-22 —sin esperar respuesta de negocio de Módulo 1 ni depender de ella: la entrega se garantiza con reintentos y backoff, `dead=true` con alerta e idempotencia por identificador único de evento (CU-22 FR-006), y un fallo de entrega no revierte la transición local de Módulo 2— y emite el evento de dominio AMQP hacia Módulo 3 (`reserva.estado.cancelada`) para la dispersión y reembolso de fondos. La cancelación solo es posible desde `Reservada`, por lo que el activo está efectivamente bloqueado en Módulo 1 y la asignación de `AVAILABLE` o `MAINTENANCE_CLEANING` procede según el mapeo de CU-22 FR-002.
+7. **Regla Estricta "Sin Dinero"**: Módulo 2 **no calcula importes de devolución, porcentajes de retención ni montos de penalidad monetaria**. Toda la valoración económica y liquidación corresponde a Módulo 3.
+
+### 2.1 Mapeo hacia el Comando de CU-08 (`TransitionCommand`)
+
+| Parámetro en CU-04 (REST) | Campo en `TransitionCommand` (CU-08) | Regla de Transformación / Origen |
+| :--- | :--- | :--- |
+| `reservation_id` (Path) | `reservation_id` | Identificador UUID de la reserva a cancelar. |
+| *(Fijo por caso de uso)* | `target_status` | `"CANCELLED"` |
+| Anticipación / Rol | `cancellation_subtype` | `"FLEXIBLE"`, `"MODERATE"` o `"LATE"` (calculado según franja de anticipación si cancela Arrendatario); `"BY_OWNER"` si cancela Propietario. |
+| Token JWT (`role`) | `actor` | `"RENTER"` o `"OWNER"` según el rol del usuario autenticado. |
+| Token JWT (`sub`) | `actor_id` | Identificador UUID del usuario en sesión. |
+| `reason` (Body) | `reason` | Valor recibido en la petición (`"logistics_force_majeure"` o `"mechanical_failure"` para Propietario; nulo si cancela Arrendatario). |
+| `reason` (Body) | `mechanical_failure` | Booleano derivado: `true` si `reason == "mechanical_failure"`; `false` si `reason == "logistics_force_majeure"` o si el actor es `RENTER` (define `MAINTENANCE_CLEANING` en CU-22). |
+| Reloj y hora de zarpe | `anticipation_minutes` | Calculado por Módulo 2 mediante la diferencia entre el reloj oficial y la hora programada de zarpe (`departure_time`) en la zona horaria del puerto. No lo envía el usuario (nulo si cancela Propietario). |
+| `justification` (Body) | `justification` | Texto libre opcional provisto por el usuario para auditoría del evento. |
+
+---
+
+## 3. Definición del Endpoint
+
+- **Método HTTP**: `POST`
+- **Ruta**: `/api/v1/reservations/{reservation_id}/cancellation`
+- **Formato de Petición / Respuesta**: `application/json`
+- **Codificación**: `UTF-8`
+
+### 3.1 Encabezados HTTP (Headers)
+
+| Header | Tipo | Obligatorio | Descripción |
+| :--- | :--- | :--- | :--- |
+| `Authorization` | String | Sí | Token Bearer JWT del usuario autenticado (`Bearer eyJhbG...`). |
+| `Content-Type` | String | Sí | Debe ser `application/json; charset=utf-8`. |
+| `X-Idempotency-Key` | String (UUID) | Opcional | Clave para evitar doble procesamiento accidental por doble clic del cliente. |
+
+### 3.2 Parámetros de Ruta (Path Parameters)
+
+| Parámetro | Tipo | Restricción | Descripción |
+| :--- | :--- | :--- | :--- |
+| `reservation_id` | String (UUIDv4) | Obligatorio | Identificador universal único de la reserva a cancelar. |
+
+---
+
+## 4. Estructura de Datos (Schemas JSON)
+
+### 4.1 Cuerpo de la Petición (Request Body)
+
+```json
+{
+  "reason": "logistics_force_majeure | mechanical_failure | null",
+  "justification": "string (opcional, máximo 500 caracteres)"
+}
+```
+
+#### Descripción de Campos de Entrada
+
+| Campo | Tipo | Obligatoriedad | Descripción / Reglas |
+| :--- | :--- | :--- | :--- |
+| `reason` | String (Enum) | Condicional | **Obligatorio si el solicitante es Propietario**. Opcional/ignorado si es Arrendatario. Valores permitidos: `"logistics_force_majeure"`, `"mechanical_failure"`. |
+| `justification` | String | Opcional | Texto libre descriptivo de hasta 500 caracteres que detalla el contexto o causa de la cancelación. |
+
+### 4.2 Cuerpo de Respuesta Exitosa (`200 OK`)
+
+```json
+{
+  "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
+  "status": "CANCELLED",
+  "cancellation_subtype": "FLEXIBLE | MODERATE | LATE | BY_OWNER",
+  "requesting_actor": "RENTER | OWNER",
+  "anticipation_hours": 74.5,
+  "port_timezone": "America/Bogota",
+  "scheduled_departure": "2026-11-20T09:00:00-05:00",
+  "cancelled_at": "2026-11-17T06:30:00-05:00",
+  "reason": "logistics_force_majeure | mechanical_failure | null",
+  "justification": "string | null",
+  "vessel_id": "b3e2a1d0-4f5c-6b7a-8e9f-0a1b2c3d4e5f",
+  "vessel_new_operational_status": "AVAILABLE | MAINTENANCE_CLEANING",
+  "m1_sync_status": "ENQUEUED",
+  "m3_notification_status": "PUBLISHED",
+  "message": "La reserva ha sido cancelada exitosamente bajo la política clasificada. Módulo 3 gestionará la liquidación financiera correspondiente."
+}
+```
+
+#### Descripción de Campos de Salida
+
+| Campo | Tipo | Nulabilidad | Descripción |
+| :--- | :--- | :--- | :--- |
+| `reservation_id` | String (UUID) | No nulo | Identificador de la reserva cancelada. |
+| `status` | String | No nulo | Estado terminal asignado. Siempre `"CANCELLED"`. |
+| `cancellation_subtype` | String (Enum) | No nulo | Clasificación de la política: `"FLEXIBLE"`, `"MODERATE"`, `"LATE"` o `"BY_OWNER"`. |
+| `requesting_actor` | String (Enum) | No nulo | Rol del usuario que detonó la acción: `"RENTER"` o `"OWNER"`. |
+| `anticipation_hours` | Number (Float) | Nulo condicional | Horas exactas con decimales de anticipación respecto al zarpe. Nulo si el actor fue el Propietario. |
+| `port_timezone` | String | No nulo | Identificador IANA de huso horario oficial del puerto de atraque (`America/Bogota`). |
+| `scheduled_departure` | String (ISO 8601) | No nulo | Fecha y hora programada de zarpe con offset del puerto local. |
+| `cancelled_at` | String (ISO 8601) | No nulo | Marca de tiempo oficial de recepción de la solicitud de cancelación con offset local. |
+| `reason` | String | Nulo condicional | Causal seleccionada (obligatoria en Propietario, nula si Arrendatario no la aportó). |
+| `justification` | String | Nulo condicional | Texto libre descriptivo registrado para auditoría. |
+| `vessel_id` | String (UUID) | No nulo | Identificador de la embarcación asociada. |
+| `vessel_new_operational_status` | String (Enum) | No nulo | Estado operativo a notificar de forma asíncrona al activo en Módulo 1: `"AVAILABLE"` o `"MAINTENANCE_CLEANING"`. |
+| `m1_sync_status` | String | No nulo | Estado de la notificación asíncrona a Módulo 1: `"ENQUEUED"` (la señal quedó encolada en la cola de notificación definida en CU-22). No confirma la aplicación efectiva del estado en Módulo 1, que se produce de forma asíncrona. |
+| `m3_notification_status` | String | No nulo | Estado de emisión del evento AMQP a Módulo 3: `"PUBLISHED"`. |
+| `message` | String | No nulo | Resumen textual informativo confirmatorio. |
+
+---
+
+## 5. Ejemplos de Petición y Respuesta
+
+### Ejemplo 1: Cancelación por Arrendatario — Política Flexible (> 72 horas de anticipación)
+
+#### Petición HTTP (`curl`)
+```bash
+curl -X POST "https://api.seashare.com/api/v1/reservations/c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e/cancellation" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -H "X-Idempotency-Key: a1111111-2222-3333-4444-555555555555" \
+  -d '{
+    "justification": "Cambio de planes familiares de vacaciones."
+  }'
+```
+
+#### Respuesta Exitosa (`200 OK`)
+```json
+{
+  "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
+  "status": "CANCELLED",
+  "cancellation_subtype": "FLEXIBLE",
+  "requesting_actor": "RENTER",
+  "anticipation_hours": 85.5,
+  "port_timezone": "America/Bogota",
+  "scheduled_departure": "2026-11-20T09:00:00-05:00",
+  "cancelled_at": "2026-11-16T19:30:00-05:00",
+  "reason": null,
+  "justification": "Cambio de planes familiares de vacaciones.",
+  "vessel_id": "b3e2a1d0-4f5c-6b7a-8e9f-0a1b2c3d4e5f",
+  "vessel_new_operational_status": "AVAILABLE",
+  "m1_sync_status": "ENQUEUED",
+  "m3_notification_status": "PUBLISHED",
+  "message": "Reserva cancelada con más de 72 horas de anticipación. Clasificación Flexible aplicada. El activo náutico ha quedado Disponible."
+}
+```
+
+---
+
+### Ejemplo 2: Cancelación por Arrendatario — Política Moderada (entre 24 y 72 horas)
+
+#### Petición HTTP (`curl`)
+```bash
+curl -X POST "https://api.seashare.com/api/v1/reservations/c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e/cancellation" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "justification": "Imprevisto laboral no postergable."
+  }'
+```
+
+#### Respuesta Exitosa (`200 OK`)
+```json
+{
+  "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
+  "status": "CANCELLED",
+  "cancellation_subtype": "MODERATE",
+  "requesting_actor": "RENTER",
+  "anticipation_hours": 36.0,
+  "port_timezone": "America/Bogota",
+  "scheduled_departure": "2026-11-20T09:00:00-05:00",
+  "cancelled_at": "2026-11-18T21:00:00-05:00",
+  "reason": null,
+  "justification": "Imprevisto laboral no postergable.",
+  "vessel_id": "b3e2a1d0-4f5c-6b7a-8e9f-0a1b2c3d4e5f",
+  "vessel_new_operational_status": "AVAILABLE",
+  "m1_sync_status": "ENQUEUED",
+  "m3_notification_status": "PUBLISHED",
+  "message": "Reserva cancelada con 36 horas de anticipación. Clasificación Moderado aplicada. El activo náutico ha quedado Disponible."
+}
+```
+
+---
+
+### Ejemplo 3: Cancelación por Arrendatario — Política Tardía (< 24 horas antes del zarpe)
+
+#### Petición HTTP (`curl`)
+```bash
+curl -X POST "https://api.seashare.com/api/v1/reservations/c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e/cancellation" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "justification": "No podremos llegar a la ciudad a tiempo para la salida de mañana."
+  }'
+```
+
+#### Respuesta Exitosa (`200 OK`)
+```json
+{
+  "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
+  "status": "CANCELLED",
+  "cancellation_subtype": "LATE",
+  "requesting_actor": "RENTER",
+  "anticipation_hours": 8.5,
+  "port_timezone": "America/Bogota",
+  "scheduled_departure": "2026-11-20T09:00:00-05:00",
+  "cancelled_at": "2026-11-20T00:30:00-05:00",
+  "reason": null,
+  "justification": "No podremos llegar a la ciudad a tiempo para la salida de mañana.",
+  "vessel_id": "b3e2a1d0-4f5c-6b7a-8e9f-0a1b2c3d4e5f",
+  "vessel_new_operational_status": "AVAILABLE",
+  "m1_sync_status": "ENQUEUED",
+  "m3_notification_status": "PUBLISHED",
+  "message": "Reserva cancelada con menos de 24 horas de anticipación. Clasificación Tardío aplicada. Módulo 3 tramitará la liquidación sin reembolso al arrendatario."
+}
+```
+
+---
+
+### Ejemplo 4: Cancelación por Propietario — Causal Fuerza Mayor Logística
+
+#### Petición HTTP (`curl`)
+```bash
+curl -X POST "https://api.seashare.com/api/v1/reservations/c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e/cancellation" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reason": "logistics_force_majeure",
+    "justification": "Capitán asignado con incapacidad médica de urgencia. No se cuenta con relevo certificado para la fecha."
+  }'
+```
+
+#### Respuesta Exitosa (`200 OK`)
+```json
+{
+  "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
+  "status": "CANCELLED",
+  "cancellation_subtype": "BY_OWNER",
+  "requesting_actor": "OWNER",
+  "anticipation_hours": null,
+  "port_timezone": "America/Bogota",
+  "scheduled_departure": "2026-11-20T09:00:00-05:00",
+  "cancelled_at": "2026-11-19T14:15:00-05:00",
+  "reason": "logistics_force_majeure",
+  "justification": "Capitán asignado con incapacidad médica de urgencia. No se cuenta con relevo certificado para la fecha.",
+  "vessel_id": "b3e2a1d0-4f5c-6b7a-8e9f-0a1b2c3d4e5f",
+  "vessel_new_operational_status": "AVAILABLE",
+  "m1_sync_status": "ENQUEUED",
+  "m3_notification_status": "PUBLISHED",
+  "message": "Cancelación por Propietario procesada. Clasificación Por Propietario asignada. La embarcación se mantiene Disponible al no mediar avería mecánica."
+}
+```
+
+---
+
+### Ejemplo 5: Cancelación por Propietario — Causal Avería Mecánica (Inhabilitación del Activo)
+
+#### Petición HTTP (`curl`)
+```bash
+curl -X POST "https://api.seashare.com/api/v1/reservations/c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e/cancellation" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reason": "mechanical_failure",
+    "justification": "Fallo crítico en el sistema de propulsión de estribor detectado en la inspección técnica previa al zarpe."
+  }'
+```
+
+#### Respuesta Exitosa (`200 OK`)
+```json
+{
+  "reservation_id": "c1f7a8b2-5e4d-4c3b-8a1e-9f0a2b3c4d5e",
+  "status": "CANCELLED",
+  "cancellation_subtype": "BY_OWNER",
+  "requesting_actor": "OWNER",
+  "anticipation_hours": null,
+  "port_timezone": "America/Bogota",
+  "scheduled_departure": "2026-11-20T09:00:00-05:00",
+  "cancelled_at": "2026-11-20T07:10:00-05:00",
+  "reason": "mechanical_failure",
+  "justification": "Fallo crítico en el sistema de propulsión de estribor detectado en la inspección técnica previa al zarpe.",
+  "vessel_id": "b3e2a1d0-4f5c-6b7a-8e9f-0a1b2c3d4e5f",
+  "vessel_new_operational_status": "MAINTENANCE_CLEANING",
+  "m1_sync_status": "ENQUEUED",
+  "m3_notification_status": "PUBLISHED",
+  "message": "Cancelación por Propietario procesada. Clasificación Por Propietario asignada. La embarcación ha sido transferida a 'En Mantenimiento/Limpieza' en Módulo 1 (solo si m1_blocked == true) para inhabilitar nuevas reservas. Las reservas futuras confirmadas se mantienen intactas (sin cancelación en cascada)."
+}
+```
+
+---
+
+## 6. Respuestas de Error y Códigos HTTP
+
+Todos los errores retornan un sobre uniforme con `code` y `message`:
+
+```json
+{
+  "code": "ERROR_CODE",
+  "message": "Descripción detallada y accionable del motivo de rechazo."
+}
+```
+
+| Código HTTP | Código Interno (`code`) | Causa / Condición de Disparo | Cuerpo de Respuesta de Ejemplo |
+| :--- | :--- | :--- | :--- |
+| **`400 Bad Request`** | `INVALID_UUID` | El identificador `reservation_id` no cumple el formato UUIDv4. | `{"code": "INVALID_UUID", "message": "El identificador de reserva proporcionado no es un UUID válido."}` |
+| **`400 Bad Request`** | `INVALID_PARAMETERS` | El solicitante es Propietario y omitió el campo `reason`, o envió un valor no soportado. | `{"code": "INVALID_PARAMETERS", "message": "El campo 'reason' es obligatorio para el Propietario y debe ser 'fuerza_mayor_logistica' o 'averia_mecanica'."}` |
+| **`401 Unauthorized`** | `UNAUTHENTICATED` | El header `Authorization` no fue proporcionado o el JWT expiró. | `{"code": "UNAUTHENTICATED", "message": "Token de autenticación ausente o inválido."}` |
+| **`403 Forbidden`** | `RESERVATION_NOT_OWNED` | El usuario autenticado no es ni el Arrendatario titular ni el Propietario registrado de la reserva. | `{"code": "RESERVATION_NOT_OWNED", "message": "No está autorizado para cancelar esta reserva. Solo el arrendatario titular o el propietario del activo pueden solicitar la cancelación."}` |
+| **`404 Not Found`** | `RESERVATION_NOT_FOUND` | La reserva no existe en la base de datos de Módulo 2. | `{"code": "RESERVATION_NOT_FOUND", "message": "No se encontró ninguna reserva asociada al identificador proporcionado."}` |
+| **`409 Conflict`** | `INVALID_RESERVATION_STATE` | La reserva no está en estado `RESERVED` (p. ej. en `INITIATED`, `PENDING_PAYMENT`, `IN_NAVIGATION`, `COMPLETED` o `CANCELLED`). | `{"code": "INVALID_RESERVATION_STATE", "message": "Solo se pueden cancelar reservas en estado 'Reservada'. Las reservas 'Pendiente de Pago' no admiten cancelación activa y deben esperar la expiración de su temporizador TTL."}` |
+| **`409 Conflict`** | `CONCURRENT_STATE_CHANGE` | Condición de carrera: la reserva comenzó la navegación o fue cancelada por el otro actor milisegundos antes. | `{"code": "CONCURRENT_STATE_CHANGE", "message": "Conflicto de concurrencia: el estado de la reserva ha cambiado simultáneamente por otra operación confirmada."}` |
+| **`503 Service Unavailable`** | `HARBOR_TIMEZONE_UNAVAILABLE` | Fallo de comunicación o timeout con Módulo 1 (`CU-09`) impidiendo conocer la zona horaria del puerto. Fail-safe activo. | `{"code": "HARBOR_TIMEZONE_UNAVAILABLE", "message": "No es posible calcular la anticipación de la cancelación debido a que el servicio de Flota (Módulo 1) no respondió con la zona horaria del puerto. Operación detenida por seguridad contractual. Reintente en unos instantes."}` |
+| **`500 Internal Server Error`** | `INTERNAL_ERROR` | Fallo no controlado de base de datos o broker de eventos. | `{"code": "INTERNAL_ERROR", "message": "Error interno del servidor al procesar la cancelación."}` |
+
+---
+
+## 7. Notas Transversales y Reglas de Negocio Arquitecturales
+
+### 7.1 Regla de Oro "Sin Dinero" (Zero-Financial Footprint)
+Módulo 2 actúa como orquestador temporal, regulador de estados contractuales y clasificador de políticas náuticas. Bajo ninguna circunstancia este endpoint:
+- Calcula montos monetarios de penalidad o retención.
+- Calcula montos monetarios a reembolsar al cliente.
+- Realiza transferencias, débitos bancarios o reversiones en pasarelas de pago.
+
+La respuesta síncrona solo reporta la clasificación (`FLEXIBLE`, `MODERATE`, `LATE` o `BY_OWNER`), y el evento emitido a Módulo 3 (`reserva.estado.cancelada`) delega toda la liquidación contable en el motor financiero de Módulo 3.
+
+### 7.2 Resolución Estricta de Límites Temporales (Límites Inclusivos)
+Para evitar disputas legales con el arrendatario, la resolución de los límites exactos de anticipación horaria se implementa con carácter inclusivo a favor del consumidor(La anticipación se calcula internamente como `anticipation_minutes`, entero truncado hacia abajo. Los umbrales se comparan en minutos (72 h = 4320, 24 h = 1440); con truncamiento, `minutos >= 4320` equivale exactamente a `anticipación >= 72 h`, y `minutos >= 1440` a `>= 24 h`, por lo que los límites inclusivos se conservan. La respuesta HTTP expone `anticipation_hours = anticipation_minutes / 60`.):
+- Si `anticipacion == 72h:00m:00s` $\rightarrow$ Clasifica como **Flexible** (100% elegible para reembolso).
+- Si `anticipacion == 24h:00m:00s` $\rightarrow$ Clasifica como **Moderado** (50% elegible para reembolso).
+- Si `anticipacion < 24h:00m:00s` $\rightarrow$ Clasifica como **Tardío** (0% elegible para reembolso).
+
+### 7.3 Fail-Safe de Zona Horaria (Dependencia de Módulo 1)
+La anticipación debe evaluarse estrictamente en la zona horaria oficial del puerto donde está amarrada la embarcación (obtenida mediante `CU-09 Proveer información de embarcación`), nunca según el reloj del dispositivo del usuario ni la zona horaria local del servidor de backend. Si Módulo 1 no responde, el sistema **no asume ninguna zona horaria por defecto** (`UTC` o de servidor) y aborta la petición con `503 Service Unavailable`, garantizando la certeza legal del cálculo de anticipación.
+
+### 7.4 Cancelación por Propietario y Matriz de Estado Náutico
+Cuando el Propietario cancela, no se mide el tiempo respecto al zarpe. Su elección en el campo `reason` rige la notificación asíncrona a Módulo 1 (señal encolada en el outbox de CU-22, sin espera de respuesta de negocio y condicionada a que la reserva tenga la guarda `m1_blocked == true` en CU-08):
+1. **Fuerza mayor logística**: Embarcación pasa a `AVAILABLE` (puede volver a recibir reservas).
+2. **Avería mecánica**: Embarcación pasa a `MAINTENANCE_CLEANING` (queda inhabilitada comercialmente en el catálogo de M1 hasta que se certifique su reparación).
+
+**Condición de Negocio: Cero Cascada por Avería Mecánica**:
+Bajo el motivo `mechanical_failure`, se notifica `MAINTENANCE_CLEANING` a Módulo 1 (solo si `m1_blocked == true`). Sin embargo, queda **estrictamente prohibido aplicar cancelaciones automáticas en cascada para reservas futuras**. Las reservas futuras confirmadas (`RESERVED`) se mantienen intactas en Módulo 2. La decisión de cancelar reservas futuras será estrictamente manual e individual por parte del Propietario tras evaluar el tiempo de reparación estimado.
+
+### 7.5 Idempotencia y Manejo de Doble Clic
+Si el cliente reenvía la petición con el mismo `X-Idempotency-Key` dentro de una ventana de 60 segundos sobre una reserva que ya fue cancelada mediante dicha clave, el endpoint retorna `200 OK` con la misma carga de respuesta previamente generada en lugar de un error `409 Conflict`.
+
+---
+
+## 8. Trazabilidad de Requisitos
+
+| Requisito Funcional / Criterio | Descripción en Spec | Cobertura en este Contrato |
+| :--- | :--- | :--- |
+| **FR-001** | Activación como extensión (`<<extend>>`) de `Ver detalle de reserva`. | Diseñado para invocarse desde el contexto profundo de la reserva; path `/api/v1/reservations/{reservation_id}/cancellation`. |
+| **FR-002** | Permitir cancelación si y solo si la reserva está en `RESERVED`. | Validación estricta de estado. Retorna `409 Conflict` si no está en `RESERVED`. |
+| **FR-003** | Validar que el solicitante sea Arrendatario titular o Propietario registrado. | Seguridad JWT y autorización estricta en sección 3 y código `403 RESERVATION_NOT_OWNED`. |
+| **FR-004** | Denegar explícitamente reservas en `INITIATED` y `PENDING_PAYMENT` (deben expirar pasivamente). | Regla explícita documentada en sección 2 y error `409 INVALID_RESERVATION_STATE`. |
+| **FR-005** | Consultar puerto y zona horaria a M1 (`CU-09`); no asumir huso por defecto si M1 falla. | Inclusión obligatoria de zona horaria del puerto y código `503 HARBOR_TIMEZONE_UNAVAILABLE`. |
+| **FR-006** | Calcular anticipación exacta en horas y minutos bajo zona horaria del puerto. | Atributo `anticipation_hours` computado según `port_timezone`. |
+| **FR-007** | Clasificación temporal Arrendatario: Flexible ($\ge 72$h), Moderado ($24$h a $72$h), Tardío ($< 24$h). | Matriz de cálculo y ejemplos 1, 2 y 3. |
+| **FR-008** | Permitir cancelar hasta el último minuto previo al zarpe bajo franja Tardío. | Confirmado en reglas de negocio y ejemplo 3. |
+| **FR-009** | Propietario recibe clasificación directa "Por Propietario" sin evaluar horas. | Ejemplos 4 y 5. Campo `anticipation_hours` se serializa como `null`. |
+| **FR-010** | Captura obligatoria de motivo para Propietario (`logistics_force_majeure` o `mechanical_failure`). | Validación de Request Body en sección 4.1 y error `400 INVALID_PARAMETERS`. En `mechanical_failure`, rige la regla estricta de cero cancelación en cascada. |
+| **FR-011** | Invocar obligatoriamente el caso de uso interno `Actualizar estado reserva` (`CU-08`). | Se delega internamente la persistencia y control transaccional a CU-08. |
+| **FR-012** | Delegar actualización de estado operativo de M1 (`AVAILABLE` o `MAINTENANCE_CLEANING`). | Notificación asíncrona documentada en los campos `vessel_new_operational_status` y `m1_sync_status` (condicionada a `m1_blocked == true`). No genera cancelaciones en cascada. |
+| **FR-013** | Delegar notificación AMQP a Módulo 3 (`reserva.estado.cancelada`) con sub-estado. | Notificación AMQP documentada en campo `m3_notification_status` y contrato `CU-14-estado-reserva`. |
+| **FR-014** | Regla estricta "Sin dinero": cero cálculos de montos o penalidades en M2. | Cumplimiento total. No existe ningún atributo monetario en el request ni response JSON. |
+| **FR-015** | Registro auditable del evento `CancellationEvent`. | Atributos registrados en la base de datos de dominio y reflejados en el response. |
+| **FR-016** | Soporte de datos para ventana emergente de cancelación del Arrendatario. | Campos `scheduled_departure`, `cancelled_at`, `anticipation_hours` y `cancellation_subtype` provistos para la UI. |
+| **FR-017** | Soporte de datos para ventana emergente del Propietario (motivo y justificación). | Campos `reason` y `justification` recibidos y procesados. |
+| **SC-001** | Cero cancelaciones permitidas sobre reservas en estado no cancelable. | Garantizado por código `409 Conflict`. |
+| **SC-002** | 100% de clasificaciones correctas según franjas horarias del Arrendatario. | Algoritmo estricto con límites inclusivos en horas completas y minutos. |
+| **SC-003** | 100% de cancelaciones del Propietario reciben "Por Propietario". | Lógica directa por rol del actor. |
+| **SC-004** | Cero clasificaciones emitidas con datos incompletos o zona horaria ausente. | Garantizado por fail-safe `503 HARBOR_TIMEZONE_UNAVAILABLE`. |
+| **SC-005** | Actualización de M1 (`Asignar estado operativo`) en $< 1$ segundo tras la cancelación. | Notificación asíncrona encolada conforme a CU-22 (sin espera de respuesta; entrega garantizada por reintentos con backoff, DLQ e idempotencia por identificador único de evento). |
+| **SC-006** | 100% de eventos notificados a Módulo 3 para liquidación de fondos. | Publicación garantizada en RabbitMQ (`reserva.estado.cancelada`). |
+| **SC-007** | Cero cálculos de reembolsos, comisiones o penalidades monetarias en M2. | Verificado en esquemas de datos. |
+| **SC-008** | Cero cancelaciones autorizadas a terceros no legítimos. | Garantizado por validación JWT y código `403 Forbidden`. |
+
+---
+
+## Diferencias entre el plan y la implementacion
+
+### [DIFERENCIA H8-CU04-01] Zona horaria
+- El plan dice: consultar M1 (CU-09) en cada operacion para obtener la zona del puerto; si M1 no responde, rechazar con `503 HARBOR_TIMEZONE_UNAVAILABLE` (L29, L346, L368).
+- El codigo hace: `RequestCancellationService.resolveZone` (L201-L212) lee `reservation.harborTimezone` y lanza `503 HARBOR_TIMEZONE_UNAVAILABLE` si la zona guardada falta o es invalida; no llama a M1.
+- Decision: fuente oficial por ahora es la zona persistida en la reserva; la consulta a CU-09 no esta implementada.
+
+### [DIFERENCIA H8-CU04-02] Identidad
+- El plan dice: header `Authorization` con `Bearer` JWT, `actor`/`actor_id` desde los claims `role`/`sub`, y `401 UNAUTHENTICATED` si falta el token (L52-53, L72, L341).
+- El codigo hace: `CallerIdentityArgumentResolver` (L28-L32) lee `X-User-Id` y `X-User-Role`; no existe `Authorization` ni Bearer. El `401 UNAUTHENTICATED` se emite solo si faltan esos dos headers.
+- Decision: resolver temporal por headers; JWT diferido a una fase posterior.
+
+### [DIFERENCIA H8-CU04-03] Notificacion a M1
+- El plan dice: encolar la senal de estado operativo a M1 por la cola de notificacion de CU-22 con reintentos, backoff y DLQ (L42).
+- El codigo hace: outbox con destino `M1_HTTP` (`ChangeReservationStatusService` L131-L133); en modo `http` el adaptador real `HttpFleetStatusNotificationAdapter` hace `POST /api/v1/internal/status-events` y clasifica `outcome`; en modo `fake` (`FakeFleetStatusNotificationAdapter`, L23-L26) solo registra en log y responde `DELIVERED`. Actualizado 2026-11-18.
+- Decision: por ahora solo adaptador fake; no hay cliente HTTP real de notificacion a M1.
+
+### [DIFERENCIA H8-CU04-04] Campos de respuesta
+- El plan dice: `m1_sync_status` = `"ENQUEUED"` y `m3_notification_status` = `"PUBLISHED"` con nulabilidad "No nulo"; `vessel_new_operational_status` tambien "No nulo" (L139-L141).
+- El codigo hace: `m1_sync_status` y `m3_notification_status` salen `null` si ese destino no se encolo (`RequestCancellationService` L142-L145); `vessel_new_operational_status` sale `null` si la reserva no estaba bloqueada en M1 (matriz, L108-L112). Para `CANCELLED` el destino AMQP siempre se encola, asi que `m3_notification_status` sale `PUBLISHED` en la practica.
+- Decision: el codigo admite `null` cuando no hay destino encolado; la tabla del plan queda desactualizada en la nulabilidad.
+
+### [DIFERENCIA H8-CU04-05] Idempotencia
+- El plan dice: header opcional `X-Idempotency-Key` y respuesta `200` identica dentro de 60 segundos ante doble clic (L74, L379).
+- El codigo hace: `CancellationController` no lee `X-Idempotency-Key` y `RequestCancellationService` no usa `IdempotencyPort`; el doble clic recibe `409` (u otro error segun estado), no la respuesta anterior.
+- Decision: idempotencia de 60 s queda fuera de la primera version.
+
+### [DIFERENCIA H8-CU04-06] reason para RENTER
+- El plan dice: `reason` nulo si cancela Arrendatario; la `justification` viaja en un campo aparte (L54, L57).
+- El codigo hace: `auditReason = command.actor() == ActorType.OWNER ? ownerReason : justification` (`RequestCancellationService` L114) y ese valor se envia como `reason` a CU-08 (L122); en la respuesta `reason` queda `null` para RENTER porque `ownerReason` es `null`.
+- Decision: para RENTER la justificacion se envia a CU-08 como `reason`; el plan no refleja eso.
+
+### Clasificacion por anticipacion (sin diferencia)
+- El plan dice: Flexible `>= 72 h`, Moderado `>= 24 h`, limites inclusivos a favor del consumidor (L33-L34, L362-L365).
+- El codigo hace: `CancellationClassifier` compara minutos truncados con umbrales 4320 y 1440 usando `>=`, y rechaza en o despues del zarpe con `INVALID_RESERVATION_STATE` (L17-L32).
+- Decision: cumple el plan; verificado en `CancellationClassifierTest` (`exactly72HoursIsFlexible`, `exactly24HoursIsModerate`, `oneSecondLessThan72HoursIsModerate`, `oneSecondLessThan24HoursIsLate`, `atDepartureIsRejected`).

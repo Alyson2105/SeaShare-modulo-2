@@ -1,0 +1,81 @@
+# CU-22 — Pruebas backend de notificación operativa a M1
+
+Casos de mapeo de estado operativo, outbox y despacho M1_HTTP. En modo `fake` el adaptador de entrega a M1 sólo registra y responde `DELIVERED`; en modo `http` existe un adaptador real que hace `POST /api/v1/internal/status-events` (actualizado 2026-11-18).
+
+**Estado global**: Draft por ambigüedad del transporte y confirmación de entrega; evaluado el 2026-11-13.
+
+## Trazabilidad
+
+| TC | Escenario | FR | SC | Test automatizado parcial | Status |
+|---|---|---|---|---|---|
+| [TC-CU22-001](TC-CU22-001-mapeo-estados.md) | Mapeo operativo | FR-001, FR-002 | SC-005 | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#reservedNotifiesModuleOneWithReserved; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#inNavigationAndCompletedNotifyModuleOne | In Process |
+| [TC-CU22-002](TC-CU22-002-sin-notificacion.md) | Estados sin notificación M1 | FR-001, FR-002 | SC-001 | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#initiatedAndPendingPaymentNotifyNobody; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#expiredAndPaymentFailedNotifyNobody | In Process |
+| [TC-CU22-003](TC-CU22-003-cancelacion-condicional.md) | Cancelación con guarda M1 | FR-001, FR-002 | SC-005 | src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#cancelledAfterReservedNotifiesAvailable; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#cancelledByOwnerWithMechanicalFailureNotifiesMaintenance; src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java#cancelledBeforeReservedDoesNotNotifyModuleOne | In Process |
+| [TC-CU22-004](TC-CU22-004-payload-operativo.md) | Payload operativo e identidad | FR-003, FR-004, FR-005, FR-007 | SC-003, SC-004 | src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java#enqueuesOperationalStatusToM1HttpWithExactFourFields | In Process |
+| [TC-CU22-005](TC-CU22-005-reintentos-locales.md) | Reintentos del relay | FR-006, FR-008 | SC-001 | src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#cincoCientosDeM1ReagendaConBackoff; src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java#cuarentaYCuatroDeM1VaDirectoDeadSinReintento | In Process |
+| [TC-CU22-006](TC-CU22-006-entrega-m1-real.md) | Entrega HTTP a M1 | FR-006, FR-008 | SC-001, SC-002 | OutboxRelayIntegrationTest#m1HttpUsaElPuertoFalsoYMarcaPublished: sin HTTP real | Draft |
+
+## Cobertura de requisitos
+
+| FR | Cobertura | TC | Alcance | Motivo / Observación |
+|---|---|---|---|---|
+| FR-001 | Parcial | 001, 002, 003 | Backend | Encolado condicionado |
+| FR-002 | Parcial | 001, 002, 003 | Backend | Matriz de flota |
+| FR-003 | Parcial | 004 | Backend | Campos operativos |
+| FR-004 | Parcial | 004 | Backend | Identidad de evento |
+| FR-005 | Parcial | 004 | Backend | Outbox transaccional |
+| FR-006 | Parcial | 005, 006 | Backend | Relay parcial; DLQ y HTTP reales pendientes |
+| FR-007 | Parcial | 004 | Backend | Sin dinero |
+| FR-008 | Parcial | 005, 006 | Backend | Entrega asíncrona |
+| FR-009 | Parcial | — | Backend | FCFS corresponde a CU-03 |
+
+## Criterios de éxito
+
+| SC | Estado | Observación |
+|---|---|---|
+| SC-001 | Parcialmente demostrado | TC-001 a 003, 005 y 006; entrega real pendiente. |
+| SC-002 | No demostrado | TC-006; primer intento en 500 ms requiere implementación y medición. |
+| SC-003 | Parcialmente demostrado | TC-004; payload operativo sin montos. |
+| SC-004 | Parcialmente demostrado | TC-004; deduplicación del receptor no demostrada. |
+| SC-005 | Parcialmente demostrado | TC-001 y 003; mapeo local. |
+
+## Checklist de ejecución
+
+| TC | Documentado | Ejecutado | Resultado | Ejecutado por | Fecha | Observaciones |
+|---|---|---|---|---|---|---|
+| TC-CU22-001 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Pruebas unitarias verifican mapeo de RESERVED, IN_NAVIGATION y COMPLETED; no prueban entrega HTTP real. |
+| TC-CU22-002 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Matriz unitaria comprueba ausencia de destino M1; no comprueba cada transición en outbox real. |
+| TC-CU22-003 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Matriz unitaria comprueba guarda y mapeos de cancelación; no prueba flujo completo de cancelación. |
+| TC-CU22-004 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Prueba unitaria verifica los cuatro campos del payload y exclusión de campos adicionales; no demuestra deduplicación real de M1. |
+| TC-CU22-005 | Sí | Sí | Partial | Agente automatizado | 2026-11-13 | Pruebas unitarias cubren backoff y dead con puertos simulados; no prueban DLQ real ni fallo HTTP real. |
+| TC-CU22-006 | Sí | Sí | Draft | Agente automatizado | 2026-11-13 | OutboxRelayIntegrationTest#m1HttpUsaElPuertoFalsoYMarcaPublished pasó con fila insertada manualmente y puerto falso; no hubo HTTP ni medición SLA. El plan mezcla broker y PATCH. |
+
+## Brechas detectadas
+
+> **Actualización 2026-11-18 (sin reescribir la corrida V4 del 2026-11-13):** las brechas 1 y 2 quedaron resueltas. Existe `HttpFleetStatusNotificationAdapter` (POST `/api/v1/internal/status-events`) y la documentación de CU-22 ya describe HTTP POST, sin AMQP ni PATCH. La brecha 3 se mantiene: para M1 no hay republicación a DLQ, sólo `dead=true` + alerta.
+
+1. [Contexto](../../../context/implementContext.md): matriz y outbox implementados, pero notificador M1_HTTP es fake.
+2. Plan mezcla PATCH HTTP y descripción AMQP/broker; último salto y confirmación requieren coherencia con M1.
+3. Quinto fallo o 4xx permanente marca dead; republicación a DLQ aún no implementada.
+4. SLA de 500 ms y deduplicación en M1 requieren integración y medición externas.
+5. Mapeo de estados sigue FR-002; FCFS es responsabilidad de CU-03.
+6. Los eventos AMQP de M3 son distintos de las notificaciones M1_HTTP.
+
+## Convenciones de estado
+
+- **Draft**: contrato incompleto o inconsistente.
+- **In Process**: ejecutable con implementación actual.
+- **Approved**: escenario y postcondiciones con FR/SC demostrados por aserciones de pruebas V4 ejecutadas.
+- **Blocked**: depende de funcionalidad pendiente.
+
+## Ejecución automatizada — 2026-11-13
+
+`sg docker -c 'bash ./mvnw -B clean test'`; inicio 2026-11-13T19:02:00-05:00, fin 2026-11-13T19:03:11-05:00, salida 0; código base `568290a0d4334b477a4b0f9d5e949e981da3fa55`. El puerto M1 es fake, no hay HTTP real.
+
+| Clase | Tests | Fallos | Errores | Omitidos | Resultado |
+|---|---:|---:|---:|---:|---|
+| [ChangeReservationStatusServiceTest](../../../../src/test/java/com/seashare/m2/reservas/integration/ChangeReservationStatusServiceTest.java) | 28 | 0 | 0 | 0 | XML V4 exitoso; integración con spies |
+| [ModuleOneNotificationMatrixTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/ModuleNotificationMatrixTest.java) | 7 | 0 | 0 | 0 | XML V4 exitoso; matriz unitaria |
+| [OutboxAdapterTest](../../../../src/test/java/com/seashare/m2/reservas/infrastructure/adapter/out/messaging/outbox/OutboxAdapterTest.java) | 15 | 0 | 0 | 0 | XML V4 exitoso; repositorio simulado |
+| [PublishPendingOutboxServiceTest](../../../../src/test/java/com/seashare/m2/reservas/application/service/PublishPendingOutboxServiceTest.java) | 10 | 0 | 0 | 0 | XML V4 exitoso; puertos simulados |
+| [OutboxRelayIntegrationTest](../../../../src/test/java/com/seashare/m2/reservas/integration/OutboxRelayIntegrationTest.java) | 4 | 0 | 0 | 0 | XML V4 exitoso; despacho a puerto falso |
