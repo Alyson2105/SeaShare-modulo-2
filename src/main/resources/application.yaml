@@ -7,7 +7,7 @@ spring:
     name: seashare-modulo-2                  # Nombre del servicio (aparece en logs y metricas)
 
   datasource:                                # Conexion a PostgreSQL (la levanta docker-compose)
-    url: jdbc:postgresql://localhost:5433/seashare_m2   # 5433: debe coincidir con docker-compose.yml
+    url: jdbc:postgresql://localhost:5434/seashare_m2   # 5434: debe coincidir con docker-compose.yml
     username: seashare                       # Solo desarrollo local; en produccion va por variable de entorno
     password: seashare
 
@@ -36,7 +36,6 @@ management:
 m2:
   messaging:                                # Nombres de la topologia RabbitMQ (T-02)
     exchange: seashare.reservations         # Exchange topic durable de eventos de reserva
-    dead-letter-exchange: seashare.reservations.dlx  # Exchange directo de dead-lettering
     routing-key-status-changed: reservation.status.changed  # CU-14: cambio de estado hacia M3
     routing-key-info-provided: reservation.info.provided    # CU-02: informacion de reserva hacia M3
     queue-status: finance.reservation-status.v1  # Cola de M3 para cambios de estado
@@ -84,7 +83,7 @@ seashare:                                  # Integracion con Modulo 1 y Modulo 3
 
   finance:
     mode: ${SEASHARE_FINANCE_MODE:fake}    # fake (default, M2 corre aislado) u http para los adaptadores reales de M3
-    base-url: ${SEASHARE_FINANCE_BASE_URL:http://localhost:8083}  # [NEEDS CLARIFICATION: puerto real de M3]; en prod solo por variable de entorno
+    base-url: ${SEASHARE_FINANCE_BASE_URL:http://localhost:8080}  # M3 sirve en 8080; en prod solo por variable de entorno
     individual-connect-timeout-ms: 100     # Timeout de conexion de la estimacion individual
     individual-read-timeout-ms: 1000       # Timeout de lectura de la estimacion individual
     batch-connect-timeout-ms: 150          # Timeout de conexion de la estimacion en lote
